@@ -1,0 +1,252 @@
+CREATE DATABASE EduCen;
+GO
+USE EduCen;
+GO
+
+/* ================= ROLE & PLAN ================= */
+
+CREATE TABLE Role (
+    role_id INT IDENTITY PRIMARY KEY,
+    role_name NVARCHAR(50) NOT NULL
+);
+
+CREATE TABLE Subscription (
+    plan_id INT IDENTITY PRIMARY KEY,
+    plan_name NVARCHAR(100),
+    price DECIMAL(10,2),
+    limit_users INT,
+    features NVARCHAR(MAX)
+);
+
+CREATE TABLE System_Admin (
+    sys_admin_id INT IDENTITY PRIMARY KEY,
+    username NVARCHAR(50),
+    password_hash NVARCHAR(255),
+    full_name NVARCHAR(100),
+    email NVARCHAR(100)
+);
+
+/* ================= TENANT ================= */
+
+CREATE TABLE Tenant (
+    tenant_id INT IDENTITY PRIMARY KEY,
+    plan_id INT,
+    tenant_name NVARCHAR(100),
+    domain_url NVARCHAR(255),
+    status NVARCHAR(50),
+    created_at DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_Tenant_Subscription
+        FOREIGN KEY (plan_id) REFERENCES Subscription(plan_id)
+);
+
+CREATE TABLE Payment_Record (
+    payment_id INT IDENTITY PRIMARY KEY,
+    tenant_id INT,
+    amount DECIMAL(10,2),
+    status NVARCHAR(50),
+    payment_date DATETIME,
+    CONSTRAINT FK_Payment_Tenant
+        FOREIGN KEY (tenant_id) REFERENCES Tenant(tenant_id)
+);
+
+/* ================= USER ================= */
+
+CREATE TABLE [User] (
+    user_id INT IDENTITY PRIMARY KEY,
+    tenant_id INT,
+    username NVARCHAR(50),
+    password_hash NVARCHAR(255),
+    full_name NVARCHAR(100),
+    email NVARCHAR(100),
+    account_status NVARCHAR(50),
+    role_id INT,
+
+    CONSTRAINT FK_User_Tenant
+        FOREIGN KEY (tenant_id) REFERENCES Tenant(tenant_id),
+
+    CONSTRAINT FK_User_Role
+        FOREIGN KEY (role_id) REFERENCES Role(role_id),
+
+    CONSTRAINT UQ_User UNIQUE (username, tenant_id)
+);
+
+/* ================= PROFILES ================= */
+
+CREATE TABLE Teacher (
+    teacher_id INT PRIMARY KEY,
+    specialization NVARCHAR(100),
+    degree NVARCHAR(100),
+
+    CONSTRAINT FK_Teacher_User
+        FOREIGN KEY (teacher_id) REFERENCES [User](user_id)
+);
+
+CREATE TABLE Assistant (
+    assistant_id INT PRIMARY KEY,
+    support_level NVARCHAR(50),
+
+    CONSTRAINT FK_Assistant_User
+        FOREIGN KEY (assistant_id) REFERENCES [User](user_id)
+);
+
+CREATE TABLE Student (
+    student_id INT PRIMARY KEY,
+    phone_number NVARCHAR(20),
+    enrollment_status NVARCHAR(50),
+
+    CONSTRAINT FK_Student_User
+        FOREIGN KEY (student_id) REFERENCES [User](user_id)
+);
+
+CREATE TABLE Parent (
+    parent_id INT PRIMARY KEY,
+    phone_number NVARCHAR(20),
+    address NVARCHAR(255),
+
+    CONSTRAINT FK_Parent_User
+        FOREIGN KEY (parent_id) REFERENCES [User](user_id)
+);
+
+CREATE TABLE Parent_Student (
+    parent_id INT,
+    student_id INT,
+
+    PRIMARY KEY (parent_id, student_id),
+
+    CONSTRAINT FK_PS_Parent
+        FOREIGN KEY (parent_id) REFERENCES Parent(parent_id),
+
+    CONSTRAINT FK_PS_Student
+        FOREIGN KEY (student_id) REFERENCES Student(student_id)
+);
+
+/* ================= ACADEMIC ================= */
+
+CREATE TABLE Subject (
+    subject_id INT IDENTITY PRIMARY KEY,
+    tenant_id INT,
+    subject_name NVARCHAR(100),
+    description NVARCHAR(255),
+
+    CONSTRAINT FK_Subject_Tenant
+        FOREIGN KEY (tenant_id) REFERENCES Tenant(tenant_id)
+);
+
+CREATE TABLE Class (
+    class_id INT IDENTITY PRIMARY KEY,
+    tenant_id INT,
+    teacher_id INT,
+    assistant_id INT,
+    subject_id INT,
+    class_name NVARCHAR(100),
+    syllabus_content NVARCHAR(MAX),
+    description NVARCHAR(255),
+    status NVARCHAR(50),
+
+    CONSTRAINT FK_Class_Tenant
+        FOREIGN KEY (tenant_id) REFERENCES Tenant(tenant_id),
+
+    CONSTRAINT FK_Class_Teacher
+        FOREIGN KEY (teacher_id) REFERENCES Teacher(teacher_id),
+
+    CONSTRAINT FK_Class_Assistant
+        FOREIGN KEY (assistant_id) REFERENCES Assistant(assistant_id),
+
+    CONSTRAINT FK_Class_Subject
+        FOREIGN KEY (subject_id) REFERENCES Subject(subject_id)
+);
+
+CREATE TABLE Enrollment (
+    student_id INT,
+    class_id INT,
+
+    PRIMARY KEY (student_id, class_id),
+
+    CONSTRAINT FK_Enroll_Student
+        FOREIGN KEY (student_id) REFERENCES Student(student_id),
+
+    CONSTRAINT FK_Enroll_Class
+        FOREIGN KEY (class_id) REFERENCES Class(class_id)
+);
+
+CREATE TABLE Schedule (
+    schedule_id INT IDENTITY PRIMARY KEY,
+    class_id INT,
+    day_of_week NVARCHAR(20),
+    start_time TIME,
+    end_time TIME,
+    room_info NVARCHAR(100),
+
+    CONSTRAINT FK_Schedule_Class
+        FOREIGN KEY (class_id) REFERENCES Class(class_id)
+);
+
+CREATE TABLE Attendance (
+    attendance_id INT IDENTITY PRIMARY KEY,
+    schedule_id INT,
+    student_id INT,
+    status NVARCHAR(50),
+    updated_by INT,
+    recorded_at DATETIME DEFAULT GETDATE(),
+
+    CONSTRAINT FK_Att_Schedule
+        FOREIGN KEY (schedule_id) REFERENCES Schedule(schedule_id),
+
+    CONSTRAINT FK_Att_Student
+        FOREIGN KEY (student_id) REFERENCES Student(student_id),
+
+    CONSTRAINT FK_Att_User
+        FOREIGN KEY (updated_by) REFERENCES [User](user_id)
+);
+
+CREATE TABLE Lesson_Material (
+    material_id INT IDENTITY PRIMARY KEY,
+    class_id INT,
+    title NVARCHAR(100),
+    file_url NVARCHAR(255),
+    content_type NVARCHAR(50),
+
+    CONSTRAINT FK_Material_Class
+        FOREIGN KEY (class_id) REFERENCES Class(class_id)
+);
+
+CREATE TABLE Assignment (
+    asm_id INT IDENTITY PRIMARY KEY,
+    class_id INT,
+    title NVARCHAR(100),
+    description NVARCHAR(MAX),
+    file_url NVARCHAR(255),
+    start_time DATETIME,
+    end_time DATETIME,
+
+    CONSTRAINT FK_Assignment_Class
+        FOREIGN KEY (class_id) REFERENCES Class(class_id)
+);
+
+CREATE TABLE Submission (
+    sub_id INT IDENTITY PRIMARY KEY,
+    asm_id INT,
+    student_id INT,
+    file_url NVARCHAR(255),
+    submitted_at DATETIME,
+    status NVARCHAR(50),
+
+    CONSTRAINT FK_Submission_Assignment
+        FOREIGN KEY (asm_id) REFERENCES Assignment(asm_id),
+
+    CONSTRAINT FK_Submission_Student
+        FOREIGN KEY (student_id) REFERENCES Student(student_id),
+
+    CONSTRAINT UQ_Submission UNIQUE (asm_id, student_id)
+);
+
+CREATE TABLE Grade (
+    grade_id INT IDENTITY PRIMARY KEY,
+    sub_id INT UNIQUE,
+    score DECIMAL(4,2),
+    teacher_comment NVARCHAR(MAX),
+    graded_at DATETIME,
+
+    CONSTRAINT FK_Grade_Submission
+        FOREIGN KEY (sub_id) REFERENCES Submission(sub_id)
+);
