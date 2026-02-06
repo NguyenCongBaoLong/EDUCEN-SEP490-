@@ -18,4 +18,15 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+    <Folder Include="Data\" />
+    <Folder Include="Middleware\" />
+    <Folder Include="Tests\" />
+    <Folder Include="Services\" />
+    <Folder Include="Repositories\" />
+    <Folder Include="Profiles\" />
+    <Folder Include="Properties\DTOs\" />
+  </ItemGroup>
+
 </Project>

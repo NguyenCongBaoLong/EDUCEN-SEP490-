@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\FU\\FALL25\\prn232\\projects\\EduCen\\EduCen\\EduCen.csproj": {}
+    "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj": {}
   },
   "projects": {
-    "D:\\FU\\FALL25\\prn232\\projects\\EduCen\\EduCen\\EduCen.csproj": {
+    "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\FU\\FALL25\\prn232\\projects\\EduCen\\EduCen\\EduCen.csproj",
+        "projectUniqueName": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
         "projectName": "EduCen",
-        "projectPath": "D:\\FU\\FALL25\\prn232\\projects\\EduCen\\EduCen\\EduCen.csproj",
+        "projectPath": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
         "packagesPath": "C:\\Users\\dell\\.nuget\\packages\\",
-        "outputPath": "D:\\FU\\FALL25\\prn232\\projects\\EduCen\\EduCen\\obj\\",
+        "outputPath": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\dell\\AppData\\Roaming\\NuGet\\NuGet.Config",
