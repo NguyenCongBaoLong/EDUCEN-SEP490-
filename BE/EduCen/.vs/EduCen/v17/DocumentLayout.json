@@ -7,6 +7,10 @@
       "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\educen.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\controllers\\subjectscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\controllers\\subjectscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\educencontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\educencontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -22,21 +26,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 231,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 15,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "EduCen",
-              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
-              "RelativeDocumentMoniker": "EduCen\\EduCen.csproj",
-              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
-              "RelativeToolTip": "EduCen\\EduCen.csproj",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABAAAABlAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-02-06T20:35:12.646Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
@@ -96,6 +87,32 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "SubjectsController.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\SubjectsController.cs",
+              "RelativeDocumentMoniker": "EduCen\\Controllers\\SubjectsController.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\SubjectsController.cs",
+              "RelativeToolTip": "EduCen\\Controllers\\SubjectsController.cs",
+              "ViewState": "AQIAACsAAAAAAAAAAAAkwDMAAAAkAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-07T14:47:02.9Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "EduCen.csproj",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
+              "RelativeDocumentMoniker": "EduCen\\EduCen.csproj",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
+              "RelativeToolTip": "EduCen\\EduCen.csproj",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABQAAAANAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-02-06T20:35:12.646Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "EduCenContext.cs",
               "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCenContext.cs",
               "RelativeDocumentMoniker": "EduCen\\EduCenContext.cs",
@@ -103,12 +120,11 @@
               "RelativeToolTip": "EduCen\\EduCenContext.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABIAAAAUAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-06T20:27:35.756Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-06T20:27:35.756Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\appsettings.json",
               "RelativeDocumentMoniker": "EduCen\\appsettings.json",
