@@ -1,0 +1,9 @@
+﻿@{
+    ViewData["Title"] = "Home";
+    var username = Context.Session.GetString("Username");
+}
+
+<div class="container mt-5">
+    <h2>Welcome, @username 👋</h2>
+    <p>This is your home page.</p>
+</div>

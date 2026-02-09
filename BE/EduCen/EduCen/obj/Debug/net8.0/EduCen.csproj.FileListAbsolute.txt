@@ -272,3 +272,5 @@ C:\DEFAULT\FPT\SEP-G58\EDUCEN-SEP490-\BE\EduCen\EduCen\obj\Debug\net8.0\EduCen.p
 C:\DEFAULT\FPT\SEP-G58\EDUCEN-SEP490-\BE\EduCen\EduCen\obj\Debug\net8.0\EduCen.genruntimeconfig.cache
 C:\DEFAULT\FPT\SEP-G58\EDUCEN-SEP490-\BE\EduCen\EduCen\obj\Debug\net8.0\ref\EduCen.dll
 C:\DEFAULT\FPT\SEP-G58\EDUCEN-SEP490-\BE\EduCen\EduCen\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+C:\DEFAULT\FPT\SEP-G58\EDUCEN-SEP490-\BE\EduCen\EduCen\obj\Debug\net8.0\EduCen.RazorAssemblyInfo.cache
+C:\DEFAULT\FPT\SEP-G58\EDUCEN-SEP490-\BE\EduCen\EduCen\obj\Debug\net8.0\EduCen.RazorAssemblyInfo.cs
