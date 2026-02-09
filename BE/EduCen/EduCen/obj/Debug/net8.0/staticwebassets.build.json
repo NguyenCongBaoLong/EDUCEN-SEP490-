@@ -1,11 +1,1 @@
-{
-  "Version": 1,
-  "Hash": "QXXXoCWTIWbufYYMafhauOXXDtkd8T/B7gQG1fW59tg=",
-  "Source": "EduCen",
-  "BasePath": "_content/EduCen",
-  "Mode": "Default",
-  "ManifestType": "Build",
-  "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
-  "Assets": []
-}
+{"Version":1,"Hash":"oe8jtNcS9/xiCNR3/wajKfPnPFEYYvEqQJGqUmWpcmk=","Source":"EduCen","BasePath":"_content/EduCen","Mode":"Default","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}

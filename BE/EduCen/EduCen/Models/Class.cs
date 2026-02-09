@@ -7,13 +7,11 @@ public partial class Class
 {
     public int ClassId { get; set; }
 
-    public int? TenantId { get; set; }
-
-    public int? TeacherId { get; set; }
+    public int TeacherId { get; set; }
 
     public int? AssistantId { get; set; }
 
-    public int? SubjectId { get; set; }
+    public int SubjectId { get; set; }
 
     public string? ClassName { get; set; }
 
@@ -31,11 +29,10 @@ public partial class Class
 
     public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
 
-    public virtual Subject? Subject { get; set; }
+    public virtual Subject Subject { get; set; } = null!;
 
-    public virtual Teacher? Teacher { get; set; }
-
-    public virtual Tenant? Tenant { get; set; }
+    public virtual Teacher Teacher { get; set; } = null!;
 
     public virtual ICollection<Student> Students { get; set; } = new List<Student>();
 }
+
