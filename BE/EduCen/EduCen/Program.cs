@@ -4,7 +4,10 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===================== SERVICES =====================
-
+//add swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{});
 // Add MVC
 builder.Services.AddControllersWithViews();
 
@@ -40,11 +43,16 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthorization();
+//Swagger
+app.UseSwagger();
+app.UseSwaggerUI();
+
 
 // ===================== ROUTING =====================
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Auth}/{action=Login}/{id?}");
+app.MapControllers();
 
 app.Run();

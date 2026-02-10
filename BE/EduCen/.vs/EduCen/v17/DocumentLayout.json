@@ -3,20 +3,44 @@
   "WorkspaceRootPath": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\educen.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\educen.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\controllers\\subjectscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\controllers\\subjectscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\educencontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\educencontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\properties\\dtos\\updatesubjectrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\properties\\dtos\\updatesubjectrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\properties\\dtos\\createsubjectrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\properties\\dtos\\createsubjectrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\models\\subject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\models\\subject.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|d:\\fu\\educen-sep490-\\be\\educen\\educen\\educen.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{7C0511E9-0085-43A2-8EFA-6859C6BFF52B}|EduCen\\EduCen.csproj|solutionrelative:educen\\educen.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -26,7 +50,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 231,
-          "SelectedChildIndex": 15,
+          "SelectedChildIndex": 21,
           "Children": [
             {
               "$type": "Bookmark",
@@ -87,52 +111,132 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "UpdateSubjectRequest.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Properties\\DTOs\\UpdateSubjectRequest.cs",
+              "RelativeDocumentMoniker": "EduCen\\Properties\\DTOs\\UpdateSubjectRequest.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Properties\\DTOs\\UpdateSubjectRequest.cs",
+              "RelativeToolTip": "EduCen\\Properties\\DTOs\\UpdateSubjectRequest.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAAwAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T21:04:10.872Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "CreateSubjectRequest.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Properties\\DTOs\\CreateSubjectRequest.cs",
+              "RelativeDocumentMoniker": "EduCen\\Properties\\DTOs\\CreateSubjectRequest.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Properties\\DTOs\\CreateSubjectRequest.cs",
+              "RelativeToolTip": "EduCen\\Properties\\DTOs\\CreateSubjectRequest.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAAvAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T21:01:27.168Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Subject.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Models\\Subject.cs",
+              "RelativeDocumentMoniker": "EduCen\\Models\\Subject.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Models\\Subject.cs",
+              "RelativeToolTip": "EduCen\\Models\\Subject.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAA8AAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T20:55:50.365Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Program.cs",
+              "RelativeDocumentMoniker": "EduCen\\Program.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Program.cs",
+              "RelativeToolTip": "EduCen\\Program.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAADYAAAA3AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T20:26:47.458Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "User.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Models\\User.cs",
+              "RelativeDocumentMoniker": "EduCen\\Models\\User.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Models\\User.cs",
+              "RelativeToolTip": "EduCen\\Models\\User.cs",
+              "ViewState": "AQIAAA0AAAAAAAAAAAA5wAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T20:23:59.06Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "HomeController.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\HomeController.cs",
+              "RelativeDocumentMoniker": "EduCen\\Controllers\\HomeController.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\HomeController.cs",
+              "RelativeToolTip": "EduCen\\Controllers\\HomeController.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T20:23:42.3Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "EduCen\\Controllers\\AuthController.cs",
+              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "EduCen\\Controllers\\AuthController.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-10T20:23:41.199Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
               "Title": "SubjectsController.cs",
               "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\SubjectsController.cs",
               "RelativeDocumentMoniker": "EduCen\\Controllers\\SubjectsController.cs",
               "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\Controllers\\SubjectsController.cs",
               "RelativeToolTip": "EduCen\\Controllers\\SubjectsController.cs",
-              "ViewState": "AQIAACsAAAAAAAAAAAAkwDMAAAAkAAAA",
+              "ViewState": "AQIAAB4AAAAAAAAAAAAYwCEAAAAjAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-07T14:47:02.9Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 9,
               "Title": "EduCen.csproj",
               "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
               "RelativeDocumentMoniker": "EduCen\\EduCen.csproj",
               "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
               "RelativeToolTip": "EduCen\\EduCen.csproj",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABQAAAANAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABgAAAAkAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2026-02-06T20:35:12.646Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "EduCenContext.cs",
-              "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCenContext.cs",
-              "RelativeDocumentMoniker": "EduCen\\EduCenContext.cs",
-              "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCenContext.cs",
-              "RelativeToolTip": "EduCen\\EduCenContext.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABIAAAAUAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-06T20:27:35.756Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\appsettings.json",
               "RelativeDocumentMoniker": "EduCen\\appsettings.json",
               "ToolTip": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\appsettings.json",
               "RelativeToolTip": "EduCen\\appsettings.json",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAA4AAAAAAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAoAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-06T20:20:16.889Z"
+              "WhenOpened": "2026-02-06T20:20:16.889Z",
+              "EditorCaption": ""
             }
           ]
         },

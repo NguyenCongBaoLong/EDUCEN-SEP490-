@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\DEFAULT\\FPT\\SEP-G58\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj": {}
+    "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj": {}
   },
   "projects": {
-    "C:\\DEFAULT\\FPT\\SEP-G58\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj": {
+    "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\DEFAULT\\FPT\\SEP-G58\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
+        "projectUniqueName": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
         "projectName": "EduCen",
-        "projectPath": "C:\\DEFAULT\\FPT\\SEP-G58\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
-        "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-        "outputPath": "C:\\DEFAULT\\FPT\\SEP-G58\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\obj\\",
+        "projectPath": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\EduCen.csproj",
+        "packagesPath": "C:\\Users\\dell\\.nuget\\packages\\",
+        "outputPath": "D:\\FU\\EDUCEN-SEP490-\\BE\\EduCen\\EduCen\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\dell\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -43,8 +39,7 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "9.0.300"
+        }
       },
       "frameworks": {
         "net8.0": {
@@ -65,6 +60,10 @@
               "suppressParent": "All",
               "target": "Package",
               "version": "[8.0.10, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[6.4.0, )"
             }
           },
           "imports": [
@@ -86,7 +85,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.204/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
