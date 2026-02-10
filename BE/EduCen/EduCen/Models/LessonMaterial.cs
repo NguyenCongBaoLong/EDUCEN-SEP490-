@@ -7,7 +7,7 @@ public partial class LessonMaterial
 {
     public int MaterialId { get; set; }
 
-    public int? ClassId { get; set; }
+    public int ClassId { get; set; }
 
     public string? Title { get; set; }
 
@@ -15,5 +15,5 @@ public partial class LessonMaterial
 
     public string? ContentType { get; set; }
 
-    public virtual Class? Class { get; set; }
+    public virtual Class Class { get; set; } = null!;
 }

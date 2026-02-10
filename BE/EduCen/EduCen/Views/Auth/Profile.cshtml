@@ -1,0 +1,34 @@
+﻿@model EduCen.Models.User
+
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div class="container mt-5" style="max-width: 500px;">
+    <h2 class="mb-4">@Model.Username's Profile</h2>
+
+    <p>
+        <strong>Full Name:</strong>
+        @(string.IsNullOrEmpty(Model.FullName) ? "Not updated" : Model.FullName)
+    </p>
+
+    <p>
+        <strong>Account Status:</strong>
+        @Model.AccountStatus
+    </p>
+
+    <p>
+        <strong>Role ID:</strong>
+        @Model.RoleId
+    </p>
+
+    <div class="d-flex gap-2 mt-4">
+        <a asp-action="EditProfile" class="btn btn-outline-primary">
+            Edit Profile
+        </a>
+
+        <a asp-controller="Auth" asp-action="Logout" class="btn btn-outline-danger">
+            Logout
+        </a>
+    </div>
+</div>

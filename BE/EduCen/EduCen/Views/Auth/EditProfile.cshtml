@@ -1,0 +1,33 @@
+﻿@model EduCen.Models.User
+
+@{
+    ViewData["Title"] = "Edit Profile";
+}
+
+<div class="container mt-5" style="max-width: 500px;">
+    <h2 class="mb-4">Edit Profile</h2>
+
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input class="form-control" value="@Model.Username" disabled />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input name="fullName"
+                   class="form-control"
+                   value="@Model.FullName" />
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+                Save Changes
+            </button>
+
+            <a asp-action="Profile" class="btn btn-outline-secondary">
+                Back
+            </a>
+        </div>
+    </form>
+</div>

@@ -7,7 +7,7 @@ public partial class Grade
 {
     public int GradeId { get; set; }
 
-    public int? SubId { get; set; }
+    public int SubId { get; set; }
 
     public decimal? Score { get; set; }
 
@@ -15,5 +15,5 @@ public partial class Grade
 
     public DateTime? GradedAt { get; set; }
 
-    public virtual Submission? Sub { get; set; }
+    public virtual Submission Sub { get; set; } = null!;
 }

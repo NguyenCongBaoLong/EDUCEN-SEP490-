@@ -7,9 +7,9 @@ public partial class Submission
 {
     public int SubId { get; set; }
 
-    public int? AsmId { get; set; }
+    public int AsmId { get; set; }
 
-    public int? StudentId { get; set; }
+    public int StudentId { get; set; }
 
     public string? FileUrl { get; set; }
 
@@ -17,9 +17,9 @@ public partial class Submission
 
     public string? Status { get; set; }
 
-    public virtual Assignment? Asm { get; set; }
+    public virtual Assignment Asm { get; set; } = null!;
 
     public virtual Grade? Grade { get; set; }
 
-    public virtual Student? Student { get; set; }
+    public virtual Student Student { get; set; } = null!;
 }

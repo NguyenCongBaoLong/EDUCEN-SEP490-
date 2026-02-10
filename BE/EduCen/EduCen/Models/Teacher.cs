@@ -15,3 +15,4 @@ public partial class Teacher
 
     public virtual User TeacherNavigation { get; set; } = null!;
 }
+
