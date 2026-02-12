@@ -6,6 +6,8 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Pricing from './pages/Pricing';
 import CenterHome from './pages/center/CenterHome';
+import ClassesManagement from './pages/center/ClassesManagement';
+import ScheduleManagement from './pages/center/ScheduleManagement';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/center" element={<CenterHome />} />
+        <Route path="/center/classes" element={<ClassesManagement />} />
+        <Route path="/center/schedules" element={<ScheduleManagement />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

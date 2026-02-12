@@ -1,0 +1,282 @@
+/* Delete Modal Overlay */
+.delete-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Delete Modal */
+.delete-modal {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Modal Header */
+.delete-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.delete-modal-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.delete-modal-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.delete-modal-close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+/* Modal Body */
+.delete-modal-body {
+    padding: 24px;
+}
+
+/* Warning Section */
+.delete-modal-warning {
+    display: flex;
+    gap: 16px;
+}
+
+.delete-modal-warning-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fee2e2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+}
+
+.delete-modal-warning-content h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.delete-modal-warning-content p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.delete-modal-warning-content strong {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* Modal Footer */
+.delete-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btn-delete-cancel,
+.btn-delete-confirm {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-delete-cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.btn-delete-cancel:hover {
+    background: #e5e7eb;
+}
+
+.btn-delete-confirm {
+    background: #dc2626;
+    color: white;
+}
+
+.btn-delete-confirm:hover {
+    background: #b91c1c;
+}
+
+/* Responsive */
+@media (max-width: 560px) {
+    .delete-modal {
+        width: 95%;
+        margin: 16px;
+    }
+
+    .delete-modal-header,
+    .delete-modal-body,
+    .delete-modal-footer {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .delete-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .btn-delete-cancel,
+    .btn-delete-confirm {
+        width: 100%;
+    }
+}
+
+/* Add Class Modal */
+.add-class-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.add-class-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.add-class-item:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+.add-class-info {
+    flex: 1;
+}
+
+.add-class-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.add-class-code {
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.add-class-name {
+    font-size: 0.875rem;
+    color: #111827;
+    font-weight: 500;
+}
+
+.add-class-teacher {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.add-class-schedule {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.schedule-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #eff6ff;
+    color: #1e40af;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.btn-add-single {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-add-single:hover {
+    background: #2563eb;
+}
+
+.btn-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
