@@ -98,7 +98,7 @@
 
 .class-action-btn.delete:hover {
     background: #FEE2E2;
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 .class-name {
@@ -165,7 +165,7 @@
 
 .teacher-unassigned {
     font-size: 0.875rem;
-    color: #DC2626;
+    color: #3b82f6;
     font-style: italic;
 }
 
@@ -199,7 +199,7 @@
 }
 
 .students-full {
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 .schedule-time {

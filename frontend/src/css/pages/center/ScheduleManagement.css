@@ -25,7 +25,7 @@
     font-weight: 800;
     color: #111827;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -42,7 +42,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.875rem 1.5rem;
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -50,13 +50,13 @@
     font-size: 0.9375rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(220, 38, 38, 0.25);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
     flex-shrink: 0;
 }
 
 .btn-add-class:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.35);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
 }
 
 .btn-add-class:active {
@@ -99,7 +99,7 @@
 
 .btn-nav:hover {
     background: #f3f4f6;
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 .schedule-date-display {
@@ -113,7 +113,7 @@
 }
 
 .schedule-date-display svg {
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 .schedule-filters {
@@ -136,14 +136,14 @@
 }
 
 .filter-select:hover {
-    border-color: #DC2626;
-    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .filter-select:focus {
     outline: none;
-    border-color: #DC2626;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .schedule-view-toggle {
@@ -173,9 +173,9 @@
 }
 
 .btn-view.active {
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
-    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 /* Calendar Content */
@@ -235,8 +235,8 @@
 }
 
 .schedule-day-header.today .schedule-day-date {
-    color: #DC2626;
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    color: #3b82f6;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     width: 36px;
     height: 36px;
@@ -245,7 +245,7 @@
     align-items: center;
     justify-content: center;
     font-size: 1rem;
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .schedule-time-slot {
@@ -282,7 +282,7 @@
 }
 
 .schedule-grid-cell:hover {
-    background: linear-gradient(to right, rgba(220, 38, 38, 0.02) 0%, rgba(220, 38, 38, 0.01) 100%);
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.02) 0%, rgba(59, 130, 246, 0.01) 100%);
 }
 
 .schedule-classes-container {
@@ -350,7 +350,7 @@
 }
 
 .btn-delete-class:hover {
-    background: rgba(220, 38, 38, 0.9);
+    background: rgba(59, 130, 246, 0.9);
     transform: scale(1.1);
 }
 
@@ -525,7 +525,7 @@
 }
 
 .month-day-cell.today .month-day-number {
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     width: 32px;
     height: 32px;

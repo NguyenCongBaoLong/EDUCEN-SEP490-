@@ -132,7 +132,8 @@
 }
 
 .btn-delete-cancel,
-.btn-delete-confirm {
+.btn-delete-confirm,
+.btn-unlock-confirm {
     padding: 10px 20px;
     border-radius: 8px;
     font-size: 0.875rem;
@@ -140,6 +141,7 @@
     cursor: pointer;
     transition: all 0.2s;
     border: none;
+    outline: none;
 }
 
 .btn-delete-cancel {
@@ -158,6 +160,21 @@
 
 .btn-delete-confirm:hover {
     background: #b91c1c;
+}
+
+.btn-unlock-confirm {
+    background: #059669;
+    color: white;
+}
+
+.btn-unlock-confirm:hover {
+    background: #047857;
+}
+
+.btn-unlock-confirm:focus,
+.btn-delete-confirm:focus,
+.btn-delete-cancel:focus {
+    outline: none;
 }
 
 /* Responsive */

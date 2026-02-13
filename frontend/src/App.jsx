@@ -8,6 +8,9 @@ import Pricing from './pages/Pricing';
 import CenterHome from './pages/center/CenterHome';
 import ClassesManagement from './pages/center/ClassesManagement';
 import ScheduleManagement from './pages/center/ScheduleManagement';
+import StaffManagement from './pages/center/StaffManagement';
+import StudentManagement from './pages/center/StudentManagement';
+import UserProfile from './pages/center/UserProfile';
 
 function App() {
   return (
@@ -22,6 +25,9 @@ function App() {
         <Route path="/center" element={<CenterHome />} />
         <Route path="/center/classes" element={<ClassesManagement />} />
         <Route path="/center/schedules" element={<ScheduleManagement />} />
+        <Route path="/center/staff" element={<StaffManagement />} />
+        <Route path="/center/students" element={<StudentManagement />} />
+        <Route path="/profile" element={<UserProfile />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>

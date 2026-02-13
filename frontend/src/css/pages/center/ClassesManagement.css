@@ -40,7 +40,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.875rem 1.5rem;
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
     border-radius: 10px;
@@ -48,13 +48,13 @@
     font-size: 0.9375rem;
     cursor: pointer;
     transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
     flex-shrink: 0;
 }
 
 .btn-create-class:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
 }
 
 .classes-filters {
@@ -79,8 +79,8 @@
 }
 
 .filter-search:focus-within {
-    border-color: #DC2626;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .filter-search svg {
@@ -116,8 +116,8 @@
 
 .filter-select:focus {
     outline: none;
-    border-color: #DC2626;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .classes-overview {
@@ -157,21 +157,21 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
     transition: all 0.3s;
     z-index: 50;
 }
 
 .btn-create-floating:hover {
     transform: translateY(-4px) scale(1.1);
-    box-shadow: 0 12px 32px rgba(220, 38, 38, 0.4);
+    box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4);
 }
 
 /* Responsive */

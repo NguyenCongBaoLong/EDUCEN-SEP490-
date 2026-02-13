@@ -8,7 +8,7 @@ const Sidebar = () => {
     const menuItems = [
         { path: '/center/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
         { path: '/center/classes', icon: GraduationCap, label: 'Lớp học' },
-        { path: '/center/teachers', icon: Users, label: 'Giáo viên' },
+        { path: '/center/staff', icon: Users, label: 'Nhân viên' },
         { path: '/center/students', icon: BookOpen, label: 'Học sinh' },
         { path: '/center/schedules', icon: Calendar, label: 'Lịch học' },
         { path: '/center/settings', icon: Settings, label: 'Cài đặt' },

@@ -20,7 +20,7 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    color: #DC2626;
+    color: #3b82f6;
     font-weight: 700;
     font-size: 1.25rem;
     margin-bottom: 0.25rem;
@@ -61,7 +61,7 @@
 
 .sidebar-nav-item.active {
     background: #FEE2E2;
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 .sidebar-footer {
@@ -131,7 +131,7 @@
 
 .sidebar-logout:hover {
     background: #FEE2E2;
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 /* Scrollbar styling */

@@ -75,7 +75,7 @@
 
 .modal-close:hover {
     background: #FEE2E2;
-    color: #DC2626;
+    color: #3b82f6;
 }
 
 .modal-form {
@@ -111,12 +111,35 @@
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #DC2626;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-group input::placeholder {
     color: #9ca3af;
+}
+
+/* Error states */
+.form-group input.input-error,
+.form-group select.input-error,
+.form-group textarea.input-error {
+    border-color: #dc2626;
+    background: #fef2f2;
+}
+
+.form-group input.input-error:focus,
+.form-group select.input-error:focus,
+.form-group textarea.input-error:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.error-message {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: #dc2626;
+    font-weight: 500;
 }
 
 /* Input with button */
@@ -131,9 +154,9 @@
 
 .btn-check-teacher {
     padding: 0.75rem 1rem;
-    border: 2px solid #DC2626;
+    border: 2px solid #3b82f6;
     background: white;
-    color: #DC2626;
+    color: #3b82f6;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
@@ -144,7 +167,7 @@
 }
 
 .btn-check-teacher:hover {
-    background: #DC2626;
+    background: #3b82f6;
     color: white;
 }
 
@@ -212,13 +235,13 @@
 }
 
 .btn-submit {
-    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
 }
 
 .btn-submit:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 /* Scrollbar styling */
@@ -395,7 +418,7 @@
 }
 
 .btn-remove-slot:hover {
-    background: #dc2626;
+    background: #3b82f6;
     transform: translateY(-1px);
 }
 
