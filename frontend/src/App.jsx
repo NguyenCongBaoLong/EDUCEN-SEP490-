@@ -7,30 +7,37 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Pricing from './pages/Pricing';
 import CenterHome from './pages/center/CenterHome';
 import ClassesManagement from './pages/center/ClassesManagement';
+import ClassDetail from './pages/center/ClassDetail';
 import ScheduleManagement from './pages/center/ScheduleManagement';
 import StaffManagement from './pages/center/StaffManagement';
 import StudentManagement from './pages/center/StudentManagement';
 import UserProfile from './pages/center/UserProfile';
+import AdminDashboard from './pages/center/AdminDashboard';
+import { ScheduleProvider } from './context/ScheduleContext';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/center" element={<CenterHome />} />
-        <Route path="/center/classes" element={<ClassesManagement />} />
-        <Route path="/center/schedules" element={<ScheduleManagement />} />
-        <Route path="/center/staff" element={<StaffManagement />} />
-        <Route path="/center/students" element={<StudentManagement />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </BrowserRouter>
+    <ScheduleProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/center" element={<CenterHome isAdmin={true} />} />
+          <Route path="/center/classes" element={<ClassesManagement />} />
+          <Route path="/center/classes/:classId" element={<ClassDetail />} />
+          <Route path="/center/schedules" element={<ScheduleManagement />} />
+          <Route path="/center/staff" element={<StaffManagement />} />
+          <Route path="/center/students" element={<StudentManagement />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/center/dashboard" element={<AdminDashboard />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </BrowserRouter>
+    </ScheduleProvider>
   );
 }
 

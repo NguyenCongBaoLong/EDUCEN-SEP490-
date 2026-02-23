@@ -1,0 +1,798 @@
+/* ─── Layout ─────────────────────────────────────────── */
+.class-detail {
+    display: flex;
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.cd-main {
+    margin-left: 260px;
+    flex: 1;
+    padding: 2rem 2.5rem;
+    max-width: calc(100vw - 260px);
+}
+
+/* ─── Breadcrumb ─────────────────────────────────────── */
+.cd-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+
+.cd-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.cd-back:hover {
+    color: #2563eb;
+}
+
+.cd-breadcrumb-sep {
+    color: #d1d5db;
+}
+
+.cd-breadcrumb-current {
+    color: #111827;
+    font-weight: 600;
+}
+
+/* ─── Page Header ────────────────────────────────────── */
+.cd-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.cd-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.375rem;
+}
+
+.cd-title-row h1 {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+}
+
+.cd-status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.cd-status-badge.active {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.cd-status-badge.inactive {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.cd-title-meta {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.cd-header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.cd-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1.125rem;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.cd-btn-outline:hover {
+    border-color: #9ca3af;
+    background: #f9fafb;
+}
+
+.cd-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1.125rem;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.cd-btn-primary:hover {
+    background: #1d4ed8;
+}
+
+/* ─── Info Cards ─────────────────────────────────────── */
+.cd-info-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.cd-info-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+}
+
+.cd-info-card-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-bottom: 0.625rem;
+}
+
+.cd-info-card-value {
+    font-size: 1.1875rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.cd-info-card-sub {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* ─── Content Grid ───────────────────────────────────── */
+.cd-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+/* ─── Card ───────────────────────────────────────────── */
+.cd-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.cd-card:last-child {
+    margin-bottom: 0;
+}
+
+.cd-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.cd-card-header h3 {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+/* ─── Add student button ─────────────────────────────── */
+.cd-btn-add-student {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4rem 0.875rem;
+    border: none;
+    border-radius: 7px;
+    background: #2563eb;
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.cd-btn-add-student:hover {
+    background: #1d4ed8;
+}
+
+/* ─── Roster table ───────────────────────────────────── */
+.cd-roster-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.cd-roster-table th {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    text-align: left;
+    padding: 0 0.75rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.cd-roster-table td {
+    padding: 0.875rem 0.75rem;
+    border-bottom: 1px solid #f9fafb;
+    vertical-align: middle;
+}
+
+.cd-roster-table tr:last-child td {
+    border-bottom: none;
+}
+
+.cd-student-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cd-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cd-student-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.9rem;
+}
+
+.cd-student-id {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 1px;
+}
+
+.cd-last-attended {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Attendance bar */
+.cd-attendance-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-width: 140px;
+}
+
+.cd-attendance-track {
+    flex: 1;
+    height: 6px;
+    background: #f3f4f6;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.cd-attendance-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.cd-attendance-pct {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    width: 36px;
+    text-align: right;
+}
+
+/* Grade badge */
+.cd-grade-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+/* Remove btn */
+.cd-remove-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.cd-remove-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+/* View all */
+.cd-view-all {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    background: none;
+    color: #2563eb;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    margin-top: 0.5rem;
+    border-top: 1px solid #f3f4f6;
+    transition: color 0.15s;
+}
+
+.cd-view-all:hover {
+    color: #1d4ed8;
+}
+
+.cd-text-btn {
+    border: none;
+    background: none;
+    color: #2563eb;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.cd-text-btn:hover {
+    color: #1d4ed8;
+}
+
+/* ─── Activity Feed ──────────────────────────────────── */
+.cd-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cd-activity-item {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+}
+
+.cd-activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.cd-activity-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.125rem;
+}
+
+.cd-activity-desc {
+    font-size: 0.8125rem;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.cd-activity-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* ─── Staff Panel ────────────────────────────────────── */
+.cd-staff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cd-staff-item {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 10px;
+}
+
+.cd-staff-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cd-staff-avatar.assistant {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.cd-staff-role {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ef4444;
+    margin-bottom: 0.2rem;
+}
+
+.cd-staff-avatar.assistant+.cd-staff-info .cd-staff-role {
+    color: #6366f1;
+}
+
+.cd-staff-name {
+    font-weight: 700;
+    color: #111827;
+    font-size: 0.9375rem;
+}
+
+.cd-staff-sub {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.cd-staff-actions {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.cd-staff-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
+    background: white;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.cd-staff-btn:hover {
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+/* ─── Overview Card ──────────────────────────────────── */
+.cd-overview-stats {
+    margin-bottom: 1.25rem;
+}
+
+.cd-overview-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.cd-overview-row:last-child {
+    border-bottom: none;
+}
+
+.cd-overview-val {
+    font-weight: 700;
+    color: #111827;
+}
+
+.cd-overview-val.green {
+    color: #16a34a;
+}
+
+.cd-progress-wrap {
+    margin-bottom: 1.25rem;
+}
+
+.cd-progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.cd-progress-track {
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.cd-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #6366f1);
+    border-radius: 4px;
+    transition: width 0.4s;
+}
+
+.cd-next-session {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    background: #f0f9ff;
+    border-radius: 8px;
+    padding: 0.625rem 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.cd-btn-attendance {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 10px;
+    background: #2563eb;
+    color: white;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.15s;
+}
+
+.cd-btn-attendance:hover {
+    background: #1d4ed8;
+}
+
+/* ─── Add Student Modal ──────────────────────────────── */
+.cd-add-modal {
+    background: white;
+    border-radius: 16px;
+    width: 540px;
+    max-width: 95vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.cd-add-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #f3f4f6;
+    padding: 0 1.5rem;
+}
+
+.cd-add-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.75rem 1.125rem;
+    border: none;
+    background: none;
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+}
+
+.cd-add-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+.cd-add-hint {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    margin-bottom: 0.875rem;
+}
+
+.cd-search-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    padding: 0.5rem 0.875rem;
+    margin-bottom: 1rem;
+    color: #9ca3af;
+}
+
+.cd-search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 0.9rem;
+    color: #111827;
+}
+
+.cd-search-box button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #9ca3af;
+    display: flex;
+}
+
+.cd-add-empty {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.875rem;
+    padding: 2rem 0;
+}
+
+.cd-student-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.cd-student-pick-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem;
+    border: 1px solid #f3f4f6;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+
+.cd-student-pick-item:hover {
+    background: #f9fafb;
+}
+
+.cd-pick-info {
+    flex: 1;
+}
+
+.cd-btn-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.375rem 0.875rem;
+    border: none;
+    border-radius: 7px;
+    background: #dbeafe;
+    color: #2563eb;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.cd-btn-pick:hover {
+    background: #2563eb;
+    color: white;
+}
+
+/* ─── Excel Upload ───────────────────────────────────── */
+.cd-excel-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cd-excel-drop {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #9ca3af;
+}
+
+.cd-excel-drop:hover,
+.cd-excel-drop.has-file {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.cd-excel-icon {
+    display: block;
+    margin: 0 auto 0.875rem;
+    color: #9ca3af;
+}
+
+.cd-excel-icon.ok {
+    color: #16a34a;
+}
+
+.cd-excel-title {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.cd-excel-filename {
+    font-weight: 700;
+    color: #16a34a;
+    margin-bottom: 0.25rem;
+}
+
+.cd-excel-hint {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+}
+
+.cd-excel-template {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+}
+
+.cd-excel-template a {
+    color: #2563eb;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cd-excel-template a:hover {
+    text-decoration: underline;
+}

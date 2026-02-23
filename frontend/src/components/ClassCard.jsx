@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { Edit, Trash2, User, Users } from 'lucide-react';
 import PropTypes from 'prop-types';
+import { useNavigate } from 'react-router-dom';
 import '../css/components/ClassCard.css';
 
 const ClassCard = ({ classData, onEdit, onDelete }) => {
     const [isDeleting, setIsDeleting] = useState(false);
+    const navigate = useNavigate();
 
     const handleDelete = () => {
         onDelete(classData);
+    };
+
+    const handleCardClick = () => {
+        navigate(`/center/classes/${classData.id}`);
     };
 
     const getSubjectColor = (subject) => {
@@ -23,7 +29,7 @@ const ClassCard = ({ classData, onEdit, onDelete }) => {
     const isFull = classData.currentStudents >= classData.maxStudents;
 
     return (
-        <div className={`class-card ${isDeleting ? 'deleting' : ''}`}>
+        <div className={`class-card ${isDeleting ? 'deleting' : ''}`} onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             <div className="class-card-header">
                 <span className={`class-subject-badge ${getSubjectColor(classData.subject)}`}>
                     {classData.subject}
@@ -31,15 +37,15 @@ const ClassCard = ({ classData, onEdit, onDelete }) => {
                 <div className="class-card-actions">
                     <button
                         className="class-action-btn edit"
-                        onClick={() => onEdit(classData)}
-                        title="Edit class"
+                        onClick={(e) => { e.stopPropagation(); onEdit(classData); }}
+                        title="Chỉnh sửa lớp"
                     >
                         <Edit size={16} />
                     </button>
                     <button
                         className="class-action-btn delete"
-                        onClick={handleDelete}
-                        title="Delete class"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                        title="Xóa lớp"
                     >
                         <Trash2 size={16} />
                     </button>

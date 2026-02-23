@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, LogOut, Home, ChevronLeft } from 'lucide-react';
 import '../css/components/Sidebar.css';
 
 const Sidebar = () => {
@@ -11,7 +11,7 @@ const Sidebar = () => {
         { path: '/center/staff', icon: Users, label: 'Nhân viên' },
         { path: '/center/students', icon: BookOpen, label: 'Học sinh' },
         { path: '/center/schedules', icon: Calendar, label: 'Lịch học' },
-        { path: '/center/settings', icon: Settings, label: 'Cài đặt' },
+
     ];
 
     const handleLogout = () => {
@@ -30,6 +30,13 @@ const Sidebar = () => {
             </div>
 
             <nav className="sidebar-nav">
+                {/* Back to Center Home */}
+                <Link to="/center" className="sidebar-back-link">
+                    <ChevronLeft size={16} />
+                    <span>Trang chủ trung tâm</span>
+                </Link>
+                <div className="sidebar-divider" />
+
                 {menuItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname === item.path;

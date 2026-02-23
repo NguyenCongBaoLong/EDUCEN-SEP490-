@@ -3,87 +3,17 @@ import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, Ale
 import Sidebar from '../../components/Sidebar';
 import '../../css/pages/center/ScheduleManagement.css';
 import '../../css/components/DeleteModal.css';
+import { useSchedule } from '../../context/ScheduleContext';
 
 const ScheduleManagement = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState('week'); // day, week, month
+    const [viewMode, setViewMode] = useState('week');
     const [teacherFilter, setTeacherFilter] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [deleteModal, setDeleteModal] = useState({ show: false, classItem: null });
 
-    // Mock data for scheduled classes - can have multiple classes in same slot
-    const [scheduledClasses, setScheduledClasses] = useState([
-        {
-            id: 1,
-            code: 'TOÁN-101',
-            name: 'Đại Số Nâng Cao',
-            teacher: 'Thầy Minh',
-            day: 1, // Monday (1 = Monday, 0 = Sunday)
-            startTime: '09:00',
-            endTime: '11:00',
-            color: '#3b82f6'
-        },
-        {
-            id: 2,
-            code: 'LÝ-202',
-            name: 'Vật Lý Lượng Tử',
-            teacher: null,
-            day: 2, // Tuesday
-            startTime: '09:00',
-            endTime: '11:00',
-            color: '#dc2626'
-        },
-        {
-            id: 3,
-            code: 'HÓA-105',
-            name: 'Hóa Hữu Cơ Thí Nghiệm',
-            teacher: 'Cô Hương',
-            day: 2, // Tuesday - Same day, overlapping time
-            startTime: '10:00',
-            endTime: '12:00',
-            color: '#f59e0b'
-        },
-        {
-            id: 4,
-            code: 'VĂN-300',
-            name: 'Văn Học Việt Nam',
-            teacher: 'Cô Hà',
-            day: 4, // Thursday
-            startTime: '09:00',
-            endTime: '11:00',
-            color: '#8b5cf6'
-        },
-        {
-            id: 5,
-            code: 'SINH-101',
-            name: 'Sinh Học Cơ Bản',
-            teacher: 'Thầy Nam',
-            day: 3, // Wednesday
-            startTime: '13:00',
-            endTime: '15:00',
-            color: '#10b981'
-        },
-        {
-            id: 6,
-            code: 'ANH-201',
-            name: 'IELTS Writing',
-            teacher: 'Cô Lan',
-            day: 6, // Saturday
-            startTime: '09:00',
-            endTime: '11:00',
-            color: '#06b6d4'
-        },
-        {
-            id: 7,
-            code: 'TOÁN-205',
-            name: 'Luyện Thi THPT QG',
-            teacher: 'Thầy Đức',
-            day: 0, // Sunday
-            startTime: '14:00',
-            endTime: '16:00',
-            color: '#ec4899'
-        }
-    ]);
+    // Use shared schedule context (synced with CenterHome)
+    const { scheduledClasses, setScheduledClasses } = useSchedule();
 
     // Mock data for unscheduled classes (with pre-set schedules)
     const unscheduledClasses = [
