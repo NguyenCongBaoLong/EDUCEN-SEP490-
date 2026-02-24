@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using EducenAPI.Models;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Linq;
@@ -103,24 +102,23 @@ namespace EducenAPI.Controllers
             return NoContent();
         }
 
-        // GET: api/Subjects/test-db
-        //test DB connection
-        //[HttpGet("test-db")]
-        //public IActionResult TestDbConnection()
-        //{
-        //    try
-        //    {
-        //        _context.Database.OpenConnection();
-        //        _context.Database.CloseConnection();
+        
+       [HttpGet("test-db")]
+        public IActionResult TestDbConnection()
+        {
+            try
+            {
+                _context.Database.OpenConnection();
+                _context.Database.CloseConnection();
 
-        //        return Ok("Database connection successful.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500,
-        //            $"Database connection failed: {ex.Message}");
-        //    }
-        //}
+                return Ok("Database connection successful.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500,
+                    $"Database connection failed: {ex.Message}");
+            }
+        }
     }
 
 
