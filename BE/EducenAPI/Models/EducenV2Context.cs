@@ -15,33 +15,21 @@ public partial class EducenV2Context : DbContext
     {
     }
 
-    public virtual DbSet<Assignment> Assignments { get; set; }
+    public virtual DbSet<Assignment> Assignments { get; set; } = null!;
+    public virtual DbSet<Assistant> Assistants { get; set; } = null!;
+    public virtual DbSet<Attendance> Attendances { get; set; } = null!;
+    public virtual DbSet<Class> Classes { get; set; } = null!;
+    public virtual DbSet<Grade> Grades { get; set; } = null!;
+    public virtual DbSet<LessonMaterial> LessonMaterials { get; set; } = null!;
+    public virtual DbSet<Parent> Parents { get; set; } = null!;
+    public virtual DbSet<Role> Roles { get; set; } = null!;
+    public virtual DbSet<Schedule> Schedules { get; set; } = null!;
+    public virtual DbSet<Student> Students { get; set; } = null!;
+    public virtual DbSet<Subject> Subjects { get; set; } = null!;
+    public virtual DbSet<Submission> Submissions { get; set; } = null!;
+    public virtual DbSet<Teacher> Teachers { get; set; } = null!;
+    public virtual DbSet<User> Users { get; set; } = null!;
 
-    public virtual DbSet<Assistant> Assistants { get; set; }
-
-    public virtual DbSet<Attendance> Attendances { get; set; }
-
-    public virtual DbSet<Class> Classes { get; set; }
-
-    public virtual DbSet<Grade> Grades { get; set; }
-
-    public virtual DbSet<LessonMaterial> LessonMaterials { get; set; }
-
-    public virtual DbSet<Parent> Parents { get; set; }
-
-    public virtual DbSet<Role> Roles { get; set; }
-
-    public virtual DbSet<Schedule> Schedules { get; set; }
-
-    public virtual DbSet<Student> Students { get; set; }
-
-    public virtual DbSet<Subject> Subjects { get; set; }
-
-    public virtual DbSet<Submission> Submissions { get; set; }
-
-    public virtual DbSet<Teacher> Teachers { get; set; }
-
-    public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:MyDatabase");
