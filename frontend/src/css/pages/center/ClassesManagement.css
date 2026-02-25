@@ -219,3 +219,266 @@
         right: 1.5rem;
     }
 }
+
+/* ── TABS ─────────────────────────────────────────────────────────────────── */
+.cm-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 1.25rem;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0;
+}
+
+.cm-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    border: none;
+    background: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+
+.cm-tab:hover {
+    color: #3b82f6;
+    background: #f0f6ff;
+}
+
+.cm-tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    background: #eff6ff;
+}
+
+.cm-tab-badge {
+    background: #e5e7eb;
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    min-width: 22px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.cm-tab.active .cm-tab-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+/* ── SUBJECTS SECTION ─────────────────────────────────────────────────────── */
+.subjects-section {
+    margin-top: 1.5rem;
+}
+
+.subjects-search-bar {
+    margin-bottom: 1.5rem;
+}
+
+.subjects-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.subjects-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+}
+
+.subjects-table thead {
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.subjects-table th {
+    padding: 0.875rem 1.25rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.subjects-table td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    vertical-align: middle;
+}
+
+.subjects-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.subjects-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.subject-idx {
+    color: #9ca3af;
+    font-weight: 600;
+    width: 48px;
+}
+
+.subject-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.subject-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    color: #6c63ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.subject-name {
+    font-weight: 600;
+    color: #111827;
+}
+
+.subject-desc {
+    color: #6b7280;
+    max-width: 400px;
+}
+
+.no-desc {
+    color: #d1d5db;
+    font-style: italic;
+    font-size: 0.875rem;
+}
+
+.subject-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-subject-edit,
+.btn-subject-delete {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-subject-edit {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.btn-subject-edit:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.btn-subject-delete {
+    background: #fff5f5;
+    color: #ef4444;
+}
+
+.btn-subject-delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Loading / Error / Empty states */
+.subjects-loading,
+.subjects-error,
+.subjects-empty {
+    background: white;
+    border: 2px dashed #e5e7eb;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.subjects-loading p,
+.subjects-error p {
+    color: #6b7280;
+}
+
+.subjects-empty svg {
+    color: #d1d5db;
+}
+
+.subjects-empty h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #374151;
+    margin: 0;
+}
+
+.subjects-empty p {
+    color: #9ca3af;
+    margin: 0;
+}
+
+.loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.btn-retry {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    border: 1.5px solid #3b82f6;
+    border-radius: 8px;
+    background: none;
+    color: #3b82f6;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-retry:hover {
+    background: #eff6ff;
+}
+
+.delete-subject-error {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 0.875rem;
+}

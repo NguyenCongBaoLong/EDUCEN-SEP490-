@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import TeacherAssignModal from './TeacherAssignModal';
 import '../css/components/CreateClassModal.css';
 
-const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingClasses = [] }) => {
+const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingClasses = [], subjects = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         subject: '',
@@ -599,12 +599,24 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                 required
                             >
                                 <option value="">Chọn môn học</option>
-                                <option value="MATHEMATICS">Toán học</option>
-                                <option value="SCIENCE">Khoa học</option>
-                                <option value="ENGLISH">Tiếng Anh</option>
-                                <option value="PHYSICS">Vật lý</option>
-                                <option value="CHEMISTRY">Hóa học</option>
-                                <option value="BIOLOGY">Sinh học</option>
+                                {subjects.length > 0
+                                    ? subjects.map(s => (
+                                        <option key={s.subjectId} value={s.subjectName}>
+                                            {s.subjectName}
+                                        </option>
+                                    ))
+                                    : (
+                                        // Fallback nếu chưa có subjects từ API
+                                        <>
+                                            <option value="MATHEMATICS">Toán học</option>
+                                            <option value="SCIENCE">Khoa học</option>
+                                            <option value="ENGLISH">Tiếng Anh</option>
+                                            <option value="PHYSICS">Vật lý</option>
+                                            <option value="CHEMISTRY">Hóa học</option>
+                                            <option value="BIOLOGY">Sinh học</option>
+                                        </>
+                                    )
+                                }
                             </select>
                         </div>
 

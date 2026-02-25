@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import '../css/components/ClassCard.css';
 
-const ClassCard = ({ classData, onEdit, onDelete }) => {
+const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '/center/classes' }) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
 
@@ -13,7 +13,7 @@ const ClassCard = ({ classData, onEdit, onDelete }) => {
     };
 
     const handleCardClick = () => {
-        navigate(`/center/classes/${classData.id}`);
+        navigate(`${basePath}/${classData.id}`);
     };
 
     const getSubjectColor = (subject) => {
@@ -34,22 +34,24 @@ const ClassCard = ({ classData, onEdit, onDelete }) => {
                 <span className={`class-subject-badge ${getSubjectColor(classData.subject)}`}>
                     {classData.subject}
                 </span>
-                <div className="class-card-actions">
-                    <button
-                        className="class-action-btn edit"
-                        onClick={(e) => { e.stopPropagation(); onEdit(classData); }}
-                        title="Chỉnh sửa lớp"
-                    >
-                        <Edit size={16} />
-                    </button>
-                    <button
-                        className="class-action-btn delete"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-                        title="Xóa lớp"
-                    >
-                        <Trash2 size={16} />
-                    </button>
-                </div>
+                {!readOnly && (
+                    <div className="class-card-actions">
+                        <button
+                            className="class-action-btn edit"
+                            onClick={(e) => { e.stopPropagation(); onEdit(classData); }}
+                            title="Chỉnh sửa lớp"
+                        >
+                            <Edit size={16} />
+                        </button>
+                        <button
+                            className="class-action-btn delete"
+                            onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+                            title="Xóa lớp"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                )}
             </div>
 
             <h3 className="class-name">{classData.name}</h3>
@@ -124,8 +126,10 @@ ClassCard.propTypes = {
         maxStudents: PropTypes.number.isRequired,
         schedule: PropTypes.string.isRequired,
     }).isRequired,
-    onEdit: PropTypes.func.isRequired,
-    onDelete: PropTypes.func.isRequired,
+    onEdit: PropTypes.func,
+    onDelete: PropTypes.func,
+    readOnly: PropTypes.bool,
+    basePath: PropTypes.string,
 };
 
 export default ClassCard;

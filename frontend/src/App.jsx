@@ -13,6 +13,9 @@ import StaffManagement from './pages/center/StaffManagement';
 import StudentManagement from './pages/center/StudentManagement';
 import UserProfile from './pages/center/UserProfile';
 import AdminDashboard from './pages/center/AdminDashboard';
+import TeacherClasses from './pages/teacher/TeacherClasses';
+import TeacherClassDetail from './pages/teacher/TeacherClassDetail';
+import TeacherSchedule from './pages/teacher/TeacherSchedule';
 import { ScheduleProvider } from './context/ScheduleContext';
 
 function App() {
@@ -34,6 +37,9 @@ function App() {
           <Route path="/center/students" element={<StudentManagement />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="/center/dashboard" element={<AdminDashboard />} />
+          <Route path="/teacher/classes" element={<TeacherClasses />} />
+          <Route path="/teacher/classes/:classId" element={<TeacherClassDetail />} />
+          <Route path="/teacher/schedules" element={<TeacherSchedule />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
