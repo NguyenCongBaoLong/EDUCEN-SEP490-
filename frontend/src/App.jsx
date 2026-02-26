@@ -16,6 +16,9 @@ import AdminDashboard from './pages/center/AdminDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
 import TeacherClassDetail from './pages/teacher/TeacherClassDetail';
 import TeacherSchedule from './pages/teacher/TeacherSchedule';
+import TeacherAssignments from './pages/teacher/TeacherAssignments';
+import AssignmentGrading from './pages/teacher/AssignmentGrading';
+import TeacherPerformanceReport from './pages/teacher/TeacherPerformanceReport';
 import { ScheduleProvider } from './context/ScheduleContext';
 
 function App() {
@@ -40,6 +43,9 @@ function App() {
           <Route path="/teacher/classes" element={<TeacherClasses />} />
           <Route path="/teacher/classes/:classId" element={<TeacherClassDetail />} />
           <Route path="/teacher/schedules" element={<TeacherSchedule />} />
+          <Route path="/teacher/assignments" element={<TeacherAssignments />} />
+          <Route path="/teacher/assignments/:assignmentId/grade" element={<AssignmentGrading />} />
+          <Route path="/teacher/performance" element={<TeacherPerformanceReport />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

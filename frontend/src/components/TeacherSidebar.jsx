@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, Calendar, ClipboardList, LogOut, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Calendar, ClipboardList, LogOut, ChevronLeft, BarChart2 } from 'lucide-react';
 import '../css/components/Sidebar.css';
 
 const TeacherSidebar = () => {
@@ -9,6 +9,7 @@ const TeacherSidebar = () => {
         { path: '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
         { path: '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
         { path: '/teacher/assignments', icon: ClipboardList, label: 'Bài tập' },
+        { path: '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
     ];
 
     return (

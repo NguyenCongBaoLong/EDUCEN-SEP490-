@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-    ChevronLeft, Calendar, Clock,
+    ChevronLeft, Calendar, Clock, ChevronRight,
     Search, X,
     CheckCircle, UserCheck, CalendarClock,
-    MessageSquare, Pencil, Lock
+    MessageSquare, Pencil, Lock, Edit2,
+    FileText, Download, Plus, PlayCircle, MoreVertical, Trash2
 } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import AttendanceModal from '../../components/AttendanceModal';
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
+import UploadMaterialModal from '../../components/UploadMaterialModal';
+import EditMaterialModal from '../../components/EditMaterialModal';
+import DeleteMaterialModal from '../../components/DeleteMaterialModal';
+import MaterialDetailModal from '../../components/MaterialDetailModal';
 import '../../css/pages/center/ClassDetail.css';
 import '../../css/components/AttendanceModal.css';
 
@@ -46,6 +51,13 @@ const TEACHER_CLASSES_DATA = {
             { id: 'ST-003', name: 'Lê Minh Cường', avatar: 'LC', attendance: 98, lastAttended: '12/10/2023', grade: 'A+' },
             { id: 'ST-004', name: 'Phạm Thị Dung', avatar: 'PD', attendance: 76, lastAttended: '10/10/2023', grade: 'B' },
             { id: 'ST-005', name: 'Hoàng Văn Em', avatar: 'HE', attendance: 90, lastAttended: '12/10/2023', grade: 'A-' },
+            { id: 'ST-006', name: 'Vũ Minh Thu', avatar: 'VT', attendance: 85, lastAttended: '12/10/2023', grade: 'B' },
+            { id: 'ST-007', name: 'Đặng Quốc Huy', avatar: 'DH', attendance: 92, lastAttended: '12/10/2023', grade: 'A' },
+            { id: 'ST-008', name: 'Lý Thanh Tùng', avatar: 'LT', attendance: 78, lastAttended: '12/10/2023', grade: 'C+' },
+            { id: 'ST-009', name: 'Đỗ Thùy Linh', avatar: 'DL', attendance: 96, lastAttended: '12/10/2023', grade: 'A+' },
+            { id: 'ST-010', name: 'Bùi Thế Anh', avatar: 'BA', attendance: 88, lastAttended: '12/10/2023', grade: 'B+' },
+            { id: 'ST-011', name: 'Trịnh Bảo Ngọc', avatar: 'BN', attendance: 91, lastAttended: '12/10/2023', grade: 'A-' },
+            { id: 'ST-012', name: 'Phan Tấn Phát', avatar: 'PP', attendance: 84, lastAttended: '12/10/2023', grade: 'B' },
         ],
         sessions: [
             { scheduleId: 1, date: '04/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00' },
@@ -67,6 +79,12 @@ const TEACHER_CLASSES_DATA = {
         ],
         classesCompleted: 8,
         totalClasses: 10,
+        materials: [
+            { id: 1, name: 'Slide Bài 1 - Giới thiệu.pdf', size: '2.4 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Tài liệu giới thiệu về phương trình bậc hai' },
+            { id: 2, name: 'Bài tập trắc nghiệm C1.docx', size: '1.1 MB', uploadDate: '05/09/2023', type: 'word', description: 'Gồm 20 câu dễ' },
+            { id: 3, name: 'Video hướng dẫn giải PT.mp4', size: '45.2 MB', uploadDate: '15/09/2023', type: 'video' },
+            { id: 4, name: 'Đề kiểm tra 15p.pdf', size: '850 KB', uploadDate: '20/09/2023', type: 'pdf' }
+        ]
     },
     102: {
         id: 102,
@@ -153,20 +171,95 @@ const TeacherClassDetail = () => {
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
 
+    // Tab State
+    const [activeTab, setActiveTab] = useState('overview');
+
+    // Pagination for students tab
+    const [studentPage, setStudentPage] = useState(1);
+    const studentsPerPage = 10;
+
+    // Manage class materials state locally so we can update it
+    const [materials, setMaterials] = useState(classData.materials || []);
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+    // For Delete
+    const [deleteMaterialId, setDeleteMaterialId] = useState(null);
+
+    // For Edit
+    const [editMaterial, setEditMaterial] = useState(null);
+
+    // For Detail View
+    const [detailMaterial, setDetailMaterial] = useState(null);
+
     const [attendanceOpen, setAttendanceOpen] = useState(false);
     const [selectedSession, setSelectedSession] = useState(null);
     const [attendanceData, setAttendanceData] = useState(INITIAL_ATTENDANCE);
 
+    // Reset page when searching
+    useEffect(() => {
+        setStudentPage(1);
+    }, [studentSearch]);
+
     // State cho Modal yêu cầu thay đổi
     const [requestOpen, setRequestOpen] = useState(false);
     const [requestInitialData, setRequestInitialData] = useState(null);
+
+    const getFileIcon = (type) => {
+        switch (type) {
+            case 'pdf': return <FileText size={24} color="#ef4444" />;
+            case 'word': return <FileText size={24} color="#2563eb" />;
+            case 'video': return <PlayCircle size={24} color="#8b5cf6" />;
+            default: return <FileText size={24} color="#64748b" />;
+        }
+    };
+
+    const handleUploadMaterial = (newFiles) => {
+        // newFiles is an array of objects
+        setMaterials(prev => [...newFiles, ...prev]);
+        setUploadModalOpen(false);
+    };
+
+    const handleDeleteMaterial = () => {
+        if (!deleteMaterialId) return;
+        setMaterials(prev => prev.filter(m => m.id !== deleteMaterialId));
+        setDeleteMaterialId(null);
+    };
+
+    const handleUpdateMaterial = (updatedData) => {
+        setMaterials(prev => prev.map(m => m.id === updatedData.id ? { ...m, ...updatedData } : m));
+        setEditMaterial(null);
+    };
+
+    const handleDownloadMaterial = (item) => {
+        if (item.rawFile) {
+            // Đây là file vừa upload (có rawFile là File object)
+            const url = URL.createObjectURL(item.rawFile);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = item.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } else {
+            // Đây là file mock data, mô phỏng tải xuống
+            alert(`Đang tải xuống tài liệu: ${item.name}\n(Chức năng tải file thực tế sẽ hoạt động khi hệ thống có Backend nha)`);
+        }
+    };
 
     /* --- derived --- */
     const filteredStudents = students.filter(s =>
         s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
         s.id.toLowerCase().includes(studentSearch.toLowerCase())
     );
-    const displayedStudents = showAllStudents ? filteredStudents : filteredStudents.slice(0, 5);
+
+    // Filter students cho tab Overview (chỉ show max 5)
+    const displayedStudentsOverview = showAllStudents ? filteredStudents : filteredStudents.slice(0, 5);
+
+    // Pagination students cho tab Học Sinh
+    const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
+    const currentStudentsPage = filteredStudents.slice((studentPage - 1) * studentsPerPage, studentPage * studentsPerPage);
+
     const avgAttendance = students.length
         ? Math.round(students.reduce((s, st) => s + st.attendance, 0) / students.length)
         : 0;
@@ -259,294 +352,466 @@ const TeacherClassDetail = () => {
                     </div>
                 </div>
 
-                {/* Content Grid */}
-                <div className="cd-content-grid">
-                    {/* LEFT */}
-                    <div className="cd-left">
-                        {/* Danh sách học sinh */}
-                        <div className="cd-card">
-                            <div className="cd-card-header">
-                                <h3>Danh sách học sinh ({students.length})</h3>
-                            </div>
-                            <div className="cd-search-box" style={{ marginBottom: '1rem' }}>
-                                <Search size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm theo tên hoặc mã học sinh..."
-                                    value={studentSearch}
-                                    onChange={e => setStudentSearch(e.target.value)}
-                                />
-                                {studentSearch && (
-                                    <button onClick={() => setStudentSearch('')}><X size={14} /></button>
-                                )}
-                            </div>
-                            <table className="cd-roster-table">
-                                <thead>
-                                    <tr>
-                                        <th>HỌ VÀ TÊN</th>
-                                        <th>CHUYÊN CẦN</th>
-                                        <th>BUỔI GẦN NHẤT</th>
-                                        <th>XẾP LOẠI</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {displayedStudents.map(st => (
-                                        <tr key={st.id}>
-                                            <td>
-                                                <div className="cd-student-cell">
-                                                    <div className="cd-avatar">{st.avatar}</div>
-                                                    <div>
-                                                        <div className="cd-student-name">{st.name}</div>
-                                                        <div className="cd-student-id">ID: #{st.id}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td><AttendanceBar value={st.attendance} /></td>
-                                            <td className="cd-last-attended">{st.lastAttended}</td>
-                                            <td><GradeBadge grade={st.grade} /></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filteredStudents.length > 5 && (
-                                <button className="cd-view-all" onClick={() => setShowAllStudents(p => !p)}>
-                                    {showAllStudents ? 'Thu gọn' : `Xem tất cả ${filteredStudents.length} học sinh`}
-                                </button>
-                            )}
-                        </div>
+                {/* Tabs Nav */}
+                <div className="cd-tabs-nav">
+                    <button
+                        className={`cd-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('overview')}
+                    >
+                        Tổng quan
+                    </button>
+                    <button
+                        className={`cd-tab-btn ${activeTab === 'students' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('students')}
+                    >
+                        Học sinh ({students.length})
+                    </button>
+                    <button
+                        className={`cd-tab-btn ${activeTab === 'materials' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('materials')}
+                    >
+                        Tài liệu học
+                    </button>
+                </div>
 
-                        {/* ── Lịch sử điểm danh ── */}
-                        <div className="cd-card">
-                            <div className="cd-card-header">
-                                <h3>Lịch sử điểm danh</h3>
-                                <span style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
-                                    {Object.keys(attendanceData).length} / {pastSessions.length} buổi đã qua
-                                </span>
-                            </div>
+                <div className="cd-tab-content">
+                    {activeTab === 'overview' && (
+                        <div className="cd-content-grid">
+                            {/* LEFT */}
+                            <div className="cd-left">
 
-                            {pastSessions.length === 0 ? (
-                                <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
-                                    Chưa có buổi học nào.
-                                </p>
-                            ) : (
-                                <div className="att-history-scroll">
-                                    <table className="att-history-table">
-                                        <thead>
-                                            <tr>
-                                                <th>NGÀY</th>
-                                                <th style={{ textAlign: 'center' }}>CÓ MẶT</th>
-                                                <th style={{ textAlign: 'center' }}>VẮNG</th>
-                                                <th style={{ textAlign: 'right' }}>THAO TÁC</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {pastSessions.map((session, idx) => {
-                                                const done = !!attendanceData[session.scheduleId];
-                                                const { present, absent } = getSessionSummary(session.scheduleId);
-                                                return (
-                                                    <tr key={session.scheduleId}>
-                                                        <td>
-                                                            <div className="att-date-cell">
-                                                                <span className="att-session-num">Buổi {pastSessions.length - idx}</span>
-                                                                <span className="att-session-date">
-                                                                    {session.dayLabel}, {session.date}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            {done
-                                                                ? <span className="att-badge present">{present}</span>
-                                                                : <span className="att-badge pending">—</span>
-                                                            }
-                                                        </td>
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            {done
-                                                                ? <span className={`att-badge ${absent > 0 ? 'absent' : 'present'}`}>{absent}</span>
-                                                                : <span className="att-badge pending">—</span>
-                                                            }
-                                                        </td>
-                                                        <td style={{ textAlign: 'right' }}>
-                                                            {done ? (
-                                                                <button
-                                                                    className="att-btn-edit"
-                                                                    onClick={() => handleOpen(session)}
-                                                                    title="Sửa điểm danh"
-                                                                >
-                                                                    <Pencil size={13} /> Sửa
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    className="att-btn-take"
-                                                                    onClick={() => handleOpen(session)}
-                                                                >
-                                                                    <CheckCircle size={13} /> Điểm danh
-                                                                </button>
-                                                            )}
-                                                        </td>
+
+                                {/* ── Lịch sử điểm danh ── */}
+                                <div className="cd-card">
+                                    <div className="cd-card-header">
+                                        <h3>Lịch sử điểm danh</h3>
+                                        <span style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
+                                            {Object.keys(attendanceData).length} / {pastSessions.length} buổi đã qua
+                                        </span>
+                                    </div>
+
+                                    {pastSessions.length === 0 ? (
+                                        <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
+                                            Chưa có buổi học nào.
+                                        </p>
+                                    ) : (
+                                        <div className="att-history-scroll">
+                                            <table className="att-history-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>NGÀY</th>
+                                                        <th style={{ textAlign: 'center' }}>CÓ MẶT</th>
+                                                        <th style={{ textAlign: 'center' }}>VẮNG</th>
+                                                        <th style={{ textAlign: 'right' }}>THAO TÁC</th>
                                                     </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
+                                                </thead>
+                                                <tbody>
+                                                    {pastSessions.map((session, idx) => {
+                                                        const done = !!attendanceData[session.scheduleId];
+                                                        const { present, absent } = getSessionSummary(session.scheduleId);
+                                                        return (
+                                                            <tr key={session.scheduleId}>
+                                                                <td>
+                                                                    <div className="att-date-cell">
+                                                                        <span className="att-session-num">Buổi {pastSessions.length - idx}</span>
+                                                                        <span className="att-session-date">
+                                                                            {session.dayLabel}, {session.date}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td style={{ textAlign: 'center' }}>
+                                                                    {done
+                                                                        ? <span className="att-badge present">{present}</span>
+                                                                        : <span className="att-badge pending">—</span>
+                                                                    }
+                                                                </td>
+                                                                <td style={{ textAlign: 'center' }}>
+                                                                    {done
+                                                                        ? <span className={`att-badge ${absent > 0 ? 'absent' : 'present'}`}>{absent}</span>
+                                                                        : <span className="att-badge pending">—</span>
+                                                                    }
+                                                                </td>
+                                                                <td style={{ textAlign: 'right' }}>
+                                                                    {done ? (
+                                                                        <button
+                                                                            className="att-btn-edit"
+                                                                            onClick={() => handleOpen(session)}
+                                                                            title="Sửa điểm danh"
+                                                                        >
+                                                                            <Pencil size={13} /> Sửa
+                                                                        </button>
+                                                                    ) : (
+                                                                        <button
+                                                                            className="att-btn-take"
+                                                                            onClick={() => handleOpen(session)}
+                                                                        >
+                                                                            <CheckCircle size={13} /> Điểm danh
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
 
-                            {/* Buổi tương lai */}
-                            {futureSessions.length > 0 && (
-                                <div className="att-future-notice">
-                                    <Lock size={13} />
-                                    <span>
-                                        {futureSessions.length} buổi sắp tới chưa mở điểm danh
-                                        &nbsp;(buổi gần nhất: {futureSessions[0].dayLabel}, {futureSessions[0].date})
-                                    </span>
+                                    {/* Buổi tương lai */}
+                                    {futureSessions.length > 0 && (
+                                        <div className="att-future-notice">
+                                            <Lock size={13} />
+                                            <span>
+                                                {futureSessions.length} buổi sắp tới chưa mở điểm danh
+                                                &nbsp;(buổi gần nhất: {futureSessions[0].dayLabel}, {futureSessions[0].date})
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Nhật ký hoạt động */}
-                        <div className="cd-card">
-                            <div className="cd-card-header"><h3>Nhật ký hoạt động</h3></div>
-                            <div className="cd-activity-list">
-                                {classData.activities.map(act => (
-                                    <div key={act.id} className="cd-activity-item">
-                                        <ActivityIcon type={act.type} />
-                                        <div className="cd-activity-content">
-                                            <div className="cd-activity-title">{act.title}</div>
-                                            <div className="cd-activity-desc">{act.desc}</div>
-                                            <div className="cd-activity-meta">{act.time} • Bởi {act.by}</div>
+                                {/* Nhật ký hoạt động */}
+                                <div className="cd-card">
+                                    <div className="cd-card-header"><h3>Nhật ký hoạt động</h3></div>
+                                    <div className="cd-activity-list">
+                                        {classData.activities.map(act => (
+                                            <div key={act.id} className="cd-activity-item">
+                                                <ActivityIcon type={act.type} />
+                                                <div className="cd-activity-content">
+                                                    <div className="cd-activity-title">{act.title}</div>
+                                                    <div className="cd-activity-desc">{act.desc}</div>
+                                                    <div className="cd-activity-meta">{act.time} • Bởi {act.by}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RIGHT */}
+                            <div className="cd-right">
+                                {/* Giáo viên phụ trách */}
+                                <div className="cd-card">
+                                    <div className="cd-card-header"><h3>Giáo viên phụ trách</h3></div>
+                                    <div className="cd-staff-list">
+                                        <div className="cd-staff-item">
+                                            <div className="cd-staff-avatar">{classData.mainTeacher.initials}</div>
+                                            <div className="cd-staff-info">
+                                                <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
+                                                <div className="cd-staff-name">{classData.mainTeacher.name}</div>
+                                                <div className="cd-staff-sub">{classData.mainTeacher.subject}</div>
+                                            </div>
+                                        </div>
+                                        {classData.assistant && (
+                                            <div className="cd-staff-item">
+                                                <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
+                                                <div className="cd-staff-info">
+                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>TRỢ GIẢNG</div>
+                                                    <div className="cd-staff-name">{classData.assistant.name}</div>
+                                                    <div className="cd-staff-sub">{classData.assistant.subject}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Tổng quan */}
+                                <div className="cd-card cd-overview-card">
+                                    <div className="cd-card-header"><h3>Tổng quan lớp học</h3></div>
+                                    <div className="cd-overview-stats">
+                                        <div className="cd-overview-row">
+                                            <span>Tổng học sinh</span>
+                                            <span className="cd-overview-val">{students.length} / {classData.maxStudents}</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                            <span>Chuyên cần TB</span>
+                                            <span className="cd-overview-val green">{avgAttendance}%</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                            <span>Buổi đã học</span>
+                                            <span className="cd-overview-val">{classData.classesCompleted} / {classData.totalClasses}</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                            <span>Đã điểm danh</span>
+                                            <span className="cd-overview-val">
+                                                {Object.keys(attendanceData).length} / {pastSessions.length} buổi
+                                            </span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* RIGHT */}
-                    <div className="cd-right">
-                        {/* Giáo viên phụ trách */}
-                        <div className="cd-card">
-                            <div className="cd-card-header"><h3>Giáo viên phụ trách</h3></div>
-                            <div className="cd-staff-list">
-                                <div className="cd-staff-item">
-                                    <div className="cd-staff-avatar">{classData.mainTeacher.initials}</div>
-                                    <div className="cd-staff-info">
-                                        <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
-                                        <div className="cd-staff-name">{classData.mainTeacher.name}</div>
-                                        <div className="cd-staff-sub">{classData.mainTeacher.subject}</div>
-                                    </div>
-                                </div>
-                                {classData.assistant && (
-                                    <div className="cd-staff-item">
-                                        <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
-                                        <div className="cd-staff-info">
-                                            <div className="cd-staff-role" style={{ color: '#6366f1' }}>TRỢ GIẢNG</div>
-                                            <div className="cd-staff-name">{classData.assistant.name}</div>
-                                            <div className="cd-staff-sub">{classData.assistant.subject}</div>
+                                    <div className="cd-progress-wrap">
+                                        <div className="cd-progress-label">
+                                            <span>Tiến độ khóa học</span>
+                                            <span>{Math.round(classData.classesCompleted / classData.totalClasses * 100)}%</span>
+                                        </div>
+                                        <div className="cd-progress-track">
+                                            <div
+                                                className="cd-progress-fill"
+                                                style={{ width: `${classData.classesCompleted / classData.totalClasses * 100}%` }}
+                                            />
                                         </div>
                                     </div>
-                                )}
+
+                                    {/* Nút điểm danh buổi tiếp theo */}
+                                    {nextSession ? (
+                                        <>
+                                            <div className="cd-next-session">
+                                                <CalendarClock size={14} />
+                                                <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
+                                            </div>
+                                            <button
+                                                className="cd-btn-attendance"
+                                                onClick={() => handleOpen(nextSession)}
+                                            >
+                                                <CheckCircle size={16} />
+                                                Điểm danh buổi {nextSession.date}
+                                            </button>
+                                        </>
+                                    ) : futureSessions.length > 0 ? (
+                                        <>
+                                            <div className="cd-next-session">
+                                                <CalendarClock size={14} />
+                                                <span>Buổi tiếp theo: {futureSessions[0].dayLabel}, {futureSessions[0].date}</span>
+                                            </div>
+                                            {/* Disabled — chưa đến ngày */}
+                                            <button className="cd-btn-attendance" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                                                <Lock size={16} />
+                                                Chưa đến ngày học
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#16a34a', padding: '0.75rem', background: '#f0fdf4', borderRadius: '8px' }}>
+                                            ✓ Đã điểm danh tất cả các buổi
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        {/* Tổng quan */}
-                        <div className="cd-card cd-overview-card">
-                            <div className="cd-card-header"><h3>Tổng quan lớp học</h3></div>
-                            <div className="cd-overview-stats">
-                                <div className="cd-overview-row">
-                                    <span>Tổng học sinh</span>
-                                    <span className="cd-overview-val">{students.length} / {classData.maxStudents}</span>
-                                </div>
-                                <div className="cd-overview-row">
-                                    <span>Chuyên cần TB</span>
-                                    <span className="cd-overview-val green">{avgAttendance}%</span>
-                                </div>
-                                <div className="cd-overview-row">
-                                    <span>Buổi đã học</span>
-                                    <span className="cd-overview-val">{classData.classesCompleted} / {classData.totalClasses}</span>
-                                </div>
-                                <div className="cd-overview-row">
-                                    <span>Đã điểm danh</span>
-                                    <span className="cd-overview-val">
-                                        {Object.keys(attendanceData).length} / {pastSessions.length} buổi
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="cd-progress-wrap">
-                                <div className="cd-progress-label">
-                                    <span>Tiến độ khóa học</span>
-                                    <span>{Math.round(classData.classesCompleted / classData.totalClasses * 100)}%</span>
-                                </div>
-                                <div className="cd-progress-track">
-                                    <div
-                                        className="cd-progress-fill"
-                                        style={{ width: `${classData.classesCompleted / classData.totalClasses * 100}%` }}
+                    {activeTab === 'students' && (
+                        <div className="cd-students-tab">
+                            <div className="cd-section-header">
+                                <h2>Danh sách học sinh của lớp</h2>
+                                <div className="student-search-box">
+                                    <Search size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm học sinh theo tên/mã..."
+                                        value={studentSearch}
+                                        onChange={(e) => setStudentSearch(e.target.value)}
                                     />
                                 </div>
                             </div>
 
-                            {/* Nút điểm danh buổi tiếp theo */}
-                            {nextSession ? (
-                                <>
-                                    <div className="cd-next-session">
-                                        <CalendarClock size={14} />
-                                        <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
+                            <table className="cd-roster-table">
+                                <thead>
+                                    <tr>
+                                        <th>HỌ VÀ TÊN</th>
+                                        <th>MÃ SỐ</th>
+                                        <th>ĐIỂM TRUNG BÌNH</th>
+                                        <th>CHUYÊN CẦN</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentStudentsPage.length > 0 ? (
+                                        currentStudentsPage.map(student => (
+                                            <tr key={student.id}>
+                                                <td>
+                                                    <div className="cd-student-cell">
+                                                        <div className="cd-avatar">{student.avatar}</div>
+                                                        <div className="cd-student-name">{student.name}</div>
+                                                    </div>
+                                                </td>
+                                                <td><span className="cd-student-id">ID: #{student.id}</span></td>
+                                                <td><GradeBadge grade={student.grade} /></td>
+                                                <td><AttendanceBar value={student.attendance} /></td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="4" className="text-center py-4 text-gray-500">
+                                                Không tìm thấy học sinh nào phù hợp.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination Controls */}
+                            {totalStudentPages > 1 && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
+                                    <div style={{ fontSize: '13px', color: '#64748b' }}>
+                                        Hiển thị <strong>{(studentPage - 1) * studentsPerPage + 1}</strong> - <strong>{Math.min(studentPage * studentsPerPage, filteredStudents.length)}</strong> trong <strong>{filteredStudents.length}</strong> học sinh
                                     </div>
-                                    <button
-                                        className="cd-btn-attendance"
-                                        onClick={() => handleOpen(nextSession)}
-                                    >
-                                        <CheckCircle size={16} />
-                                        Điểm danh buổi {nextSession.date}
-                                    </button>
-                                </>
-                            ) : futureSessions.length > 0 ? (
-                                <>
-                                    <div className="cd-next-session">
-                                        <CalendarClock size={14} />
-                                        <span>Buổi tiếp theo: {futureSessions[0].dayLabel}, {futureSessions[0].date}</span>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        <button
+                                            onClick={() => setStudentPage(p => Math.max(1, p - 1))}
+                                            disabled={studentPage === 1}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', border: '1px solid #cbd5e1', borderRadius: '4px', background: studentPage === 1 ? '#f8fafc' : 'white', color: studentPage === 1 ? '#94a3b8' : '#334155', cursor: studentPage === 1 ? 'not-allowed' : 'pointer' }}
+                                        >
+                                            <ChevronLeft size={14} />
+                                        </button>
+
+                                        {Array.from({ length: totalStudentPages }, (_, i) => i + 1).map(page => (
+                                            <button
+                                                key={page}
+                                                onClick={() => setStudentPage(page)}
+                                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', border: page === studentPage ? 'none' : '1px solid #cbd5e1', borderRadius: '4px', background: page === studentPage ? '#3b82f6' : 'white', color: page === studentPage ? 'white' : '#334155', fontSize: '12px', fontWeight: page === studentPage ? '600' : '400', cursor: 'pointer' }}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+
+                                        <button
+                                            onClick={() => setStudentPage(p => Math.min(totalStudentPages, p + 1))}
+                                            disabled={studentPage === totalStudentPages}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', border: '1px solid #cbd5e1', borderRadius: '4px', background: studentPage === totalStudentPages ? '#f8fafc' : 'white', color: studentPage === totalStudentPages ? '#94a3b8' : '#334155', cursor: studentPage === totalStudentPages ? 'not-allowed' : 'pointer' }}
+                                        >
+                                            <ChevronRight size={14} />
+                                        </button>
                                     </div>
-                                    {/* Disabled — chưa đến ngày */}
-                                    <button className="cd-btn-attendance" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                                        <Lock size={16} />
-                                        Chưa đến ngày học
-                                    </button>
-                                </>
-                            ) : (
-                                <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#16a34a', padding: '0.75rem', background: '#f0fdf4', borderRadius: '8px' }}>
-                                    ✓ Đã điểm danh tất cả các buổi
                                 </div>
                             )}
                         </div>
-                    </div>
+                    )}
+
+                    {activeTab === 'materials' && (
+                        <div className="cd-materials-tab">
+                            <div className="cd-materials-header">
+                                <h2>Tài liệu học tập</h2>
+                                <button className="btn-upload-material" onClick={() => setUploadModalOpen(true)}>
+                                    <Plus size={18} /> Tải lên tài liệu mới
+                                </button>
+                            </div>
+
+                            {materials && materials.length > 0 ? (
+                                <div className="material-items-grid">
+                                    {materials.map(item => (
+                                        <div
+                                            key={item.id}
+                                            className="material-card"
+                                            onClick={() => setDetailMaterial(item)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <div className="material-icon">{getFileIcon(item.type)}</div>
+                                            <div className="material-info">
+                                                <h4 className="material-name">{item.name}</h4>
+                                                <div className="material-meta">
+                                                    <span>{item.size}</span>
+                                                    <span className="dot">•</span>
+                                                    <span>{item.uploadDate}</span>
+                                                    {item.description && (
+                                                        <>
+                                                            <span className="dot">•</span>
+                                                            <span style={{ fontStyle: 'italic', maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="material-actions" onClick={(e) => e.stopPropagation()}>
+                                                <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}>
+                                                    <Download size={18} />
+                                                </button>
+                                                <button className="btn-icon text-blue-600 hover:bg-blue-50" title="Chỉnh sửa" onClick={() => setEditMaterial(item)}>
+                                                    <Edit2 size={18} />
+                                                </button>
+                                                <button className="btn-icon text-red-600 hover:bg-red-50" title="Xóa" onClick={() => setDeleteMaterialId(item.id)}>
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="cd-empty-state">
+                                    <FileText size={48} className="empty-icon" />
+                                    <h3>Chưa có tài liệu nào</h3>
+                                    <p>Tải lên giáo trình, bài tập hoặc video tham khảo cho lớp học này.</p>
+                                    <button className="btn-upload-material mt-4" onClick={() => setUploadModalOpen(true)}>
+                                        <Plus size={18} /> Tải lên tài liệu
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 
             {/* Attendance Modal */}
-            {attendanceOpen && selectedSession && (
-                <AttendanceModal
-                    isOpen={attendanceOpen}
-                    onClose={handleClose}
-                    onSave={handleSave}
-                    session={selectedSession}
-                    students={students}
-                    existingRecords={attendanceData[selectedSession.scheduleId]}
-                />
-            )}
+            {
+                attendanceOpen && selectedSession && (
+                    <AttendanceModal
+                        isOpen={attendanceOpen}
+                        onClose={handleClose}
+                        onSave={handleSave}
+                        session={selectedSession}
+                        students={students}
+                        existingRecords={attendanceData[selectedSession.scheduleId]}
+                    />
+                )
+            }
 
             {/* Request Change Modal */}
-            {requestOpen && (
-                <ScheduleRequestModal
-                    isOpen={requestOpen}
-                    onClose={() => setRequestOpen(false)}
-                    onSend={(payload) => {
-                        console.log("Schedule Request Sent from Detail:", payload);
-                        setRequestOpen(false);
-                    }}
-                    initialData={requestInitialData}
-                />
-            )}
-        </div>
+            {
+                requestOpen && (
+                    <ScheduleRequestModal
+                        isOpen={requestOpen}
+                        onClose={() => setRequestOpen(false)}
+                        onSend={(payload) => {
+                            console.log("Schedule Request Sent from Detail:", payload);
+                            setRequestOpen(false);
+                        }}
+                        initialData={requestInitialData}
+                    />
+                )
+            }
+
+            {/* Upload Material Modal */}
+            {
+                uploadModalOpen && (
+                    <UploadMaterialModal
+                        isOpen={uploadModalOpen}
+                        onClose={() => setUploadModalOpen(false)}
+                        onUpload={handleUploadMaterial}
+                    />
+                )
+            }
+
+            {/* Edit Material Modal */}
+            {
+                editMaterial && (
+                    <EditMaterialModal
+                        isOpen={!!editMaterial}
+                        onClose={() => setEditMaterial(null)}
+                        onUpdate={handleUpdateMaterial}
+                        materialData={editMaterial}
+                    />
+                )
+            }
+
+            {/* Delete Material Modal */}
+            {
+                deleteMaterialId && (
+                    <DeleteMaterialModal
+                        isOpen={!!deleteMaterialId}
+                        onClose={() => setDeleteMaterialId(null)}
+                        onDelete={handleDeleteMaterial}
+                    />
+                )
+            }
+
+            {/* Material Detail Modal */}
+            {
+                detailMaterial && (
+                    <MaterialDetailModal
+                        isOpen={!!detailMaterial}
+                        onClose={() => setDetailMaterial(null)}
+                        material={detailMaterial}
+                        onDownload={handleDownloadMaterial}
+                    />
+                )
+            }
+        </div >
     );
 };
 
