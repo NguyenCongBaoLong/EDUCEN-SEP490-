@@ -46,6 +46,14 @@ function App() {
           <Route path="/teacher/assignments" element={<TeacherAssignments />} />
           <Route path="/teacher/assignments/:assignmentId/grade" element={<AssignmentGrading />} />
           <Route path="/teacher/performance" element={<TeacherPerformanceReport />} />
+
+          {/* TA Routes */}
+          <Route path="/ta/classes" element={<TeacherClasses isTA={true} />} />
+          <Route path="/ta/classes/:classId" element={<TeacherClassDetail isTA={true} />} />
+          <Route path="/ta/schedules" element={<TeacherSchedule isTA={true} />} />
+          <Route path="/ta/assignments" element={<TeacherAssignments isTA={true} />} />
+          <Route path="/ta/assignments/:assignmentId/grade" element={<AssignmentGrading isTA={true} />} />
+          <Route path="/ta/performance" element={<TeacherPerformanceReport isTA={true} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

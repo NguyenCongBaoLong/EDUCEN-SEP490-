@@ -56,7 +56,7 @@ const MY_CLASSES = [
     },
 ];
 
-const TeacherClasses = () => {
+const TeacherClasses = ({ isTA = false }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
@@ -68,7 +68,7 @@ const TeacherClasses = () => {
 
     return (
         <div className="classes-management">
-            <TeacherSidebar />
+            <TeacherSidebar isTA={isTA} />
 
             <main className="classes-main">
                 {/* Header */}
@@ -129,7 +129,7 @@ const TeacherClasses = () => {
                                     key={classItem.id}
                                     classData={classItem}
                                     readOnly
-                                    basePath="/teacher/classes"
+                                    basePath={isTA ? "/ta/classes" : "/teacher/classes"}
                                 />
                             ))}
                         </div>

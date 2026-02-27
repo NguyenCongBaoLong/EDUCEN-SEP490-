@@ -163,7 +163,7 @@ const ActivityIcon = ({ type }) => {
 };
 
 /* ─── Main Component ────────────────────────────── */
-const TeacherClassDetail = () => {
+const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
     const classData = TEACHER_CLASSES_DATA[classId] || TEACHER_CLASSES_DATA[101];
 
@@ -296,12 +296,12 @@ const TeacherClassDetail = () => {
 
     return (
         <div className="class-detail">
-            <TeacherSidebar />
+            <TeacherSidebar isTA={isTA} />
 
             <main className="cd-main">
                 {/* Breadcrumb */}
                 <div className="cd-breadcrumb">
-                    <Link to="/teacher/classes" className="cd-back">
+                    <Link to={isTA ? "/ta/classes" : "/teacher/classes"} className="cd-back">
                         <ChevronLeft size={16} /> Quay lại lớp của tôi
                     </Link>
                     <span className="cd-breadcrumb-sep">/</span>
@@ -679,9 +679,11 @@ const TeacherClassDetail = () => {
                         <div className="cd-materials-tab">
                             <div className="cd-materials-header">
                                 <h2>Tài liệu học tập</h2>
-                                <button className="btn-upload-material" onClick={() => setUploadModalOpen(true)}>
-                                    <Plus size={18} /> Tải lên tài liệu mới
-                                </button>
+                                {!isTA && (
+                                    <button className="btn-upload-material" onClick={() => setUploadModalOpen(true)}>
+                                        <Plus size={18} /> Tải lên tài liệu mới
+                                    </button>
+                                )}
                             </div>
 
                             {materials && materials.length > 0 ? (
@@ -712,12 +714,16 @@ const TeacherClassDetail = () => {
                                                 <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}>
                                                     <Download size={18} />
                                                 </button>
-                                                <button className="btn-icon text-blue-600 hover:bg-blue-50" title="Chỉnh sửa" onClick={() => setEditMaterial(item)}>
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button className="btn-icon text-red-600 hover:bg-red-50" title="Xóa" onClick={() => setDeleteMaterialId(item.id)}>
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                {!isTA && (
+                                                    <>
+                                                        <button className="btn-icon text-blue-600 hover:bg-blue-50" title="Chỉnh sửa" onClick={() => setEditMaterial(item)}>
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        <button className="btn-icon text-red-600 hover:bg-red-50" title="Xóa" onClick={() => setDeleteMaterialId(item.id)}>
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -727,9 +733,11 @@ const TeacherClassDetail = () => {
                                     <FileText size={48} className="empty-icon" />
                                     <h3>Chưa có tài liệu nào</h3>
                                     <p>Tải lên giáo trình, bài tập hoặc video tham khảo cho lớp học này.</p>
-                                    <button className="btn-upload-material mt-4" onClick={() => setUploadModalOpen(true)}>
-                                        <Plus size={18} /> Tải lên tài liệu
-                                    </button>
+                                    {!isTA && (
+                                        <button className="btn-upload-material mt-4" onClick={() => setUploadModalOpen(true)}>
+                                            <Plus size={18} /> Tải lên tài liệu
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>

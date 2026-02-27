@@ -71,7 +71,7 @@ const INITIAL_ASSIGNMENTS = [
     }
 ];
 
-const TeacherAssignments = () => {
+const TeacherAssignments = ({ isTA = false }) => {
     const navigate = useNavigate();
     const [assignments, setAssignments] = useState(INITIAL_ASSIGNMENTS);
     const [searchQuery, setSearchQuery] = useState('');
@@ -168,7 +168,7 @@ const TeacherAssignments = () => {
 
     return (
         <div className="teacher-assignments">
-            <TeacherSidebar />
+            <TeacherSidebar isTA={isTA} />
 
             <main className="ta-main">
                 {/* Header */}
@@ -177,10 +177,12 @@ const TeacherAssignments = () => {
                         <h1>Quản lý bài tập</h1>
                         <p>Theo dõi, tạo mới và chấm điểm bài tập cho tất cả các lớp của bạn.</p>
                     </div>
-                    <button className="btn-create-assignment" onClick={handleCreate}>
-                        <Plus size={18} />
-                        Tạo bài tập mới
-                    </button>
+                    {!isTA && (
+                        <button className="btn-create-assignment" onClick={handleCreate}>
+                            <Plus size={18} />
+                            Tạo bài tập mới
+                        </button>
+                    )}
                 </div>
 
                 {/* Tiện ích lọc */}
@@ -240,14 +242,16 @@ const TeacherAssignments = () => {
                                 >
                                     <div className="ta-card-header">
                                         {getStatusBadge(assignment.status)}
-                                        <div className="ta-card-actions" onClick={(e) => e.stopPropagation()}>
-                                            <button className="btn-icon edit" onClick={() => handleEdit(assignment)} title="Chỉnh sửa">
-                                                <Edit size={16} />
-                                            </button>
-                                            <button className="btn-icon delete" onClick={() => handleDelete(assignment)} title="Xóa">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
+                                        {!isTA && (
+                                            <div className="ta-card-actions" onClick={(e) => e.stopPropagation()}>
+                                                <button className="btn-icon edit" onClick={() => handleEdit(assignment)} title="Chỉnh sửa">
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button className="btn-icon delete" onClick={() => handleDelete(assignment)} title="Xóa">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <h3 className="ta-card-title">{assignment.title}</h3>
@@ -279,7 +283,7 @@ const TeacherAssignments = () => {
                                         </div>
                                         <button
                                             className={`btn-grade ${assignment.status === 'draft' ? 'disabled' : ''}`}
-                                            onClick={() => assignment.status !== 'draft' && navigate(`/teacher/assignments/${assignment.id}/grade`)}
+                                            onClick={() => assignment.status !== 'draft' && navigate(isTA ? `/ta/assignments/${assignment.id}/grade` : `/teacher/assignments/${assignment.id}/grade`)}
                                             disabled={assignment.status === 'draft'}
                                             style={{ opacity: assignment.status === 'draft' ? 0.5 : 1, cursor: assignment.status === 'draft' ? 'not-allowed' : 'pointer' }}
                                         >

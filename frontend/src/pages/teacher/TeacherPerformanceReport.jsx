@@ -109,7 +109,7 @@ const CustomTooltip = ({ active, payload, label, suffix = '' }) => {
     return null;
 };
 
-const TeacherPerformanceReport = () => {
+const TeacherPerformanceReport = ({ isTA = false }) => {
     const [filterClass, setFilterClass] = useState('math-10a');
 
     // Lấy dữ liệu tương ứng với lớp đang chọn (hoặc mặc định nếu lớp không tồn tại)
@@ -117,7 +117,7 @@ const TeacherPerformanceReport = () => {
 
     return (
         <div className="teacher-report-layout">
-            <TeacherSidebar />
+            <TeacherSidebar isTA={isTA} />
             <main className="report-main-content">
 
                 {/* Header */}

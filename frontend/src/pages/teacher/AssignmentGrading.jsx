@@ -22,7 +22,7 @@ const STUDENTS_MOCK = [
     { id: 5, name: 'Đặng Thái E', avatar: 'DE', status: 'submitted', score: null, feedback: '', submittedAt: '2023-10-15T22:45:00', fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', fileType: 'pdf' },
 ];
 
-const AssignmentGrading = () => {
+const AssignmentGrading = ({ isTA = false }) => {
     const { assignmentId } = useParams();
     const navigate = useNavigate();
 
@@ -37,6 +37,7 @@ const AssignmentGrading = () => {
     const [feedbackInput, setFeedbackInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [gradeError, setGradeError] = useState('');
 
     // Calculate if form is dirty (has changes)
     const [isDirty, setIsDirty] = useState(false);
@@ -66,6 +67,7 @@ const AssignmentGrading = () => {
             setGradeInput(selectedStudent.score !== null ? selectedStudent.score : '');
             setFeedbackInput(selectedStudent.feedback || '');
             setShowSuccess(false); // Reset success message on student change
+            setGradeError('');
         }
     }, [selectedStudent]);
 
@@ -74,6 +76,15 @@ const AssignmentGrading = () => {
     const handleSaveGrade = () => {
         if (!isDirty || isScoreRequired) return;
 
+        if (gradeInput !== '') {
+            const numGrade = parseFloat(gradeInput);
+            if (numGrade < 0 || numGrade > 10) {
+                setGradeError('Điểm số phải từ 0 đến 10');
+                return;
+            }
+        }
+
+        setGradeError('');
         setIsSaving(true);
         setShowSuccess(false);
         // Simulate API call
@@ -140,13 +151,13 @@ const AssignmentGrading = () => {
 
     return (
         <div className="assignment-grading-page">
-            <TeacherSidebar />
+            <TeacherSidebar isTA={isTA} />
 
             <main className="grading-main">
                 {/* Header (Top Bar) */}
                 <header className="grading-header">
                     <div className="grading-header-left">
-                        <button className="btn-back" onClick={() => navigate('/teacher/assignments')}>
+                        <button className="btn-back" onClick={() => navigate(isTA ? '/ta/assignments' : '/teacher/assignments')}>
                             <ArrowLeft size={20} />
                             Trở về
                         </button>
@@ -298,10 +309,15 @@ const AssignmentGrading = () => {
                                                     min="0" max="10" step="0.25"
                                                     disabled={selectedStudent.status === 'missing'}
                                                     value={gradeInput}
-                                                    onChange={(e) => setGradeInput(e.target.value)}
+                                                    onChange={(e) => {
+                                                        setGradeInput(e.target.value);
+                                                        setGradeError('');
+                                                    }}
                                                     placeholder="VD: 8.5"
-                                                    className="score-input"
+                                                    className={`score-input ${gradeError ? 'error-border' : ''}`}
+                                                    style={gradeError ? { borderColor: '#ef4444' } : {}}
                                                 />
+                                                {gradeError && <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>{gradeError}</span>}
                                             </div>
 
                                             <div className="form-group">

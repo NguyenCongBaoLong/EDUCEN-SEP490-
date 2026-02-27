@@ -2,14 +2,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, GraduationCap, Calendar, ClipboardList, LogOut, ChevronLeft, BarChart2 } from 'lucide-react';
 import '../css/components/Sidebar.css';
 
-const TeacherSidebar = () => {
+const TeacherSidebar = ({ isTA = false }) => {
     const location = useLocation();
 
     const menuItems = [
-        { path: '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
-        { path: '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
-        { path: '/teacher/assignments', icon: ClipboardList, label: 'Bài tập' },
-        { path: '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
+        { path: isTA ? '/ta/classes' : '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
+        { path: isTA ? '/ta/schedules' : '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
+        { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Bài tập' },
+        { path: isTA ? '/ta/performance' : '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
     ];
 
     return (
@@ -19,7 +19,7 @@ const TeacherSidebar = () => {
                     <GraduationCap size={24} />
                     <span>TutorCenter</span>
                 </div>
-                <div className="sidebar-subtitle">Giáo viên</div>
+                <div className="sidebar-subtitle">{isTA ? 'Trợ giảng' : 'Giáo viên'}</div>
             </div>
 
             <nav className="sidebar-nav">
@@ -48,9 +48,9 @@ const TeacherSidebar = () => {
 
             <div className="sidebar-footer">
                 <div className="sidebar-user">
-                    <div className="sidebar-user-avatar">GV</div>
+                    <div className="sidebar-user-avatar">{isTA ? 'TG' : 'GV'}</div>
                     <div className="sidebar-user-info">
-                        <div className="sidebar-user-name">Giáo viên</div>
+                        <div className="sidebar-user-name">{isTA ? 'Trợ giảng' : 'Giáo viên'}</div>
                         <div className="sidebar-user-role">Đã đăng nhập</div>
                     </div>
                 </div>

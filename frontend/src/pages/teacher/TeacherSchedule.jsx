@@ -16,7 +16,7 @@ const MOCK_STUDENTS = [
     { id: 'ST-005', name: 'Hoàng Văn Em', avatar: 'HE' },
 ];
 
-const TeacherSchedule = () => {
+const TeacherSchedule = ({ isTA = false }) => {
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState('week');
@@ -119,7 +119,7 @@ const TeacherSchedule = () => {
     const handleCardClick = (classItem) => {
         // Chuyển hướng đến chi tiết lớp (giả sử ID lớp nằm trong code hoặc có id riêng)
         // Trong mockup TeacherClasses, id là 101, 102. Ở đây ta mock tạm id 101.
-        navigate(`/teacher/classes/101`);
+        navigate(isTA ? `/ta/classes/101` : `/teacher/classes/101`);
     };
 
     const handleQuickAttendance = (e, classItem, date) => {
@@ -163,7 +163,7 @@ const TeacherSchedule = () => {
 
     return (
         <div className="teacher-schedule">
-            <TeacherSidebar />
+            <TeacherSidebar isTA={isTA} />
 
             <main className="ts-main">
                 <div className="ts-header">
