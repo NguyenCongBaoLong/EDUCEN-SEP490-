@@ -13,7 +13,7 @@
 
 .center-home {
     min-height: 100vh;
-    background: white;
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
@@ -92,47 +92,158 @@
 
 /* Hero Section */
 .center-home .center-hero {
-    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-    padding: 3.5rem 2rem;
+    position: relative;
+    padding: 10rem 2rem;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+.center-home .hero-slide-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out, transform 8s linear;
+    transform: scale(1.05);
+    z-index: 0;
+}
+
+.center-home .hero-slide-bg.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.center-home .center-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+    z-index: 1;
 }
 
 .center-home .center-hero-content {
-    max-width: 1200px;
+    position: relative;
+    max-width: 900px;
     margin: 0 auto;
+    z-index: 2;
 }
 
 .center-home .center-welcome-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: white;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--primary-blue);
-    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.6rem 1.25rem;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    letter-spacing: 0.5px;
+}
+
+@keyframes gradient-text-anim {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 .center-home .center-hero h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    margin-bottom: 1rem;
+    font-size: 4rem;
+    font-weight: 900;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #ffffff 0%, #38bdf8 50%, #a78bfa 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-text-anim 5s ease infinite;
+    filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.4));
+}
+
+.center-home .hero-name-field {
+    font-size: 4rem !important;
+    font-weight: 900 !important;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: white !important;
+    border: 2px dashed rgba(255, 255, 255, 0.5) !important;
+    border-radius: 16px;
+    padding: 0.5rem 1rem !important;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    max-width: 900px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.center-home .hero-name-field:focus {
+    background: rgba(0, 0, 0, 0.6) !important;
+    border-color: #38bdf8 !important;
+    outline: none;
 }
 
 .center-home .center-hero p {
-    font-size: 1.125rem;
-    color: var(--text-gray);
-    max-width: 700px;
-    line-height: 1.7;
-    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.8;
+    margin: 0 auto 3rem auto;
 }
 
-.center-home .center-link-mission {
-    color: var(--primary-blue);
-    text-decoration: underline;
-    font-size: 0.9375rem;
+.center-home .center-btn-hero {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #3B82F6 100%);
+    color: white;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 20px rgba(0, 102, 255, 0.3);
+}
+
+.center-home .center-btn-hero:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(0, 102, 255, 0.4);
+}
+
+.center-home .hero-slide-indicators {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.75rem;
+    z-index: 2;
+}
+
+.center-home .hero-indicator {
+    width: 40px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.center-home .hero-indicator.active {
+    background: white;
+    width: 60px;
 }
 
 /* Container */
@@ -290,13 +401,18 @@
 /* Class Schedule */
 .center-home .center-operating-hours {
     margin-bottom: 5rem;
+    background: white;
+    padding: 3.5rem 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 102, 255, 0.05);
 }
 
 .center-home .center-operating-hours h2 {
     font-size: 2.25rem;
     font-weight: 800;
     color: var(--text-dark);
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
     text-align: center;
 }
 
@@ -307,18 +423,25 @@
 .center-home .center-schedule-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
 }
 
 .center-home .center-schedule-day {
-    background: white;
+    background: var(--bg-light);
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
     height: 100%;
+    transition: all 0.3s;
+}
+
+.center-home .center-schedule-day:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 102, 255, 0.1);
+    border-color: rgba(0, 102, 255, 0.2);
 }
 
 .center-home .center-schedule-day-header {
@@ -401,9 +524,12 @@
 
 /* Journey Section */
 .center-home .center-journey-section {
-    background: var(--bg-light);
-    padding: 3rem;
-    border-radius: 12px;
+    background: white;
+    padding: 4rem 3rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 102, 255, 0.05);
+    margin-bottom: 5rem;
 }
 
 .center-home .center-journey-badge {

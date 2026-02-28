@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
     MapPin, Phone, Mail, Globe, Clock, BookOpen, Star, Quote, Users, Award,
     TrendingUp, Pencil, X, Check, LayoutDashboard, Eye, Plus, Trash2, ImageIcon, Upload
@@ -22,6 +22,11 @@ const INIT = {
         'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=600&h=500&fit=crop',
         'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&h=500&fit=crop',
         'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&h=500&fit=crop',
+    ],
+    heroImages: [
+        'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=2000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=2000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=2000&auto=format&fit=crop'
     ],
     introTitle: 'Câu chuyện của chúng tôi',
     introDescription: 'Với hơn 10 năm kinh nghiệm trong lĩnh vực giáo dục, chúng tôi cam kết mang đến cho học sinh những phương pháp học tập hiện đại, hiệu quả và phù hợp với từng cá nhân. Đội ngũ giáo viên của chúng tôi đều là những chuyên gia giàu kinh nghiệm, luôn đồng hành cùng học sinh trên con đường chinh phục kiến thức.',
@@ -53,6 +58,33 @@ const ICON_MAP = {
 // Calendar columns: 0=Mon ... 5=Sat, 6=Sun
 const DAY_LABELS = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 const dayToColumnIndex = (day) => (day === 0 ? 6 : day - 1);
+
+
+/* ── Inline edit helper ── */
+const InlineEditField = ({ draft, set, field, className, placeholder, multiline, rows = 3 }) =>
+    multiline ? (
+        <textarea
+            className={`admin-edit-textarea${className ? ' ' + className : ''}`}
+            value={draft[field] || ''}
+            onChange={e => set(field, e.target.value)}
+            rows={rows}
+            placeholder={placeholder}
+        />
+    ) : (
+        <input
+            className={`admin-edit-field${className ? ' ' + className : ''}`}
+            value={draft[field] || ''}
+            onChange={e => set(field, e.target.value)}
+            placeholder={placeholder}
+        />
+    );
+
+/* ── Logo render helper ── */
+const LogoDisplay = ({ logoSrc, name }) => (
+    logoSrc
+        ? <img src={logoSrc} alt="logo" className="center-logo-img" />
+        : <><BookOpen size={24} /><span>{name}</span></>
+);
 
 /* ─── Component ─────────────────────────────────────── */
 const CenterHome = ({ isAdmin = false }) => {
@@ -115,31 +147,15 @@ const CenterHome = ({ isAdmin = false }) => {
     /* Data source */
     const d = editMode ? draft : saved;
 
-    /* ── Inline edit helper ── */
-    const E = ({ field, className, placeholder, multiline, rows = 3 }) =>
-        multiline ? (
-            <textarea
-                className={`admin-edit-textarea${className ? ' ' + className : ''}`}
-                value={draft[field]}
-                onChange={e => set(field, e.target.value)}
-                rows={rows}
-                placeholder={placeholder}
-            />
-        ) : (
-            <input
-                className={`admin-edit-field${className ? ' ' + className : ''}`}
-                value={draft[field]}
-                onChange={e => set(field, e.target.value)}
-                placeholder={placeholder}
-            />
-        );
+    /* Hero Slider */
+    const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
-    /* ── Logo render helper ── */
-    const LogoDisplay = ({ logoSrc, name }) => (
-        logoSrc
-            ? <img src={logoSrc} alt="logo" className="center-logo-img" />
-            : <><BookOpen size={24} /><span>{name}</span></>
-    );
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentHeroSlide(prev => (prev + 1) % (d.heroImages?.length || 1));
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [d.heroImages]);
 
     return (
         <div className={`center-home${isAdmin ? ' has-admin-bar' : ''}`}>
@@ -199,7 +215,7 @@ const CenterHome = ({ isAdmin = false }) => {
                                         <X size={12} />
                                     </button>
                                 )}
-                                <E field="name" placeholder="Tên trung tâm" className="logo-name-field" />
+                                <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="logo-name-field" />
                             </div>
                         ) : (
                             <LogoDisplay logoSrc={d.logo} name={d.name} />
@@ -214,14 +230,36 @@ const CenterHome = ({ isAdmin = false }) => {
 
             {/* ── Hero ── */}
             <section className="center-hero">
+                {d.heroImages?.map((img, idx) => (
+                    <div
+                        key={idx}
+                        className={`hero-slide-bg ${idx === currentHeroSlide ? 'active' : ''}`}
+                        style={{ backgroundImage: `url(${img})` }}
+                    />
+                ))}
+                <div className="center-hero-overlay"></div>
+
                 <div className="center-hero-content">
-                    <div className="center-welcome-badge"><BookOpen size={16} /> CHÀO MỪNG ĐẾN VỚI EDUCEN</div>
+                    {/* <div className="center-welcome-badge"><BookOpen size={16} /> CHÀO MỪNG ĐẾN VỚI EDUCEN</div> */}
                     {editMode
-                        ? <E field="name" placeholder="Tên trung tâm" className="hero-name-field" />
+                        ? <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="hero-name-field" />
                         : <h1>{d.name}</h1>}
                     {editMode
-                        ? <E field="tagline" multiline rows={3} placeholder="Tagline / mô tả ngắn" className="hero-tagline-field" />
+                        ? <InlineEditField draft={draft} set={set} field="tagline" multiline rows={3} placeholder="Tagline / mô tả ngắn" className="hero-tagline-field" />
                         : <p>{d.tagline}</p>}
+                    <div className="center-hero-buttons">
+                        <a href="#enrollment" className="center-btn-hero">Tham Gia Khóa Học Của Chúng Tôi Ngay</a>
+                    </div>
+                </div>
+
+                <div className="hero-slide-indicators">
+                    {d.heroImages?.map((_, idx) => (
+                        <div
+                            key={idx}
+                            className={`hero-indicator ${idx === currentHeroSlide ? 'active' : ''}`}
+                            onClick={() => setCurrentHeroSlide(idx)}
+                        />
+                    ))}
                 </div>
             </section>
 
@@ -236,10 +274,10 @@ const CenterHome = ({ isAdmin = false }) => {
                         <div className="center-about-content">
                             <div className="center-section-badge"><BookOpen size={16} /> VỀ CHÚNG TÔI</div>
                             {editMode
-                                ? <E field="introTitle" placeholder="Tiêu đề giới thiệu" className="intro-title-field" />
+                                ? <InlineEditField draft={draft} set={set} field="introTitle" placeholder="Tiêu đề giới thiệu" className="intro-title-field" />
                                 : <h2>{d.introTitle}</h2>}
                             {editMode
-                                ? <E field="introDescription" multiline rows={5} placeholder="Mô tả giới thiệu" className="intro-desc-field" />
+                                ? <InlineEditField draft={draft} set={set} field="introDescription" multiline rows={5} placeholder="Mô tả giới thiệu" className="intro-desc-field" />
                                 : <p className="center-intro-text">{d.introDescription}</p>}
 
                             {/* Highlights */}
@@ -451,11 +489,11 @@ const CenterHome = ({ isAdmin = false }) => {
                                 ? <img src={d.logo} alt="logo" className="center-logo-img footer-logo" />
                                 : <BookOpen size={20} />}
                             {editMode
-                                ? <E field="name" placeholder="Tên trung tâm" className="footer-name-field" />
+                                ? <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="footer-name-field" />
                                 : d.name}
                         </h3>
                         {editMode
-                            ? <E field="footerTagline" multiline rows={2} placeholder="Tagline footer" className="footer-tagline-field" />
+                            ? <InlineEditField draft={draft} set={set} field="footerTagline" multiline rows={2} placeholder="Tagline footer" className="footer-tagline-field" />
                             : <p className="center-footer-tagline">{d.footerTagline}</p>}
                     </div>
 
@@ -464,8 +502,8 @@ const CenterHome = ({ isAdmin = false }) => {
                         <h4><MapPin size={18} /> Địa chỉ</h4>
                         {editMode ? (
                             <>
-                                <E field="address" placeholder="Địa chỉ" className="footer-info-field" />
-                                <E field="city" placeholder="Thành phố" className="footer-info-field" />
+                                <InlineEditField draft={draft} set={set} field="address" placeholder="Địa chỉ" className="footer-info-field" />
+                                <InlineEditField draft={draft} set={set} field="city" placeholder="Thành phố" className="footer-info-field" />
                             </>
                         ) : (
                             <>
@@ -482,15 +520,15 @@ const CenterHome = ({ isAdmin = false }) => {
                             <div className="footer-contact-edit">
                                 <div className="footer-contact-edit-row">
                                     <Phone size={14} />
-                                    <E field="phone" placeholder="Số điện thoại" className="footer-info-field" />
+                                    <InlineEditField draft={draft} set={set} field="phone" placeholder="Số điện thoại" className="footer-info-field" />
                                 </div>
                                 <div className="footer-contact-edit-row">
                                     <Mail size={14} />
-                                    <E field="email" placeholder="Email" className="footer-info-field" />
+                                    <InlineEditField draft={draft} set={set} field="email" placeholder="Email" className="footer-info-field" />
                                 </div>
                                 <div className="footer-contact-edit-row">
                                     <Globe size={14} />
-                                    <E field="website" placeholder="Website" className="footer-info-field" />
+                                    <InlineEditField draft={draft} set={set} field="website" placeholder="Website" className="footer-info-field" />
                                 </div>
                             </div>
                         ) : (
@@ -515,7 +553,7 @@ const CenterHome = ({ isAdmin = false }) => {
 
                 <div className="center-footer-bottom">
                     {editMode
-                        ? <E field="copyright" placeholder="Bản quyền" className="footer-copyright-field" />
+                        ? <InlineEditField draft={draft} set={set} field="copyright" placeholder="Bản quyền" className="footer-copyright-field" />
                         : <p>{d.copyright}</p>}
                 </div>
             </footer>

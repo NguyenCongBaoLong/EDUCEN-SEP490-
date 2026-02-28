@@ -23,12 +23,6 @@ const TeacherSidebar = ({ isTA = false }) => {
             </div>
 
             <nav className="sidebar-nav">
-                <Link to="/center" className="sidebar-back-link">
-                    <ChevronLeft size={16} />
-                    <span>Trang chủ trung tâm</span>
-                </Link>
-                <div className="sidebar-divider" />
-
                 {menuItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = location.pathname.startsWith(item.path);
