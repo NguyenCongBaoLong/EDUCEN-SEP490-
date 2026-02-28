@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs;
+﻿using EducenAPI.DTOs.Auth;
 using EducenAPI.Models;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -62,22 +62,22 @@ namespace EducenAPI.Services
 
             var claims = new[]
             {
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role.RoleName),
-            new Claim("UserId", user.UserId.ToString())
-        };
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, user.Role.RoleName),
+                new Claim("UserId", user.UserId.ToString())
+            };
 
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwt["Key"]));
+            var jwtKey = jwt["Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
+            var expireMinutes = jwt["ExpireMinutes"] ?? "60";
             var token = new JwtSecurityToken(
                 issuer: jwt["Issuer"],
                 audience: jwt["Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(
-                    double.Parse(jwt["ExpireMinutes"])),
-                signingCredentials:
-                    new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+                expires: DateTime.Now.AddMinutes(double.Parse(expireMinutes)),
+                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);

@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs;
+﻿using EducenAPI.DTOs.Auth;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

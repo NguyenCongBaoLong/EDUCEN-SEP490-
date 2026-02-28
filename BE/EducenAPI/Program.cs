@@ -1,25 +1,42 @@
+using EducenAPI.Middleware;
+using EducenAPI.Models;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
-using EducenAPI.Models;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Database
 builder.Services.AddDbContext<EducenV2Context>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
-builder.Services.AddEndpointsApiExplorer();
+// Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<ISubjectService, SubjectService>();
 
-builder.Services.AddSwaggerGen();
+// CORS - Allow Frontend
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowAnyOrigin()); // TODO: Restrict in production
+});
+
+// JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+var jwtKey = jwtSettings["Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
+var key = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -42,41 +59,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddDbContext<EducenV2Context>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("MyDatabase")
-    ));
-
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy => policy
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowAnyOrigin()); // dev only
-});
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey =
-                new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(
-                        builder.Configuration["Jwt:Key"]
-                    ))
-        };
-    });
-
-builder.Services.AddAuthorization();
-
 var app = builder.Build();
+
+// Configure the HTTP request pipeline
+app.UseMiddleware<GlobalExceptionHandler>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -85,12 +71,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseCors("AllowFrontend");
-
-app.UseAuthentication();  
+app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
