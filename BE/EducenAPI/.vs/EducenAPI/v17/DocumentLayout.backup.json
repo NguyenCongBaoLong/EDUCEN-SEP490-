@@ -530,7 +530,8 @@
               "RelativeToolTip": "Properties\\launchSettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-25T16:23:19.635Z"
+              "WhenOpened": "2026-02-25T16:23:19.635Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -542,7 +543,8 @@
               "RelativeToolTip": "Models\\Teacher.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:20:10.877Z"
+              "WhenOpened": "2026-02-25T16:20:10.877Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -554,7 +556,8 @@
               "RelativeToolTip": "Models\\Student.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:19:55.868Z"
+              "WhenOpened": "2026-02-25T16:19:55.868Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -566,7 +569,8 @@
               "RelativeToolTip": "Controllers\\AuthController.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:17:45.582Z"
+              "WhenOpened": "2026-02-25T16:17:45.582Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -576,7 +580,7 @@
               "RelativeDocumentMoniker": "Services\\AuthService.cs",
               "ToolTip": "C:\\Users\\Duc Luong\\Downloads\\Educen\\Educen\\BackEnd\\EducenAPI\\Services\\AuthService.cs",
               "RelativeToolTip": "Services\\AuthService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACoAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABYAAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-25T16:16:29.761Z",
               "EditorCaption": ""
@@ -591,7 +595,8 @@
               "RelativeToolTip": "Services\\Interface\\IAuthService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAApAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:16:02.295Z"
+              "WhenOpened": "2026-02-25T16:16:02.295Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -603,7 +608,8 @@
               "RelativeToolTip": "DTOs\\LoginDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:14:55.359Z"
+              "WhenOpened": "2026-02-25T16:14:55.359Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -615,19 +621,21 @@
               "RelativeToolTip": "DTOs\\RegisterDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAqwAsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:14:01.526Z"
+              "WhenOpened": "2026-02-25T16:14:01.526Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 10,
-              "Title": "EducenAPI.csproj",
+              "Title": "EducenAPI",
               "DocumentMoniker": "C:\\Users\\Duc Luong\\Downloads\\Educen\\Educen\\BackEnd\\EducenAPI\\EducenAPI.csproj",
               "RelativeDocumentMoniker": "EducenAPI.csproj",
               "ToolTip": "C:\\Users\\Duc Luong\\Downloads\\Educen\\Educen\\BackEnd\\EducenAPI\\EducenAPI.csproj",
               "RelativeToolTip": "EducenAPI.csproj",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-02-25T16:08:25.575Z"
+              "WhenOpened": "2026-02-25T16:08:25.575Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -639,7 +647,8 @@
               "RelativeToolTip": "Models\\Role.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:06:12.156Z"
+              "WhenOpened": "2026-02-25T16:06:12.156Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -651,7 +660,8 @@
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T16:05:35.751Z"
+              "WhenOpened": "2026-02-25T16:05:35.751Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -663,7 +673,8 @@
               "RelativeToolTip": "Models\\User.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T15:58:54.618Z"
+              "WhenOpened": "2026-02-25T15:58:54.618Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -675,7 +686,8 @@
               "RelativeToolTip": "Models\\EducenV2Context.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-25T15:58:49.085Z"
+              "WhenOpened": "2026-02-25T15:58:49.085Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -687,7 +699,8 @@
               "RelativeToolTip": "appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-25T15:58:39.542Z"
+              "WhenOpened": "2026-02-25T15:58:39.542Z",
+              "EditorCaption": ""
             }
           ]
         },
