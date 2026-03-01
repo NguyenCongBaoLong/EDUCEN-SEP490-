@@ -1,49 +1,73 @@
-import { useState } from 'react';
-import { User, Mail, Phone, Briefcase, MapPin, Calendar, FileText, Lock, Upload, Camera } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Mail, Phone, Briefcase, MapPin, Calendar, FileText, Lock, Upload, Camera, AlertCircle, CheckCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import '../../css/pages/center/UserProfile.css';
 
 const UserProfile = () => {
-    // Mock current user data - sẽ lấy từ authentication context
-    const [userData, setUserData] = useState({
-        id: 'T-1024',
-        name: 'Nguyễn Văn An',
-        email: 'nguyenvanan@trungcam.edu.vn',
-        phone: '0901234567',
-        role: 'teacher',
-        subject: 'Toán học',
-        status: 'active',
-        // Personal info - editable by user
-        avatar: null,
-        dateOfBirth: '1985-03-15',
-        address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-        notes: 'Giảng viên giỏi, nhiều kinh nghiệm'
-    });
+    const { user } = useAuth();
 
-    const [personalInfo, setPersonalInfo] = useState({
-        dateOfBirth: userData.dateOfBirth || '',
-        address: userData.address || '',
-        notes: userData.notes || ''
-    });
+    // Profile data from API
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
 
+    // Edit state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editFullName, setEditFullName] = useState('');
+
+    // Password state
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [passwordData, setPasswordData] = useState({
-        currentPassword: '',
+        oldPassword: '',
         newPassword: '',
         confirmPassword: ''
     });
+    const [passwordError, setPasswordError] = useState('');
 
-    const [isEditingPersonal, setIsEditingPersonal] = useState(false);
-    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    // Fetch profile on mount
+    useEffect(() => {
+        fetchProfile();
+    }, []);
 
-    const getRoleLabel = (role) => {
-        return role === 'teacher' ? 'Giảng Viên' : 'Trợ Giảng';
+    const fetchProfile = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get('/profile/me');
+            setProfile(res.data);
+            setEditFullName(res.data.fullName || '');
+        } catch (err) {
+            // API fail → dùng data từ JWT token (AuthContext) làm fallback
+            if (user) {
+                const roleMap = { 'Admin': 1, 'Teacher': 2, 'Assistant': 3, 'Student': 4, 'Parent': 5 };
+                setProfile({
+                    userId: user.userId,
+                    username: user.username,
+                    fullName: user.fullName || user.username,
+                    roleId: roleMap[user.role] || 0
+                });
+                setEditFullName(user.fullName || user.username || '');
+            }
+            setError('Không thể kết nối server. Đang hiển thị dữ liệu từ phiên đăng nhập.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const getStatusLabel = (status) => {
-        return status === 'active' ? 'Hoạt động' : 'Không hoạt động';
+    const getRoleLabel = (roleId) => {
+        const roles = { 1: 'Quản trị viên', 2: 'Giáo viên', 3: 'Trợ giảng', 4: 'Học sinh', 5: 'Phụ huynh' };
+        return roles[roleId] || 'Không xác định';
+    };
+
+    const getRoleBadgeClass = (roleId) => {
+        const classes = { 1: 'admin', 2: 'teacher', 3: 'assistant', 4: 'student', 5: 'parent' };
+        return classes[roleId] || '';
     };
 
     const getInitials = (name) => {
+        if (!name) return '?';
         return name
             .split(' ')
             .map(word => word[0])
@@ -52,59 +76,74 @@ const UserProfile = () => {
             .slice(0, 2);
     };
 
-    const handleAvatarChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setUserData(prev => ({ ...prev, avatar: reader.result }));
-            };
-            reader.readAsDataURL(file);
+    // Save fullName
+    const handleSaveFullName = async () => {
+        try {
+            setError('');
+            await api.put('/profile/update', { fullName: editFullName });
+            setProfile(prev => ({ ...prev, fullName: editFullName }));
+            setIsEditingName(false);
+            setSuccessMsg('Cập nhật họ tên thành công!');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Lỗi khi cập nhật.');
         }
     };
 
-    const handlePersonalInfoChange = (e) => {
-        const { name, value } = e.target;
-        setPersonalInfo(prev => ({ ...prev, [name]: value }));
+    const handleCancelEdit = () => {
+        setEditFullName(profile?.fullName || '');
+        setIsEditingName(false);
     };
 
-    const handleSavePersonalInfo = () => {
-        setUserData(prev => ({ ...prev, ...personalInfo }));
-        setIsEditingPersonal(false);
-    };
-
-    const handleCancelPersonalEdit = () => {
-        setPersonalInfo({
-            dateOfBirth: userData.dateOfBirth || '',
-            address: userData.address || '',
-            notes: userData.notes || ''
-        });
-        setIsEditingPersonal(false);
-    };
-
+    // Change password
     const handlePasswordChange = (e) => {
         const { name, value } = e.target;
         setPasswordData(prev => ({ ...prev, [name]: value }));
+        setPasswordError('');
     };
 
-    const handleChangePassword = (e) => {
+    const handleChangePassword = async (e) => {
         e.preventDefault();
-        // Validate & call API
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            alert('Mật khẩu mới không khớp!');
+        setPasswordError('');
+
+        if (passwordData.newPassword.length < 6) {
+            setPasswordError('Mật khẩu mới phải có ít nhất 6 ký tự.');
             return;
         }
-        // TODO: Call API to change password
-        alert('Đổi mật khẩu thành công!');
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        setIsChangingPassword(false);
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            setPasswordError('Mật khẩu mới không khớp!');
+            return;
+        }
+
+        try {
+            await api.put('/profile/change-password', {
+                oldPassword: passwordData.oldPassword,
+                newPassword: passwordData.newPassword
+            });
+            setSuccessMsg('Đổi mật khẩu thành công!');
+            setTimeout(() => setSuccessMsg(''), 3000);
+            setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+            setIsChangingPassword(false);
+        } catch (err) {
+            setPasswordError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+        }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'Chưa cập nhật';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN');
-    };
+    if (loading) {
+        return (
+            <div className="staff-management">
+                <Sidebar />
+                <main className="staff-content">
+                    <div className="profile-container">
+                        <div className="profile-loading">Đang tải hồ sơ...</div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    const displayName = profile?.fullName || profile?.username || 'Người dùng';
 
     return (
         <div className="staff-management">
@@ -117,150 +156,189 @@ const UserProfile = () => {
                         <p>Quản lý thông tin cá nhân của bạn</p>
                     </div>
 
+                    {/* Success Message */}
+                    {successMsg && (
+                        <div className="profile-alert success">
+                            <CheckCircle size={18} />
+                            <span>{successMsg}</span>
+                        </div>
+                    )}
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="profile-alert error">
+                            <AlertCircle size={18} />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
                     {/* Avatar Section */}
                     <div className="profile-section avatar-section">
                         <div className="avatar-wrapper">
                             <div className="profile-avatar">
-                                {userData.avatar ? (
-                                    <img src={userData.avatar} alt={userData.name} />
-                                ) : (
-                                    <div className="avatar-initials">
-                                        {getInitials(userData.name)}
-                                    </div>
-                                )}
-                                <label htmlFor="avatar-upload" className="avatar-upload-btn">
-                                    <Camera size={18} />
-                                </label>
-                                <input
-                                    id="avatar-upload"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleAvatarChange}
-                                    style={{ display: 'none' }}
-                                />
+                                <div className="avatar-initials">
+                                    {getInitials(displayName)}
+                                </div>
                             </div>
                             <div className="avatar-info">
-                                <h2>{userData.name}</h2>
-                                <p className="user-id">ID: {userData.id}</p>
+                                <h2>{displayName}</h2>
+                                <p className="user-id">@{profile?.username}</p>
                                 <div className="user-badges">
-                                    <span className={`role-badge ${userData.role}`}>
-                                        {getRoleLabel(userData.role)}
+                                    <span className={`role-badge ${getRoleBadgeClass(profile?.roleId)}`}>
+                                        {getRoleLabel(profile?.roleId)}
                                     </span>
-                                    <span className={`status-badge ${userData.status}`}>
-                                        {getStatusLabel(userData.status)}
-                                    </span>
+                                    <span className="status-badge active">Hoạt động</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Work Information (Read-only) */}
+                    {/* Account Information (Read-only) */}
                     <div className="profile-section">
                         <div className="section-header">
-                            <h3>Thông Tin Công Việc</h3>
+                            <h3>Thông Tin Tài Khoản</h3>
                             <span className="read-only-badge">Chỉ xem</span>
                         </div>
                         <div className="info-grid read-only">
                             <div className="info-item">
-                                <Mail size={18} />
+                                <User size={18} />
                                 <div>
-                                    <label>Email</label>
-                                    <p>{userData.email}</p>
-                                </div>
-                            </div>
-                            <div className="info-item">
-                                <Phone size={18} />
-                                <div>
-                                    <label>Số điện thoại</label>
-                                    <p>{userData.phone}</p>
+                                    <label>Tên đăng nhập</label>
+                                    <p>{profile?.username}</p>
                                 </div>
                             </div>
                             <div className="info-item">
                                 <Briefcase size={18} />
                                 <div>
-                                    <label>Môn học</label>
-                                    <p>{userData.subject}</p>
+                                    <label>Vai trò</label>
+                                    <p>{profile?.roleName || getRoleLabel(profile?.roleId)}</p>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <User size={18} />
+                                <div>
+                                    <label>ID người dùng</label>
+                                    <p>{profile?.userId}</p>
+                                </div>
+                            </div>
+                            <div className="info-item">
+                                <User size={18} />
+                                <div>
+                                    <label>Trạng thái</label>
+                                    <p>{profile?.accountStatus === 'active' ? 'Hoạt động' : (profile?.accountStatus || 'Hoạt động')}</p>
                                 </div>
                             </div>
                         </div>
-                        <p className="section-note">
-                            💡 Thông tin này do quản trị viên quản lý. Vui lòng liên hệ admin để thay đổi.
-                        </p>
                     </div>
 
-                    {/* Personal Information (Editable) */}
+                    {/* Personal / Role-specific Info */}
+                    {(profile?.email || profile?.phoneNumber || profile?.address || profile?.specialization || profile?.degree || profile?.supportLevel) && (
+                        <div className="profile-section">
+                            <div className="section-header">
+                                <h3>Thông Tin Cá Nhân</h3>
+                                <span className="read-only-badge">Chỉ xem</span>
+                            </div>
+                            <div className="info-grid read-only">
+                                {profile?.email && (
+                                    <div className="info-item">
+                                        <Mail size={18} />
+                                        <div>
+                                            <label>Email</label>
+                                            <p>{profile.email}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {profile?.phoneNumber && (
+                                    <div className="info-item">
+                                        <Phone size={18} />
+                                        <div>
+                                            <label>Số điện thoại</label>
+                                            <p>{profile.phoneNumber}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {profile?.address && (
+                                    <div className="info-item full-width">
+                                        <MapPin size={18} />
+                                        <div>
+                                            <label>Địa chỉ</label>
+                                            <p>{profile.address}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {profile?.specialization && (
+                                    <div className="info-item">
+                                        <Briefcase size={18} />
+                                        <div>
+                                            <label>Chuyên môn</label>
+                                            <p>{profile.specialization}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {profile?.degree && (
+                                    <div className="info-item">
+                                        <FileText size={18} />
+                                        <div>
+                                            <label>Bằng cấp</label>
+                                            <p>{profile.degree}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {profile?.supportLevel && (
+                                    <div className="info-item">
+                                        <Briefcase size={18} />
+                                        <div>
+                                            <label>Cấp hỗ trợ</label>
+                                            <p>{profile.supportLevel}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="section-note">
+                                💡 Thông tin này do quản trị viên quản lý. Liên hệ admin để thay đổi.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Full Name (Editable) */}
                     <div className="profile-section">
                         <div className="section-header">
-                            <h3>Thông Tin Cá Nhân</h3>
-                            {!isEditingPersonal ? (
-                                <button className="btn-edit" onClick={() => setIsEditingPersonal(true)}>
+                            <h3>Họ và Tên</h3>
+                            {!isEditingName ? (
+                                <button className="btn-edit" onClick={() => setIsEditingName(true)}>
                                     Chỉnh sửa
                                 </button>
                             ) : (
                                 <div className="edit-actions">
-                                    <button className="btn-cancel" onClick={handleCancelPersonalEdit}>
+                                    <button className="btn-cancel" onClick={handleCancelEdit}>
                                         Hủy
                                     </button>
-                                    <button className="btn-save" onClick={handleSavePersonalInfo}>
+                                    <button className="btn-save" onClick={handleSaveFullName}>
                                         Lưu
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        {!isEditingPersonal ? (
+                        {!isEditingName ? (
                             <div className="info-grid">
-                                <div className="info-item">
-                                    <Calendar size={18} />
-                                    <div>
-                                        <label>Ngày sinh</label>
-                                        <p>{formatDate(userData.dateOfBirth)}</p>
-                                    </div>
-                                </div>
                                 <div className="info-item full-width">
-                                    <MapPin size={18} />
+                                    <User size={18} />
                                     <div>
-                                        <label>Địa chỉ</label>
-                                        <p>{userData.address || 'Chưa cập nhật'}</p>
-                                    </div>
-                                </div>
-                                <div className="info-item full-width">
-                                    <FileText size={18} />
-                                    <div>
-                                        <label>Ghi chú</label>
-                                        <p>{userData.notes || 'Không có ghi chú'}</p>
+                                        <label>Họ và tên hiển thị</label>
+                                        <p>{profile?.fullName || 'Chưa cập nhật'}</p>
                                     </div>
                                 </div>
                             </div>
                         ) : (
                             <div className="edit-form">
                                 <div className="form-group">
-                                    <label>Ngày sinh</label>
-                                    <input
-                                        type="date"
-                                        name="dateOfBirth"
-                                        value={personalInfo.dateOfBirth}
-                                        onChange={handlePersonalInfoChange}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Địa chỉ</label>
+                                    <label>Họ và tên</label>
                                     <input
                                         type="text"
-                                        name="address"
-                                        value={personalInfo.address}
-                                        onChange={handlePersonalInfoChange}
-                                        placeholder="Nhập địa chỉ của bạn"
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Ghi chú</label>
-                                    <textarea
-                                        name="notes"
-                                        value={personalInfo.notes}
-                                        onChange={handlePersonalInfoChange}
-                                        placeholder="Thêm ghi chú..."
-                                        rows="4"
+                                        value={editFullName}
+                                        onChange={(e) => setEditFullName(e.target.value)}
+                                        placeholder="Nhập họ và tên của bạn"
                                     />
                                 </div>
                             </div>
@@ -280,12 +358,18 @@ const UserProfile = () => {
 
                         {isChangingPassword ? (
                             <form className="password-form" onSubmit={handleChangePassword}>
+                                {passwordError && (
+                                    <div className="profile-alert error" style={{ marginBottom: '1rem' }}>
+                                        <AlertCircle size={18} />
+                                        <span>{passwordError}</span>
+                                    </div>
+                                )}
                                 <div className="form-group">
                                     <label>Mật khẩu hiện tại</label>
                                     <input
                                         type="password"
-                                        name="currentPassword"
-                                        value={passwordData.currentPassword}
+                                        name="oldPassword"
+                                        value={passwordData.oldPassword}
                                         onChange={handlePasswordChange}
                                         required
                                     />
@@ -316,7 +400,8 @@ const UserProfile = () => {
                                         className="btn-cancel"
                                         onClick={() => {
                                             setIsChangingPassword(false);
-                                            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                                            setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+                                            setPasswordError('');
                                         }}
                                     >
                                         Hủy

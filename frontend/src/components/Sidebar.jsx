@@ -1,5 +1,6 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, LogOut, Home, ChevronLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import '../css/components/Sidebar.css';
 
 const Sidebar = () => {
@@ -14,9 +15,12 @@ const Sidebar = () => {
 
     ];
 
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+
     const handleLogout = () => {
-        // TODO: Implement logout logic
-        console.log('Logout clicked');
+        logout();
+        navigate('/center');
     };
 
     return (
@@ -55,13 +59,13 @@ const Sidebar = () => {
             </nav>
 
             <div className="sidebar-footer">
-                <div className="sidebar-user">
-                    <div className="sidebar-user-avatar">SJ</div>
+                <Link to="/profile" className="sidebar-user" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div className="sidebar-user-avatar">{(user?.fullName || user?.username || 'A').charAt(0).toUpperCase()}</div>
                     <div className="sidebar-user-info">
-                        <div className="sidebar-user-name">Sarah Jenkins</div>
-                        <div className="sidebar-user-role">Đã đăng nhập</div>
+                        <div className="sidebar-user-name">{user?.fullName || user?.username || 'Admin'}</div>
+                        <div className="sidebar-user-role">Quản trị viên</div>
                     </div>
-                </div>
+                </Link>
                 <button className="sidebar-logout" onClick={handleLogout}>
                     <LogOut size={20} />
                 </button>

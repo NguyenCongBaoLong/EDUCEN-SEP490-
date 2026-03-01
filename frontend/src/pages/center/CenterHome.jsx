@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
     MapPin, Phone, Mail, Globe, Clock, BookOpen, Star, Quote, Users, Award,
-    TrendingUp, Pencil, X, Check, LayoutDashboard, Eye, Plus, Trash2, ImageIcon, Upload
+    TrendingUp, Pencil, X, Check, LayoutDashboard, Eye, Plus, Trash2, ImageIcon, Upload, LogOut
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSchedule } from '../../context/ScheduleContext';
+import { useAuth } from '../../context/AuthContext';
 import '../../css/pages/center/CenterHome.css';
 
 /* ─── Initial data ──────────────────────────────────── */
@@ -90,6 +91,7 @@ const LogoDisplay = ({ logoSrc, name }) => (
 const CenterHome = ({ isAdmin = false }) => {
     const navigate = useNavigate();
     const { scheduledClasses } = useSchedule();
+    const { user, logout } = useAuth();
     const logoInputRef = useRef(null);
 
     /* Enrollment form */
@@ -222,8 +224,24 @@ const CenterHome = ({ isAdmin = false }) => {
                         )}
                     </div>
                     <div className="center-header-actions">
-                        <a href="#enrollment" className="center-header-enroll">Đăng ký</a>
-                        <Link to="/login" className="center-link-login">Đăng nhập</Link>
+                        {user ? (
+                            <>
+                                <Link to="/profile" className="center-header-user-link">
+                                    <div className="center-header-avatar">
+                                        {(user.fullName || user.username || '?').charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="center-header-user">{user.fullName || user.username}</span>
+                                </Link>
+                                <button onClick={() => { logout(); navigate('/center'); }} className="center-header-logout" title="Đăng xuất">
+                                    <LogOut size={18} />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <a href="#enrollment" className="center-header-enroll">Đăng ký</a>
+                                <Link to="/login" className="center-link-login">Đăng nhập</Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </header>

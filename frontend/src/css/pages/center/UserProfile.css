@@ -5,6 +5,47 @@
     margin: 0 auto;
 }
 
+.staff-content {
+    flex: 1;
+    margin-left: 280px;
+    padding: 2rem;
+}
+
+.profile-loading {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6b7280;
+    font-size: 1rem;
+}
+
+.profile-alert {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+}
+
+.profile-alert.success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.profile-alert.error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.role-badge.admin {
+    background: rgba(59, 130, 246, 0.2) !important;
+    color: #1e40af;
+}
+
 /* Header */
 .profile-header {
     margin-bottom: 2rem;

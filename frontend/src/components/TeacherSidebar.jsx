@@ -1,9 +1,17 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, GraduationCap, Calendar, ClipboardList, LogOut, ChevronLeft, BarChart2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import '../css/components/Sidebar.css';
 
 const TeacherSidebar = ({ isTA = false }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/center');
+    };
 
     const menuItems = [
         { path: isTA ? '/ta/classes' : '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
@@ -41,14 +49,14 @@ const TeacherSidebar = ({ isTA = false }) => {
             </nav>
 
             <div className="sidebar-footer">
-                <div className="sidebar-user">
-                    <div className="sidebar-user-avatar">{isTA ? 'TG' : 'GV'}</div>
+                <Link to="/profile" className="sidebar-user" style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div className="sidebar-user-avatar">{(user?.fullName || user?.username || (isTA ? 'T' : 'G')).charAt(0).toUpperCase()}</div>
                     <div className="sidebar-user-info">
-                        <div className="sidebar-user-name">{isTA ? 'Trợ giảng' : 'Giáo viên'}</div>
-                        <div className="sidebar-user-role">Đã đăng nhập</div>
+                        <div className="sidebar-user-name">{user?.fullName || user?.username || (isTA ? 'Trợ giảng' : 'Giáo viên')}</div>
+                        <div className="sidebar-user-role">{isTA ? 'Trợ giảng' : 'Giáo viên'}</div>
                     </div>
-                </div>
-                <button className="sidebar-logout" onClick={() => console.log('Logout')}>
+                </Link>
+                <button className="sidebar-logout" onClick={handleLogout}>
                     <LogOut size={20} />
                 </button>
             </div>

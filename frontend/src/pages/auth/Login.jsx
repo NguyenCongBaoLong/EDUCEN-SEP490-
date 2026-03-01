@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, AlertCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowRight, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth, getRedirectPath } from '../../context/AuthContext';
 import '../../css/pages/auth/Login.css';
 
 const Login = () => {
     const [formData, setFormData] = useState({
-        email: '',
+        username: '',
         password: '',
         rememberMe: false,
     });
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -19,22 +23,22 @@ const Login = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(''); // Clear previous error
+        setError('');
+        setIsLoading(true);
 
-        // TODO: Replace this with actual API call to backend
-        // For now, simulate validation for testing
-        const validEmail = 'admin@educen.com';
-        const validPassword = 'admin123';
-
-        if (formData.email === validEmail && formData.password === validPassword) {
-            console.log('Login successful!', formData);
-            // TODO: Redirect to dashboard
-            alert('Đăng nhập thành công! (Chỉ để kiểm tra)');
-        } else {
-            // Show error message
-            setError('Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.');
+        try {
+            const user = await login(formData.username, formData.password);
+            const redirectPath = getRedirectPath(user.role);
+            navigate(redirectPath);
+        } catch (err) {
+            // Lấy message lỗi từ backend
+            const data = err.response?.data;
+            const message = data?.message || (typeof data === 'string' ? data : null) || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+            setError(message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -70,18 +74,19 @@ const Login = () => {
 
 
                     <form onSubmit={handleSubmit} className="login-form">
-                        {/* Email Input */}
+                        {/* Username Input */}
                         <div className="form-group">
-                            <label htmlFor="email">Email hoặc Tên đăng nhập</label>
+                            <label htmlFor="username">Tên đăng nhập</label>
                             <input
                                 type="text"
-                                id="email"
-                                name="email"
-                                value={formData.email}
+                                id="username"
+                                name="username"
+                                value={formData.username}
                                 onChange={handleChange}
-                                placeholder="tutor@example.com"
+                                placeholder="Nhập tên đăng nhập"
                                 className="form-input"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -96,6 +101,7 @@ const Login = () => {
                                 placeholder="••••••••"
                                 className="form-input"
                                 required
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -125,9 +131,18 @@ const Login = () => {
                         </div>
 
                         {/* Submit Button */}
-                        <button type="submit" className="submit-btn">
-                            <span>Đăng nhập</span>
-                            <ArrowRight size={18} />
+                        <button type="submit" className="submit-btn" disabled={isLoading}>
+                            {isLoading ? (
+                                <>
+                                    <Loader2 size={18} className="spin-icon" />
+                                    <span>Đang đăng nhập...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>Đăng nhập</span>
+                                    <ArrowRight size={18} />
+                                </>
+                            )}
                         </button>
                     </form>
 

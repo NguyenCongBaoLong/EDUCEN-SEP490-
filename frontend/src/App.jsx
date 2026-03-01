@@ -20,44 +20,54 @@ import TeacherAssignments from './pages/teacher/TeacherAssignments';
 import AssignmentGrading from './pages/teacher/AssignmentGrading';
 import TeacherPerformanceReport from './pages/teacher/TeacherPerformanceReport';
 import { ScheduleProvider } from './context/ScheduleContext';
+import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
-    <ScheduleProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/center" element={<CenterHome isAdmin={true} />} />
-          <Route path="/center/classes" element={<ClassesManagement />} />
-          <Route path="/center/classes/:classId" element={<ClassDetail />} />
-          <Route path="/center/schedules" element={<ScheduleManagement />} />
-          <Route path="/center/staff" element={<StaffManagement />} />
-          <Route path="/center/students" element={<StudentManagement />} />
-          <Route path="/profile" element={<UserProfile />} />
-          <Route path="/center/dashboard" element={<AdminDashboard />} />
-          <Route path="/teacher/classes" element={<TeacherClasses />} />
-          <Route path="/teacher/classes/:classId" element={<TeacherClassDetail />} />
-          <Route path="/teacher/schedules" element={<TeacherSchedule />} />
-          <Route path="/teacher/assignments" element={<TeacherAssignments />} />
-          <Route path="/teacher/assignments/:assignmentId/grade" element={<AssignmentGrading />} />
-          <Route path="/teacher/performance" element={<TeacherPerformanceReport />} />
+    <AuthProvider>
+      <ScheduleProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* ── Public Routes ── */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/center" element={<CenterHome isAdmin={true} />} />
 
-          {/* TA Routes */}
-          <Route path="/ta/classes" element={<TeacherClasses isTA={true} />} />
-          <Route path="/ta/classes/:classId" element={<TeacherClassDetail isTA={true} />} />
-          <Route path="/ta/schedules" element={<TeacherSchedule isTA={true} />} />
-          <Route path="/ta/assignments" element={<TeacherAssignments isTA={true} />} />
-          <Route path="/ta/assignments/:assignmentId/grade" element={<AssignmentGrading isTA={true} />} />
-          <Route path="/ta/performance" element={<TeacherPerformanceReport isTA={true} />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </BrowserRouter>
-    </ScheduleProvider>
+            {/* ── Admin Routes (chỉ Admin) ── */}
+            <Route path="/center/classes" element={<PrivateRoute allowedRoles={['Admin']}><ClassesManagement /></PrivateRoute>} />
+            <Route path="/center/classes/:classId" element={<PrivateRoute allowedRoles={['Admin']}><ClassDetail /></PrivateRoute>} />
+            <Route path="/center/schedules" element={<PrivateRoute allowedRoles={['Admin']}><ScheduleManagement /></PrivateRoute>} />
+            <Route path="/center/staff" element={<PrivateRoute allowedRoles={['Admin']}><StaffManagement /></PrivateRoute>} />
+            <Route path="/center/students" element={<PrivateRoute allowedRoles={['Admin']}><StudentManagement /></PrivateRoute>} />
+            <Route path="/center/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant']}><UserProfile /></PrivateRoute>} />
+
+            {/* ── Teacher Routes (chỉ Teacher) ── */}
+            <Route path="/teacher/classes" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherClasses /></PrivateRoute>} />
+            <Route path="/teacher/classes/:classId" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherClassDetail /></PrivateRoute>} />
+            <Route path="/teacher/schedules" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherSchedule /></PrivateRoute>} />
+            <Route path="/teacher/assignments" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherAssignments /></PrivateRoute>} />
+            <Route path="/teacher/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Teacher']}><AssignmentGrading /></PrivateRoute>} />
+            <Route path="/teacher/performance" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherPerformanceReport /></PrivateRoute>} />
+
+            {/* ── TA Routes (chỉ Assistant) ── */}
+            <Route path="/ta/classes" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClasses isTA={true} /></PrivateRoute>} />
+            <Route path="/ta/classes/:classId" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClassDetail isTA={true} /></PrivateRoute>} />
+            <Route path="/ta/schedules" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherSchedule isTA={true} /></PrivateRoute>} />
+            <Route path="/ta/assignments" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherAssignments isTA={true} /></PrivateRoute>} />
+            <Route path="/ta/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Assistant']}><AssignmentGrading isTA={true} /></PrivateRoute>} />
+            <Route path="/ta/performance" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherPerformanceReport isTA={true} /></PrivateRoute>} />
+
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </BrowserRouter>
+      </ScheduleProvider>
+    </AuthProvider>
   );
 }
 

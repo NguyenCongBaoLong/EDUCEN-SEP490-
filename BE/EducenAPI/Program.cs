@@ -6,29 +6,21 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.Models;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// ── Services ────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-
-
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// ── Database ────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<EducenV2Context>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
-builder.Services.AddEndpointsApiExplorer();
+// ── Auth Service ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-builder.Services.AddSwaggerGen();
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
-
-
-
-// ── CORS: cho phép FE gọi API ─────────────────────────────────────────────
+// ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -42,6 +34,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// ── JWT Authentication ──────────────────────────────────────────────────────
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -64,25 +59,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddDbContext<EducenV2Context>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("MyDatabase")
-    ));
-
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy => policy
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowAnyOrigin()); // dev only
-});
-
-
-
-builder.Services.AddAuthorization();
-
+// ── Build App ───────────────────────────────────────────────────────────────
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -91,15 +68,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend"); // ← phải đứng trước UseAuthorization
-
-app.UseHttpsRedirection();
-
 app.UseCors("AllowFrontend");
-
-app.UseAuthentication();  
+app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 app.MapControllers();
 
 app.Run();
