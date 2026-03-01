@@ -1,25 +1,73 @@
+using EducenAPI.Middleware;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
+using EducenAPI.Services.TenantService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
-using EducenAPI.Models;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ===============================
+// Controllers & Swagger
+// ===============================
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddDbContext<EducenV2Context>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
-
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddScoped<IAuthService, AuthService>();
-
 builder.Services.AddSwaggerGen();
+
+// ===============================
+// DATABASE CONFIGURATION
+// ===============================
+
+// Admin DB (central database)
+builder.Services.AddDbContext<AdminDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("AdminConnection")));
+
+
+
+
+// Tenant DB (dynamic per request)
+builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
+{
+    var tenantService = serviceProvider.GetRequiredService<ICurrentTenantService>();
+
+    var connectionString =
+        tenantService.ConnectionString
+        ?? builder.Configuration.GetConnectionString("DefaultTenantConnection");
+
+    options.UseSqlServer(connectionString);
+});
+
+// ===============================
+// Services
+// ===============================
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+
+// ===============================
+// CORS
+// ===============================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowAnyOrigin()); // TODO: restrict in production
+});
+
+// ===============================
+// JWT Authentication
+// ===============================
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+var jwtKey = jwtSettings["Key"]
+    ?? throw new InvalidOperationException("JWT Key is not configured");
+
+var key = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -42,41 +90,11 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddDbContext<EducenV2Context>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("MyDatabase")
-    ));
-
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy => policy
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowAnyOrigin()); // dev only
-});
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey =
-                new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(
-                        builder.Configuration["Jwt:Key"]
-                    ))
-        };
-    });
-
-builder.Services.AddAuthorization();
-
 var app = builder.Build();
+
+// ===============================
+// MIDDLEWARE PIPELINE
+// ===============================
 
 if (app.Environment.IsDevelopment())
 {
@@ -86,11 +104,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<TenantResolver>();
+
 app.UseCors("AllowFrontend");
 
-app.UseAuthentication();  
+app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
+
 app.MapControllers();
 
 app.Run();

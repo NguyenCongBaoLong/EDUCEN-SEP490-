@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models;
 
 public partial class LessonMaterial
 {
+    [Key]
     public int MaterialId { get; set; }
 
     public int ClassId { get; set; }

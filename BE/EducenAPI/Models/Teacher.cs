@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EducenAPI.Models;
 
 public partial class Teacher
 {
-    public int TeacherId { get; set; }
+    [Key]
+    [ForeignKey("User")]
+    public int UserId { get; set; }
 
     public string? Specialization { get; set; }
 

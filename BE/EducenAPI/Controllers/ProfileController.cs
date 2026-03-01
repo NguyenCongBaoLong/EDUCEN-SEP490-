@@ -1,5 +1,5 @@
 ﻿using EducenAPI.DTOs.Profile;
-using EducenAPI.Models;
+using EducenAPI.Persistence.Contexts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;

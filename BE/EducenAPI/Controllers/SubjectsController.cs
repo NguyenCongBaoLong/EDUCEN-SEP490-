@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System;
 using EducenAPI.DTOs;
+using EducenAPI.Persistence.Contexts;
 namespace EducenAPI.Controllers
 {
     [ApiController]
