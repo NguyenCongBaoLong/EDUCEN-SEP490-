@@ -51,11 +51,11 @@ namespace EduCen.Controllers
                 // Assistant info
                 SupportLevel = user.Assistant?.SupportLevel,
                 // Student info
-                Email = user.Student?.Email,
-                PhoneNumber = user.Student?.PhoneNumber ?? user.Parent?.PhoneNumber,
-                EnrollmentStatus = user.Student?.EnrollmentStatus,
-                // Parent info
-                Address = user.Parent?.Address
+                //Email = user.Student?.Email,
+                //PhoneNumber = user.Student?.PhoneNumber ?? user.Parent?.PhoneNumber,
+                //EnrollmentStatus = user.Student?.EnrollmentStatus,
+                //// Parent info
+                //Address = user.Parent?.Address
             };
 
             return Ok(result);

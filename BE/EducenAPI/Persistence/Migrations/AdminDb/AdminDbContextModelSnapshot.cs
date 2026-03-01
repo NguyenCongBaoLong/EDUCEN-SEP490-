@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace EducenAPI.Migrations.AdminDb
+namespace EducenAPI.Persistence.Migrations.AdminDb
 {
     [DbContext(typeof(AdminDbContext))]
     partial class AdminDbContextModelSnapshot : ModelSnapshot
@@ -162,6 +162,10 @@ namespace EducenAPI.Migrations.AdminDb
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -170,6 +174,10 @@ namespace EducenAPI.Migrations.AdminDb
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("TenantId");
 

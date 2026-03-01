@@ -17,12 +17,27 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ── Database ────────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<EducenV2Context>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
+// Admin DB (central database)
+builder.Services.AddDbContext<AdminDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("AdminConnection")));
+
+// Tenant DB (dynamic per request)
+builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
+{
+    var tenantService = serviceProvider.GetRequiredService<ICurrentTenantService>();
+
+    var connectionString =
+        tenantService.ConnectionString
+        ?? builder.Configuration.GetConnectionString("DefaultTenantConnection");
+
+    options.UseSqlServer(connectionString);
+});
 
 // ── Auth Service ────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
 
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -78,7 +93,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseHttpsRedirection();
+app.UseMiddleware<TenantResolver>();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();

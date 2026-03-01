@@ -11,6 +11,10 @@ namespace EducenAPI.Models
         [MaxLength(200)]
         public string TenantName { get; set; }
 
+        public string Username { get; set; } = null!;
+
+        public string Password { get; set; } = null!;
+
         [MaxLength(200)]
         public string? ContactPerson { get; set; }
 
