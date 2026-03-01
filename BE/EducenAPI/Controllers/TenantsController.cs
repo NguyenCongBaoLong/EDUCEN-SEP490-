@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using EducenAPI.DTOs;
+using EducenAPI.DTOs.Tenant;
 using EducenAPI.Services.TenantService;
-using EducenAPI.DTOs;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
 {
@@ -21,6 +22,35 @@ namespace EducenAPI.Controllers
         {
             var result = _tenantService.CreateTenant(request);
             return Ok(result);
+        }
+
+        [HttpGet]
+        public IActionResult GetAll()
+        {
+            var tenants = _tenantService.GetAllTenants();
+            return Ok(tenants);
+        }
+
+        [HttpGet("{tenantId}")]
+        public IActionResult GetById(string tenantId)
+        {
+            var tenant = _tenantService.GetTenantById(tenantId);
+
+            if (tenant == null)
+                return NotFound();
+
+            return Ok(tenant);
+        }
+
+        [HttpPut("{tenantId}")]
+        public IActionResult Update(string tenantId, UpdateTenantRequest request)
+        {
+            var updatedTenant = _tenantService.UpdateTenant(tenantId, request);
+
+            if (updatedTenant == null)
+                return NotFound();
+
+            return Ok(updatedTenant);
         }
     }
 }

@@ -1,8 +1,9 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+﻿using EducenAPI.DTOs;
+using EducenAPI.DTOs.Tenant;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
-using EducenAPI.DTOs;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services.TenantService
 {
@@ -68,6 +69,38 @@ namespace EducenAPI.Services.TenantService
             {
                 throw new Exception(ex.Message);
             }
+
+            return tenant;
+        }
+
+        public IEnumerable<Tenant> GetAllTenants()
+        {
+            return _adminDbContext.Tenants.ToList();
+        }
+
+        public Tenant? GetTenantById(string tenantId)
+        {
+            return _adminDbContext.Tenants
+                .FirstOrDefault(t => t.TenantId == tenantId);
+        }
+
+        public Tenant? UpdateTenant(string tenantId, UpdateTenantRequest request)
+        {
+            var tenant = _adminDbContext.Tenants
+                .FirstOrDefault(t => t.TenantId == tenantId);
+
+            if (tenant == null)
+                return null;
+
+            tenant.TenantName = request.TenantName;
+            tenant.ContactPerson = request.ContactPerson;
+            tenant.Email = request.Email;
+            tenant.PhoneNumber = request.PhoneNumber;
+            tenant.Address = request.Address;
+            tenant.DomainUrl = request.DomainUrl;
+            tenant.IsActive = request.IsActive;
+
+            _adminDbContext.SaveChanges();
 
             return tenant;
         }
