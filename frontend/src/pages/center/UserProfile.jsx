@@ -3,6 +3,7 @@ import { User, Mail, Phone, Briefcase, MapPin, Calendar, FileText, Lock, Upload,
 import Sidebar from '../../components/Sidebar';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import StudentSidebar from '../../components/StudentSidebar';
+import ParentSidebar from '../../components/ParentSidebar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import '../../css/pages/center/UserProfile.css';
@@ -11,6 +12,7 @@ import '../../css/pages/center/UserProfile.css';
 const SidebarByRole = ({ role }) => {
     if (role === 'Teacher' || role === 'Assistant') return <TeacherSidebar />;
     if (role === 'Student') return <StudentSidebar />;
+    if (role === 'Parent') return <ParentSidebar />;
     return <Sidebar />; // Admin / fallback
 };
 
