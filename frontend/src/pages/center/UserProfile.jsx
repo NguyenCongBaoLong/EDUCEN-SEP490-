@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Briefcase, MapPin, Calendar, FileText, Lock, Upload, Camera, AlertCircle, CheckCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
+import TeacherSidebar from '../../components/TeacherSidebar';
+import StudentSidebar from '../../components/StudentSidebar';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import '../../css/pages/center/UserProfile.css';
+
+// Render đúng sidebar theo role
+const SidebarByRole = ({ role }) => {
+    if (role === 'Teacher' || role === 'Assistant') return <TeacherSidebar />;
+    if (role === 'Student') return <StudentSidebar />;
+    return <Sidebar />; // Admin / fallback
+};
 
 const UserProfile = () => {
     const { user } = useAuth();
@@ -133,7 +142,7 @@ const UserProfile = () => {
     if (loading) {
         return (
             <div className="staff-management">
-                <Sidebar />
+                <SidebarByRole role={user?.role} />
                 <main className="staff-content">
                     <div className="profile-container">
                         <div className="profile-loading">Đang tải hồ sơ...</div>
@@ -147,7 +156,7 @@ const UserProfile = () => {
 
     return (
         <div className="staff-management">
-            <Sidebar />
+            <SidebarByRole role={user?.role} />
             <main className="staff-content">
                 <div className="profile-container">
                     {/* Header */}

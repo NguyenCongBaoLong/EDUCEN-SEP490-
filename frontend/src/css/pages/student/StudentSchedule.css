@@ -1,0 +1,418 @@
+/* ─── StudentSchedule Page ─────────────────────────────────── */
+.ss-page {
+    display: flex;
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.ss-main {
+    flex: 1;
+    margin-left: 240px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+}
+
+/* Header */
+.ss-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+
+.ss-subtitle {
+    font-size: 0.9375rem;
+    color: #64748b;
+    margin: 0 0 20px;
+}
+
+/* Controls */
+.ss-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ss-date-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ss-btn-nav {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    transition: all .15s;
+}
+
+.ss-btn-nav:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.ss-date-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.ss-view-toggle {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.ss-btn-view {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: #475569;
+    transition: all .15s;
+}
+
+.ss-btn-view.active {
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+}
+
+/* Legend */
+.ss-legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.ss-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.ss-legend-item.present {
+    color: #16a34a;
+}
+
+.ss-legend-item.absent {
+    color: #dc2626;
+}
+
+.ss-legend-item.upcoming {
+    color: #94a3b8;
+}
+
+/* Content */
+.ss-content {
+    flex: 1;
+    overflow: auto;
+}
+
+/* Calendar (week/day) */
+.ss-calendar {
+    display: flex;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ss-time-column {
+    width: 64px;
+    flex-shrink: 0;
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+}
+
+.ss-day-header {
+    height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #64748b;
+    gap: 2px;
+}
+
+.ss-day-header.today {
+    background: #eff6ff;
+}
+
+.ss-day-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.ss-day-date {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.ss-day-header.today .ss-day-date {
+    background: #3b82f6;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9375rem;
+}
+
+.ss-time-slot {
+    height: 70px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 6px;
+    font-size: 0.6875rem;
+    color: #94a3b8;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ss-day-column {
+    flex: 1;
+    border-right: 1px solid #f1f5f9;
+    min-width: 0;
+    position: relative;
+}
+
+.ss-day-column:last-child {
+    border-right: none;
+}
+
+.ss-day-column-single {
+    flex: 1;
+    position: relative;
+}
+
+.ss-day-grid {
+    position: relative;
+    height: calc(14 * 70px);
+}
+
+.ss-grid-cell {
+    height: 70px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ss-classes-container {
+    position: absolute;
+    inset: 0;
+}
+
+/* Class Card in Calendar */
+.ss-class-card {
+    position: absolute;
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    overflow: hidden;
+    opacity: 0.92;
+    transition: opacity .15s, box-shadow .15s;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ss-class-card:hover {
+    opacity: 1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ss-class-code {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.ss-class-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.ss-class-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Attendance badge inside card */
+.ss-att-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-top: 4px;
+    width: fit-content;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+}
+
+.ss-att-badge.present {
+    background: rgba(22, 163, 74, 0.85);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.ss-att-badge.absent {
+    background: rgba(220, 38, 38, 0.9);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.ss-att-badge.upcoming {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* ─── Month View ─── */
+.ss-month-view {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ss-month-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ss-month-weekday {
+    text-align: center;
+    padding: 12px 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.ss-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.ss-month-day-cell {
+    min-height: 90px;
+    border-right: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 6px;
+}
+
+.ss-month-day-cell:nth-child(7n) {
+    border-right: none;
+}
+
+.ss-month-day-cell.empty {
+    background: #fafafa;
+}
+
+.ss-month-day-cell.today {
+    background: #eff6ff;
+}
+
+.ss-month-day-number {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 4px;
+}
+
+.ss-month-day-cell.today .ss-month-day-number {
+    background: #3b82f6;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.ss-month-day-classes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ss-month-class-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #fff;
+    padding: 2px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.9;
+    transition: opacity .15s;
+}
+
+.ss-month-class-badge:hover {
+    opacity: 1;
+}
+
+.ss-month-class-badge.att-absent {
+    outline: 2px solid #ef4444;
+}
+
+@media (max-width: 768px) {
+    .ss-main {
+        margin-left: 0;
+        padding: 16px;
+    }
+}

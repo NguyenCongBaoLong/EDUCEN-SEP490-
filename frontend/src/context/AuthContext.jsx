@@ -28,7 +28,7 @@ function getRedirectPath(role) {
         case 'Assistant':
             return '/ta/classes';
         case 'Student':
-            return '/'; // TODO: thêm route student sau
+            return '/student/classes';
         case 'Parent':
             return '/'; // TODO: thêm route parent sau
         default:

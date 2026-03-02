@@ -19,6 +19,9 @@ import TeacherSchedule from './pages/teacher/TeacherSchedule';
 import TeacherAssignments from './pages/teacher/TeacherAssignments';
 import AssignmentGrading from './pages/teacher/AssignmentGrading';
 import TeacherPerformanceReport from './pages/teacher/TeacherPerformanceReport';
+import StudentClasses from './pages/student/StudentClasses';
+import StudentSchedule from './pages/student/StudentSchedule';
+import StudentClassDetail from './pages/student/StudentClassDetail';
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -45,7 +48,7 @@ function App() {
             <Route path="/center/staff" element={<PrivateRoute allowedRoles={['Admin']}><StaffManagement /></PrivateRoute>} />
             <Route path="/center/students" element={<PrivateRoute allowedRoles={['Admin']}><StudentManagement /></PrivateRoute>} />
             <Route path="/center/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
-            <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant']}><UserProfile /></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant', 'Student']}><UserProfile /></PrivateRoute>} />
 
             {/* ── Teacher Routes (chỉ Teacher) ── */}
             <Route path="/teacher/classes" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherClasses /></PrivateRoute>} />
@@ -62,6 +65,11 @@ function App() {
             <Route path="/ta/assignments" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherAssignments isTA={true} /></PrivateRoute>} />
             <Route path="/ta/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Assistant']}><AssignmentGrading isTA={true} /></PrivateRoute>} />
             <Route path="/ta/performance" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherPerformanceReport isTA={true} /></PrivateRoute>} />
+
+            {/* ── Student Routes (chỉ Student) ── */}
+            <Route path="/student/classes" element={<PrivateRoute allowedRoles={['Student']}><StudentClasses /></PrivateRoute>} />
+            <Route path="/student/classes/:classId" element={<PrivateRoute allowedRoles={['Student']}><StudentClassDetail /></PrivateRoute>} />
+            <Route path="/student/schedules" element={<PrivateRoute allowedRoles={['Student']}><StudentSchedule /></PrivateRoute>} />
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
