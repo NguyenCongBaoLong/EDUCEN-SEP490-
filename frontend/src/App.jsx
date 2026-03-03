@@ -11,6 +11,7 @@ import ClassDetail from './pages/center/ClassDetail';
 import ScheduleManagement from './pages/center/ScheduleManagement';
 import StaffManagement from './pages/center/StaffManagement';
 import StudentManagement from './pages/center/StudentManagement';
+import ParentManagement from './pages/center/ParentManagement';
 import UserProfile from './pages/center/UserProfile';
 import AdminDashboard from './pages/center/AdminDashboard';
 import TeacherClasses from './pages/teacher/TeacherClasses';
@@ -50,6 +51,7 @@ function App() {
             <Route path="/center/schedules" element={<PrivateRoute allowedRoles={['Admin']}><ScheduleManagement /></PrivateRoute>} />
             <Route path="/center/staff" element={<PrivateRoute allowedRoles={['Admin']}><StaffManagement /></PrivateRoute>} />
             <Route path="/center/students" element={<PrivateRoute allowedRoles={['Admin']}><StudentManagement /></PrivateRoute>} />
+            <Route path="/center/parents" element={<PrivateRoute allowedRoles={['Admin']}><ParentManagement /></PrivateRoute>} />
             <Route path="/center/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant', 'Student', 'Parent']}><UserProfile /></PrivateRoute>} />
 

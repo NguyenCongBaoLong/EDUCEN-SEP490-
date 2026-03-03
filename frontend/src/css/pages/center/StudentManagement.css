@@ -56,6 +56,27 @@
     box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
 }
 
+.btn-import-student {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    color: #374151;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border: 1.5px solid #d1d5db;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-import-student:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+    transform: translateY(-1px);
+}
+
 /* Tabs for Enrollment Requests vs Student List */
 .student-tabs {
     display: flex;

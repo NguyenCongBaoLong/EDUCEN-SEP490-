@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import StudentTable from '../../components/StudentTable';
 import AddStudentModal from '../../components/AddStudentModal';
@@ -7,6 +7,7 @@ import StudentDetailModal from '../../components/StudentDetailModal';
 import EnrollmentRequestsTable from '../../components/EnrollmentRequestsTable';
 import EnrollmentDetailModal from '../../components/EnrollmentDetailModal';
 import RejectEnrollmentModal from '../../components/RejectEnrollmentModal';
+import ImportStudentModal from '../../components/ImportStudentModal';
 import '../../css/pages/center/StudentManagement.css';
 
 const StudentManagement = () => {
@@ -15,6 +16,7 @@ const StudentManagement = () => {
 
     // Student Management States
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
     const [viewingStudent, setViewingStudent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -27,102 +29,105 @@ const StudentManagement = () => {
     const [rejectingRequest, setRejectingRequest] = useState(null);
     const [requestStatusFilter, setRequestStatusFilter] = useState('');
 
+    // Mock data - Parents (Must be defined before students)
+    const MOCK_PARENTS = [
+        { id: 'PAR-001', name: 'Nguyễn Văn Bình', phone: '0901234567', email: 'parent1@gmail.com' },
+        { id: 'PAR-002', name: 'Trần Văn Cường', phone: '0912345678', email: 'parent2@gmail.com' },
+        { id: 'PAR-003', name: 'Lê Thị Fang', phone: '0923456789', email: 'parent3@gmail.com' },
+        { id: 'PAR-004', name: 'Phạm Văn Hùng', phone: '0934567890', email: 'parent4@gmail.com' },
+        { id: 'PAR-005', name: 'Vũ Văn Nam', phone: '0956789012', email: 'parent6@gmail.com' }
+    ];
+
     // Mock data - Students
     const [studentList, setStudentList] = useState([
         {
             id: 'STU-001',
             name: 'Nguyễn Văn An',
             avatar: null,
+            email: 'an.nguyen@example.com',
             grade: 6,
-            class: 'Toán 6A',
             dateOfBirth: '2012-05-15',
             gender: 'male',
-            parentName: 'Nguyễn Văn Bình',
-            parentPhone: '0901234567',
-            parentEmail: 'parent1@gmail.com',
+            linkedParentIds: ['PAR-001'],
             address: '123 Lê Lợi, Quận 1, TP.HCM',
             enrollmentDate: '2024-01-15',
             status: 'active',
+            accountSent: true,
             notes: 'Học sinh giỏi toán'
         },
         {
             id: 'STU-002',
             name: 'Trần Thị Bình',
             avatar: null,
+            email: '',
             grade: 7,
-            class: 'Vật lý 7B',
             dateOfBirth: '2011-08-20',
             gender: 'female',
-            parentName: 'Trần Văn Cường',
-            parentPhone: '0912345678',
-            parentEmail: 'parent2@gmail.com',
+            linkedParentIds: ['PAR-002'],
             address: '456 Nguyễn Huệ, Quận 3, TP.HCM',
             enrollmentDate: '2023-09-01',
-            status: 'active',
+            status: 'inactive',
+            accountSent: false,
             notes: ''
         },
         {
             id: 'STU-003',
             name: 'Lê Minh Đức',
             avatar: null,
+            email: 'duc.le@example.com',
             grade: 8,
-            class: 'Hóa 8A',
             dateOfBirth: '2010-12-10',
             gender: 'male',
-            parentName: 'Lê Văn Em',
-            parentPhone: '0923456789',
-            parentEmail: 'parent3@gmail.com',
+            linkedParentIds: ['PAR-003'],
             address: '789 Trần Hưng Đạo, Quận 5, TP.HCM',
             enrollmentDate: '2023-01-10',
-            status: 'active',
+            status: 'inactive',
+            accountSent: false,
             notes: 'Thích học hóa'
         },
         {
             id: 'STU-004',
             name: 'Phạm Thị Giang',
             avatar: null,
+            email: 'giang.pham@example.com',
             grade: 9,
-            class: 'Toán 9A',
             dateOfBirth: '2009-03-25',
             gender: 'female',
-            parentName: 'Phạm Văn Hùng',
-            parentPhone: '0934567890',
-            parentEmail: 'parent4@gmail.com',
+            linkedParentIds: ['PAR-004'],
             address: '321 Hai Bà Trưng, Quận 1, TP.HCM',
             enrollmentDate: '2022-09-05',
             status: 'active',
+            accountSent: true,
             notes: ''
         },
         {
             id: 'STU-005',
             name: 'Hoàng Văn Khoa',
             avatar: null,
+            email: '',
             grade: 10,
-            class: 'Vật lý 10B',
             dateOfBirth: '2008-07-18',
             gender: 'male',
-            parentName: 'Hoàng Thị Lan',
-            parentPhone: '0945678901',
-            parentEmail: 'parent5@gmail.com',
+            linkedParentIds: ['PAR-003'],
             address: '654 Võ Văn Tần, Quận 3, TP.HCM',
             enrollmentDate: '2022-01-20',
             status: 'inactive',
+            accountSent: false,
             notes: 'Tạm nghỉ học'
         },
         {
             id: 'STU-006',
             name: 'Vũ Thị Mai',
             avatar: null,
+            email: 'mai.vu@example.com',
             grade: 11,
-            class: 'Hóa 11A',
             dateOfBirth: '2007-11-30',
             gender: 'female',
-            parentName: 'Vũ Văn Nam',
-            parentPhone: '0956789012',
-            parentEmail: 'parent6@gmail.com',
+            linkedParentIds: ['PAR-005'],
             address: '987 Nguyễn Thị Minh Khai, Quận 3, TP.HCM',
             enrollmentDate: '2021-09-01',
             status: 'active',
+            accountSent: true,
             notes: ''
         }
     ]);
@@ -178,14 +183,11 @@ const StudentManagement = () => {
     const pendingCount = requestsList.filter(r => r.status === 'pending').length;
 
     // Filter students
-    const filteredStudents = studentList.filter(student => {
-        const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesGrade = !gradeFilter || student.grade === parseInt(gradeFilter);
-        const matchesClass = !classFilter || student.class === classFilter;
-        const matchesStatus = !statusFilter || student.status === statusFilter;
-
-        return matchesSearch && matchesGrade && matchesClass && matchesStatus;
-    });
+    // We pass MOCK_PARENTS as parentListData to the StudentTable to display actual parent info
+    const filteredStudents = studentList
+        .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()) || student.id.toLowerCase().includes(searchQuery.toLowerCase()))
+        .filter(student => gradeFilter ? student.grade.toString() === gradeFilter : true)
+        .filter(student => statusFilter ? student.status === statusFilter : true);
 
     const handleAddStudent = () => {
         setEditingStudent(null);
@@ -223,6 +225,23 @@ const StudentManagement = () => {
                 ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' }
                 : s
         ));
+    };
+
+    const handleSendAccount = (studentId) => {
+        setStudentList(studentList.map(s =>
+            s.id === studentId
+                ? { ...s, accountSent: true, status: 'active' }
+                : s
+        ));
+    };
+
+    const handleImportStudents = (newStudents) => {
+        const withIds = newStudents.map((s, i) => ({
+            ...s,
+            id: `STU-${String(studentList.length + i + 1).padStart(3, '0')}`,
+            accountSent: false
+        }));
+        setStudentList(prev => [...prev, ...withIds]);
     };
 
     // Enrollment Request Handlers
@@ -291,10 +310,19 @@ const StudentManagement = () => {
                         </p>
                     </div>
                     {viewMode === 'list' && (
-                        <button className="btn-add-student" onClick={handleAddStudent}>
-                            <Plus size={20} />
-                            Thêm Học Sinh
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                className="btn-import-student"
+                                onClick={() => setIsImportModalOpen(true)}
+                            >
+                                <Upload size={18} />
+                                Import File
+                            </button>
+                            <button className="btn-add-student" onClick={handleAddStudent}>
+                                <Plus size={20} />
+                                Thêm Học Sinh
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -319,6 +347,7 @@ const StudentManagement = () => {
                 {viewMode === 'list' ? (
                     <StudentTable
                         studentData={filteredStudents}
+                        parentListData={MOCK_PARENTS}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
                         gradeFilter={gradeFilter}
@@ -330,6 +359,7 @@ const StudentManagement = () => {
                         onView={handleViewStudent}
                         onEdit={handleEditStudent}
                         onToggleStatus={handleToggleStatusStudent}
+                        onSendAccount={handleSendAccount}
                     />
                 ) : (
                     <EnrollmentRequestsTable
@@ -353,6 +383,7 @@ const StudentManagement = () => {
                 onSubmit={handleSubmitStudent}
                 editingStudent={editingStudent}
                 existingStudents={studentList}
+                parentList={MOCK_PARENTS}
             />
 
             {/* Student Detail Modal */}
@@ -374,6 +405,13 @@ const StudentManagement = () => {
                 onClose={() => setRejectingRequest(null)}
                 onConfirm={handleConfirmReject}
                 request={rejectingRequest}
+            />
+
+            {/* Import Students Modal */}
+            <ImportStudentModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImport={handleImportStudents}
             />
         </div >
     );

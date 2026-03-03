@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, LogOut, Home, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, LogOut, Home, ChevronLeft, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/components/Sidebar.css';
 
@@ -9,10 +9,10 @@ const Sidebar = () => {
     const menuItems = [
         { path: '/center/dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
         { path: '/center/classes', icon: GraduationCap, label: 'Lớp học' },
-        { path: '/center/staff', icon: Users, label: 'Nhân viên' },
+        { path: '/center/staff', icon: Users, label: 'Giáo viên' },
         { path: '/center/students', icon: BookOpen, label: 'Học sinh' },
+        { path: '/center/parents', icon: Heart, label: 'Phụ huynh' },
         { path: '/center/schedules', icon: Calendar, label: 'Lịch học' },
-
     ];
 
     const navigate = useNavigate();
