@@ -1,72 +1,106 @@
 ﻿using EducenAPI.DTOs.Profile;
-using EducenAPI.Services.Interface;
+using EducenAPI.Persistence.Contexts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
-namespace EducenAPI.Controllers
+namespace EduCen.Controllers
 {
     [Route("api/profile")]
     [ApiController]
     [Authorize]
     public class ProfileController : ControllerBase
     {
-        private readonly IProfileService _profileService;
+        private readonly EducenV2Context _context;
 
-        public ProfileController(IProfileService profileService)
+        public ProfileController(EducenV2Context context)
         {
-            _profileService = profileService;
+            _context = context;
         }
 
         // ================= GET CURRENT USER =================
         [HttpGet("me")]
-        public async Task<IActionResult> GetCurrentUser()
+        public IActionResult GetCurrentUser()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return Unauthorized(new { message = "Invalid token" });
+            var userId = User.FindFirst("UserId")?.Value;
 
-            var user = await _profileService.GetUserByIdAsync(userId);
+            var user = _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.Teacher)
+                .Include(u => u.Assistant)
+                .Include(u => u.Student)
+                .Include(u => u.Parent)
+                .FirstOrDefault(u => u.UserId.ToString() == userId);
+
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(new
+            // Build response with role-specific data
+            var result = new
             {
                 user.UserId,
                 user.Username,
                 user.FullName,
-                user.RoleId
-            });
+                user.RoleId,
+                RoleName = user.Role?.RoleName,
+                user.AccountStatus,
+                // Teacher info
+                Specialization = user.Teacher?.Specialization,
+                Degree = user.Teacher?.Degree,
+                // Assistant info
+                SupportLevel = user.Assistant?.SupportLevel,
+                // Student info
+                //Email = user.Student?.Email,
+                //PhoneNumber = user.Student?.PhoneNumber ?? user.Parent?.PhoneNumber,
+                //EnrollmentStatus = user.Student?.EnrollmentStatus,
+                //// Parent info
+                //Address = user.Parent?.Address
+            };
+
+            return Ok(result);
         }
 
         // ================= UPDATE PROFILE =================
         [HttpPut("update")]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+        public IActionResult UpdateProfile([FromBody] UpdateProfileRequest request)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return Unauthorized(new { message = "Invalid token" });
+            var userId = User.FindFirst("UserId")?.Value;
 
-            var success = await _profileService.UpdateProfileAsync(userId, request);
-            if (!success)
+            var user = _context.Users
+                .FirstOrDefault(u => u.UserId.ToString() == userId);
+
+            if (user == null)
                 return NotFound(new { message = "User not found" });
+
+            user.FullName = request.FullName;
+
+            _context.SaveChanges();
 
             return Ok(new { message = "Profile updated successfully" });
         }
 
         // ================= CHANGE PASSWORD =================
         [HttpPut("change-password")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        public IActionResult ChangePassword([FromBody] ChangePasswordRequest request)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return Unauthorized(new { message = "Invalid token" });
+            var userId = User.FindFirst("UserId")?.Value;
 
-            var success = await _profileService.ChangePasswordAsync(userId, request);
-            if (!success)
-                return BadRequest(new { message = "Old password incorrect or user not found" });
+            var user = _context.Users
+                .FirstOrDefault(u => u.UserId.ToString() == userId);
 
-            return Ok(new { message = "Password changed successfully" });
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+                return BadRequest(new { message = "Mật khẩu hiện tại không đúng" });
+
+            user.PasswordHash =
+                BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            _context.SaveChanges();
+
+            return Ok(new { message = "Đổi mật khẩu thành công" });
         }
     }
 }
