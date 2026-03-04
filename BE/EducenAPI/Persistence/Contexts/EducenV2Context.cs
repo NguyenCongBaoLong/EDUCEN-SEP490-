@@ -22,7 +22,7 @@ public partial class EducenV2Context : DbContext
         CurrentTenantId = _currentTenantService.TenantId;
     }
 
-
+   
     // DbSets 
     public virtual DbSet<Assignment> Assignments { get; set; } = null!;
     public virtual DbSet<Assistant> Assistants { get; set; } = null!;
@@ -41,6 +41,13 @@ public partial class EducenV2Context : DbContext
     // ================================
     // MODEL CONFIGURATION
     // ================================
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("...");
+        }
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

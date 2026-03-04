@@ -5,7 +5,7 @@ VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EducenAPI", "EducenAPI.csproj", "{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EduCenAPI.Tests", "..\EduCenAPI.Tests\EduCenAPI.Tests.csproj", "{B4191648-5891-40E1-A950-B9516B9FEE42}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EduCenAPI.Tests", "..\EduCenAPI.Tests\EduCenAPI.Tests.csproj", "{5D440C82-EE68-4B1A-B635-B527300AD600}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B4191648-5891-40E1-A950-B9516B9FEE42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B4191648-5891-40E1-A950-B9516B9FEE42}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B4191648-5891-40E1-A950-B9516B9FEE42}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B4191648-5891-40E1-A950-B9516B9FEE42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D440C82-EE68-4B1A-B635-B527300AD600}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D440C82-EE68-4B1A-B635-B527300AD600}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D440C82-EE68-4B1A-B635-B527300AD600}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D440C82-EE68-4B1A-B635-B527300AD600}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

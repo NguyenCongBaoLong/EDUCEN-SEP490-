@@ -6,6 +6,8 @@ using EducenAPI.DTOs;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using EducenAPI.Persistence.Contexts;
+using EduCenAPI.Tests.Fakes;
 
 public class SubjectServiceTests
 {
@@ -15,7 +17,9 @@ public class SubjectServiceTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        return new EducenV2Context(options);
+        var tenantService = new FakeTenantService();
+
+        return new EducenV2Context(options, tenantService);
     }
 
     // ===============================

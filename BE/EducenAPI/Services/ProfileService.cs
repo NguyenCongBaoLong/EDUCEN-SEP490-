@@ -1,5 +1,6 @@
 using EducenAPI.DTOs.Profile;
 using EducenAPI.Models;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 
