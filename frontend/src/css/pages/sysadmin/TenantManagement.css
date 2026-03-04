@@ -310,7 +310,7 @@
     z-index: 100;
     min-width: 160px;
     overflow: hidden;
-    animation: dropIn 0.15s ease;
+    animation: tenantDropIn 0.15s ease;
 }
 
 .sa-dropdown button {
@@ -332,7 +332,7 @@
     background: #f9fafb;
 }
 
-@keyframes dropIn {
+@keyframes tenantDropIn {
     from {
         opacity: 0;
         transform: translateY(-6px);
@@ -347,13 +347,17 @@
 /* Modal */
 .sa-modal-overlay {
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
     z-index: 200;
-    animation: fadeInOverlay 0.2s ease;
+    animation: tenantFadeInOverlay 0.2s ease;
 }
 
-@keyframes fadeInOverlay {
+@keyframes tenantFadeInOverlay {
     from {
         opacity: 0;
     }
@@ -374,12 +378,12 @@
     width: 100%;
     max-width: 640px;
     z-index: 201;
-    animation: slideUp 0.25s ease;
+    animation: tenantSlideUp 0.25s ease;
     max-height: 90vh;
     overflow-y: auto;
 }
 
-@keyframes slideUp {
+@keyframes tenantSlideUp {
     from {
         opacity: 0;
         transform: translate(-50%, calc(-50% + 20px));
