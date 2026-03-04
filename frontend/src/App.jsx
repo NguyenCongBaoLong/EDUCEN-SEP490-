@@ -26,6 +26,10 @@ import StudentClassDetail from './pages/student/StudentClassDetail';
 import ParentClasses from './pages/parent/ParentClasses';
 import ParentSchedule from './pages/parent/ParentSchedule';
 import ParentFeedback from './pages/parent/ParentFeedback';
+import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
+import TenantManagement from './pages/sysadmin/TenantManagement';
+import PlansManagement from './pages/sysadmin/PlansManagement';
+import SystemAdminLogin from './pages/auth/SystemAdminLogin';
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
@@ -80,6 +84,13 @@ function App() {
             <Route path="/parent/classes" element={<PrivateRoute allowedRoles={['Parent']}><ParentClasses /></PrivateRoute>} />
             <Route path="/parent/schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
             <Route path="/parent/feedback" element={<PrivateRoute allowedRoles={['Parent']}><ParentFeedback /></PrivateRoute>} />
+
+            {/* ── System Admin Routes ── */}
+            <Route path="/sysadmin/login" element={<SystemAdminLogin />} />
+            <Route path="/sysadmin" element={<Navigate to="/sysadmin/dashboard" />} />
+            <Route path="/sysadmin/dashboard" element={<SystemAdminDashboard />} />
+            <Route path="/sysadmin/tenants" element={<TenantManagement />} />
+            <Route path="/sysadmin/plans" element={<PlansManagement />} />
 
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

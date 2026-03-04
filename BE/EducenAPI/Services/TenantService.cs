@@ -41,7 +41,9 @@ namespace EducenAPI.Services.TenantService
                 Address = request.Address,
                 DomainUrl = request.DomainUrl,
                 ConnectionString = modifiedConnectionString,
-                IsActive = true
+                IsActive = true,
+                Username = request.TenantId,   // mặc định = TenantId, admin có thể đổi sau
+                Password = "Admin@123"          // mật khẩu mặc định ban đầu
             };
 
 
