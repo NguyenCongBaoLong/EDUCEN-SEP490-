@@ -1,0 +1,74 @@
+.staff-management {
+    display: flex;
+    min-height: 100vh;
+    background: #f9fafb;
+}
+
+.staff-main {
+    flex: 1;
+    margin-left: 280px;
+    padding: 2rem;
+}
+
+/* Header */
+.staff-header {
+    margin-bottom: 2rem;
+}
+
+.staff-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.staff-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+}
+
+.staff-subtitle {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.btn-add-staff {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.btn-add-staff:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .staff-main {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    .staff-header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .btn-add-staff {
+        width: 100%;
+        justify-content: center;
+    }
+}

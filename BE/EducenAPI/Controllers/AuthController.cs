@@ -19,16 +19,29 @@ namespace EducenAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
-            await _auth.Register(dto);
-            return Ok("Đăng ký thành công");
+            try
+            {
+                await _auth.Register(dto);
+                return Ok("Đăng ký thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
-            var token = await _auth.Login(dto);
-            return Ok(token);
+            try
+            {
+                var token = await _auth.Login(dto);
+                return Ok(token);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
-
 }

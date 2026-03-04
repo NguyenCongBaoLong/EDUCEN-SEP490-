@@ -1,0 +1,21 @@
+/* Modal styles for AddStaffModal - extends CreateClassModal.css */
+
+/* If there are any specific overrides for AddStaffModal, they can be added here */
+/* Otherwise, it will use the existing modal styles from CreateClassModal.css */
+
+/* Additional specific styles if needed */
+.modal-form .form-group input[type="tel"] {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-family: inherit;
+    transition: all 0.2s;
+    background: white;
+}
+
+.modal-form .form-group input[type="tel"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}

@@ -1,5 +1,6 @@
 ﻿using EducenAPI.DTOs.Auth;
 using EducenAPI.Models;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;

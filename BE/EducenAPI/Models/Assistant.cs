@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EducenAPI.Models;
 
 public partial class Assistant
 {
-    public int AssistantId { get; set; }
+    [Key]
+    [ForeignKey("User")]
+    public int UserId { get; set; }
 
     public string? SupportLevel { get; set; }
 
