@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace EducenAPI.Persistence.Migrations.TenantDb
+namespace EducenAPI.Migrations
 {
     [DbContext(typeof(EducenV2Context))]
     partial class EducenV2ContextModelSnapshot : ModelSnapshot

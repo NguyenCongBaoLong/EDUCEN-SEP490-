@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace EducenAPI.Persistence.Migrations.TenantDb
+namespace EducenAPI.Migrations
 {
     [DbContext(typeof(EducenV2Context))]
-    [Migration("20260301103607_Initial")]
-    partial class Initial
+    [Migration("20260303041416_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
