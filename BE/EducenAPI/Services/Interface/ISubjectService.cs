@@ -1,4 +1,4 @@
-using EducenAPI.DTOs;
+using EducenAPI.DTOs.Subjects;
 using EducenAPI.Models;
 
 namespace EducenAPI.Services.Interface

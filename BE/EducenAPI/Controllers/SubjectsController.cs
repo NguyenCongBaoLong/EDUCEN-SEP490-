@@ -5,26 +5,28 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Linq;
 using System;
-using EducenAPI.DTOs;
 using EducenAPI.Persistence.Contexts;
+using EducenAPI.Services.Interface;
+using EducenAPI.DTOs.Subjects;
+
 namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     public class SubjectsController : ControllerBase
     {
-        private readonly EducenV2Context _context;
+        private readonly ISubjectService _subjectService;
 
-        public SubjectsController(EducenV2Context context)
+        public SubjectsController(ISubjectService subjectService)
         {
-            _context = context;
+            _subjectService = subjectService;
         }
 
         // GET: api/Subjects
         [HttpGet]
         public async Task<IActionResult> GetSubjects()
         {
-            var subjects = await _context.Subjects.ToListAsync();
+            var subjects = await _subjectService.GetAllSubjectsAsync();
             return Ok(subjects);
         }
 
@@ -32,10 +34,9 @@ namespace EducenAPI.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetSubject(int id)
         {
-            var subject = await _context.Subjects.FindAsync(id);
-
+            var subject = await _subjectService.GetSubjectByIdAsync(id);
             if (subject == null)
-                return NotFound();
+                return NotFound(new { message = "Subject not found" });
 
             return Ok(subject);
         }
@@ -44,83 +45,37 @@ namespace EducenAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSubject(CreateSubjectRequest request)
         {
-            var subject = new Subject
-            {
-                SubjectName = request.SubjectName,
-                Description = request.Description
-            };
-
-            _context.Subjects.Add(subject);
-            await _context.SaveChangesAsync();
-
+            var subject = await _subjectService.CreateSubjectAsync(request);
             return CreatedAtAction(nameof(GetSubject),
                 new { id = subject.SubjectId },
                 subject);
         }
 
-
-        // PUT: api/Subjects/5
         // PUT: api/Subjects/5
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateSubject(
-            int id,
-            [FromBody] UpdateSubjectRequest request)
+        public async Task<IActionResult> UpdateSubject(int id, [FromBody] UpdateSubjectRequest request)
         {
-            var existingSubject = await _context.Subjects.FindAsync(id);
-
-            if (existingSubject == null)
-                return NotFound();
-
-            // Update only allowed fields
-            existingSubject.SubjectName = request.SubjectName;
-            existingSubject.Description = request.Description;
-
-            await _context.SaveChangesAsync();
+            var success = await _subjectService.UpdateSubjectAsync(id, request);
+            if (!success)
+                return NotFound(new { message = "Subject not found" });
 
             return NoContent();
         }
-
 
         // DELETE: api/Subjects/5
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteSubject(int id)
         {
-            var subject = await _context.Subjects.FindAsync(id);
+            var subject = await _subjectService.GetSubjectByIdAsync(id);
             if (subject == null)
-                return NotFound();
+                return NotFound(new { message = "Subject not found" });
 
-            bool isUsed = await _context.Classes
-                                        .AnyAsync(c => c.SubjectId == id);
-
+            var isUsed = await _subjectService.IsSubjectUsedInClassesAsync(id);
             if (isUsed)
-                return BadRequest(
-                    "Cannot delete subject: it is used by one or more classes."
-                );
+                return BadRequest(new { message = "Cannot delete subject: it is used by one or more classes." });
 
-            _context.Subjects.Remove(subject);
-            await _context.SaveChangesAsync();
-
+            await _subjectService.DeleteSubjectAsync(id);
             return NoContent();
         }
-
-        
-       [HttpGet("test-db")]
-        public IActionResult TestDbConnection()
-        {
-            try
-            {
-                _context.Database.OpenConnection();
-                _context.Database.CloseConnection();
-
-                return Ok("Database connection successful.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500,
-                    $"Database connection failed: {ex.Message}");
-            }
-        }
     }
-
-
 }

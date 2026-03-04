@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace EducenAPI.DTOs
+namespace EducenAPI.DTOs.Subjects
 {
     public class CreateSubjectRequest
     {

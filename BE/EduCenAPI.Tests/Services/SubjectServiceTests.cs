@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using EducenAPI.Persistence.Contexts;
 using EduCenAPI.Tests.Fakes;
+using EducenAPI.DTOs.Subjects;
 
 public class SubjectServiceTests
 {
