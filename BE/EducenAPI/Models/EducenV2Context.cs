@@ -30,9 +30,13 @@ public partial class EducenV2Context : DbContext
     public virtual DbSet<Teacher> Teachers { get; set; } = null!;
     public virtual DbSet<User> Users { get; set; } = null!;
 
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer("Name=ConnectionStrings:MyDatabase");
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("...");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
