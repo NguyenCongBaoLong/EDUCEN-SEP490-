@@ -12,7 +12,7 @@ using EducenAPI.DTOs.Subjects;
 namespace EducenAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/tenantadmin/[controller]")]
     public class SubjectsController : ControllerBase
     {
         private readonly ISubjectService _subjectService;
@@ -45,21 +45,37 @@ namespace EducenAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSubject(CreateSubjectRequest request)
         {
-            var subject = await _subjectService.CreateSubjectAsync(request);
-            return CreatedAtAction(nameof(GetSubject),
-                new { id = subject.SubjectId },
-                subject);
+            try
+            {
+                var subject = await _subjectService.CreateSubjectAsync(request);
+
+                return CreatedAtAction(
+                    nameof(GetSubject),
+                    new { id = subject.SubjectId },
+                    subject);
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // PUT: api/Subjects/5
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateSubject(int id, [FromBody] UpdateSubjectRequest request)
         {
-            var success = await _subjectService.UpdateSubjectAsync(id, request);
-            if (!success)
-                return NotFound(new { message = "Subject not found" });
+            try
+            {
+                var success = await _subjectService.UpdateSubjectAsync(id, request);
+                if (!success)
+                    return NotFound(new { message = "Subject not found" });
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // DELETE: api/Subjects/5
