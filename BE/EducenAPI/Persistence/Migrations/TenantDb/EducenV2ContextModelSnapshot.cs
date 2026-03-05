@@ -137,6 +137,12 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Status")
                         .HasColumnType("nvarchar(max)");
 
@@ -146,7 +152,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("SyllabusContent")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("TeacherId")
+                    b.Property<int?>("TeacherId")
                         .HasColumnType("int");
 
                     b.HasKey("ClassId");
@@ -230,9 +236,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
-
-                    b.Property<string>("RoomInfo")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
@@ -470,9 +473,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.HasOne("EducenAPI.Models.Teacher", "Teacher")
                         .WithMany("Classes")
-                        .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("TeacherId");
 
                     b.Navigation("Assistant");
 

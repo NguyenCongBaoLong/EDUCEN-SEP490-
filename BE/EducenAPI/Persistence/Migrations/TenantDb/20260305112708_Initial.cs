@@ -166,13 +166,15 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 {
                     ClassId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    TeacherId = table.Column<int>(type: "int", nullable: false),
+                    TeacherId = table.Column<int>(type: "int", nullable: true),
                     AssistantId = table.Column<int>(type: "int", nullable: true),
                     SubjectId = table.Column<int>(type: "int", nullable: false),
                     ClassName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SyllabusContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -192,8 +194,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         name: "FK_Classes_Teachers_TeacherId",
                         column: x => x.TeacherId,
                         principalTable: "Teachers",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "UserId");
                 });
 
             migrationBuilder.CreateTable(
@@ -274,8 +275,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     ClassId = table.Column<int>(type: "int", nullable: false),
                     DayOfWeek = table.Column<int>(type: "int", nullable: false),
                     StartTime = table.Column<TimeOnly>(type: "time", nullable: false),
-                    EndTime = table.Column<TimeOnly>(type: "time", nullable: false),
-                    RoomInfo = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    EndTime = table.Column<TimeOnly>(type: "time", nullable: false)
                 },
                 constraints: table =>
                 {
