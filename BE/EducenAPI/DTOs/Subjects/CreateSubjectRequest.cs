@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace EducenAPI.DTOs
+namespace EducenAPI.DTOs.Subjects
 {
     public class CreateSubjectRequest
     {
@@ -8,7 +8,7 @@ namespace EducenAPI.DTOs
         [StringLength(100, ErrorMessage = "SubjectName cannot exceed 100 characters")]
         public string SubjectName { get; set; } = string.Empty;
 
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+        [StringLength(255, ErrorMessage = "Description cannot exceed 255 characters")]
         public string? Description { get; set; }
     }
 }

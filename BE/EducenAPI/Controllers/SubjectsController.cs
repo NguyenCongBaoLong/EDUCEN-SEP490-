@@ -5,12 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Linq;
 using System;
-using EducenAPI.DTOs;
 using EducenAPI.Persistence.Contexts;
+using EducenAPI.Services.Interface;
+using EducenAPI.DTOs.Subjects;
+
 namespace EducenAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/tenantadmin/[controller]")]
     public class SubjectsController : ControllerBase
     {
         private readonly EducenV2Context _context;
@@ -44,18 +46,19 @@ namespace EducenAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateSubject(CreateSubjectRequest request)
         {
-            var subject = new Subject
+            try
             {
-                SubjectName = request.SubjectName,
-                Description = request.Description
-            };
+                var subject = await _subjectService.CreateSubjectAsync(request);
 
-            _context.Subjects.Add(subject);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetSubject),
-                new { id = subject.SubjectId },
-                subject);
+                return CreatedAtAction(
+                    nameof(GetSubject),
+                    new { id = subject.SubjectId },
+                    subject);
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
 
@@ -66,18 +69,18 @@ namespace EducenAPI.Controllers
             int id,
             [FromBody] UpdateSubjectRequest request)
         {
-            var existingSubject = await _context.Subjects.FindAsync(id);
+            try
+            {
+                var success = await _subjectService.UpdateSubjectAsync(id, request);
+                if (!success)
+                    return NotFound(new { message = "Subject not found" });
 
-            if (existingSubject == null)
-                return NotFound();
-
-            // Update only allowed fields
-            existingSubject.SubjectName = request.SubjectName;
-            existingSubject.Description = request.Description;
-
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
 

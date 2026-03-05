@@ -1,4 +1,4 @@
-using EducenAPI.DTOs;
+using EducenAPI.DTOs.Subjects;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -27,10 +27,21 @@ namespace EducenAPI.Services
 
         public async Task<Subject> CreateSubjectAsync(CreateSubjectRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request.SubjectName))
+                throw new Exception("Subject name cannot be empty.");
+
+            var name = request.SubjectName.Trim();
+
+            var exists = await _context.Subjects
+                .AnyAsync(s => s.SubjectName == name);
+
+            if (exists)
+                throw new Exception("Subject name already exists.");
+
             var subject = new Subject
             {
-                SubjectName = request.SubjectName,
-                Description = request.Description
+                SubjectName = name,
+                Description = request.Description?.Trim()
             };
 
             _context.Subjects.Add(subject);
@@ -45,8 +56,23 @@ namespace EducenAPI.Services
             if (existingSubject == null)
                 return false;
 
-            existingSubject.SubjectName = request.SubjectName;
-            existingSubject.Description = request.Description;
+            // Validate name
+            if (string.IsNullOrWhiteSpace(request.SubjectName))
+                throw new Exception("Subject name cannot be empty.");
+
+            var name = request.SubjectName.Trim();
+            var description = request.Description?.Trim();
+
+            // Check duplicate (exclude current subject)
+            var isDuplicate = await _context.Subjects
+                .AnyAsync(s => s.SubjectName == name && s.SubjectId != id);
+
+            if (isDuplicate)
+                throw new Exception("Subject name already exists.");
+
+            // Update fields
+            existingSubject.SubjectName = name;
+            existingSubject.Description = description;
 
             await _context.SaveChangesAsync();
             return true;
