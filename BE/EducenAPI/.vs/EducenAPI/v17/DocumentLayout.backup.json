@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\migrations\\20260305130054_init.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:migrations\\20260305130054_init.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
@@ -74,7 +78,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 209,
+          "SelectedChildIndex": 202,
           "Children": [
             {
               "$type": "Bookmark",
@@ -886,7 +890,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 0,
+              "Title": "20260305130054_Init.cs",
+              "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Migrations\\20260305130054_Init.cs",
+              "RelativeDocumentMoniker": "Migrations\\20260305130054_Init.cs",
+              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Migrations\\20260305130054_Init.cs",
+              "RelativeToolTip": "Migrations\\20260305130054_Init.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB0AAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-05T13:00:54.263Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "NotFoundException.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Exceptions\\NotFoundException.cs",
               "RelativeDocumentMoniker": "Exceptions\\NotFoundException.cs",
@@ -898,7 +915,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "SubjectService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SubjectService.cs",
               "RelativeDocumentMoniker": "Services\\SubjectService.cs",
@@ -910,7 +927,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "IAuthService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IAuthService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IAuthService.cs",
@@ -922,7 +939,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "BadRequestException.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Exceptions\\BadRequestException.cs",
               "RelativeDocumentMoniker": "Exceptions\\BadRequestException.cs",
@@ -934,7 +951,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "GlobalExceptionHandler.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Middleware\\GlobalExceptionHandler.cs",
               "RelativeDocumentMoniker": "Middleware\\GlobalExceptionHandler.cs",
@@ -946,7 +963,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "ChangePasswordRequest.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\Profile\\ChangePasswordRequest.cs",
               "RelativeDocumentMoniker": "DTOs\\Profile\\ChangePasswordRequest.cs",
@@ -958,7 +975,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "AuthService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AuthService.cs",
               "RelativeDocumentMoniker": "Services\\AuthService.cs",
@@ -970,7 +987,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\appsettings.json",
               "RelativeDocumentMoniker": "appsettings.json",
@@ -978,12 +995,11 @@
               "RelativeToolTip": "appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAADAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-02-28T18:26:52.468Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-02-28T18:26:52.468Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "UnauthorizedException.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Exceptions\\UnauthorizedException.cs",
               "RelativeDocumentMoniker": "Exceptions\\UnauthorizedException.cs",
@@ -995,7 +1011,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "ProfileService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\ProfileService.cs",
               "RelativeDocumentMoniker": "Services\\ProfileService.cs",
@@ -1007,7 +1023,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "ISubjectService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\ISubjectService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\ISubjectService.cs",
@@ -1019,7 +1035,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "IProfileService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IProfileService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IProfileService.cs",
@@ -1031,7 +1047,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "ApiResponse.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\Common\\ApiResponse.cs",
               "RelativeDocumentMoniker": "DTOs\\Common\\ApiResponse.cs",
@@ -1043,7 +1059,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -1055,7 +1071,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "ProfileController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\ProfileController.cs",
               "RelativeDocumentMoniker": "Controllers\\ProfileController.cs",
@@ -1067,7 +1083,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "AuthController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
