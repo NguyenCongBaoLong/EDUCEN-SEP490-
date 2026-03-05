@@ -1,8 +1,14 @@
-﻿namespace EducenAPI.DTOs.Profile
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EducenAPI.DTOs.Profile
 {
     public class ChangePasswordRequest
     {
-        public string OldPassword { get; set; }
-        public string NewPassword { get; set; }
+        [Required(ErrorMessage = "Old password is required")]
+        public string OldPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "New password is required")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "New password must be at least 6 characters")]
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

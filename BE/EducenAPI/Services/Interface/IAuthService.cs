@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs;
+﻿using EducenAPI.DTOs.Auth;
 
 namespace EducenAPI.Services.Interface
 {
