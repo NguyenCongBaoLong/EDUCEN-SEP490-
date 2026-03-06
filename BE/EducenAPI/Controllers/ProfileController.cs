@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
-namespace EduCen.Controllers
+namespace EducenAPI.Controllers
 {
     [Route("api/profile")]
     [ApiController]

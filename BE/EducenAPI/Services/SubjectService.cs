@@ -84,6 +84,10 @@ namespace EducenAPI.Services
             if (subject == null)
                 return false;
 
+            var isUsed = await IsSubjectUsedInClassesAsync(id);
+            if (isUsed)
+                throw new Exception("Cannot delete subject: subject is used in classes");
+
             _context.Subjects.Remove(subject);
             await _context.SaveChangesAsync();
             return true;

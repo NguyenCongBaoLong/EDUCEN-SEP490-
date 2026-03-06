@@ -43,5 +43,36 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> RequestResetPassword(ResetPasswordDto dto)
+        {
+            try
+            {
+                var result = await _auth.RequestResetPassword(dto);
+                return Ok(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("reset-password/confirm")]
+        public async Task<IActionResult> ConfirmResetPassword(ResetPasswordConfirmDto dto)
+        {
+            try
+            {
+                var success = await _auth.ConfirmResetPassword(dto);
+                if (success)
+                    return Ok(new { message = "Password reset successfully" });
+                
+                return BadRequest(new { message = "Failed to reset password" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
