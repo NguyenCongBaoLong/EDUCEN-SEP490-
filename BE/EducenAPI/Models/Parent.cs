@@ -14,4 +14,5 @@ public partial class Parent
     public virtual User ParentNavigation { get; set; } = null!;
 
     public virtual ICollection<Student> Students { get; set; } = new List<Student>();
+    
 }
