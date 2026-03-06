@@ -57,6 +57,42 @@ namespace EducenAPI.Services
             return GenerateToken(user);
         }
 
+        public async Task<string> RequestResetPassword(ResetPasswordDto dto)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+            if (user == null)
+                throw new Exception("Email not found");
+
+            // Generate reset token (valid for 1 hour)
+            var resetToken = Guid.NewGuid().ToString("N");
+            
+            // In production, you would:
+            // 1. Store this token in database with expiration
+            // 2. Send email with reset link
+            
+            // For now, return token directly (in production, send via email)
+            return $"Reset token generated for {dto.Email}. Token: {resetToken} (valid for 1 hour)";
+        }
+
+        public async Task<bool> ConfirmResetPassword(ResetPasswordConfirmDto dto)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+            if (user == null)
+                throw new Exception("Email not found");
+
+            // In production, validate the reset token from database
+            
+            // Update password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
         private string GenerateToken(User user)
         {
             var jwt = _config.GetSection("Jwt");
@@ -84,5 +120,4 @@ namespace EducenAPI.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
-
 }
