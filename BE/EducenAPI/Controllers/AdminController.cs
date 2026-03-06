@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using EducenAPI.Persistence.Contexts;
-using Microsoft.EntityFrameworkCore;
+using EducenAPI.Services.Interface;
 
 namespace EducenAPI.Controllers
 {
@@ -10,68 +9,54 @@ namespace EducenAPI.Controllers
     [Authorize]
     public class AdminController : ControllerBase
     {
-        private readonly EducenV2Context _context;
+        private readonly IUserManagementService _userManagementService;
 
-        public AdminController(EducenV2Context context)
+        public AdminController(IUserManagementService userManagementService)
         {
-            _context = context;
+            _userManagementService = userManagementService;
         }
 
         // PUT: api/admin/users/{id}/lock
         [HttpPut("users/{id:int}/lock")]
         public async Task<IActionResult> LockUserAccount(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            
-            if (user == null)
-                return NotFound(new { message = "User not found" });
+            try
+            {
+                var success = await _userManagementService.LockUserAccountAsync(id);
+                if (!success)
+                    return NotFound(new { message = "User not found" });
 
-            if (user.AccountStatus == "Locked")
-                return BadRequest(new { message = "User account is already locked" });
-
-            user.AccountStatus = "Locked";
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "User account locked successfully", userId = id, status = "Locked" });
+                return Ok(new { message = "User account locked successfully", userId = id, status = "Locked" });
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // PUT: api/admin/users/{id}/unlock
         [HttpPut("users/{id:int}/unlock")]
         public async Task<IActionResult> UnlockUserAccount(int id)
         {
-            var user = await _context.Users.FindAsync(id);
-            
-            if (user == null)
-                return NotFound(new { message = "User not found" });
+            try
+            {
+                var success = await _userManagementService.UnlockUserAccountAsync(id);
+                if (!success)
+                    return NotFound(new { message = "User not found" });
 
-            if (user.AccountStatus == "Active")
-                return BadRequest(new { message = "User account is already active" });
-
-            user.AccountStatus = "Active";
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "User account unlocked successfully", userId = id, status = "Active" });
+                return Ok(new { message = "User account unlocked successfully", userId = id, status = "Active" });
+            }
+            catch (Exception ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
         }
 
         // GET: api/admin/users
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = await _context.Users
-                .Include(u => u.Role)
-                .Select(u => new
-                {
-                    u.UserId,
-                    u.Username,
-                    u.FullName,
-                    u.Email,
-                    u.PhoneNumber,
-                    u.AccountStatus,
-                    RoleName = u.Role.RoleName,
-                    u.RoleId
-                })
-                .ToListAsync();
-
+            var users = await _userManagementService.GetAllUsersAsync();
             return Ok(users);
         }
 
@@ -79,22 +64,7 @@ namespace EducenAPI.Controllers
         [HttpGet("users/{id:int}")]
         public async Task<IActionResult> GetUserById(int id)
         {
-            var user = await _context.Users
-                .Include(u => u.Role)
-                .Where(u => u.UserId == id)
-                .Select(u => new
-                {
-                    u.UserId,
-                    u.Username,
-                    u.FullName,
-                    u.Email,
-                    u.PhoneNumber,
-                    u.Address,
-                    u.AccountStatus,
-                    RoleName = u.Role.RoleName,
-                    u.RoleId
-                })
-                .FirstOrDefaultAsync();
+            var user = await _userManagementService.GetUserByIdAsync(id);
 
             if (user == null)
                 return NotFound(new { message = "User not found" });
