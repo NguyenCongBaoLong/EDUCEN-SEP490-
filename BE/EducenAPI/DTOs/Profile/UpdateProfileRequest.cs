@@ -1,7 +1,11 @@
-﻿namespace EducenAPI.DTOs.Profile
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace EducenAPI.DTOs.Profile
 {
     public class UpdateProfileRequest
     {
-        public String FullName { get; set; }
+        [Required(ErrorMessage = "FullName is required")]
+        [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
+        public string FullName { get; set; } = string.Empty;
     }
 }

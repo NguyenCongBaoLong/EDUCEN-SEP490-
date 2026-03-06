@@ -15,8 +15,6 @@ public partial class Schedule
 
     public TimeOnly EndTime { get; set; }
 
-    public string? RoomInfo { get; set; }
-
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
     public virtual Class Class { get; set; } = null!;
