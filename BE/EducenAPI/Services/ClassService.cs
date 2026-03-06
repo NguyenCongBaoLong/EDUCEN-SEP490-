@@ -22,7 +22,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Teacher)
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
-                    .ThenInclude(a => a!.User)
+                    .ThenInclude(a => a!.AssistantNavigation)
                 .Include(c => c.Students)
                 .Select(c => new ClassDto
                 {
@@ -35,7 +35,7 @@ namespace EducenAPI.Services
                     TeacherId = c.TeacherId,
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
-                    AssistantName = c.Assistant != null ? c.Assistant.User.FullName : null,
+                    AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
                     StartDate = c.StartDate,
                     EndDate = c.EndDate,
                     Status = c.Status,
@@ -52,7 +52,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Teacher)
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
-                    .ThenInclude(a => a!.User)
+                    .ThenInclude(a => a!.AssistantNavigation)
                 .Include(c => c.Students)
                 .Where(c => c.ClassId == id)
                 .Select(c => new ClassDto
@@ -66,7 +66,7 @@ namespace EducenAPI.Services
                     TeacherId = c.TeacherId,
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
-                    AssistantName = c.Assistant != null ? c.Assistant.User.FullName : null,
+                    AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
                     StartDate = c.StartDate,
                     EndDate = c.EndDate,
                     Status = c.Status,

@@ -18,18 +18,18 @@ namespace EducenAPI.Services
         public async Task<IEnumerable<AssistantDto>> GetAllAssistantsAsync()
         {
             return await _context.Assistants
-                .Include(a => a.User)
+                .Include(a => a.AssistantNavigation)
                 .Select(a => new AssistantDto
                 {
-                    AssistantId = a.AssistantId,
+                    AssistantId = a.UserId,
                     UserId = a.UserId,
-                    Username = a.User.Username,
-                    FullName = a.User.FullName ?? "",
-                    Email = a.User.Email ?? "",
-                    PhoneNumber = a.User.PhoneNumber,
+                    Username = a.AssistantNavigation.Username,
+                    FullName = a.AssistantNavigation.FullName ?? "",
+                    Email = a.AssistantNavigation.Email ?? "",
+                    PhoneNumber = a.AssistantNavigation.PhoneNumber,
                     SupportLevel = a.SupportLevel,
-                    AccountStatus = a.User.AccountStatus,
-                    AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.AssistantId),
+                    AccountStatus = a.AssistantNavigation.AccountStatus,
+                    AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
@@ -38,19 +38,19 @@ namespace EducenAPI.Services
         public async Task<AssistantDto?> GetAssistantByIdAsync(int id)
         {
             return await _context.Assistants
-                .Include(a => a.User)
-                .Where(a => a.AssistantId == id)
+                .Include(a => a.AssistantNavigation)
+                .Where(a => a.UserId == id)
                 .Select(a => new AssistantDto
                 {
-                    AssistantId = a.AssistantId,
+                    AssistantId = a.UserId,
                     UserId = a.UserId,
-                    Username = a.User.Username,
-                    FullName = a.User.FullName ?? "",
-                    Email = a.User.Email ?? "",
-                    PhoneNumber = a.User.PhoneNumber,
+                    Username = a.AssistantNavigation.Username,
+                    FullName = a.AssistantNavigation.FullName ?? "",
+                    Email = a.AssistantNavigation.Email ?? "",
+                    PhoneNumber = a.AssistantNavigation.PhoneNumber,
                     SupportLevel = a.SupportLevel,
-                    AccountStatus = a.User.AccountStatus,
-                    AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.AssistantId),
+                    AccountStatus = a.AssistantNavigation.AccountStatus,
+                    AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
@@ -101,7 +101,7 @@ namespace EducenAPI.Services
 
             return new AssistantDto
             {
-                AssistantId = assistant.AssistantId,
+                AssistantId = assistant.UserId,
                 UserId = user.UserId,
                 Username = user.Username,
                 FullName = user.FullName ?? "",
@@ -117,14 +117,14 @@ namespace EducenAPI.Services
         public async Task<bool> UpdateAssistantAsync(int id, UpdateAssistantDto dto)
         {
             var assistant = await _context.Assistants
-                .Include(a => a.User)
-                .FirstOrDefaultAsync(a => a.AssistantId == id);
+                .Include(a => a.AssistantNavigation)
+                .FirstOrDefaultAsync(a => a.UserId == id);
 
             if (assistant == null)
                 return false;
 
             if (!string.IsNullOrEmpty(dto.FullName))
-                assistant.User.FullName = dto.FullName;
+                assistant.AssistantNavigation.FullName = dto.FullName;
 
             if (!string.IsNullOrEmpty(dto.Email))
             {
@@ -134,11 +134,11 @@ namespace EducenAPI.Services
                 if (emailExists)
                     throw new Exception("Email already exists");
 
-                assistant.User.Email = dto.Email;
+                assistant.AssistantNavigation.Email = dto.Email;
             }
 
             if (dto.PhoneNumber != null)
-                assistant.User.PhoneNumber = dto.PhoneNumber;
+                assistant.AssistantNavigation.PhoneNumber = dto.PhoneNumber;
 
             if (dto.SupportLevel != null)
                 assistant.SupportLevel = dto.SupportLevel;
@@ -150,8 +150,8 @@ namespace EducenAPI.Services
         public async Task<bool> DeleteAssistantAsync(int id)
         {
             var assistant = await _context.Assistants
-                .Include(a => a.User)
-                .FirstOrDefaultAsync(a => a.AssistantId == id);
+                .Include(a => a.AssistantNavigation)
+                .FirstOrDefaultAsync(a => a.UserId == id);
 
             if (assistant == null)
                 return false;
@@ -166,7 +166,7 @@ namespace EducenAPI.Services
             try
             {
                 _context.Assistants.Remove(assistant);
-                _context.Users.Remove(assistant.User);
+                _context.Users.Remove(assistant.AssistantNavigation);
                 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();

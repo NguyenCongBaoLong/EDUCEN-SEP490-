@@ -24,11 +24,11 @@ namespace EducenAPI.Services
                     ScheduleId = s.ScheduleId,
                     ClassId = s.ClassId,
                     ClassName = s.Class.ClassName ?? "",
-                    ScheduleDate = s.ScheduleDate,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    Notes = s.Notes,
-                    Status = s.Status ?? "Pending",
+                    ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
+                    StartTime = s.StartTime.ToTimeSpan(),
+                    EndTime = s.EndTime.ToTimeSpan(),
+                    Notes = null,
+                    Status = "Active",
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
@@ -44,11 +44,11 @@ namespace EducenAPI.Services
                     ScheduleId = s.ScheduleId,
                     ClassId = s.ClassId,
                     ClassName = s.Class.ClassName ?? "",
-                    ScheduleDate = s.ScheduleDate,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    Notes = s.Notes,
-                    Status = s.Status ?? "Pending",
+                    ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
+                    StartTime = s.StartTime.ToTimeSpan(),
+                    EndTime = s.EndTime.ToTimeSpan(),
+                    Notes = null,
+                    Status = "Active",
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
@@ -64,11 +64,11 @@ namespace EducenAPI.Services
                     ScheduleId = s.ScheduleId,
                     ClassId = s.ClassId,
                     ClassName = s.Class.ClassName ?? "",
-                    ScheduleDate = s.ScheduleDate,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    Notes = s.Notes,
-                    Status = s.Status ?? "Pending",
+                    ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
+                    StartTime = s.StartTime.ToTimeSpan(),
+                    EndTime = s.EndTime.ToTimeSpan(),
+                    Notes = null,
+                    Status = "Active",
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
@@ -86,11 +86,9 @@ namespace EducenAPI.Services
             var schedule = new Schedule
             {
                 ClassId = dto.ClassId,
-                ScheduleDate = dto.ScheduleDate,
-                StartTime = dto.StartTime,
-                EndTime = dto.EndTime,
-                Notes = dto.Notes,
-                Status = dto.Status ?? "Pending"
+                DayOfWeek = (int)dto.ScheduleDate.DayOfWeek,
+                StartTime = TimeOnly.FromTimeSpan(dto.StartTime),
+                EndTime = TimeOnly.FromTimeSpan(dto.EndTime)
             };
 
             _context.Schedules.Add(schedule);
@@ -106,19 +104,13 @@ namespace EducenAPI.Services
                 return false;
 
             if (dto.ScheduleDate.HasValue)
-                schedule.ScheduleDate = dto.ScheduleDate.Value;
+                schedule.DayOfWeek = (int)dto.ScheduleDate.Value.DayOfWeek;
 
             if (dto.StartTime.HasValue)
-                schedule.StartTime = dto.StartTime.Value;
+                schedule.StartTime = TimeOnly.FromTimeSpan(dto.StartTime.Value);
 
             if (dto.EndTime.HasValue)
-                schedule.EndTime = dto.EndTime.Value;
-
-            if (dto.Notes != null)
-                schedule.Notes = dto.Notes;
-
-            if (dto.Status != null)
-                schedule.Status = dto.Status;
+                schedule.EndTime = TimeOnly.FromTimeSpan(dto.EndTime.Value);
 
             if (schedule.StartTime >= schedule.EndTime)
                 throw new Exception("Start time must be before end time");
@@ -143,12 +135,6 @@ namespace EducenAPI.Services
             var schedule = await _context.Schedules.FindAsync(id);
             if (schedule == null)
                 return false;
-
-            if (schedule.Status == "Approved")
-                throw new Exception("Schedule is already approved");
-
-            schedule.Status = "Approved";
-            await _context.SaveChangesAsync();
             return true;
         }
 
@@ -157,15 +143,6 @@ namespace EducenAPI.Services
             var schedule = await _context.Schedules.FindAsync(id);
             if (schedule == null)
                 return false;
-
-            if (schedule.Status == "Rejected")
-                throw new Exception("Schedule is already rejected");
-
-            schedule.Status = "Rejected";
-            if (!string.IsNullOrEmpty(reason))
-                schedule.Notes = $"{schedule.Notes}\nRejection reason: {reason}".Trim();
-
-            await _context.SaveChangesAsync();
             return true;
         }
     }
