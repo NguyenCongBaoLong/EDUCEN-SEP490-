@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models;
 
 public partial class User
 {
+    [Key]
     public int UserId { get; set; }
 
     public string Username { get; set; } = null!;
@@ -16,7 +18,10 @@ public partial class User
     public int RoleId { get; set; }
 
     public string? FullName { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? Email { get; set; }
 
+    public string? Address { get; set; }
     public virtual Assistant? Assistant { get; set; }
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
