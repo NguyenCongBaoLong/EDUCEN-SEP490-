@@ -18,7 +18,9 @@ const StudentTable = ({
     onView,
     onEdit,
     onToggleStatus,
-    onSendAccount
+    onSendAccount,
+    selectedIds = [],
+    setSelectedIds = () => { }
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, student: null });
@@ -53,6 +55,23 @@ const StudentTable = ({
 
     const cancelSendAccount = () => {
         setSendModal({ show: false, student: null });
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allUnsent = studentData.filter(s => !s.accountSent).map(s => s.id);
+            setSelectedIds(allUnsent);
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelect = (id, checked) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        }
     };
 
     // Filter Logic is handled in parent, this component receives filtered data
@@ -140,6 +159,15 @@ const StudentTable = ({
                 <table className="student-table">
                     <thead>
                         <tr>
+                            <th style={{ width: '40px', paddingLeft: '1.25rem' }}>
+                                <input
+                                    type="checkbox"
+                                    className="bulk-checkbox"
+                                    checked={studentData.length > 0 && studentData.filter(s => !s.accountSent).length > 0 && selectedIds.length === studentData.filter(s => !s.accountSent).length}
+                                    onChange={handleSelectAll}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                            </th>
                             <th>Học Sinh</th>
                             <th>Khối</th>
                             <th>Phụ Huynh</th>
@@ -153,6 +181,16 @@ const StudentTable = ({
                         {currentStudents.length > 0 ? (
                             currentStudents.map((student) => (
                                 <tr key={student.id}>
+                                    <td style={{ paddingLeft: '1.25rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            className="bulk-checkbox"
+                                            disabled={student.accountSent}
+                                            checked={selectedIds.includes(student.id)}
+                                            onChange={(e) => handleSelect(student.id, e.target.checked)}
+                                            style={{ width: '16px', height: '16px', cursor: student.accountSent ? 'not-allowed' : 'pointer', accentColor: '#3b82f6' }}
+                                        />
+                                    </td>
                                     <td>
                                         <div className="student-info">
                                             <div className="student-avatar">
@@ -241,7 +279,7 @@ const StudentTable = ({
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="7" className="text-center py-8 text-gray-500">
+                                <td colSpan="8" className="text-center py-8 text-gray-500">
                                     Không tìm thấy học sinh nào phù hợp.
                                 </td>
                             </tr>

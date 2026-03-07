@@ -1049,3 +1049,36 @@
     font-size: 0.875rem;
     margin: 0;
 }
+/* --- Sessions Roadmap (Teacher) --- */
+.cd-roadmap-tab { display: flex; flex-direction: column; gap: 16px; }
+.cd-session-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); }
+.cd-session-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; background: #fff; transition: background .15s; }
+.cd-session-header:hover { background: #f8fafc; }
+.cd-session-info { display: flex; align-items: center; gap: 16px; }
+.cd-session-num { font-size: 1rem; font-weight: 700; color: #3b82f6; background: #eff6ff; padding: 6px 12px; border-radius: 8px; }
+.cd-session-title h4 { margin: 0 0 4px; font-size: 1.0625rem; color: #1e293b; }
+.cd-session-meta { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: #64748b; }
+.cd-session-status { display: flex; align-items: center; gap: 16px; font-size: 0.875rem; color: #64748b;}
+.cd-session-content { border-top: 1px solid #f1f5f9; padding: 20px; background: #fafbfc; animation: slideDown 0.3s ease-out; }
+.cd-session-section { margin-bottom: 24px; }
+.cd-session-section:last-child { margin-bottom: 0; }
+.cd-session-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.cd-session-section h5 { display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; color: #334155; margin: 0; }
+.cd-session-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.cd-session-item-badge { display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #f1f5f9; color: #475569; margin-left: auto; }
+.cd-btn-add-item { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; font-weight: 500; color: #3b82f6; background: none; border: none; cursor: pointer; transition: color .15s; }
+.cd-btn-add-item:hover { color: #2563eb; text-decoration: underline; }
+.cd-btn-import-lib { margin-right: auto; margin-left:12px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.875rem; font-weight: 500; color: #334155; cursor: pointer; transition: all 0.2s; }
+.cd-btn-import-lib:hover { background: #e2e8f0; color: #0f172a; }
+.material-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.material-card { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.material-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08); }
+.material-info { flex: 1; min-width: 0; }
+.material-name { font-size: 0.9375rem; font-weight: 600; color: #1e293b; margin: 0 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.material-meta { display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: #94a3b8; }
+.material-actions { display: flex; gap: 4px; }
+.btn-icon { width: 32px; height: 32px; border-radius: 8px; border: none; background: transparent; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer; transition: all 0.2s; }
+.btn-icon:hover { background: #f1f5f9; color: #1e293b; }
+.btn-icon.text-blue-600 { color: #2563eb; } .btn-icon.text-blue-600:hover { background: #eff6ff; }
+.btn-icon.text-red-600 { color: #dc2626; } .btn-icon.text-red-600:hover { background: #fef2f2; }
+

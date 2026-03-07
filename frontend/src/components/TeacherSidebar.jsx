@@ -16,7 +16,7 @@ const TeacherSidebar = ({ isTA = false }) => {
     const menuItems = [
         { path: isTA ? '/ta/classes' : '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
         { path: isTA ? '/ta/schedules' : '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
-        { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Bài tập' },
+        { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Thư viện' },
         { path: isTA ? '/ta/performance' : '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
     ];
 

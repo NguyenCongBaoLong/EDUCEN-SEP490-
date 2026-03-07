@@ -29,11 +29,31 @@ const CHILD_CLASSES = [
         attendance: 87,
         status: 'active',
         color: '#3b82f6',
-        assignments: [
-            { id: 'A1', title: 'Bài tập chương 1 - PT bậc hai', dueDate: '20/09/2023', grade: 9.5, submitted: true, comment: 'Trình bày rõ ràng! Cần chú ý kiểm tra nghiệm.' },
-            { id: 'A2', title: 'Bài tập chương 2 - Bất phương trình', dueDate: '10/10/2023', grade: 8.0, submitted: true, comment: 'Làm đúng phần lớn, cần xem lại bài 7.' },
-            { id: 'A3', title: 'Kiểm tra giữa kỳ', dueDate: '28/02/2026', grade: null, submitted: false, comment: null },
-            { id: 'A4', title: 'Bài tập chương 3 - Hàm số', dueDate: '04/03/2026', grade: null, submitted: false, comment: null },
+        sessions: [
+            {
+                sessionNum: 1, title: 'Bài 1: Giới thiệu Phương trình bậc hai', date: '04/09/2023',
+                assignments: [
+                    { id: 'A1', title: 'Bài tập chương 1 - PT bậc hai', dueDate: '20/09/2023', grade: 9.5, submitted: true, comment: 'Trình bày rõ ràng! Cần chú ý kiểm tra nghiệm.' }
+                ]
+            },
+            {
+                sessionNum: 6, title: 'Kiểm tra 15 phút', date: '20/09/2023',
+                assignments: [
+                    { id: 'A2', title: 'Bài tập chương 2 - Bất phương trình', dueDate: '10/10/2023', grade: 8.0, submitted: true, comment: 'Làm đúng phần lớn, cần xem lại bài 7.' }
+                ]
+            },
+            {
+                sessionNum: 9, title: 'Kiểm tra giữa kỳ', date: '28/02/2026',
+                assignments: [
+                    { id: 'A3', title: 'Kiểm tra giữa kỳ', dueDate: '28/02/2026', grade: null, submitted: false, comment: null }
+                ]
+            },
+            {
+                sessionNum: 10, title: 'Bài 8: Hàm số bậc hai', date: '04/03/2026',
+                assignments: [
+                    { id: 'A4', title: 'Bài tập chương 3 - Hàm số', dueDate: '04/03/2026', grade: null, submitted: false, comment: null }
+                ]
+            }
         ],
     },
     {
@@ -51,9 +71,14 @@ const CHILD_CLASSES = [
         attendance: 100,
         status: 'active',
         color: '#10b981',
-        assignments: [
-            { id: 'B1', title: 'Writing - My Hometown', dueDate: '20/09/2023', grade: 8.5, submitted: true, comment: 'Good structure! Work on vocabulary variety.' },
-        ],
+        sessions: [
+            {
+                sessionNum: 1, title: 'Unit 1: Family Life', date: '05/09/2023',
+                assignments: [
+                    { id: 'B1', title: 'Writing - My Hometown', dueDate: '20/09/2023', grade: 8.5, submitted: true, comment: 'Good structure! Work on vocabulary variety.' },
+                ]
+            }
+        ]
     },
     {
         id: 203,
@@ -70,7 +95,7 @@ const CHILD_CLASSES = [
         attendance: 94,
         status: 'inactive',
         color: '#f59e0b',
-        assignments: [],
+        sessions: [],
     },
 ];
 
@@ -84,8 +109,9 @@ const SUBJECT_COLORS = {
 const ClassDetailModal = ({ cls, onClose }) => {
     if (!cls) return null;
     const accent = SUBJECT_COLORS[cls.subject] || cls.color;
+    const allAssignments = cls.sessions ? cls.sessions.flatMap(s => s.assignments || []) : [];
     const avg = (() => {
-        const graded = cls.assignments.filter(a => a.grade !== null);
+        const graded = allAssignments.filter(a => a.grade !== null);
         if (!graded.length) return null;
         return (graded.reduce((s, a) => s + a.grade, 0) / graded.length).toFixed(1);
     })();
@@ -148,44 +174,54 @@ const ClassDetailModal = ({ cls, onClose }) => {
                     </div>
                 </div>
 
-                {/* Assignments */}
+                {/* Assignments via Sessions */}
                 <div className="pc-modal-section">
-                    <div className="pc-modal-section-title">Bài tập & Điểm số ({cls.assignments.length} bài)</div>
-                    {cls.assignments.length === 0 ? (
+                    <div className="pc-modal-section-title">Bài tập & Điểm số ({allAssignments.length} bài)</div>
+                    {allAssignments.length === 0 ? (
                         <p className="pc-modal-empty">Chưa có bài tập nào.</p>
                     ) : (
                         <div className="pc-asm-list">
-                            {cls.assignments.map(asm => (
-                                <div key={asm.id} className={`pc-asm-row ${asm.submitted ? 'submitted' : 'pending'}`}>
-                                    <div className="pc-asm-left">
-                                        <div className="pc-asm-status-icon">
-                                            {asm.submitted
-                                                ? <CheckCircle size={16} color="#16a34a" />
-                                                : <AlertCircle size={16} color="#f59e0b" />}
+                            {cls.sessions.map(session => {
+                                if (!session.assignments || session.assignments.length === 0) return null;
+                                return (
+                                    <div key={`session-${session.sessionNum}`} className="pc-asm-session-group" style={{ marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                            Buổi {session.sessionNum}: {session.title}
                                         </div>
-                                        <div>
-                                            <div className="pc-asm-title">{asm.title}</div>
-                                            <div className="pc-asm-due">Hạn: {asm.dueDate}</div>
-                                        </div>
-                                    </div>
-                                    <div className="pc-asm-right">
-                                        {asm.grade !== null ? (
-                                            <div className="pc-asm-grade-block">
-                                                <span className={`pc-asm-grade ${asm.grade >= 8 ? 'high' : asm.grade >= 6.5 ? 'mid' : 'low'}`}>
-                                                    <Star size={12} /> {asm.grade}/10
-                                                </span>
-                                                {asm.comment && (
-                                                    <div className="pc-asm-comment">💬 {asm.comment}</div>
-                                                )}
+                                        {session.assignments.map(asm => (
+                                            <div key={asm.id} className={`pc-asm-row ${asm.submitted ? 'submitted' : 'pending'}`} style={{ marginBottom: '8px' }}>
+                                                <div className="pc-asm-left">
+                                                    <div className="pc-asm-status-icon">
+                                                        {asm.submitted
+                                                            ? <CheckCircle size={16} color="#16a34a" />
+                                                            : <AlertCircle size={16} color="#f59e0b" />}
+                                                    </div>
+                                                    <div>
+                                                        <div className="pc-asm-title">{asm.title}</div>
+                                                        <div className="pc-asm-due">Hạn: {asm.dueDate}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="pc-asm-right">
+                                                    {asm.grade !== null ? (
+                                                        <div className="pc-asm-grade-block">
+                                                            <span className={`pc-asm-grade ${asm.grade >= 8 ? 'high' : asm.grade >= 6.5 ? 'mid' : 'low'}`}>
+                                                                <Star size={12} /> {asm.grade}/10
+                                                            </span>
+                                                            {asm.comment && (
+                                                                <div className="pc-asm-comment">💬 {asm.comment}</div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="pc-asm-pending">
+                                                            {asm.submitted ? 'Chờ chấm' : 'Chưa nộp'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <span className="pc-asm-pending">
-                                                {asm.submitted ? 'Chờ chấm' : 'Chưa nộp'}
-                                            </span>
-                                        )}
+                                        ))}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -214,7 +250,8 @@ const ParentClasses = () => {
 
     const activeCount = CHILD_CLASSES.filter(c => c.status === 'active').length;
     const avgAttendance = Math.round(CHILD_CLASSES.reduce((s, c) => s + c.attendance, 0) / CHILD_CLASSES.length);
-    const allGrades = CHILD_CLASSES.flatMap(c => c.assignments.filter(a => a.grade !== null).map(a => a.grade));
+    const getAllAssignmentsForClass = (cls) => cls.sessions ? cls.sessions.flatMap(s => s.assignments || []) : [];
+    const allGrades = CHILD_CLASSES.flatMap(c => getAllAssignmentsForClass(c).filter(a => a.grade !== null).map(a => a.grade));
     const avgGrade = allGrades.length ? (allGrades.reduce((s, g) => s + g, 0) / allGrades.length).toFixed(1) : '—';
 
     return (
@@ -300,7 +337,8 @@ const ParentClasses = () => {
                             {filtered.map(cls => {
                                 const accent = SUBJECT_COLORS[cls.subject] || cls.color;
                                 const progress = Math.round((cls.classesCompleted / cls.totalClasses) * 100);
-                                const graded = cls.assignments.filter(a => a.grade !== null);
+                                const allAsm = getAllAssignmentsForClass(cls);
+                                const graded = allAsm.filter(a => a.grade !== null);
                                 const avg = graded.length
                                     ? (graded.reduce((s, a) => s + a.grade, 0) / graded.length).toFixed(1)
                                     : null;
@@ -347,7 +385,7 @@ const ParentClasses = () => {
                                                 <div className="pc-mini-stat">
                                                     <span className="pc-mini-label">Bài nộp</span>
                                                     <span className="pc-mini-val">
-                                                        {cls.assignments.filter(a => a.submitted).length}/{cls.assignments.length}
+                                                        {allAsm.filter(a => a.submitted).length}/{allAsm.length}
                                                     </span>
                                                 </div>
                                             </div>

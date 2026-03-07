@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Upload } from 'lucide-react';
+import { Plus, Upload, Mail } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import StudentTable from '../../components/StudentTable';
 import AddStudentModal from '../../components/AddStudentModal';
@@ -28,6 +29,7 @@ const StudentManagement = () => {
     const [viewingRequest, setViewingRequest] = useState(null);
     const [rejectingRequest, setRejectingRequest] = useState(null);
     const [requestStatusFilter, setRequestStatusFilter] = useState('');
+    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
 
     // Mock data - Parents (Must be defined before students)
     const MOCK_PARENTS = [
@@ -233,6 +235,18 @@ const StudentManagement = () => {
                 ? { ...s, accountSent: true, status: 'active' }
                 : s
         ));
+        toast.success("Đã gửi tài khoản cho học sinh!");
+    };
+
+    const handleBulkSendAccount = () => {
+        if (selectedStudentIds.length === 0) return;
+        setStudentList(studentList.map(s =>
+            selectedStudentIds.includes(s.id)
+                ? { ...s, accountSent: true, status: 'active' }
+                : s
+        ));
+        toast.success(`Đã gửi tài khoản cho ${selectedStudentIds.length} học sinh!`);
+        setSelectedStudentIds([]);
     };
 
     const handleImportStudents = (newStudents) => {
@@ -311,6 +325,16 @@ const StudentManagement = () => {
                     </div>
                     {viewMode === 'list' && (
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            {selectedStudentIds.length > 0 && (
+                                <button
+                                    className="btn-add-student"
+                                    style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                    onClick={handleBulkSendAccount}
+                                >
+                                    <Mail size={18} />
+                                    Gửi TK ({selectedStudentIds.length})
+                                </button>
+                            )}
                             <button
                                 className="btn-import-student"
                                 onClick={() => setIsImportModalOpen(true)}
@@ -360,6 +384,8 @@ const StudentManagement = () => {
                         onEdit={handleEditStudent}
                         onToggleStatus={handleToggleStatusStudent}
                         onSendAccount={handleSendAccount}
+                        selectedIds={selectedStudentIds}
+                        setSelectedIds={setSelectedStudentIds}
                     />
                 ) : (
                     <EnrollmentRequestsTable

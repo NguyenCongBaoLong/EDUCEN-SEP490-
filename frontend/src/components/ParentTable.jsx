@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import '../css/components/ParentTable.css';
 import '../css/components/DeleteModal.css';
 
-const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, onToggleStatus, onSendAccount }) => {
+const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, onToggleStatus, onSendAccount, selectedIds = [], setSelectedIds = () => { } }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, parent: null });
     const [sendModal, setSendModal] = useState({ show: false, parent: null });
@@ -23,6 +23,23 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
     const confirmSend = () => {
         if (sendModal.parent && onSendAccount) onSendAccount(sendModal.parent.id);
         setSendModal({ show: false, parent: null });
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allUnsent = parentData.filter(p => !p.accountSent).map(p => p.id);
+            setSelectedIds(allUnsent);
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelect = (id, checked) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        }
     };
 
     return (
@@ -47,6 +64,15 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                 <table className="parent-table">
                     <thead>
                         <tr>
+                            <th style={{ width: '40px', paddingLeft: '1.25rem' }}>
+                                <input
+                                    type="checkbox"
+                                    className="bulk-checkbox"
+                                    checked={parentData.length > 0 && parentData.filter(s => !s.accountSent).length > 0 && selectedIds.length === parentData.filter(s => !s.accountSent).length}
+                                    onChange={handleSelectAll}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                            </th>
                             <th>Phụ Huynh</th>
                             <th>Liên Hệ</th>
                             <th>Học Sinh</th>
@@ -58,6 +84,16 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                     <tbody>
                         {currentParents.length > 0 ? currentParents.map(p => (
                             <tr key={p.id}>
+                                <td style={{ paddingLeft: '1.25rem' }}>
+                                    <input
+                                        type="checkbox"
+                                        className="bulk-checkbox"
+                                        disabled={p.accountSent}
+                                        checked={selectedIds.includes(p.id)}
+                                        onChange={(e) => handleSelect(p.id, e.target.checked)}
+                                        style={{ width: '16px', height: '16px', cursor: p.accountSent ? 'not-allowed' : 'pointer', accentColor: '#3b82f6' }}
+                                    />
+                                </td>
                                 <td>
                                     <div className="parent-info-cell">
                                         <div className="parent-avatar">{getInitials(p.name)}</div>
@@ -121,7 +157,7 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
                                     Không tìm thấy phụ huynh nào.
                                 </td>
                             </tr>

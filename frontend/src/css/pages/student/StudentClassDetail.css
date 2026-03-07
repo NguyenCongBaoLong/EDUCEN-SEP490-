@@ -1304,3 +1304,21 @@
     line-height: 1.6;
     margin: 0;
 }
+/* --- Sessions Roadmap --- */
+.scd-roadmap-tab { display: flex; flex-direction: column; gap: 16px; }
+.scd-session-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); }
+.scd-session-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; background: #fff; transition: background .15s; }
+.scd-session-header:hover { background: #f8fafc; }
+.scd-session-info { display: flex; align-items: center; gap: 16px; }
+.scd-session-num { font-size: 1rem; font-weight: 700; color: var(--accent, #3b82f6); background: #eff6ff; padding: 6px 12px; border-radius: 8px; }
+.scd-session-title h4 { margin: 0 0 4px; font-size: 1.0625rem; color: #1e293b; }
+.scd-session-meta { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: #64748b; }
+.scd-session-status { display: flex; align-items: center; gap: 16px; font-size: 0.875rem; color: #64748b;}
+.scd-session-content { border-top: 1px solid #f1f5f9; padding: 20px; background: #fafbfc; animation: slideDown 0.3s ease-out; }
+.scd-session-section { margin-bottom: 24px; }
+.scd-session-section:last-child { margin-bottom: 0; }
+.scd-session-section h5 { display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; color: #334155; margin: 0 0 12px; }
+.scd-session-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.scd-session-item-badge { display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #f1f5f9; color: #475569; margin-left: auto; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+

@@ -12,6 +12,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload }) => {
 
     const [files, setFiles] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
+    const [saveToLibrary, setSaveToLibrary] = useState(true);
     const fileInputRef = useRef(null);
 
     // Xử lý kéo thả
@@ -77,7 +78,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload }) => {
             rawFile: f.file
         }));
 
-        onUpload(newMaterialItems);
+        onUpload(newMaterialItems, saveToLibrary);
     };
 
     return (
@@ -177,6 +178,18 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload }) => {
                                 onChange={handleChange}
                                 rows={2}
                             ></textarea>
+                        </div>
+
+                        <div className="cam-field" style={{ marginTop: '0.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={saveToLibrary}
+                                    onChange={(e) => setSaveToLibrary(e.target.checked)}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                                <span style={{ fontWeight: 500 }}>Lưu vào Thư viện học liệu chung</span> (giúp tái sử dụng cho các lớp khác)
+                            </label>
                         </div>
                     </div>
 

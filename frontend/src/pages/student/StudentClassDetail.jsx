@@ -4,7 +4,7 @@ import {
     ChevronLeft, Calendar, Clock, Users, BookOpen,
     FileText, Download, PlayCircle, Upload, CheckCircle,
     AlertCircle, Clock as ClockIcon, Star, MessageSquare,
-    X, Paperclip, Eye
+    X, Paperclip, Eye, ChevronDown, ChevronUp, CheckSquare
 } from 'lucide-react';
 import StudentSidebar from '../../components/StudentSidebar';
 import '../../css/pages/student/StudentClassDetail.css';
@@ -27,53 +27,73 @@ const STUDENT_CLASS_DATA = {
         currentStudents: 12, maxStudents: 15,
         myAttendance: 87,
         sessions: [
-            { scheduleId: 1, date: '04/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 2, date: '06/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 3, date: '11/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: false },
-            { scheduleId: 4, date: '13/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 5, date: '18/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 6, date: '20/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 7, date: '25/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 8, date: '12/10/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true },
-            { scheduleId: 9, date: '28/02/2026', dayLabel: 'Thứ Bảy', time: '16:30 - 18:00', attended: null },
-            { scheduleId: 10, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: null },
-        ],
-        materials: [
-            { id: 1, name: 'Slide Bài 1 - Giới thiệu.pdf', size: '2.4 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Tài liệu giới thiệu về phương trình bậc hai' },
-            { id: 2, name: 'Bài tập trắc nghiệm C1.docx', size: '1.1 MB', uploadDate: '05/09/2023', type: 'word', description: 'Gồm 20 câu bài tập cơ bản' },
-            { id: 3, name: 'Video hướng dẫn giải PT.mp4', size: '45.2 MB', uploadDate: '15/09/2023', type: 'video' },
-            { id: 4, name: 'Đề kiểm tra 15p.pdf', size: '850 KB', uploadDate: '20/09/2023', type: 'pdf' },
-        ],
-        assignments: [
             {
-                id: 'A1', title: 'Bài tập chương 1 - Phương trình bậc hai',
-                dueDate: '20/09/2023', description: 'Làm các bài tập từ 1 đến 15 trong sách bài tập. Nộp file PDF hoặc ảnh bài làm.',
-                hasFile: true, fileTemplate: 'BT_C1_Template.pdf',
-                submissions: [
-                    { id: 'S1', fileName: 'Bai_tap_C1_NV.pdf', submittedAt: '19/09/2023 20:45', grade: 9.5, comment: 'Bài làm tốt, trình bày rõ ràng! Cần chú ý thêm bước kiểm tra nghiệm.' },
+                scheduleId: 1, sessionNum: 1, date: '04/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true,
+                title: 'Bài 1: Giới thiệu Phương trình bậc hai',
+                materials: [
+                    { id: 1, name: 'Slide Bài 1 - Giới thiệu.pdf', size: '2.4 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Tài liệu giới thiệu về phương trình bậc hai' },
+                    { id: 2, name: 'Bài tập trắc nghiệm C1.docx', size: '1.1 MB', uploadDate: '05/09/2023', type: 'word', description: 'Gồm 20 câu bài tập cơ bản' }
                 ],
+                assignments: [
+                    {
+                        id: 'A1', title: 'Bài tập chương 1 - Phương trình bậc hai',
+                        dueDate: '20/09/2023', description: 'Làm các bài tập từ 1 đến 15 trong sách bài tập. Nộp file PDF hoặc ảnh bài làm.',
+                        hasFile: true, fileTemplate: 'BT_C1_Template.pdf',
+                        submissions: [
+                            { id: 'S1', fileName: 'Bai_tap_C1_NV.pdf', submittedAt: '19/09/2023 20:45', grade: 9.5, comment: 'Bài làm tốt, trình bày rõ ràng! Cần chú ý thêm bước kiểm tra nghiệm.' }
+                        ]
+                    }
+                ]
             },
             {
-                id: 'A2', title: 'Bài tập chương 2 - Bất phương trình',
-                dueDate: '10/10/2023', description: 'Làm các bài tập số 1, 3, 5, 7 trang 45-48.',
-                hasFile: false,
-                submissions: [
-                    { id: 'S2', fileName: 'BPT_chuong2.jpg', submittedAt: '09/10/2023 18:30', grade: 8.0, comment: 'Làm đúng phần lớn, cần xem lại bài 7.' },
+                scheduleId: 2, sessionNum: 2, date: '06/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: true,
+                title: 'Bài 2: Hệ phương trình',
+                materials: [
+                    { id: 3, name: 'Video hướng dẫn giải PT.mp4', size: '45.2 MB', uploadDate: '05/09/2023', type: 'video' }
                 ],
+                assignments: []
             },
             {
-                id: 'A3', title: 'Kiểm tra giữa kỳ - Ôn tập chương 1-2',
-                dueDate: '28/02/2026', description: 'Đề kiểm tra giữa kỳ. Thời gian: 45 phút. Nộp bài làm scan hoặc chụp ảnh.',
-                hasFile: true, fileTemplate: 'De_KT_GiuaKy.pdf',
-                submissions: [],
+                scheduleId: 3, sessionNum: 3, date: '11/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: false,
+                title: 'Bài 3: Bất phương trình',
+                materials: [],
+                assignments: [
+                    {
+                        id: 'A2', title: 'Bài tập chương 2 - Bất phương trình',
+                        dueDate: '10/10/2023', description: 'Làm các bài tập số 1, 3, 5, 7 trang 45-48.',
+                        hasFile: false,
+                        submissions: [
+                            { id: 'S2', fileName: 'BPT_chuong2.jpg', submittedAt: '09/10/2023 18:30', grade: 8.0, comment: 'Làm đúng phần lớn, cần xem lại bài 7.' }
+                        ]
+                    }
+                ]
+            },
+            { scheduleId: 4, sessionNum: 4, date: '13/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: true, title: 'Bài 4: Bất phương trình bậc hai (Tiếp)', materials: [], assignments: [] },
+            { scheduleId: 5, sessionNum: 5, date: '18/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true, title: 'Bài 5: Luyện tập', materials: [], assignments: [] },
+            { scheduleId: 6, sessionNum: 6, date: '20/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: true, title: 'Kiểm tra 15 phút', materials: [{ id: 4, name: 'Đề kiểm tra 15p.pdf', size: '850 KB', uploadDate: '20/09/2023', type: 'pdf' }], assignments: [] },
+            { scheduleId: 7, sessionNum: 7, date: '25/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true, title: 'Bài 6: Ôn tập giữa kỳ', materials: [], assignments: [] },
+            { scheduleId: 8, sessionNum: 8, date: '12/10/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', attended: true, title: 'Bài 7: Hàm số', materials: [], assignments: [] },
+            {
+                scheduleId: 9, sessionNum: 9, date: '28/02/2026', dayLabel: 'Thứ Bảy', time: '16:30 - 18:00', attended: null, title: 'Kiểm tra giữa kỳ', materials: [], assignments: [
+                    {
+                        id: 'A3', title: 'Kiểm tra giữa kỳ - Ôn tập chương 1-2',
+                        dueDate: '28/02/2026', description: 'Đề kiểm tra giữa kỳ. Thời gian: 45 phút. Nộp bài làm scan hoặc chụp ảnh.',
+                        hasFile: true, fileTemplate: 'De_KT_GiuaKy.pdf',
+                        submissions: []
+                    }
+                ]
             },
             {
-                id: 'A4', title: 'Bài tập chương 3 - Hàm số',
-                dueDate: '04/03/2026', description: 'Tìm hiểu về hàm số bậc hai và vẽ đồ thị.',
-                hasFile: false,
-                submissions: [],
+                scheduleId: 10, sessionNum: 10, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', attended: null, title: 'Bài 8: Hàm số bậc hai', materials: [], assignments: [
+                    {
+                        id: 'A4', title: 'Bài tập chương 3 - Hàm số',
+                        dueDate: '04/03/2026', description: 'Tìm hiểu về hàm số bậc hai và vẽ đồ thị.',
+                        hasFile: false,
+                        submissions: []
+                    }
+                ]
             },
-        ],
+        ]
     },
     202: {
         id: 202, code: 'ANH-G10-INT', name: 'Tiếng Anh Giao Tiếp Nâng Cao',
@@ -86,22 +106,22 @@ const STUDENT_CLASS_DATA = {
         currentStudents: 10, maxStudents: 12,
         myAttendance: 100,
         sessions: [
-            { scheduleId: 1, date: '05/09/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30', attended: true },
-            { scheduleId: 2, date: '07/09/2023', dayLabel: 'Thứ Năm', time: '17:00 - 18:30', attended: true },
-            { scheduleId: 3, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '17:00 - 18:30', attended: null },
-        ],
-        materials: [
-            { id: 1, name: 'Unit 1 - Vocabulary.pdf', size: '1.2 MB', uploadDate: '05/09/2023', type: 'pdf' },
-        ],
-        assignments: [
             {
-                id: 'B1', title: 'Writing Assignment - My Hometown',
-                dueDate: '20/09/2023', description: 'Write a 200-word essay about your hometown.',
-                hasFile: false,
-                submissions: [
-                    { id: 'SB1', fileName: 'My_hometown_essay.docx', submittedAt: '18/09/2023 22:00', grade: 8.5, comment: 'Good structure! Work on vocabulary variety.' },
-                ],
+                scheduleId: 1, sessionNum: 1, date: '05/09/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30', attended: true, title: 'Unit 1: Introduction', materials: [
+                    { id: 1, name: 'Unit 1 - Vocabulary.pdf', size: '1.2 MB', uploadDate: '05/09/2023', type: 'pdf' },
+                ], assignments: [
+                    {
+                        id: 'B1', title: 'Writing Assignment - My Hometown',
+                        dueDate: '20/09/2023', description: 'Write a 200-word essay about your hometown.',
+                        hasFile: false,
+                        submissions: [
+                            { id: 'SB1', fileName: 'My_hometown_essay.docx', submittedAt: '18/09/2023 22:00', grade: 8.5, comment: 'Good structure! Work on vocabulary variety.' },
+                        ],
+                    },
+                ]
             },
+            { scheduleId: 2, sessionNum: 2, date: '07/09/2023', dayLabel: 'Thứ Năm', time: '17:00 - 18:30', attended: true, title: 'Unit 2: Daily Life', materials: [], assignments: [] },
+            { scheduleId: 3, sessionNum: 3, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '17:00 - 18:30', attended: null, title: 'Review Unit 1-2', materials: [], assignments: [] },
         ],
     },
     203: {
@@ -115,8 +135,6 @@ const STUDENT_CLASS_DATA = {
         currentStudents: 9, maxStudents: 15,
         myAttendance: 94,
         sessions: [],
-        materials: [],
-        assignments: [],
     },
 };
 
@@ -215,11 +233,13 @@ const SubmitModal = ({ assignment, onClose, onSubmit }) => {
 /* ─── Main Component ─── */
 const StudentClassDetail = () => {
     const { classId } = useParams();
-    const classData = STUDENT_CLASS_DATA[classId] || STUDENT_CLASS_DATA[201];
+    const [classData, setClassData] = useState(STUDENT_CLASS_DATA[classId] || STUDENT_CLASS_DATA[201]);
 
     const [activeTab, setActiveTab] = useState('overview');
-    const [materials] = useState(classData.materials || []);
-    const [assignments, setAssignments] = useState(classData.assignments || []);
+
+    // Expand/Collapse sessions
+    const [expandedSessionId, setExpandedSessionId] = useState(null);
+
     const [submitTarget, setSubmitTarget] = useState(null);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -228,6 +248,14 @@ const StudentClassDetail = () => {
     const futureSessions = classData.sessions.filter(s => !isPast(s.date));
     const progress = Math.round((classData.classesCompleted / classData.totalClasses) * 100);
     const attendedCount = pastSessions.filter(s => s.attended === true).length;
+
+    // Get all assignments across all sessions
+    const assignments = classData.sessions.flatMap(s => s.assignments || []);
+    const materialsCount = classData.sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
+
+    const handleToggleSession = (id) => {
+        setExpandedSessionId(prev => prev === id ? null : id);
+    };
 
     const handleDownload = (item) => {
         if (item.rawFile) {
@@ -242,19 +270,27 @@ const StudentClassDetail = () => {
         }
     };
 
-    const handleSubmit = (assignmentId, { file, note }) => {
+    const handleSubmit = (scheduleId, assignmentId, { file, note }) => {
         const now = new Date();
         const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        setAssignments(prev => prev.map(a => {
-            if (a.id !== assignmentId) return a;
-            return {
-                ...a,
-                submissions: [
-                    ...a.submissions,
-                    { id: `S_${Date.now()}`, fileName: file.name, submittedAt: dateStr, grade: null, comment: null },
-                ],
-            };
-        }));
+
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== scheduleId) return s;
+                const newAssignments = s.assignments.map(a => {
+                    if (a.id !== assignmentId) return a;
+                    return {
+                        ...a,
+                        submissions: [
+                            ...a.submissions,
+                            { id: `S_${Date.now()}`, fileName: file.name, submittedAt: dateStr, grade: null, comment: null },
+                        ]
+                    };
+                });
+                return { ...s, assignments: newAssignments };
+            });
+            return { ...prev, sessions: newSessions };
+        });
     };
 
     const subjectColors = {
@@ -263,6 +299,42 @@ const StudentClassDetail = () => {
         'Vật lý': '#f59e0b',
     };
     const accent = subjectColors[classData.subject] || '#3b82f6';
+
+    const renderMaterialCard = (item) => (
+        <div key={item.id} className="scd-item-card" onClick={() => setSelectedMaterial(item)}>
+            <div className="scd-item-card-icon">{getFileIcon(item.type)}</div>
+            <div className="scd-item-card-body">
+                <h4 className="scd-item-card-title">{item.name}</h4>
+                <div className="scd-item-card-meta">
+                    <span>{item.size}</span><span className="dot">•</span><span>{item.uploadDate}</span>
+                </div>
+            </div>
+            <div className="scd-item-card-action"><Eye size={15} /></div>
+        </div>
+    );
+
+    const renderAssignmentCard = (asm, scheduleId) => {
+        const status = getAssignmentStatus(asm);
+        const cfg = statusConfig[status];
+        const lastSub = asm.submissions[asm.submissions.length - 1];
+        return (
+            <div key={asm.id} className={`scd-item-card scd-asm-item-card ${status}`} onClick={() => setSelectedAssignment({ asm, scheduleId })}>
+                <div className="scd-item-card-body">
+                    <div className="scd-item-card-toprow">
+                        <span className={`scd-status-chip ${status}`}>{cfg.icon} {cfg.label}</span>
+                        {lastSub?.grade !== null && lastSub?.grade !== undefined && (
+                            <span className="scd-grade-badge"><Star size={12} /> {lastSub.grade}/10</span>
+                        )}
+                    </div>
+                    <h4 className="scd-item-card-title">{asm.title}</h4>
+                    <div className="scd-item-card-meta">
+                        <ClockIcon size={12} /><span>Hạn: {asm.dueDate}</span>
+                    </div>
+                </div>
+                <div className="scd-item-card-action"><Eye size={15} /></div>
+            </div>
+        );
+    };
 
     return (
         <div className="scd-page">
@@ -324,8 +396,7 @@ const StudentClassDetail = () => {
                 <div className="scd-tabs-nav">
                     {[
                         { key: 'overview', label: 'Tổng quan' },
-                        { key: 'materials', label: `Tài liệu (${materials.length})` },
-                        { key: 'assignments', label: `Bài tập (${assignments.length})` },
+                        { key: 'roadmap', label: 'Lộ trình học (Tài liệu & Bài tập)' },
                     ].map(tab => (
                         <button
                             key={tab.key}
@@ -366,7 +437,7 @@ const StudentClassDetail = () => {
                                                         <tr key={s.scheduleId}>
                                                             <td>
                                                                 <div className="att-date-cell">
-                                                                    <span className="att-session-num">Buổi {pastSessions.length - idx}</span>
+                                                                    <span className="att-session-num">Buổi {s.sessionNum} - {s.title}</span>
                                                                     <span className="att-session-date">{s.dayLabel}, {s.date} • {s.time}</span>
                                                                 </div>
                                                             </td>
@@ -384,7 +455,7 @@ const StudentClassDetail = () => {
                                     {futureSessions.length > 0 && (
                                         <div className="att-future-notice">
                                             <Clock size={13} />
-                                            <span>{futureSessions.length} buổi sắp tới &nbsp;(gần nhất: {futureSessions[0].dayLabel}, {futureSessions[0].date})</span>
+                                            <span>{futureSessions.length} buổi sắp tới &nbsp;(gần nhất: Buổi {futureSessions[0].sessionNum} - {futureSessions[0].date})</span>
                                         </div>
                                     )}
                                 </div>
@@ -418,7 +489,7 @@ const StudentClassDetail = () => {
 
                                 {/* Tiến độ */}
                                 <div className="scd-card scd-progress-card">
-                                    <div className="scd-card-header"><h3>Tiến độ khóa học</h3></div>
+                                    <div className="scd-card-header"><h3>Thống kê học tập</h3></div>
                                     <div className="cd-overview-stats">
                                         <div className="cd-overview-row">
                                             <span>Buổi đã học</span>
@@ -429,8 +500,12 @@ const StudentClassDetail = () => {
                                             <span className="cd-overview-val green">{classData.myAttendance}%</span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>Bài đã nộp</span>
+                                            <span>Bài tập đã nộp</span>
                                             <span className="cd-overview-val">{assignments.filter(a => a.submissions.length > 0).length} / {assignments.length}</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                            <span>Tài liệu đã chia sẻ</span>
+                                            <span className="cd-overview-val">{materialsCount} file</span>
                                         </div>
                                     </div>
                                     <div className="cd-progress-wrap">
@@ -447,104 +522,73 @@ const StudentClassDetail = () => {
                         </div>
                     )}
 
-                    {/* ─── TAB: MATERIALS ─── */}
-                    {activeTab === 'materials' && (
-                        <div className="scd-materials-tab">
-                            <div className="scd-materials-header">
-                                <h2>Tài liệu học tập</h2>
-                                <p className="scd-materials-hint">{materials.length} tài liệu — nhấn vào card để xem chi tiết</p>
-                            </div>
-                            {materials.length === 0 ? (
-                                <div className="scd-empty-state">
-                                    <FileText size={48} />
-                                    <h3>Chưa có tài liệu nào</h3>
-                                    <p>Giáo viên chưa tải lên tài liệu cho lớp này.</p>
-                                </div>
-                            ) : (
-                                <div className="scd-card-grid">
-                                    {materials.map(item => (
-                                        <div
-                                            key={item.id}
-                                            className="scd-item-card"
-                                            onClick={() => setSelectedMaterial(item)}
-                                        >
-                                            <div className="scd-item-card-icon">{getFileIcon(item.type)}</div>
-                                            <div className="scd-item-card-body">
-                                                <h4 className="scd-item-card-title">{item.name}</h4>
-                                                <div className="scd-item-card-meta">
-                                                    <span>{item.size}</span>
-                                                    <span className="dot">•</span>
-                                                    <span>{item.uploadDate}</span>
+                    {/* ─── TAB: ROADMAP (SESSIONS) ─── */}
+                    {activeTab === 'roadmap' && (
+                        <div className="scd-roadmap-tab" style={{ '--accent': accent }}>
+                            {classData.sessions.map((session) => {
+                                const isExpanded = expandedSessionId === session.scheduleId;
+                                const mats = session.materials || [];
+                                const asms = session.assignments || [];
+                                const hasContent = mats.length > 0 || asms.length > 0;
+                                const isFuture = parseDate(session.date) > today;
+
+                                return (
+                                    <div key={session.scheduleId} className="scd-session-card">
+                                        <div className="scd-session-header" onClick={() => handleToggleSession(session.scheduleId)}>
+                                            <div className="scd-session-info">
+                                                <div className="scd-session-num">Buổi {session.sessionNum}</div>
+                                                <div className="scd-session-title">
+                                                    <h4>{session.title || `Buổi học ${session.date}`}</h4>
+                                                    <div className="scd-session-meta">
+                                                        <Calendar size={13} /> {session.dayLabel}, {session.date}
+                                                        <span className="dot">•</span>
+                                                        <Clock size={13} /> {session.time}
+                                                    </div>
                                                 </div>
-                                                {item.description && (
-                                                    <p className="scd-item-card-desc">{item.description}</p>
-                                                )}
                                             </div>
-                                            <div className="scd-item-card-action">
-                                                <Eye size={15} />
+                                            <div className="scd-session-status">
+                                                {session.attended === true && <span className="scd-att-badge present"><CheckCircle size={13} /> Có mặt</span>}
+                                                {session.attended === false && <span className="scd-att-badge absent"><AlertCircle size={13} /> Vắng</span>}
+                                                {isFuture && <span className="scd-att-badge upcoming"><ClockIcon size={13} /> Chưa học</span>}
+                                                {hasContent && (
+                                                    <span className="scd-session-item-badge">
+                                                        {mats.length > 0 && <><FileText size={12} style={{ marginRight: 4 }} /> {mats.length}</>}
+                                                        {mats.length > 0 && asms.length > 0 && <span style={{ margin: '0 4px', color: '#cbd5e1' }}>|</span>}
+                                                        {asms.length > 0 && <><CheckSquare size={12} style={{ marginRight: 4 }} /> {asms.length}</>}
+                                                    </span>
+                                                )}
+                                                {isExpanded ? <ChevronUp size={20} color="#64748b" /> : <ChevronDown size={20} color="#64748b" />}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
 
-                    {/* ─── TAB: ASSIGNMENTS ─── */}
-                    {activeTab === 'assignments' && (
-                        <div className="scd-assignments-tab">
-                            <div className="scd-assignments-header">
-                                <h2>Bài tập</h2>
-                                <div className="scd-asm-summary">
-                                    <span className="scd-asm-chip submitted">{assignments.filter(a => a.submissions.length > 0).length} đã nộp</span>
-                                    <span className="scd-asm-chip pending">{assignments.filter(a => a.submissions.length === 0 && parseDate(a.dueDate) >= today).length} chưa nộp</span>
-                                    <span className="scd-asm-chip overdue">{assignments.filter(a => a.submissions.length === 0 && parseDate(a.dueDate) < today).length} quá hạn</span>
-                                </div>
-                            </div>
+                                        {isExpanded && (
+                                            <div className="scd-session-content">
+                                                {mats.length === 0 && asms.length === 0 && (
+                                                    <p className="scd-empty-msg">Chưa có tài liệu hay bài tập nào cho buổi học này.</p>
+                                                )}
 
-                            {assignments.length === 0 ? (
-                                <div className="scd-empty-state">
-                                    <BookOpen size={48} />
-                                    <h3>Chưa có bài tập nào</h3>
-                                    <p>Giáo viên chưa giao bài tập cho lớp này.</p>
-                                </div>
-                            ) : (
-                                <div className="scd-card-grid">
-                                    {assignments.map(asm => {
-                                        const status = getAssignmentStatus(asm);
-                                        const cfg = statusConfig[status];
-                                        const lastSub = asm.submissions[asm.submissions.length - 1];
-                                        return (
-                                            <div
-                                                key={asm.id}
-                                                className={`scd-item-card scd-asm-item-card ${status}`}
-                                                onClick={() => setSelectedAssignment(asm)}
-                                            >
-                                                <div className="scd-item-card-body">
-                                                    <div className="scd-item-card-toprow">
-                                                        <span className={`scd-status-chip ${status}`}>
-                                                            {cfg.icon} {cfg.label}
-                                                        </span>
-                                                        {lastSub?.grade !== null && lastSub?.grade !== undefined && (
-                                                            <span className="scd-grade-badge">
-                                                                <Star size={12} /> {lastSub.grade}/10
-                                                            </span>
-                                                        )}
+                                                {mats.length > 0 && (
+                                                    <div className="scd-session-section">
+                                                        <h5><BookOpen size={16} /> Tài liệu bài giảng</h5>
+                                                        <div className="scd-session-grid">
+                                                            {mats.map(renderMaterialCard)}
+                                                        </div>
                                                     </div>
-                                                    <h4 className="scd-item-card-title">{asm.title}</h4>
-                                                    <div className="scd-item-card-meta">
-                                                        <ClockIcon size={12} />
-                                                        <span>Hạn: {asm.dueDate}</span>
+                                                )}
+
+                                                {asms.length > 0 && (
+                                                    <div className="scd-session-section">
+                                                        <h5><CheckSquare size={16} /> Bài tập ({asms.length})</h5>
+                                                        <div className="scd-session-grid">
+                                                            {asms.map(asm => renderAssignmentCard(asm, session.scheduleId))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className="scd-item-card-action">
-                                                    <Eye size={15} />
-                                                </div>
+                                                )}
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -553,10 +597,10 @@ const StudentClassDetail = () => {
             {/* Submit Modal */}
             {submitTarget && (
                 <SubmitModal
-                    assignment={submitTarget}
+                    assignment={submitTarget.asm}
                     onClose={() => setSubmitTarget(null)}
                     onSubmit={(payload) => {
-                        handleSubmit(submitTarget.id, payload);
+                        handleSubmit(submitTarget.scheduleId, submitTarget.asm.id, payload);
                         setSubmitTarget(null);
                     }}
                 />
@@ -594,7 +638,8 @@ const StudentClassDetail = () => {
 
             {/* Assignment Detail Modal */}
             {selectedAssignment && (() => {
-                const asm = selectedAssignment;
+                const asm = selectedAssignment.asm;
+                const scheduleId = selectedAssignment.scheduleId;
                 const status = getAssignmentStatus(asm);
                 const cfg = statusConfig[status];
                 const lastSub = asm.submissions[asm.submissions.length - 1];
@@ -662,7 +707,7 @@ const StudentClassDetail = () => {
                                     <button
                                         className="scd-btn-submit"
                                         style={{ background: accent }}
-                                        onClick={() => { setSelectedAssignment(null); setSubmitTarget(asm); }}
+                                        onClick={() => { setSelectedAssignment(null); setSubmitTarget({ asm, scheduleId }); }}
                                     >
                                         <Upload size={16} /> {status === 'submitted' ? 'Nộp lại' : 'Nộp bài'}
                                     </button>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Mail } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import ParentTable from '../../components/ParentTable';
 import AddParentModal from '../../components/AddParentModal';
@@ -21,6 +22,7 @@ const ParentManagement = () => {
     const [viewingParent, setViewingParent] = useState(null);
     const [editingParent, setEditingParent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedParentIds, setSelectedParentIds] = useState([]);
 
     const [parentList, setParentList] = useState([
         {
@@ -127,6 +129,16 @@ const ParentManagement = () => {
         setParentList(prev => prev.map(p =>
             p.id === id ? { ...p, accountSent: true, status: 'active' } : p
         ));
+        toast.success("Đã gửi tài khoản cho phụ huynh!");
+    };
+
+    const handleBulkSendAccount = () => {
+        if (selectedParentIds.length === 0) return;
+        setParentList(prev => prev.map(p =>
+            selectedParentIds.includes(p.id) ? { ...p, accountSent: true, status: 'active' } : p
+        ));
+        toast.success(`Đã gửi tài khoản cho ${selectedParentIds.length} phụ huynh!`);
+        setSelectedParentIds([]);
     };
 
     const totalParents = parentList.length;
@@ -143,10 +155,22 @@ const ParentManagement = () => {
                         <h1>Quản Lý Phụ Huynh</h1>
                         <p>{totalParents} phụ huynh · {activeParents} đang hoạt động · {unsent} chưa gửi tài khoản</p>
                     </div>
-                    <button className="btn-add-parent" onClick={handleAdd}>
-                        <Plus size={20} />
-                        Thêm Phụ Huynh
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        {selectedParentIds.length > 0 && (
+                            <button
+                                className="btn-add-parent"
+                                style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                onClick={handleBulkSendAccount}
+                            >
+                                <Mail size={18} />
+                                Gửi TK ({selectedParentIds.length})
+                            </button>
+                        )}
+                        <button className="btn-add-parent" onClick={handleAdd}>
+                            <Plus size={20} />
+                            Thêm Phụ Huynh
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -183,6 +207,8 @@ const ParentManagement = () => {
                     onEdit={handleEdit}
                     onToggleStatus={handleToggleStatus}
                     onSendAccount={handleSendAccount}
+                    selectedIds={selectedParentIds}
+                    setSelectedIds={setSelectedParentIds}
                 />
             </main>
 
