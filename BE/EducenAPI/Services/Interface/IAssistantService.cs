@@ -1,5 +1,5 @@
 using EducenAPI.DTOs.Assistants;
-
+ 
 namespace EducenAPI.Services.Interface
 {
     public interface IAssistantService
