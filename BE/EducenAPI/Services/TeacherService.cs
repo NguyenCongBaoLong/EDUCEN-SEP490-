@@ -61,6 +61,45 @@ namespace EducenAPI.Services
 
         public async Task<TeacherDto> CreateTeacherAsync(CreateTeacherDto dto)
         {
+            // Trim input strings
+            dto.Username = dto.Username?.Trim();
+            dto.Password = dto.Password?.Trim();
+            dto.FullName = dto.FullName?.Trim();
+            dto.Email = dto.Email?.Trim();
+            dto.PhoneNumber = dto.PhoneNumber?.Trim();
+            dto.Specialization = dto.Specialization?.Trim();
+            dto.Degree = dto.Degree?.Trim();
+
+            // Skip user creation if username or password is null
+            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                // Create teacher profile without user account
+                var teacherProfile = new Teacher
+                {
+                    UserId = 0, // Will be set when account is created
+                    Specialization = dto.Specialization,
+                    Degree = dto.Degree
+                };
+
+                _context.Teachers.Add(teacherProfile);
+                await _context.SaveChangesAsync();
+
+                return new TeacherDto
+                {
+                    TeacherId = teacherProfile.UserId,
+                    UserId = teacherProfile.UserId,
+                    Username = "",
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    PhoneNumber = dto.PhoneNumber,
+                    Specialization = teacherProfile.Specialization ?? "",
+                    Degree = teacherProfile.Degree,
+                    AccountStatus = "Pending",
+                    ClassesCount = 0,
+                    CreatedAt = DateTime.Now
+                };
+            }
+
             var existingUser = await _context.Users
                 .AnyAsync(u => u.Username == dto.Username);
 

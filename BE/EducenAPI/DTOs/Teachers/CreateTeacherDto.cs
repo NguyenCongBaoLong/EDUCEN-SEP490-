@@ -12,11 +12,13 @@ namespace EducenAPI.DTOs.Teachers
 
         [Required(ErrorMessage = "FullName is required")]
         [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
         public string FullName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string Email { get; set; } = string.Empty;
 
         [Phone(ErrorMessage = "Invalid phone number format")]
@@ -25,6 +27,7 @@ namespace EducenAPI.DTOs.Teachers
 
         [Required(ErrorMessage = "Specialization is required")]
         [StringLength(100, ErrorMessage = "Specialization cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Specialization cannot be only whitespace")]
         public string Specialization { get; set; } = string.Empty;
 
         [StringLength(100, ErrorMessage = "Degree cannot exceed 100 characters")]
@@ -34,10 +37,12 @@ namespace EducenAPI.DTOs.Teachers
     public class UpdateTeacherDto
     {
         [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
         public string? FullName { get; set; }
 
         [EmailAddress(ErrorMessage = "Invalid email format")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string? Email { get; set; }
 
         [Phone(ErrorMessage = "Invalid phone number format")]
@@ -45,6 +50,7 @@ namespace EducenAPI.DTOs.Teachers
         public string? PhoneNumber { get; set; }
 
         [StringLength(100, ErrorMessage = "Specialization cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Specialization cannot be only whitespace")]
         public string? Specialization { get; set; }
 
         [StringLength(100, ErrorMessage = "Degree cannot exceed 100 characters")]

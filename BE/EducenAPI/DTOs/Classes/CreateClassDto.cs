@@ -6,12 +6,15 @@ namespace EducenAPI.DTOs.Classes
     {
         [Required(ErrorMessage = "ClassName is required")]
         [StringLength(100, ErrorMessage = "ClassName cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "ClassName cannot be only whitespace")]
         public string ClassName { get; set; } = string.Empty;
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Description cannot be only whitespace")]
         public string? Description { get; set; }
 
         [StringLength(1000, ErrorMessage = "SyllabusContent cannot exceed 1000 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SyllabusContent cannot be only whitespace")]
         public string? SyllabusContent { get; set; }
 
         [Required(ErrorMessage = "SubjectId is required")]
@@ -26,18 +29,22 @@ namespace EducenAPI.DTOs.Classes
         public DateTime? EndDate { get; set; }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
         public string? Status { get; set; }
     }
 
     public class UpdateClassDto
     {
         [StringLength(100, ErrorMessage = "ClassName cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "ClassName cannot be only whitespace")]
         public string? ClassName { get; set; }
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Description cannot be only whitespace")]
         public string? Description { get; set; }
 
         [StringLength(1000, ErrorMessage = "SyllabusContent cannot exceed 1000 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SyllabusContent cannot be only whitespace")]
         public string? SyllabusContent { get; set; }
 
         public int? SubjectId { get; set; }
@@ -51,6 +58,7 @@ namespace EducenAPI.DTOs.Classes
         public DateTime? EndDate { get; set; }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
         public string? Status { get; set; }
     }
 

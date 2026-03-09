@@ -17,9 +17,11 @@ namespace EducenAPI.DTOs.Schedules
         public TimeSpan EndTime { get; set; }
 
         [StringLength(200, ErrorMessage = "Notes cannot exceed 200 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Notes cannot be only whitespace")]
         public string? Notes { get; set; }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
         public string? Status { get; set; }
     }
 
@@ -32,9 +34,11 @@ namespace EducenAPI.DTOs.Schedules
         public TimeSpan? EndTime { get; set; }
 
         [StringLength(200, ErrorMessage = "Notes cannot exceed 200 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Notes cannot be only whitespace")]
         public string? Notes { get; set; }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
         public string? Status { get; set; }
     }
 
