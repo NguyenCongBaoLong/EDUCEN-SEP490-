@@ -61,15 +61,6 @@ namespace EducenAPI.Services
 
         public async Task<TeacherDto> CreateTeacherAsync(CreateTeacherDto dto)
         {
-            // Trim input strings
-            dto.Username = dto.Username?.Trim();
-            dto.Password = dto.Password?.Trim();
-            dto.FullName = dto.FullName?.Trim();
-            dto.Email = dto.Email?.Trim();
-            dto.PhoneNumber = dto.PhoneNumber?.Trim();
-            dto.Specialization = dto.Specialization?.Trim();
-            dto.Degree = dto.Degree?.Trim();
-
             // Skip user creation if username or password is null
             if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
             {
