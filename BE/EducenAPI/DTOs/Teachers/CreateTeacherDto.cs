@@ -1,36 +1,44 @@
 using System.ComponentModel.DataAnnotations;
+using EducenAPI.Attributes;
 
 namespace EducenAPI.DTOs.Teachers
 {
     public class CreateTeacherDto
     {
         [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
+        [Trim]
         public string? Username { get; set; }
 
         [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+        [Trim]
         public string? Password { get; set; }
 
         [Required(ErrorMessage = "FullName is required")]
         [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
+        [Trim]
         public string FullName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
+        [Trim]
         public string Email { get; set; } = string.Empty;
 
         [Phone(ErrorMessage = "Invalid phone number format")]
         [StringLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
+        [Trim]
         public string? PhoneNumber { get; set; }
 
         [Required(ErrorMessage = "Specialization is required")]
         [StringLength(100, ErrorMessage = "Specialization cannot exceed 100 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Specialization cannot be only whitespace")]
+        [Trim]
         public string Specialization { get; set; } = string.Empty;
 
         [StringLength(100, ErrorMessage = "Degree cannot exceed 100 characters")]
+        [Trim]
         public string? Degree { get; set; }
     }
 

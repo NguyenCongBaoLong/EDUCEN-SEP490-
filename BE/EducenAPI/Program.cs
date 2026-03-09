@@ -3,6 +3,7 @@ using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using EducenAPI.Services.TenantService;
+using EducenAPI.Binders;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -13,7 +14,11 @@ using EducenAPI.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Add custom model binder for string trimming
+    options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
+});
 builder.Services.AddEndpointsApiExplorer();
 
 // ── Swagger ───────────────────────────────────────────────────────────────
