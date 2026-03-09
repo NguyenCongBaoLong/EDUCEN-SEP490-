@@ -36,8 +36,8 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
-                    StartDate = c.StartDate,
-                    EndDate = c.EndDate,
+                    //StartDate = c.StartDate,
+                    //EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
                     CreatedAt = DateTime.Now
@@ -67,8 +67,8 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
-                    StartDate = c.StartDate,
-                    EndDate = c.EndDate,
+                    //StartDate = c.StartDate,
+                    //EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
                     CreatedAt = DateTime.Now
@@ -104,8 +104,8 @@ namespace EducenAPI.Services
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
                 AssistantId = dto.AssistantId,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                //StartDate = dto.StartDate,
+                //EndDate = dto.EndDate,
                 Status = dto.Status ?? "Active"
             };
 
