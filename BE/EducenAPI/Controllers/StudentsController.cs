@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Students;
+﻿using EducenAPI.DTOs.Students;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,19 +6,26 @@ using Microsoft.AspNetCore.Http;
 using System.Data;
 using System.Text;
 using ExcelDataReader;
+using EducenAPI.Persistence.Contexts;
+using EducenAPI.Ultils;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class StudentsController : ControllerBase
     {
         private readonly IStudentService _studentService;
+        private readonly EducenV2Context _context;
+        private readonly MailService _mailService;
 
-        public StudentsController(IStudentService studentService)
+        public StudentsController(IStudentService studentService, EducenV2Context context, MailService mailService)
         {
             _studentService = studentService;
+            _context = context;
+            _mailService = mailService;
         }
 
         // GET: api/Students
@@ -222,7 +229,41 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = $"Import failed: {ex.Message}" });
             }
         }
+        [HttpPost("send-account/{studentId}")]
+        public async Task<IActionResult> SendAccount(int studentId)
+        {
+            var user = await _context.Users
+        .Include(x => x.Student)
+        .FirstOrDefaultAsync(x => x.UserId == studentId);
 
+            if (user == null)
+                return NotFound("User không tồn tại");
+
+            if (user.Student == null || string.IsNullOrEmpty(user.Student.Email))
+                return BadRequest("Student chưa có email");
+
+            // tạo password mới
+            string newPassword = GeneratePassword();
+
+            // hash password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+            user.IsAccountSent = true;
+            await _context.SaveChangesAsync();
+
+            // gửi mail
+            await _mailService.SendStudentAccount(user.Student.Email, user.Username, newPassword);
+
+            return Ok("Đã gửi tài khoản thành công");
+        }
+        private string GeneratePassword(int length = 8)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var random = new Random();
+
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
         private sealed class ImportResults
         {
             public int Total { get; set; }
