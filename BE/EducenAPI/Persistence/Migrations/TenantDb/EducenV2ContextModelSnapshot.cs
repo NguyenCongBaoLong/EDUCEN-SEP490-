@@ -218,6 +218,33 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasKey("RoleId");
 
                     b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleId = 1,
+                            RoleName = "Admin"
+                        },
+                        new
+                        {
+                            RoleId = 2,
+                            RoleName = "Teacher"
+                        },
+                        new
+                        {
+                            RoleId = 3,
+                            RoleName = "Student"
+                        },
+                        new
+                        {
+                            RoleId = 4,
+                            RoleName = "Parent"
+                        },
+                        new
+                        {
+                            RoleId = 5,
+                            RoleName = "Assistant"
+                        });
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Schedule", b =>
@@ -252,10 +279,19 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EnrollmentStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Gender")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Grade")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UserId");
@@ -299,6 +335,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<DateTime?>("GradedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
 
                     b.Property<decimal?>("Score")
                         .HasColumnType("decimal(18,2)");
@@ -360,6 +399,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<string>("FullName")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsAccountSent")
+                        .HasColumnType("bit");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()

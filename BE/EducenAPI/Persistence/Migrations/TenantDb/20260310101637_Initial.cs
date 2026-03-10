@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     /// <inheritdoc />
@@ -51,7 +53,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsAccountSent = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -105,7 +108,10 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 {
                     UserId = table.Column<int>(type: "int", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EnrollmentStatus = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    EnrollmentStatus = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Grade = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -301,7 +307,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Score = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     TeacherComment = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    GradedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    GradedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -351,6 +358,18 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         column: x => x.UpdatedByNavigationUserId,
                         principalTable: "Users",
                         principalColumn: "UserId");
+                });
+
+            migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "RoleId", "RoleName" },
+                values: new object[,]
+                {
+                    { 1, "Admin" },
+                    { 2, "Teacher" },
+                    { 3, "Student" },
+                    { 4, "Parent" },
+                    { 5, "Assistant" }
                 });
 
             migrationBuilder.CreateIndex(
