@@ -10,12 +10,14 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.Models;
 using Microsoft.OpenApi.Models;
+using EducenAPI.Ultils;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddScoped<MailService>();
 
 // ── Swagger ───────────────────────────────────────────────────────────────
 builder.Services.AddSwaggerGen(c =>
