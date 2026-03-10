@@ -37,6 +37,10 @@ public partial class EducenV2Context : DbContext
     public virtual DbSet<Submission> Submissions { get; set; } = null!;
     public virtual DbSet<Teacher> Teachers { get; set; } = null!;
     public virtual DbSet<User> Users { get; set; } = null!;
+    public virtual DbSet<CenterProfile> CenterProfiles { get; set; } = null!;
+    public virtual DbSet<CenterImage> CenterImages { get; set; } = null!;
+    public virtual DbSet<CenterHeroImage> CenterHeroImages { get; set; } = null!;
+    public virtual DbSet<CenterHighlight> CenterHighlights { get; set; } = null!;
 
     // ================================
     // MODEL CONFIGURATION
@@ -177,7 +181,25 @@ public partial class EducenV2Context : DbContext
         .WithMany(s => s.Attendances)
         .HasForeignKey(a => a.StudentId)
         .OnDelete(DeleteBehavior.NoAction);
-        }
+
+        modelBuilder.Entity<CenterImage>()
+        .HasOne(i => i.CenterProfile)
+        .WithMany(c => c.Images)
+        .HasForeignKey(i => i.CenterProfileId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CenterHeroImage>()
+            .HasOne(i => i.CenterProfile)
+            .WithMany(c => c.HeroImages)
+            .HasForeignKey(i => i.CenterProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CenterHighlight>()
+            .HasOne(h => h.CenterProfile)
+            .WithMany(c => c.Highlights)
+            .HasForeignKey(h => h.CenterProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
 
     private void SeedRoles(ModelBuilder modelBuilder)
     {
