@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    [Migration("20260310101637_Initial")]
+    [Migration("20260310111144_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -407,7 +407,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasColumnType("bit");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
@@ -417,7 +416,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasColumnType("int");
 
                     b.Property<string>("Username")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UserId");
