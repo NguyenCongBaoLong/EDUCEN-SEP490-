@@ -10,3 +10,4 @@ namespace EducenAPI.Services.Interface
         Task<bool> ConfirmResetPassword(ResetPasswordConfirmDto dto);
     }
 }
+

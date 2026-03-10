@@ -16,11 +16,24 @@ namespace EducenAPI.DTOs.Schedules
         [Required(ErrorMessage = "EndTime is required")]
         public TimeSpan EndTime { get; set; }
 
+        private string? _notes;
+        private string? _status;
+
         [StringLength(200, ErrorMessage = "Notes cannot exceed 200 characters")]
-        public string? Notes { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Notes cannot be only whitespace")]
+        public string? Notes 
+        { 
+            get => _notes;
+            set => _notes = value?.Trim();
+        }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        public string? Status { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        public string? Status 
+        { 
+            get => _status;
+            set => _status = value?.Trim();
+        }
     }
 
     public class UpdateScheduleDto
@@ -31,11 +44,24 @@ namespace EducenAPI.DTOs.Schedules
 
         public TimeSpan? EndTime { get; set; }
 
+        private string? _notes;
+        private string? _status;
+
         [StringLength(200, ErrorMessage = "Notes cannot exceed 200 characters")]
-        public string? Notes { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Notes cannot be only whitespace")]
+        public string? Notes 
+        { 
+            get => _notes;
+            set => _notes = value?.Trim();
+        }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        public string? Status { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        public string? Status 
+        { 
+            get => _status;
+            set => _status = value?.Trim();
+        }
     }
 
     public class ScheduleDto
