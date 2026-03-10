@@ -25,6 +25,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
                 .Include(c => c.Students)
+                .Include(c => c.Schedules)
                 .Select(c => new ClassDto
                 {
                     ClassId = c.ClassId,
@@ -37,11 +38,17 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
-                    //StartDate = c.StartDate,
-                    //EndDate = c.EndDate,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList()
                 })
                 .ToListAsync();
         }
@@ -54,6 +61,7 @@ namespace EducenAPI.Services
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Schedules)
                 .Include(c => c.Students)
                 .Where(c => c.ClassId == id)
                 .Select(c => new ClassDto
@@ -68,11 +76,17 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
-                    //StartDate = c.StartDate,
-                    //EndDate = c.EndDate,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -105,13 +119,36 @@ namespace EducenAPI.Services
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
                 AssistantId = dto.AssistantId,
-                //StartDate = dto.StartDate,
-                //EndDate = dto.EndDate,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
                 Status = dto.Status ?? "Active"
             };
 
             _context.Classes.Add(newClass);
             await _context.SaveChangesAsync();
+
+            // Create schedules for this class
+            if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
+            {
+                foreach (var slot in dto.ScheduleSlots)
+                {
+                    if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
+                        throw new Exception($"Invalid start time format: {slot.StartTime}");
+                    
+                    if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
+                        throw new Exception($"Invalid end time format: {slot.EndTime}");
+
+                    var schedule = new Schedule
+                    {
+                        ClassId = newClass.ClassId,
+                        DayOfWeek = slot.DayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime
+                    };
+                    _context.Schedules.Add(schedule);
+                }
+                await _context.SaveChangesAsync();
+            }
 
             return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
         }
@@ -146,6 +183,11 @@ namespace EducenAPI.Services
                     throw new Exception("Teacher not found");
                 existingClass.TeacherId = dto.TeacherId;
             }
+            else if (dto.TeacherId == null) 
+            {
+                // Note: Consider if business logic allows unassigning
+                existingClass.TeacherId = null;
+            }
 
             if (dto.AssistantId.HasValue)
             {
@@ -153,6 +195,10 @@ namespace EducenAPI.Services
                 if (assistant == null)
                     throw new Exception("Assistant not found");
                 existingClass.AssistantId = dto.AssistantId;
+            }
+            else if (dto.AssistantId == null)
+            {
+                existingClass.AssistantId = null;
             }
 
             if (dto.StartDate.HasValue)
@@ -163,6 +209,36 @@ namespace EducenAPI.Services
 
             if (dto.Status != null)
                 existingClass.Status = dto.Status;
+
+            // Update schedules if provided
+            if (dto.ScheduleSlots != null)
+            {
+                // Remove existing schedules
+                var oldSchedules = await _context.Schedules
+                    .Where(s => s.ClassId == id)
+                    .ToListAsync();
+                _context.Schedules.RemoveRange(oldSchedules);
+
+                // Add new schedules
+                foreach (var slot in dto.ScheduleSlots)
+                {
+                    // More robust time parsing
+                    if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
+                        throw new Exception($"Invalid start time format: {slot.StartTime}. Expected HH:mm or HH:mm:ss");
+                    
+                    if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
+                        throw new Exception($"Invalid end time format: {slot.EndTime}. Expected HH:mm or HH:mm:ss");
+
+                    var schedule = new Schedule
+                    {
+                        ClassId = id,
+                        DayOfWeek = slot.DayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime
+                    };
+                    _context.Schedules.Add(schedule);
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -318,6 +394,29 @@ namespace EducenAPI.Services
                 await transaction.RollbackAsync();
                 return false;
             }
+        }
+
+        public async Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId)
+        {
+            var classEntity = await _context.Classes
+                .Include(c => c.Students)
+                    .ThenInclude(s => s.StudentNavigation)
+                .FirstOrDefaultAsync(c => c.ClassId == classId);
+
+            if (classEntity == null)
+                return Enumerable.Empty<StudentDto>();
+
+            return classEntity.Students.Select(s => new StudentDto
+            {
+                UserId = s.UserId,
+                Username = s.StudentNavigation.Username ?? "",
+                FullName = s.StudentNavigation.FullName ?? "",
+                Email = s.Email ?? "",
+                PhoneNumber = s.StudentNavigation.PhoneNumber,
+                EnrollmentStatus = s.EnrollmentStatus ?? "",
+                AccountStatus = s.StudentNavigation.AccountStatus ?? "",
+                CreatedAt = DateTime.Now
+            });
         }
     }
 }

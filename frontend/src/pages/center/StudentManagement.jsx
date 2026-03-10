@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Upload, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import api from '../../services/api';
 import StudentTable from '../../components/StudentTable';
 import AddStudentModal from '../../components/AddStudentModal';
 import StudentDetailModal from '../../components/StudentDetailModal';
@@ -40,99 +41,36 @@ const StudentManagement = () => {
         { id: 'PAR-005', name: 'Vũ Văn Nam', phone: '0956789012', email: 'parent6@gmail.com' }
     ];
 
-    // Mock data - Students
-    const [studentList, setStudentList] = useState([
-        {
-            id: 'STU-001',
-            name: 'Nguyễn Văn An',
-            avatar: null,
-            email: 'an.nguyen@example.com',
-            grade: 6,
-            dateOfBirth: '2012-05-15',
-            gender: 'male',
-            linkedParentIds: ['PAR-001'],
-            address: '123 Lê Lợi, Quận 1, TP.HCM',
-            enrollmentDate: '2024-01-15',
-            status: 'active',
-            accountSent: true,
-            notes: 'Học sinh giỏi toán'
-        },
-        {
-            id: 'STU-002',
-            name: 'Trần Thị Bình',
-            avatar: null,
-            email: '',
-            grade: 7,
-            dateOfBirth: '2011-08-20',
-            gender: 'female',
-            linkedParentIds: ['PAR-002'],
-            address: '456 Nguyễn Huệ, Quận 3, TP.HCM',
-            enrollmentDate: '2023-09-01',
-            status: 'inactive',
-            accountSent: false,
-            notes: ''
-        },
-        {
-            id: 'STU-003',
-            name: 'Lê Minh Đức',
-            avatar: null,
-            email: 'duc.le@example.com',
-            grade: 8,
-            dateOfBirth: '2010-12-10',
-            gender: 'male',
-            linkedParentIds: ['PAR-003'],
-            address: '789 Trần Hưng Đạo, Quận 5, TP.HCM',
-            enrollmentDate: '2023-01-10',
-            status: 'inactive',
-            accountSent: false,
-            notes: 'Thích học hóa'
-        },
-        {
-            id: 'STU-004',
-            name: 'Phạm Thị Giang',
-            avatar: null,
-            email: 'giang.pham@example.com',
-            grade: 9,
-            dateOfBirth: '2009-03-25',
-            gender: 'female',
-            linkedParentIds: ['PAR-004'],
-            address: '321 Hai Bà Trưng, Quận 1, TP.HCM',
-            enrollmentDate: '2022-09-05',
-            status: 'active',
-            accountSent: true,
-            notes: ''
-        },
-        {
-            id: 'STU-005',
-            name: 'Hoàng Văn Khoa',
-            avatar: null,
-            email: '',
-            grade: 10,
-            dateOfBirth: '2008-07-18',
-            gender: 'male',
-            linkedParentIds: ['PAR-003'],
-            address: '654 Võ Văn Tần, Quận 3, TP.HCM',
-            enrollmentDate: '2022-01-20',
-            status: 'inactive',
-            accountSent: false,
-            notes: 'Tạm nghỉ học'
-        },
-        {
-            id: 'STU-006',
-            name: 'Vũ Thị Mai',
-            avatar: null,
-            email: 'mai.vu@example.com',
-            grade: 11,
-            dateOfBirth: '2007-11-30',
-            gender: 'female',
-            linkedParentIds: ['PAR-005'],
-            address: '987 Nguyễn Thị Minh Khai, Quận 3, TP.HCM',
-            enrollmentDate: '2021-09-01',
-            status: 'active',
-            accountSent: true,
-            notes: ''
+    const [studentList, setStudentList] = useState([]);
+
+    useEffect(() => {
+        fetchStudents();
+    }, []);
+
+    const fetchStudents = async () => {
+        try {
+            const res = await api.get('/Students');
+            const data = res.data.map((student, index) => ({
+                id: student.userId.toString(),
+                name: student.fullName,
+                avatar: null,
+                email: student.email,
+                grade: 6,
+                dateOfBirth: '2010-01-01',
+                gender: 'male',
+                linkedParentIds: [],
+                address: student.address || '',
+                enrollmentDate: student.createdAt,
+                status: student.accountStatus === 'Active' ? 'active' : 'inactive', // Dùng cho nút Ban/Unlock account
+                accountSent: true, // Auto-enable Ban/Unlock button
+                notes: ''
+            }));
+            setStudentList(data);
+        } catch (error) {
+            console.error("Fetch students error:", error);
+            toast.error("Không thể tải danh sách học sinh");
         }
-    ]);
+    };
 
     // Mock data - Enrollment Requests
     const [requestsList, setRequestsList] = useState([
@@ -205,28 +143,63 @@ const StudentManagement = () => {
         setIsModalOpen(true);
     };
 
-    const handleSubmitStudent = (studentData) => {
-        if (studentData.id) {
-            // Edit existing student
-            setStudentList(studentList.map(s =>
-                s.id === studentData.id ? studentData : s
-            ));
-        } else {
-            // Add new student
-            const newStudent = {
-                ...studentData,
-                id: `STU-${String(studentList.length + 1).padStart(3, '0')}`
-            };
-            setStudentList([...studentList, newStudent]);
+    const handleSubmitStudent = async (studentData) => {
+        try {
+            if (studentData.id && !studentData.id.toString().startsWith('STU')) {
+                // Edit existing
+                const updatePayload = {
+                    fullName: studentData.name,
+                    email: studentData.email || `${studentData.name.replace(/\s/g, '').toLowerCase()}@temp.com`,
+                    enrollmentStatus: studentData.status,
+                };
+                if (studentData.phone) updatePayload.phoneNumber = studentData.phone;
+
+                await api.put(`/Students/${studentData.id}`, updatePayload);
+                toast.success('Cập nhật học sinh thành công!');
+            } else {
+                // Add new
+                const username = studentData.username || `stu_${Date.now()}`;
+                const payload = {
+                    username: username,
+                    password: `${username}123`,
+                    fullName: studentData.name,
+                    email: studentData.email || `${username}@temp.com`,
+                    enrollmentStatus: studentData.status
+                };
+                if (studentData.phone) payload.phoneNumber = studentData.phone;
+
+                await api.post('/Students', payload);
+                toast.success('Thêm học sinh thành công!');
+            }
+            fetchStudents();
+            setIsModalOpen(false);
+            setEditingStudent(null);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
-    const handleToggleStatusStudent = (studentId) => {
-        setStudentList(studentList.map(s =>
-            s.id === studentId
-                ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' }
-                : s
-        ));
+    const handleToggleStatusStudent = async (studentId) => {
+        const student = studentList.find(s => s.id === studentId);
+        if (!student) return;
+        try {
+            const endpoint = student.status === 'active'
+                ? `/admin/users/${studentId}/lock`
+                : `/admin/users/${studentId}/unlock`;
+
+            // Re-use logic for Lock/Unlock admin API
+            await api.put(endpoint);
+
+            setStudentList(studentList.map(s =>
+                s.id === studentId
+                    ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' }
+                    : s
+            ));
+            toast.success("Đổi trạng thái thành công!");
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Lỗi khi đổi trạng thái');
+        }
     };
 
     const handleSendAccount = (studentId) => {
@@ -249,13 +222,11 @@ const StudentManagement = () => {
         setSelectedStudentIds([]);
     };
 
-    const handleImportStudents = (newStudents) => {
-        const withIds = newStudents.map((s, i) => ({
-            ...s,
-            id: `STU-${String(studentList.length + i + 1).padStart(3, '0')}`,
-            accountSent: false
-        }));
-        setStudentList(prev => [...prev, ...withIds]);
+    const handleImportStudents = () => {
+        // Called by ImportStudentModal when at least 1 student was imported successfully
+        fetchStudents();
+        toast.success('Import học sinh thành công! Danh sách đã được cập nhật.');
+        setIsImportModalOpen(false);
     };
 
     // Enrollment Request Handlers

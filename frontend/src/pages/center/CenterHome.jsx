@@ -90,7 +90,7 @@ const LogoDisplay = ({ logoSrc, name }) => (
 /* ─── Component ─────────────────────────────────────── */
 const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     const navigate = useNavigate();
-    const { scheduledClasses } = useSchedule();
+    const { scheduledClasses = [] } = useSchedule() || {};
     const { user, logout } = useAuth();
     const logoInputRef = useRef(null);
 
@@ -375,30 +375,64 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                     <h2>Lịch Học Các Lớp</h2>
                     <div className="center-schedule">
                         <div className="center-schedule-grid">
-                            {DAY_LABELS.map((dayLabel, colIdx) => {
-                                // colIdx: 0=Mon...5=Sat, 6=Sun
-                                const dayClasses = scheduledClasses.filter(c => dayToColumnIndex(c.day) === colIdx);
-                                return (
-                                    <div key={colIdx} className="center-schedule-day">
-                                        <div className="center-schedule-day-header">
-                                            <Clock size={14} /><span>{dayLabel}</span>
+                            {(() => {
+                                // Get current week range (Monday to Sunday)
+                                const now = new Date();
+                                const day = now.getDay();
+                                const diff = day === 0 ? -6 : 1 - day; // Adjust to Monday
+                                const monday = new Date(now);
+                                monday.setHours(0, 0, 0, 0);
+                                monday.setDate(now.getDate() + diff);
+
+                                return DAY_LABELS.map((dayLabel, colIdx) => {
+                                    // Calculate the specific date for this column's day
+                                    const colDate = new Date(monday);
+                                    colDate.setDate(monday.getDate() + colIdx);
+
+                                    // colIdx: 0=Mon...5=Sat, 6=Sun
+                                    // dayToColumnIndex maps Backend day (0=Sun, 1=Mon...) to colIdx
+                                    const dayClasses = scheduledClasses.filter(c => {
+                                        // Match day of week
+                                        if (dayToColumnIndex(c.day) !== colIdx) return false;
+
+                                        // Match date range
+                                        if (c.startDate) {
+                                            const start = new Date(c.startDate);
+                                            start.setHours(0, 0, 0, 0);
+                                            if (colDate < start) return false;
+                                        }
+                                        if (c.endDate) {
+                                            const end = new Date(c.endDate);
+                                            end.setHours(23, 59, 59, 999);
+                                            if (colDate > end) return false;
+                                        }
+
+                                        return true;
+                                    });
+
+                                    return (
+                                        <div key={colIdx} className="center-schedule-day">
+                                            <div className="center-schedule-day-header">
+                                                <Clock size={14} /><span>{dayLabel}</span>
+                                                <div className="center-schedule-date-sub">{colDate.getDate()}/{colDate.getMonth() + 1}</div>
+                                            </div>
+                                            <div className="center-schedule-slots">
+                                                {dayClasses.length > 0 ? dayClasses.map((cls) => (
+                                                    <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
+                                                        <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
+                                                        <span className="center-slot-subject">{cls.name}</span>
+                                                        {cls.teacher && (
+                                                            <span className="center-slot-teacher">{cls.teacher}</span>
+                                                        )}
+                                                    </div>
+                                                )) : (
+                                                    <div className="center-schedule-closed">NGHỈ</div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="center-schedule-slots">
-                                            {dayClasses.length > 0 ? dayClasses.map((cls) => (
-                                                <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
-                                                    <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
-                                                    <span className="center-slot-subject">{cls.name}</span>
-                                                    {cls.teacher && (
-                                                        <span className="center-slot-teacher">{cls.teacher}</span>
-                                                    )}
-                                                </div>
-                                            )) : (
-                                                <div className="center-schedule-closed">NGHỈ</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                });
+                            })()}
                         </div>
                     </div>
                 </section>

@@ -310,6 +310,14 @@ namespace EducenAPI.Controllers
             }
         }
 
+        // GET: api/Classes/5/students
+        [HttpGet("{id:int}/students")]
+        public async Task<IActionResult> GetStudentsByClass(int id)
+        {
+            var students = await _classService.GetStudentsByClassIdAsync(id);
+            return Ok(students);
+        }
+
         private sealed class ImportResults
         {
             public int Total { get; set; }
@@ -319,3 +327,4 @@ namespace EducenAPI.Controllers
         }
     }
 }
+

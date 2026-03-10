@@ -447,15 +447,23 @@
 .center-home .center-schedule-day-header {
     background: linear-gradient(135deg, var(--primary-blue) 0%, #0052CC 100%);
     color: white;
-    padding: 1rem;
+    padding: 0.75rem;
     font-weight: 700;
     font-size: 0.9375rem;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.125rem;
     justify-content: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    min-height: 60px;
+}
+
+.center-home .center-schedule-date-sub {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    font-weight: 500;
 }
 
 .center-home .center-schedule-slots {

@@ -1,16 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, X, AlertTriangle, BookOpen, GraduationCap, Pencil, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import ClassCard from '../../components/ClassCard';
 import CreateClassModal from '../../components/CreateClassModal';
 import SubjectModal from '../../components/SubjectModal';
+import api from '../../services/api';
 import '../../css/pages/center/ClassesManagement.css';
 import '../../css/components/DeleteModal.css';
-
-const API_BASE = 'http://localhost:5062/api/tenantadmin';
-const authHeader = () => ({
-    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-});
 
 const ClassesManagement = () => {
     // ── Tab state ─────────────────────────────────────────────────────────────
@@ -22,62 +19,100 @@ const ClassesManagement = () => {
     const [deleteModal, setDeleteModal] = useState({ show: false, classItem: null });
     const [searchQuery, setSearchQuery] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
-    const [gradeFilter, setGradeFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    // Mock data cho classes (giữ nguyên như cũ cho đến khi có classes API)
-    const [classes, setClasses] = useState([
-        {
-            id: 1,
-            name: 'Advanced Algebra II',
-            subject: 'MATHEMATICS',
-            gradeLevel: 'high',
-            mainTeacher: { name: 'Mr. David Harrison', initials: 'DH' },
-            assistant: { name: 'Elena Rodriguez', initials: 'ER' },
-            currentStudents: 12,
-            maxStudents: 15,
-            schedule: 'Mon, Wed • 4:30 PM',
-            status: 'active'
-        },
-        {
-            id: 2,
-            name: 'Biology: Cell Structures',
-            subject: 'SCIENCE',
-            gradeLevel: 'high',
-            mainTeacher: { name: 'Dr. Amanda Lee', initials: 'AL' },
-            assistant: null,
-            currentStudents: 15,
-            maxStudents: 15,
-            schedule: 'Tue, Thu • 3:00 PM',
-            status: 'active'
-        },
-        {
-            id: 3,
-            name: 'Creative Writing Workshop',
-            subject: 'ENGLISH',
-            gradeLevel: 'middle',
-            mainTeacher: { name: 'Marcus Thorne', initials: 'MT' },
-            assistant: { name: 'Lila Vance', initials: 'LV' },
-            currentStudents: 8,
-            maxStudents: 12,
-            schedule: 'Friday • 5:00 PM',
-            status: 'active'
-        },
-        {
-            id: 4,
-            name: 'Mechanics & Dynamics',
-            subject: 'PHYSICS',
-            gradeLevel: 'high',
-            mainTeacher: { name: 'Dr. Robert Chen', initials: 'RC' },
-            assistant: { name: 'Sarah Miller', initials: 'SM' },
-            currentStudents: 10,
-            maxStudents: 10,
-            schedule: 'Wed, Fri • 4:00 PM',
-            status: 'active'
-        },
-    ]);
+    const [classes, setClasses] = useState([]);
+    const [teachers, setTeachers] = useState([]);
+    const [assistants, setAssistants] = useState([]);
+    const [classesLoading, setClassesLoading] = useState(false);
 
-    // ── Subjects state ────────────────────────────────────────────────────────
+    // Helper function to format schedule slots for display
+    const formatScheduleForDisplay = useCallback((slots) => {
+        if (!slots || slots.length === 0) return 'Chưa có lịch';
+        const dayMap = {
+            'CN': 'CN', 'Thứ 2': 'T2', 'Thứ 3': 'T3', 'Thứ 4': 'T4',
+            'Thứ 5': 'T5', 'Thứ 6': 'T6', 'Thứ 7': 'T7'
+        };
+        const groups = {};
+        slots.forEach(slot => {
+            const timeKey = `${slot.startTime} - ${slot.endTime}`;
+            if (!groups[timeKey]) groups[timeKey] = [];
+            groups[timeKey].push(dayMap[slot.day] || slot.day);
+        });
+        const groupEntries = Object.entries(groups);
+        if (groupEntries.length === 1) {
+            const [time, days] = groupEntries[0];
+            return `${days.join(', ')} • ${time}`;
+        }
+        return slots.map(s => `${dayMap[s.day] || s.day}: ${s.startTime}-${s.endTime}`).join('; ');
+    }, []);
+
+    const fetchClasses = useCallback(async () => {
+        setClassesLoading(true);
+        try {
+            const res = await api.get('/Classes');
+
+            const reverseDayMap = {
+                0: 'CN', 1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7'
+            };
+
+            // Map backend ClassDto to frontend format
+            const mappedClasses = res.data.map(c => ({
+                id: c.classId,
+                name: c.className,
+                description: c.description || '',
+                syllabusContent: c.syllabusContent || '',
+                subjectId: c.subjectId,
+                subject: c.subjectName,
+                teacherId: c.teacherId,
+                mainTeacher: c.teacherName ? { name: c.teacherName, initials: c.teacherName.substring(0, 2).toUpperCase() } : { name: '', initials: '' },
+                assistantId: c.assistantId,
+                assistant: c.assistantName ? { name: c.assistantName, initials: c.assistantName.substring(0, 2).toUpperCase() } : { name: '', initials: '' },
+                currentStudents: c.studentCount,
+                scheduleSlots: (c.scheduleSlots || c.ScheduleSlots || []).map(slot => ({
+                    day: reverseDayMap[slot.dayOfWeek] || reverseDayMap[slot.DayOfWeek] || 'Thứ 2',
+                    startTime: slot.startTime || slot.StartTime,
+                    endTime: slot.endTime || slot.EndTime
+                })),
+                schedule: formatScheduleForDisplay((c.scheduleSlots || c.ScheduleSlots || []).map(slot => ({
+                    day: reverseDayMap[slot.dayOfWeek] || reverseDayMap[slot.DayOfWeek] || 'Thứ 2',
+                    startTime: slot.startTime || slot.StartTime,
+                    endTime: slot.endTime || slot.EndTime
+                }))),
+                status: c.status?.toLowerCase() === 'active' ? 'active' : 'inactive',
+                startDate: c.startDate ? c.startDate.split('T')[0] : '',
+                endDate: c.endDate ? c.endDate.split('T')[0] : ''
+            }));
+            setClasses(mappedClasses);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setClassesLoading(false);
+        }
+    }, [formatScheduleForDisplay]);
+
+    const fetchTeachersAndAssistants = useCallback(async () => {
+        try {
+            const [tRes, aRes] = await Promise.all([
+                api.get('/Teachers'),
+                api.get('/Assistants')
+            ]);
+
+            const mapStaff = (staff, title) => ({
+                id: staff.userId || staff.teacherId || staff.assistantId,
+                name: staff.fullName,
+                title: title,
+                department: "All Departments",
+                avatar: staff.fullName ? staff.fullName.substring(0, 2).toUpperCase() : 'ST',
+                schedule: [] // Skipping schedule conflicts for now
+            });
+
+            setTeachers(tRes.data.map(t => mapStaff(t, 'Giáo viên')));
+            setAssistants(aRes.data.map(a => mapStaff(a, 'Trợ giảng')));
+        } catch (error) {
+            console.error('Lỗi tải danh sách staff', error);
+        }
+    }, []);
     const [subjects, setSubjects] = useState([]);
     const [subjectsLoading, setSubjectsLoading] = useState(false);
     const [subjectsError, setSubjectsError] = useState('');
@@ -94,12 +129,8 @@ const ClassesManagement = () => {
         setSubjectsLoading(true);
         setSubjectsError('');
         try {
-            const res = await fetch(`${API_BASE}/Subjects`, {
-                headers: authHeader()
-            });
-            if (!res.ok) throw new Error('Không thể tải danh sách môn học');
-            const data = await res.json();
-            setSubjects(data);
+            const res = await api.get('/tenantadmin/Subjects');
+            setSubjects(res.data);
         } catch (err) {
             setSubjectsError(err.message || 'Lỗi kết nối server');
         } finally {
@@ -109,7 +140,9 @@ const ClassesManagement = () => {
 
     useEffect(() => {
         fetchSubjects();
-    }, [fetchSubjects]);
+        fetchClasses();
+        fetchTeachersAndAssistants();
+    }, [fetchSubjects, fetchClasses, fetchTeachersAndAssistants]);
 
     // ── Classes handlers ──────────────────────────────────────────────────────
     const handleCreateClass = () => {
@@ -126,23 +159,77 @@ const ClassesManagement = () => {
         setDeleteModal({ show: true, classItem: classData });
     };
 
-    const confirmDelete = () => {
-        if (deleteModal.classItem) {
-            setClasses(classes.filter(c => c.id !== deleteModal.classItem.id));
-            setDeleteModal({ show: false, classItem: null });
-        }
-    };
-
     const cancelDelete = () => {
         setDeleteModal({ show: false, classItem: null });
     };
 
-    const handleSubmitClass = (classData) => {
-        if (editingClass) {
-            setClasses(classes.map(c => c.id === classData.id ? classData : c));
-        } else {
-            const newClass = { ...classData, id: Date.now() };
-            setClasses([...classes, newClass]);
+    const confirmDelete = async () => {
+        if (!deleteModal.classItem) return;
+        try {
+            await api.delete(`/Classes/${deleteModal.classItem.id}`);
+            fetchClasses();
+            setDeleteModal({ show: false, classItem: null });
+            toast.success(`Đã xóa lớp "${deleteModal.classItem.name}" thành công!`);
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Xóa lớp thất bại!');
+        }
+    };
+
+    const handleSubmitClass = async (classData) => {
+        try {
+            const subject = subjects.find(s => s.subjectName === classData.subject);
+            if (!subject) {
+                toast.error('Vui lòng chọn môn học hợp lệ!');
+                return;
+            }
+
+            const teacher = teachers.find(t => t.name?.toLowerCase() === classData.mainTeacher?.name?.toLowerCase());
+            const assistant = assistants.find(a => a.name?.toLowerCase() === classData.assistant?.name?.toLowerCase());
+
+            const dayMap = {
+                'CN': 0, 'Chủ nhật': 0,
+                'Thứ 2': 1, 'T2': 1,
+                'Thứ 3': 2, 'T3': 2,
+                'Thứ 4': 3, 'T4': 3,
+                'Thứ 5': 4, 'T5': 4,
+                'Thứ 6': 5, 'T6': 5,
+                'Thứ 7': 6, 'T7': 6
+            };
+
+            const scheduleSlots = (classData.scheduleSlots || []).map(slot => ({
+                dayOfWeek: dayMap[slot.day] ?? 1,
+                startTime: slot.startTime,
+                endTime: slot.endTime
+            }));
+
+            const payload = {
+                className: classData.name,
+                description: classData.description || '',
+                syllabusContent: classData.syllabusContent || '',
+                subjectId: subject.subjectId,
+                teacherId: teacher?.id || null,
+                assistantId: assistant?.id || null,
+                startDate: classData.startDate ? new Date(classData.startDate).toISOString() : null,
+                endDate: classData.endDate ? new Date(classData.endDate).toISOString() : null,
+                status: classData.status === 'active' ? 'Active' : 'Inactive',
+                scheduleSlots: scheduleSlots
+            };
+
+            if (editingClass) {
+                await api.put(`/Classes/${editingClass.id}`, payload);
+                toast.success(`Đã cập nhật lớp "${classData.name}" thành công!`);
+            } else {
+                await api.post('/Classes', payload);
+                toast.success(`Đã tạo lớp "${classData.name}" thành công!`);
+            }
+
+            fetchClasses();
+            setIsModalOpen(false);
+            setEditingClass(null);
+        } catch (error) {
+            console.error(error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi lưu lớp học');
         }
     };
 
@@ -151,9 +238,8 @@ const ClassesManagement = () => {
         const matchesSearch = classItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             classItem.mainTeacher.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesSubject = !subjectFilter || classItem.subject === subjectFilter;
-        const matchesGrade = !gradeFilter || classItem.gradeLevel === gradeFilter;
         const matchesStatus = !statusFilter || classItem.status === statusFilter;
-        return matchesSearch && matchesSubject && matchesGrade && matchesStatus;
+        return matchesSearch && matchesSubject && matchesStatus;
     });
 
     // ── Subject handlers ──────────────────────────────────────────────────────
@@ -177,20 +263,16 @@ const ClassesManagement = () => {
         setDeletingSubject(true);
         setDeleteSubjectError('');
         try {
-            const res = await fetch(`${API_BASE}/Subjects/${deleteSubjectModal.subject.subjectId}`, {
-                method: 'DELETE',
-                headers: authHeader()
-            });
-            if (res.status === 400) {
-                const text = await res.text();
-                setDeleteSubjectError(text || 'Môn học đang được sử dụng, không thể xóa!');
-                return;
-            }
-            if (!res.ok) throw new Error('Xóa môn học thất bại!');
+            await api.delete(`/tenantadmin/Subjects/${deleteSubjectModal.subject.subjectId}`);
             await fetchSubjects();
             setDeleteSubjectModal({ show: false, subject: null });
+            toast.success(`Đã xóa môn học "${deleteSubjectModal.subject.subjectName}" thành công!`);
         } catch (err) {
-            setDeleteSubjectError(err.message);
+            if (err.response?.status === 400) {
+                setDeleteSubjectError(err.response.data?.message || 'Môn học đang được sử dụng, không thể xóa!');
+            } else {
+                setDeleteSubjectError(err.message || 'Xóa môn học thất bại!');
+            }
         } finally {
             setDeletingSubject(false);
         }
@@ -278,18 +360,6 @@ const ClassesManagement = () => {
                                 {subjects.map(s => (
                                     <option key={s.subjectId} value={s.subjectName}>{s.subjectName}</option>
                                 ))}
-                            </select>
-
-                            <select
-                                className="filter-select"
-                                value={gradeFilter}
-                                onChange={(e) => setGradeFilter(e.target.value)}
-                            >
-                                <option value="">Cấp học</option>
-                                <option value="elementary">Tiểu học</option>
-                                <option value="middle">THCS</option>
-                                <option value="high">THPT</option>
-                                <option value="college">Luyện thi đại học</option>
                             </select>
 
                             <select
@@ -427,6 +497,8 @@ const ClassesManagement = () => {
                 editingClass={editingClass}
                 existingClasses={classes}
                 subjects={subjects}
+                teachersList={teachers}
+                assistantsList={assistants}
             />
 
             {/* ── CREATE/EDIT SUBJECT MODAL ── */}

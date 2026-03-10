@@ -3,83 +3,12 @@ import { X, Search, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/TeacherAssignModal.css';
 
-const TeacherAssignModal = ({ isOpen, onClose, onSelectTeacher, classSchedule }) => {
+const TeacherAssignModal = ({ isOpen, onClose, onSelectTeacher, classSchedule, teachers = [] }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDepartment, setSelectedDepartment] = useState('All Departments');
     const [selectedTeacher, setSelectedTeacher] = useState(null);
 
-    // Mock teacher data with schedules
-    const teachers = [
-        {
-            id: 1,
-            name: "Dr. Sarah Jenkins",
-            title: "Senior Lecturer",
-            department: "Mathematics",
-            avatar: "SJ",
-            schedule: [
-                { day: "MON", startTime: "10:00", endTime: "11:30", class: "Algebra 101" },
-                { day: "WED", startTime: "10:00", endTime: "11:30", class: "Algebra 101" },
-                { day: "FRI", startTime: "14:00", endTime: "15:30", class: "Calculus 201" }
-            ]
-        },
-        {
-            id: 2,
-            name: "Prof. Robert Fox",
-            title: "Department Head",
-            department: "Mathematics",
-            avatar: "RF",
-            schedule: [
-                { day: "MON", startTime: "09:00", endTime: "10:30", class: "Statistics 101" },
-                { day: "TUE", startTime: "14:00", endTime: "15:30", class: "Advanced Math" },
-                { day: "THU", startTime: "09:00", endTime: "10:30", class: "Statistics 101" }
-            ]
-        },
-        {
-            id: 3,
-            name: "Michael Chen",
-            title: "Associate Professor",
-            department: "Mathematics",
-            avatar: "MC",
-            schedule: [
-                { day: "TUE", startTime: "10:00", endTime: "11:30", class: "Geometry 102" },
-                { day: "THU", startTime: "13:00", endTime: "14:30", class: "Trigonometry" }
-            ]
-        },
-        {
-            id: 4,
-            name: "Alice Rivera",
-            title: "Lecturer",
-            department: "Science",
-            avatar: "AR",
-            schedule: [
-                { day: "MON", startTime: "13:00", endTime: "14:30", class: "Biology 101" },
-                { day: "WED", startTime: "15:00", endTime: "16:30", class: "Chemistry Lab" }
-            ]
-        },
-        {
-            id: 5,
-            name: "Dr. James Wilson",
-            title: "Senior Lecturer",
-            department: "Physics",
-            avatar: "JW",
-            schedule: [
-                { day: "TUE", startTime: "09:00", endTime: "10:30", class: "Physics 201" },
-                { day: "THU", startTime: "09:00", endTime: "10:30", class: "Physics 201" }
-            ]
-        },
-        {
-            id: 6,
-            name: "Emma Thompson",
-            title: "Lecturer",
-            department: "English",
-            avatar: "ET",
-            schedule: [
-                { day: "MON", startTime: "11:00", endTime: "12:30", class: "Literature 101" },
-                { day: "WED", startTime: "11:00", endTime: "12:30", class: "Creative Writing" },
-                { day: "FRI", startTime: "10:00", endTime: "11:30", class: "Grammar" }
-            ]
-        }
-    ];
+
 
     const departments = ['All Departments', 'Mathematics', 'Science', 'Physics', 'English'];
 
@@ -430,7 +359,8 @@ TeacherAssignModal.propTypes = {
     isOpen: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
     onSelectTeacher: PropTypes.func.isRequired,
-    classSchedule: PropTypes.string
+    classSchedule: PropTypes.string,
+    teachers: PropTypes.array
 };
 
 export default TeacherAssignModal;

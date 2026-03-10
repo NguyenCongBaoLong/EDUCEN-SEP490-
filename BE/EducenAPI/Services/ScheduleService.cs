@@ -19,14 +19,24 @@ namespace EducenAPI.Services
         {
             return await _context.Schedules
                 .Include(s => s.Class)
+                    .ThenInclude(c => c.Teacher)
+                        .ThenInclude(t => t!.TeacherNavigation)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Subject)
                 .Select(s => new ScheduleDto
                 {
                     ScheduleId = s.ScheduleId,
                     ClassId = s.ClassId,
                     ClassName = s.Class.ClassName ?? "",
+                    SubjectId = s.Class.SubjectId,
+                    SubjectName = s.Class.Subject.SubjectName,
+                    DayOfWeek = s.DayOfWeek,
                     ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
                     StartTime = s.StartTime.ToTimeSpan(),
                     EndTime = s.EndTime.ToTimeSpan(),
+                    StartDate = s.Class.StartDate,
+                    EndDate = s.Class.EndDate,
+                    TeacherName = s.Class.Teacher != null ? s.Class.Teacher.TeacherNavigation.FullName : null,
                     Notes = null,
                     Status = "Active",
                     CreatedAt = DateTime.Now
@@ -38,15 +48,21 @@ namespace EducenAPI.Services
         {
             return await _context.Schedules
                 .Include(s => s.Class)
+                    .ThenInclude(c => c.Subject)
                 .Where(s => s.ClassId == classId)
                 .Select(s => new ScheduleDto
                 {
                     ScheduleId = s.ScheduleId,
                     ClassId = s.ClassId,
                     ClassName = s.Class.ClassName ?? "",
+                    SubjectId = s.Class.SubjectId,
+                    SubjectName = s.Class.Subject.SubjectName,
+                    DayOfWeek = s.DayOfWeek,
                     ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
                     StartTime = s.StartTime.ToTimeSpan(),
                     EndTime = s.EndTime.ToTimeSpan(),
+                    StartDate = s.Class.StartDate,
+                    EndDate = s.Class.EndDate,
                     Notes = null,
                     Status = "Active",
                     CreatedAt = DateTime.Now
@@ -58,15 +74,21 @@ namespace EducenAPI.Services
         {
             return await _context.Schedules
                 .Include(s => s.Class)
+                    .ThenInclude(c => c.Subject)
                 .Where(s => s.ScheduleId == id)
                 .Select(s => new ScheduleDto
                 {
                     ScheduleId = s.ScheduleId,
                     ClassId = s.ClassId,
                     ClassName = s.Class.ClassName ?? "",
+                    SubjectId = s.Class.SubjectId,
+                    SubjectName = s.Class.Subject.SubjectName,
+                    DayOfWeek = s.DayOfWeek,
                     ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
                     StartTime = s.StartTime.ToTimeSpan(),
                     EndTime = s.EndTime.ToTimeSpan(),
+                    StartDate = s.Class.StartDate,
+                    EndDate = s.Class.EndDate,
                     Notes = null,
                     Status = "Active",
                     CreatedAt = DateTime.Now

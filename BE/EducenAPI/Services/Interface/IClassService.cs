@@ -16,5 +16,6 @@ namespace EducenAPI.Services.Interface
         Task<bool> RemoveStudentFromClassAsync(int classId, int studentId);
         Task<bool> ClassExistsAsync(int id);
         Task<bool> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto);
+        Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId);
     }
 }

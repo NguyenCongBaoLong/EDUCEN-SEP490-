@@ -51,6 +51,9 @@ namespace EducenAPI.Services
             if (user == null)
                 throw new Exception("Sai tài khoản");
 
+            if (user.AccountStatus != "Active")
+                throw new Exception("Tài khoản của bạn đã bị khóa");
+
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 throw new Exception("Sai mật khẩu");
 
