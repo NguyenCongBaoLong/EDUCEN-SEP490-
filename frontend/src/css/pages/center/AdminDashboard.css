@@ -351,10 +351,10 @@
     border-radius: 10px;
     font-size: 0.875rem;
     font-weight: 600;
-    animation: fadeIn 0.3s ease;
+    animation: adminFadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
+@keyframes adminFadeIn {
     from {
         opacity: 0;
         transform: translateY(-4px);

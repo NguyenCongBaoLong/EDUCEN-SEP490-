@@ -3,7 +3,10 @@ import { X, BookOpen } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/SubjectModal.css';
 
-const API_BASE = 'http://localhost:5062/api';
+const API_BASE = 'http://localhost:5062/api/tenantadmin';
+const authHeader = () => ({
+    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+});
 
 const SubjectModal = ({ isOpen, onClose, onSuccess, editingSubject }) => {
     const [formData, setFormData] = useState({ subjectName: '', description: '' });
@@ -47,13 +50,13 @@ const SubjectModal = ({ isOpen, onClose, onSuccess, editingSubject }) => {
             if (editingSubject) {
                 response = await fetch(`${API_BASE}/Subjects/${editingSubject.subjectId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...authHeader() },
                     body: JSON.stringify(payload)
                 });
             } else {
                 response = await fetch(`${API_BASE}/Subjects`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...authHeader() },
                     body: JSON.stringify(payload)
                 });
             }

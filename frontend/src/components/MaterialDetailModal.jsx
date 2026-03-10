@@ -15,7 +15,7 @@ const MaterialDetailModal = ({ isOpen, onClose, material, onDownload }) => {
 
     return (
         <div className="cam-overlay">
-            <div className="cam-modal" style={{ maxWidth: '500px' }}>
+            <div className="cam-modal" style={{ maxWidth: material.url ? '800px' : '500px', width: '100%' }}>
                 <div className="cam-header">
                     <h2 className="cam-title">Chi tiết tài liệu</h2>
                     <button className="cam-close" onClick={onClose}>
@@ -23,31 +23,48 @@ const MaterialDetailModal = ({ isOpen, onClose, material, onDownload }) => {
                     </button>
                 </div>
 
-                <div className="cam-form" style={{ paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1rem' }}>
-                    <div style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '16px', display: 'inline-flex' }}>
-                        {getFileIcon(material.type)}
-                    </div>
-
-                    <div style={{ width: '100%' }}>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem', wordBreak: 'break-word' }}>
-                            {material.name}
-                        </h3>
-
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
-                            <span>Kích thước: <strong>{material.size}</strong></span>
-                            <span className="dot">•</span>
-                            <span>Ngày đăng: <strong>{material.uploadDate}</strong></span>
+                <div className="cam-form" style={{ paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                        <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '12px', flexShrink: 0 }}>
+                            {getFileIcon(material.type)}
                         </div>
-
-                        {material.description && (
-                            <div style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '8px', textAlign: 'left', marginTop: '1rem' }}>
-                                <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Mô tả</div>
-                                <p style={{ color: '#334155', fontSize: '0.9375rem', margin: '0', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                                    {material.description}
-                                </p>
+                        <div style={{ flex: 1 }}>
+                            <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem', wordBreak: 'break-word' }}>
+                                {material.name}
+                            </h3>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
+                                <span>Khối: <strong>{material.targetLevel || 'Khác'}</strong></span>
+                                <span className="dot">•</span>
+                                <span>Kích thước: <strong>{material.size}</strong></span>
+                                <span className="dot">•</span>
+                                <span>Ngày đăng: <strong>{material.uploadDate}</strong></span>
                             </div>
-                        )}
+                        </div>
                     </div>
+
+                    {material.url && (
+                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', width: '100%', height: '400px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            {material.type === 'video' ? (
+                                <video src={material.url} controls style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: 'black' }} />
+                            ) : material.type === 'pdf' ? (
+                                <iframe src={material.url} title={material.name} style={{ width: '100%', height: '100%', border: 'none' }} />
+                            ) : (
+                                <div style={{ color: '#64748b', textAlign: 'center' }}>
+                                    <FileText size={48} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                                    <p>Không có bản xem trước cho định dạng này</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {material.description && (
+                        <div style={{ background: '#f1f5f9', padding: '1rem', borderRadius: '8px', textAlign: 'left' }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Mô tả</div>
+                            <p style={{ color: '#334155', fontSize: '0.9375rem', margin: '0', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                                {material.description}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="cam-footer">

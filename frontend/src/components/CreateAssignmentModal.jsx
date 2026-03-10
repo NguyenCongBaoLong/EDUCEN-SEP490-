@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Calendar, FileText, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import '../css/components/CreateAssignmentModal.css';
 
-const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes }) => {
+const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes, isTemplate = false }) => {
     const [formData, setFormData] = useState({
         title: '',
         classId: '',
@@ -33,17 +33,19 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes }
     const validate = () => {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = 'Tên bài tập không được để trống';
-        if (!formData.classId) newErrors.classId = 'Vui lòng chọn lớp học';
+        if (!isTemplate && !formData.classId) newErrors.classId = 'Vui lòng chọn lớp học';
 
         // validate dueDate có thể trống nếu là draft, nhưng active thì nên có
-        if (formData.status === 'active' && !formData.dueDate) {
-            newErrors.dueDate = 'Vui lòng chọn hạn nộp bài (hoặc lưu nháp)';
-        } else if (formData.dueDate) {
-            // Kiểm tra xem hạn nộp có nhỏ hơn thời gian hiện tại không
-            const selectedDate = new Date(formData.dueDate);
-            const now = new Date();
-            if (selectedDate <= now) {
-                newErrors.dueDate = 'Hạn nộp bài phải là thời gian trong tương lai';
+        if (!isTemplate) {
+            if (formData.status === 'active' && !formData.dueDate) {
+                newErrors.dueDate = 'Vui lòng chọn hạn nộp bài (hoặc lưu nháp)';
+            } else if (formData.dueDate) {
+                // Kiểm tra xem hạn nộp có nhỏ hơn thời gian hiện tại không
+                const selectedDate = new Date(formData.dueDate);
+                const now = new Date();
+                if (selectedDate <= now) {
+                    newErrors.dueDate = 'Hạn nộp bài phải là thời gian trong tương lai';
+                }
             }
         }
 
@@ -97,36 +99,38 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes }
                     </div>
 
                     {/* Hàng 2: Lớp học & Hạn nộp */}
-                    <div className="cam-form-row">
-                        <div className="cam-form-group">
-                            <label>Chọn Lớp <span className="req">*</span></label>
-                            <select
-                                value={formData.classId}
-                                onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
-                                className={errors.classId ? 'error' : ''}
-                            >
-                                <option value="">-- Chọn một lớp --</option>
-                                {classes.map(cls => (
-                                    <option key={cls.id} value={cls.id}>{cls.name}</option>
-                                ))}
-                            </select>
-                            {errors.classId && <span className="error-text">{errors.classId}</span>}
-                        </div>
-
-                        <div className="cam-form-group">
-                            <label>Hạn nộp bài</label>
-                            <div className="cam-input-icon">
-                                <Calendar size={16} />
-                                <input
-                                    type="datetime-local"
-                                    value={formData.dueDate}
-                                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                                    className={errors.dueDate ? 'error' : ''}
-                                />
+                    {!isTemplate && (
+                        <div className="cam-form-row">
+                            <div className="cam-form-group">
+                                <label>Chọn Lớp <span className="req">*</span></label>
+                                <select
+                                    value={formData.classId}
+                                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                                    className={errors.classId ? 'error' : ''}
+                                >
+                                    <option value="">-- Chọn một lớp --</option>
+                                    {classes.map(cls => (
+                                        <option key={cls.id} value={cls.id}>{cls.name}</option>
+                                    ))}
+                                </select>
+                                {errors.classId && <span className="error-text">{errors.classId}</span>}
                             </div>
-                            {errors.dueDate && <span className="error-text">{errors.dueDate}</span>}
+
+                            <div className="cam-form-group">
+                                <label>Hạn nộp bài</label>
+                                <div className="cam-input-icon">
+                                    <Calendar size={16} />
+                                    <input
+                                        type="datetime-local"
+                                        value={formData.dueDate}
+                                        onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                        className={errors.dueDate ? 'error' : ''}
+                                    />
+                                </div>
+                                {errors.dueDate && <span className="error-text">{errors.dueDate}</span>}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Hàng 3: Mô tả */}
                     <div className="cam-form-group">
@@ -140,34 +144,36 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes }
                     </div>
 
                     {/* Hàng 4: Trạng thái */}
-                    <div className="cam-form-group">
-                        <label>Trạng thái</label>
-                        <div className="cam-status-options">
-                            <label className="cam-radio-label">
-                                <input
-                                    type="radio"
-                                    name="status"
-                                    value="active"
-                                    checked={formData.status === 'active'}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                />
-                                <span>Đang mở (Giao ngay)</span>
-                            </label>
-                            <label className="cam-radio-label">
-                                <input
-                                    type="radio"
-                                    name="status"
-                                    value="draft"
-                                    checked={formData.status === 'draft'}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                />
-                                <span>Lưu nháp</span>
-                            </label>
+                    {!isTemplate && (
+                        <div className="cam-form-group">
+                            <label>Trạng thái</label>
+                            <div className="cam-status-options">
+                                <label className="cam-radio-label">
+                                    <input
+                                        type="radio"
+                                        name="status"
+                                        value="active"
+                                        checked={formData.status === 'active'}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    />
+                                    <span>Đang mở (Giao ngay)</span>
+                                </label>
+                                <label className="cam-radio-label">
+                                    <input
+                                        type="radio"
+                                        name="status"
+                                        value="draft"
+                                        checked={formData.status === 'draft'}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    />
+                                    <span>Lưu nháp</span>
+                                </label>
+                            </div>
+                            {formData.status === 'draft' && (
+                                <div className="cam-helper-text">Học sinh sẽ không nhìn thấy bài tập nháp.</div>
+                            )}
                         </div>
-                        {formData.status === 'draft' && (
-                            <div className="cam-helper-text">Học sinh sẽ không nhìn thấy bài tập nháp.</div>
-                        )}
-                    </div>
+                    )}
 
                     {/* Tệp đính kèm */}
                     <div className="cam-form-group">

@@ -1,0 +1,315 @@
+/* ParentTable.css */
+
+.parent-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    animation: parentTableFadeIn 0.4s ease-out;
+}
+
+.parent-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.parent-search-wrap {
+    position: relative;
+    width: 250px;
+}
+
+.parent-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+.parent-search-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem 0.5rem 2.1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    outline: none;
+    font-size: 0.8125rem;
+    transition: all 0.2s;
+}
+
+.parent-search-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.parent-count-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    border: 1px solid #e5e7eb;
+}
+
+.parent-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+}
+
+.parent-table th {
+    background: #f9fafb;
+    padding: 0.875rem 1.25rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.parent-table td {
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    font-size: 0.9rem;
+    vertical-align: middle;
+}
+
+.parent-table tr:last-child td {
+    border-bottom: none;
+}
+
+.parent-table tr:hover {
+    background: #f9fafb;
+}
+
+/* Parent info cell */
+.parent-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.parent-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.parent-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #111827;
+}
+
+.parent-id {
+    font-size: 0.78rem;
+    color: #9ca3af;
+}
+
+/* Linked student badges */
+.linked-students {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.linked-student-badge {
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid #dbeafe;
+}
+
+/* Status & Account badges (reuse from StudentTable) */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.status-badge.active {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.status-badge.active::before {
+    background: #10b981;
+}
+
+.status-badge.inactive {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.status-badge.inactive::before {
+    background: #ef4444;
+}
+
+.account-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.account-badge.sent {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.account-badge.pending {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.parent-table th:last-child,
+.parent-table td:last-child {
+    text-align: right;
+    padding-right: 1.5rem;
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: #6b7280;
+}
+
+.action-btn:hover {
+    background: #f3f4f6;
+    transform: translateY(-1px);
+}
+
+.action-btn.view:hover {
+    color: #3b82f6;
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.action-btn.edit:hover {
+    color: #f59e0b;
+    background: #fffbeb;
+    border-color: #fef3c7;
+}
+
+.action-btn.lock:hover {
+    color: #ef4444;
+    background: #fef2f2;
+    border-color: #fee2e2;
+}
+
+.action-btn.unlock:hover {
+    color: #10b981;
+    background: #ecfdf5;
+    border-color: #d1fae5;
+}
+
+.action-btn.send-account:hover {
+    color: #3b82f6;
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.pagination-btn {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    color: #6b7280;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #f9fafb;
+    color: #111827;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+@keyframes parentTableFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

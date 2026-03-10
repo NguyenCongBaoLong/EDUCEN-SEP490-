@@ -165,7 +165,7 @@ const StaffManagement = () => {
                         </div>
                         <button className="btn-add-staff" onClick={handleAddStaff}>
                             <Plus size={20} />
-                            Thêm Nhân Viên
+                            Thêm Giáo Viên
                         </button>
                     </div>
                 </div>

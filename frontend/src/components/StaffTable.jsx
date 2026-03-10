@@ -90,7 +90,7 @@ const StaffTable = ({
                             onChange={(e) => setRoleFilter(e.target.value)}
                         >
                             <option value="">Vai trò</option>
-                            <option value="teacher">Giảng Viên</option>
+                            <option value="teacher">Giáo Viên</option>
                             <option value="assistant">Trợ Giảng</option>
                         </select>
 
@@ -141,7 +141,7 @@ const StaffTable = ({
                                     </td>
                                     <td>
                                         <span className={`role - badge ${staff.role} `}>
-                                            {staff.role === 'teacher' ? 'Giảng Viên' : 'Trợ Giảng'}
+                                            {staff.role === 'teacher' ? 'Giáo Viên' : 'Trợ Giảng'}
                                         </span>
                                     </td>
                                     <td>

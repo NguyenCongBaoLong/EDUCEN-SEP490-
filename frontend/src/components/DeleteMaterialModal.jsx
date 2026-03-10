@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, AlertTriangle } from 'lucide-react';
 
-const DeleteMaterialModal = ({ isOpen, onClose, onDelete }) => {
+const DeleteMaterialModal = ({ isOpen, onClose, onDelete, itemName = 'tài liệu' }) => {
     if (!isOpen) return null;
 
     return (
@@ -16,7 +16,7 @@ const DeleteMaterialModal = ({ isOpen, onClose, onDelete }) => {
                         }}>
                             <AlertTriangle size={24} />
                         </div>
-                        <h2 className="cam-title">Xóa tài liệu</h2>
+                        <h2 className="cam-title">Xóa {itemName}</h2>
                     </div>
                     <button className="cam-close" onClick={onClose}>
                         <X size={20} />
@@ -25,8 +25,8 @@ const DeleteMaterialModal = ({ isOpen, onClose, onDelete }) => {
 
                 <div className="cam-form" style={{ paddingTop: '0' }}>
                     <p style={{ color: '#475569', fontSize: '0.9375rem', lineHeight: '1.5' }}>
-                        Bạn có chắc chắn muốn xóa tài liệu này không? <br />
-                        Hành động này <strong style={{ color: '#1e293b' }}>không thể hoàn tác</strong> và học sinh sẽ không thể tải xuống tài liệu này nữa.
+                        Bạn có chắc chắn muốn xóa {itemName} này không? <br />
+                        Hành động này <strong style={{ color: '#1e293b' }}>không thể hoàn tác</strong>.
                     </p>
                 </div>
 
@@ -49,7 +49,7 @@ const DeleteMaterialModal = ({ isOpen, onClose, onDelete }) => {
                             transition: 'all 0.2s'
                         }}
                     >
-                        Xóa tài liệu
+                        Xóa {itemName}
                     </button>
                 </div>
             </div>

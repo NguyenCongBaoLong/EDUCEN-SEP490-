@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Search, Eye, Edit2, Lock, Unlock, X, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Edit2, Lock, Unlock, X, AlertTriangle, Mail, CheckCircle } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/StudentTable.css';
 import '../css/components/DeleteModal.css';
 
 const StudentTable = ({
     studentData,
+    parentListData = [],
     searchQuery,
     setSearchQuery,
     gradeFilter,
@@ -16,10 +17,14 @@ const StudentTable = ({
     setStatusFilter,
     onView,
     onEdit,
-    onToggleStatus
+    onToggleStatus,
+    onSendAccount,
+    selectedIds = [],
+    setSelectedIds = () => { }
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, student: null });
+    const [sendModal, setSendModal] = useState({ show: false, student: null });
     const itemsPerPage = 6;
 
     const handleLockClick = (student) => {
@@ -35,6 +40,38 @@ const StudentTable = ({
 
     const cancelLock = () => {
         setLockModal({ show: false, student: null });
+    };
+
+    const handleSendAccountClick = (student) => {
+        setSendModal({ show: true, student });
+    };
+
+    const confirmSendAccount = () => {
+        if (sendModal.student && onSendAccount) {
+            onSendAccount(sendModal.student.id);
+        }
+        setSendModal({ show: false, student: null });
+    };
+
+    const cancelSendAccount = () => {
+        setSendModal({ show: false, student: null });
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allUnsent = studentData.filter(s => !s.accountSent).map(s => s.id);
+            setSelectedIds(allUnsent);
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelect = (id, checked) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        }
     };
 
     // Filter Logic is handled in parent, this component receives filtered data
@@ -122,12 +159,21 @@ const StudentTable = ({
                 <table className="student-table">
                     <thead>
                         <tr>
+                            <th style={{ width: '40px', paddingLeft: '1.25rem' }}>
+                                <input
+                                    type="checkbox"
+                                    className="bulk-checkbox"
+                                    checked={studentData.length > 0 && studentData.filter(s => !s.accountSent).length > 0 && selectedIds.length === studentData.filter(s => !s.accountSent).length}
+                                    onChange={handleSelectAll}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                            </th>
                             <th>Học Sinh</th>
                             <th>Khối</th>
-                            <th>Lớp</th>
                             <th>Phụ Huynh</th>
                             <th>Ngày Nhập Học</th>
                             <th>Trạng Thái</th>
+                            <th>Tài Khoản</th>
                             <th className="text-right">Hành Động</th>
                         </tr>
                     </thead>
@@ -135,6 +181,16 @@ const StudentTable = ({
                         {currentStudents.length > 0 ? (
                             currentStudents.map((student) => (
                                 <tr key={student.id}>
+                                    <td style={{ paddingLeft: '1.25rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            className="bulk-checkbox"
+                                            disabled={student.accountSent}
+                                            checked={selectedIds.includes(student.id)}
+                                            onChange={(e) => handleSelect(student.id, e.target.checked)}
+                                            style={{ width: '16px', height: '16px', cursor: student.accountSent ? 'not-allowed' : 'pointer', accentColor: '#3b82f6' }}
+                                        />
+                                    </td>
                                     <td>
                                         <div className="student-info">
                                             <div className="student-avatar">
@@ -154,12 +210,22 @@ const StudentTable = ({
                                         <span className="grade-badge">Khối {student.grade}</span>
                                     </td>
                                     <td>
-                                        <span className="class-badge">{student.class}</span>
-                                    </td>
-                                    <td>
                                         <div className="parent-info">
-                                            <div style={{ fontWeight: 500 }}>{student.parentName}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{student.parentPhone}</div>
+                                            {student.linkedParentIds && student.linkedParentIds.length > 0 ? (
+                                                <div className="linked-parents">
+                                                    {student.linkedParentIds.map(parentId => {
+                                                        const p = parentListData.find(x => x.id === parentId);
+                                                        if (!p) return null;
+                                                        return (
+                                                            <div key={parentId} className="linked-parent-badge">
+                                                                {p.name}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>Không có</span>
+                                            )}
                                         </div>
                                     </td>
                                     <td>{new Date(student.enrollmentDate).toLocaleDateString('vi-VN')}</td>
@@ -167,6 +233,12 @@ const StudentTable = ({
                                         <span className={`status-badge ${student.status}`}>
                                             {getStatusLabel(student.status)}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {student.accountSent
+                                            ? <span className="account-badge sent"><CheckCircle size={13} /> Đã gửi</span>
+                                            : <span className="account-badge pending">Chưa gửi</span>
+                                        }
                                     </td>
                                     <td>
                                         <div className="action-buttons">
@@ -184,10 +256,20 @@ const StudentTable = ({
                                             >
                                                 <Edit2 size={18} />
                                             </button>
+                                            {!student.accountSent && (
+                                                <button
+                                                    className="action-btn send-account"
+                                                    title="Gửi tài khoản qua email"
+                                                    onClick={() => handleSendAccountClick(student)}
+                                                >
+                                                    <Mail size={18} />
+                                                </button>
+                                            )}
                                             <button
-                                                className={`action-btn ${student.status === 'active' ? 'lock' : 'unlock'}`}
-                                                title={student.status === 'active' ? 'Tạm ngưng học' : 'Kích hoạt lại'}
-                                                onClick={() => handleLockClick(student)}
+                                                className={`action-btn ${student.status === 'active' ? 'lock' : 'unlock'} ${!student.accountSent ? 'disabled' : ''}`}
+                                                title={!student.accountSent ? 'Cần gửi tài khoản để kích hoạt' : (student.status === 'active' ? 'Tạm ngưng học' : 'Kích hoạt lại')}
+                                                onClick={() => student.accountSent && handleLockClick(student)}
+                                                disabled={!student.accountSent}
                                             >
                                                 {student.status === 'active' ? <Lock size={18} /> : <Unlock size={18} />}
                                             </button>
@@ -197,7 +279,7 @@ const StudentTable = ({
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="7" className="text-center py-8 text-gray-500">
+                                <td colSpan="8" className="text-center py-8 text-gray-500">
                                     Không tìm thấy học sinh nào phù hợp.
                                 </td>
                             </tr>
@@ -281,12 +363,55 @@ const StudentTable = ({
                     </div>
                 </div>
             )}
+            {/* Send Account Confirmation Modal */}
+            {sendModal.show && (
+                <div className="delete-modal-overlay" onClick={cancelSendAccount}>
+                    <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="delete-modal-header">
+                            <h3>Gửi Tài Khoản Qua Email</h3>
+                            <button className="delete-modal-close" onClick={cancelSendAccount}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="delete-modal-body">
+                            <div className="delete-modal-warning">
+                                <div className="delete-modal-warning-icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
+                                    <Mail size={20} />
+                                </div>
+                                <div className="delete-modal-warning-content">
+                                    <h4>Xác nhận gửi tài khoản?</h4>
+                                    <p>
+                                        Hệ thống sẽ gửi thông tin tài khoản và mật khẩu đến email của học sinh{' '}
+                                        <strong>{sendModal.student?.name}</strong>.
+                                        {sendModal.student?.email
+                                            ? <> (Email: <strong>{sendModal.student.email}</strong>)</>
+                                            : <span style={{ color: '#ef4444' }}> Email học sinh chưa được cập nhật!</span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="delete-modal-footer">
+                            <button className="btn-delete-cancel" onClick={cancelSendAccount}>Hủy</button>
+                            <button
+                                className="btn-unlock-confirm"
+                                onClick={confirmSendAccount}
+                                disabled={!sendModal.student?.email}
+                                style={!sendModal.student?.email ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                            >
+                                Gửi Tài Khoản
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 StudentTable.propTypes = {
     studentData: PropTypes.array.isRequired,
+    parentListData: PropTypes.array,
     searchQuery: PropTypes.string.isRequired,
     setSearchQuery: PropTypes.func.isRequired,
     gradeFilter: PropTypes.string.isRequired,
@@ -297,7 +422,8 @@ StudentTable.propTypes = {
     setStatusFilter: PropTypes.func.isRequired,
     onView: PropTypes.func.isRequired,
     onEdit: PropTypes.func.isRequired,
-    onToggleStatus: PropTypes.func.isRequired
+    onToggleStatus: PropTypes.func.isRequired,
+    onSendAccount: PropTypes.func
 };
 
 export default StudentTable;

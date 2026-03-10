@@ -1,0 +1,158 @@
+/* ─── SystemAdmin Sidebar — đồng bộ design với Sidebar.css ─── */
+
+.sa-sidebar {
+    width: 260px;
+    height: 100vh;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+}
+
+.sa-sidebar-header {
+    padding: 2rem 1.5rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.sa-sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #6366f1;
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+}
+
+.sa-sidebar-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    padding-left: 2rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sa-sidebar-nav {
+    flex: 1;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    overflow-y: auto;
+}
+
+.sa-sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
+    color: #6b7280;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+}
+
+.sa-sidebar-nav-item:hover {
+    background: #f5f3ff;
+    color: #6366f1;
+}
+
+.sa-sidebar-nav-item.active {
+    background: #ede9fe;
+    color: #6366f1;
+    font-weight: 600;
+}
+
+.sa-sidebar-footer {
+    padding: 1.25rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.sa-sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-sidebar-user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.sa-sidebar-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sa-sidebar-user-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sa-sidebar-user-role {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.sa-sidebar-logout {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: #f9fafb;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.sa-sidebar-logout:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.sa-sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sa-sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sa-sidebar-nav::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
+.sa-sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}

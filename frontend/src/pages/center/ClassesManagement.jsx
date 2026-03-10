@@ -7,7 +7,10 @@ import SubjectModal from '../../components/SubjectModal';
 import '../../css/pages/center/ClassesManagement.css';
 import '../../css/components/DeleteModal.css';
 
-const API_BASE = 'http://localhost:5062/api';
+const API_BASE = 'http://localhost:5062/api/tenantadmin';
+const authHeader = () => ({
+    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+});
 
 const ClassesManagement = () => {
     // ── Tab state ─────────────────────────────────────────────────────────────
@@ -91,7 +94,9 @@ const ClassesManagement = () => {
         setSubjectsLoading(true);
         setSubjectsError('');
         try {
-            const res = await fetch(`${API_BASE}/Subjects`);
+            const res = await fetch(`${API_BASE}/Subjects`, {
+                headers: authHeader()
+            });
             if (!res.ok) throw new Error('Không thể tải danh sách môn học');
             const data = await res.json();
             setSubjects(data);
@@ -173,7 +178,8 @@ const ClassesManagement = () => {
         setDeleteSubjectError('');
         try {
             const res = await fetch(`${API_BASE}/Subjects/${deleteSubjectModal.subject.subjectId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: authHeader()
             });
             if (res.status === 400) {
                 const text = await res.text();

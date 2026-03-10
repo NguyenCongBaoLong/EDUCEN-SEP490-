@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useParams, Link } from 'react-router-dom';
 import {
     ChevronLeft, Calendar, Clock, ChevronRight,
     Search, X,
     CheckCircle, UserCheck, CalendarClock,
     MessageSquare, Pencil, Lock, Edit2,
-    FileText, Download, Plus, PlayCircle, MoreVertical, Trash2
+    FileText, Download, Plus, PlayCircle, MoreVertical, Trash2,
+    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen
 } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import AttendanceModal from '../../components/AttendanceModal';
@@ -14,11 +16,13 @@ import UploadMaterialModal from '../../components/UploadMaterialModal';
 import EditMaterialModal from '../../components/EditMaterialModal';
 import DeleteMaterialModal from '../../components/DeleteMaterialModal';
 import MaterialDetailModal from '../../components/MaterialDetailModal';
+import ImportLibraryModal from '../../components/ImportLibraryModal';
+import CreateAssignmentModal from '../../components/CreateAssignmentModal';
+import AssignmentDetailModal from '../../components/AssignmentDetailModal';
 import '../../css/pages/center/ClassDetail.css';
 import '../../css/components/AttendanceModal.css';
 
 /* ─── Date helper ──────────────────────────────── */
-// Parse "DD/MM/YYYY" → Date object (midnight local)
 const parseDate = (str) => {
     const [d, m, y] = str.split('/');
     return new Date(Number(y), Number(m) - 1, Number(d));
@@ -26,23 +30,16 @@ const parseDate = (str) => {
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
-const isPast = (dateStr) => parseDate(dateStr) <= today;   // ngày đã đến hoặc là hôm nay
-const isFuture = (dateStr) => parseDate(dateStr) > today;  // buổi chưa đến
+const isPast = (dateStr) => parseDate(dateStr) <= today;
+const isFuture = (dateStr) => parseDate(dateStr) > today;
 
 /* ─── Mock data ─────────────────────────────────── */
 const TEACHER_CLASSES_DATA = {
     101: {
-        id: 101,
-        code: 'TOÁN-G10-ADV',
-        name: 'Đại Số Nâng Cao',
-        subject: 'Toán học',
-        gradeLevel: 'THPT',
-        status: 'active',
-        schedule: 'Thứ Hai & Thứ Tư',
-        scheduleTime: '16:30 - 18:00 (90 phút)',
-        startDate: '04/09/2023',
-        duration: '12 tuần',
-        maxStudents: 15,
+        id: 101, code: 'TOÁN-G10-ADV', name: 'Đại Số Nâng Cao',
+        subject: 'Toán học', gradeLevel: 'THPT', status: 'active',
+        schedule: 'Thứ Hai & Thứ Tư', scheduleTime: '16:30 - 18:00 (90 phút)',
+        startDate: '04/09/2023', duration: '12 tuần', maxStudents: 15,
         mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM', subject: 'Chuyên gia Toán học' },
         assistant: { name: 'Cô Lê Hoa', initials: 'LH', subject: 'Trợ giảng Toán' },
         students: [
@@ -52,25 +49,39 @@ const TEACHER_CLASSES_DATA = {
             { id: 'ST-004', name: 'Phạm Thị Dung', avatar: 'PD', attendance: 76, lastAttended: '10/10/2023', grade: 'B' },
             { id: 'ST-005', name: 'Hoàng Văn Em', avatar: 'HE', attendance: 90, lastAttended: '12/10/2023', grade: 'A-' },
             { id: 'ST-006', name: 'Vũ Minh Thu', avatar: 'VT', attendance: 85, lastAttended: '12/10/2023', grade: 'B' },
-            { id: 'ST-007', name: 'Đặng Quốc Huy', avatar: 'DH', attendance: 92, lastAttended: '12/10/2023', grade: 'A' },
-            { id: 'ST-008', name: 'Lý Thanh Tùng', avatar: 'LT', attendance: 78, lastAttended: '12/10/2023', grade: 'C+' },
-            { id: 'ST-009', name: 'Đỗ Thùy Linh', avatar: 'DL', attendance: 96, lastAttended: '12/10/2023', grade: 'A+' },
-            { id: 'ST-010', name: 'Bùi Thế Anh', avatar: 'BA', attendance: 88, lastAttended: '12/10/2023', grade: 'B+' },
-            { id: 'ST-011', name: 'Trịnh Bảo Ngọc', avatar: 'BN', attendance: 91, lastAttended: '12/10/2023', grade: 'A-' },
-            { id: 'ST-012', name: 'Phan Tấn Phát', avatar: 'PP', attendance: 84, lastAttended: '12/10/2023', grade: 'B' },
         ],
         sessions: [
-            { scheduleId: 1, date: '04/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00' },
-            { scheduleId: 2, date: '06/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00' },
-            { scheduleId: 3, date: '11/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00' },
-            { scheduleId: 4, date: '13/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00' },
-            { scheduleId: 5, date: '18/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00' },
-            { scheduleId: 6, date: '20/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00' },
-            { scheduleId: 7, date: '25/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00' },
-            { scheduleId: 8, date: '12/10/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00' },
-            // Buổi tương lai (chưa đến) — dùng để test validation
-            { scheduleId: 9, date: '28/02/2026', dayLabel: 'Thứ Bảy', time: '16:30 - 18:00' },
-            { scheduleId: 10, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '16:30 - 18:00' },
+            {
+                scheduleId: 1, sessionNum: 1, date: '04/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00',
+                title: 'Bài 1: Giới thiệu Phương trình bậc hai',
+                materials: [
+                    { id: 1, name: 'Slide Bài 1 - Giới thiệu.pdf', size: '2.4 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Tài liệu giới thiệu về phương trình bậc hai' },
+                    { id: 2, name: 'Bài tập trắc nghiệm C1.docx', size: '1.1 MB', uploadDate: '05/09/2023', type: 'word', description: 'Gồm 20 câu dễ' }
+                ],
+                assignments: [
+                    { id: 'A1', title: 'Bài tập chương 1 - Phương trình bậc hai', dueDate: '20/09/2023', submissionsCount: 12 }
+                ]
+            },
+            {
+                scheduleId: 2, sessionNum: 2, date: '06/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00',
+                title: 'Bài 2: Hệ phương trình',
+                materials: [
+                    { id: 3, name: 'Video hướng dẫn giải PT.mp4', size: '45.2 MB', uploadDate: '15/09/2023', type: 'video' }
+                ],
+                assignments: []
+            },
+            { scheduleId: 3, sessionNum: 3, date: '11/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 3: Bất phương trình', materials: [], assignments: [] },
+            { scheduleId: 4, sessionNum: 4, date: '13/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', title: 'Bài 4: Bất phương trình bậc hai', materials: [], assignments: [] },
+            { scheduleId: 5, sessionNum: 5, date: '18/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 5: Luyện tập', materials: [], assignments: [] },
+            { scheduleId: 6, sessionNum: 6, date: '20/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', title: 'Kiểm tra 15 phút', materials: [{ id: 4, name: 'Đề kiểm tra 15p.pdf', size: '850 KB', uploadDate: '20/09/2023', type: 'pdf' }], assignments: [] },
+            { scheduleId: 7, sessionNum: 7, date: '25/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 6: Ôn tập giữa kỳ', materials: [], assignments: [] },
+            { scheduleId: 8, sessionNum: 8, date: '12/10/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 7: Hàm số', materials: [], assignments: [] },
+            { scheduleId: 9, sessionNum: 9, date: '28/02/2026', dayLabel: 'Thứ Bảy', time: '16:30 - 18:00', title: 'Kiểm tra giữa kỳ', materials: [], assignments: [] },
+            {
+                scheduleId: 10, sessionNum: 10, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', title: 'Bài 8: Hàm số bậc hai', materials: [], assignments: [
+                    { id: 'A4', title: 'Bài tập chương 3 - Hàm số', dueDate: '04/03/2026', submissionsCount: 0 }
+                ]
+            },
         ],
         activities: [
             { id: 1, type: 'note', title: 'Ghi chú buổi học', desc: 'Đã dạy xong chương 3 - Phương trình bậc hai.', time: '2 giờ trước', by: 'Thầy Nguyễn Minh' },
@@ -79,25 +90,12 @@ const TEACHER_CLASSES_DATA = {
         ],
         classesCompleted: 8,
         totalClasses: 10,
-        materials: [
-            { id: 1, name: 'Slide Bài 1 - Giới thiệu.pdf', size: '2.4 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Tài liệu giới thiệu về phương trình bậc hai' },
-            { id: 2, name: 'Bài tập trắc nghiệm C1.docx', size: '1.1 MB', uploadDate: '05/09/2023', type: 'word', description: 'Gồm 20 câu dễ' },
-            { id: 3, name: 'Video hướng dẫn giải PT.mp4', size: '45.2 MB', uploadDate: '15/09/2023', type: 'video' },
-            { id: 4, name: 'Đề kiểm tra 15p.pdf', size: '850 KB', uploadDate: '20/09/2023', type: 'pdf' }
-        ]
     },
     102: {
-        id: 102,
-        code: 'TOÁN-G11-CB',
-        name: 'Giải Tích Cơ Bản',
-        subject: 'Toán học',
-        gradeLevel: 'THPT',
-        status: 'active',
-        schedule: 'Thứ Ba & Thứ Năm',
-        scheduleTime: '17:00 - 18:30 (90 phút)',
-        startDate: '01/09/2023',
-        duration: '10 tuần',
-        maxStudents: 15,
+        id: 102, code: 'TOÁN-G11-CB', name: 'Giải Tích Cơ Bản',
+        subject: 'Toán học', gradeLevel: 'THPT', status: 'active',
+        schedule: 'Thứ Ba & Thứ Năm', scheduleTime: '17:00 - 18:30 (90 phút)',
+        startDate: '01/09/2023', duration: '10 tuần', maxStudents: 15,
         mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM', subject: 'Chuyên gia Toán học' },
         assistant: null,
         students: [
@@ -105,9 +103,9 @@ const TEACHER_CLASSES_DATA = {
             { id: 'ST-007', name: 'Đặng Văn Giang', avatar: 'DG', attendance: 100, lastAttended: '11/10/2023', grade: 'A' },
         ],
         sessions: [
-            { scheduleId: 9, date: '05/09/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30' },
-            { scheduleId: 10, date: '07/09/2023', dayLabel: 'Thứ Năm', time: '17:00 - 18:30' },
-            { scheduleId: 11, date: '11/10/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30' },
+            { scheduleId: 9, sessionNum: 1, date: '05/09/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30', title: 'Unit 1', materials: [], assignments: [] },
+            { scheduleId: 10, sessionNum: 2, date: '07/09/2023', dayLabel: 'Thứ Năm', time: '17:00 - 18:30', title: 'Unit 2', materials: [], assignments: [] },
+            { scheduleId: 11, sessionNum: 3, date: '11/10/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30', title: 'Unit 3', materials: [], assignments: [] },
         ],
         activities: [
             { id: 1, type: 'note', title: 'Ghi chú buổi học', desc: 'Hoàn thành chương giới hạn và liên tục.', time: '1 ngày trước', by: 'Thầy Nguyễn Minh' },
@@ -162,10 +160,25 @@ const ActivityIcon = ({ type }) => {
     return <div className="cd-activity-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>;
 };
 
+// Mock Library Data (would be fetched from API)
+const LIBRARY_MATERIALS = [
+    { id: 101, name: 'Giáo trình Toán Học Đại cương Tập 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Sách giáo khoa điện tử chương trình cơ bản.' },
+    { id: 102, name: 'Video Hướng dẫn Giải Phương trình Bậc 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'Cách bấm máy tính Casio để giải nhanh.' },
+    { id: 103, name: 'Bài Tập Trắc Nghiệm Chương 1 (Bản gốc).docx', size: '1.2 MB', uploadDate: '10/09/2023', type: 'word', description: 'Dùng để soạn đề cho các lớp.' },
+    { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.' },
+];
+
+const LIBRARY_ASSIGNMENTS = [
+    { id: 1, title: 'Bài tập về nhà Chương 1: Hàm số', dueDate: '2023-10-15T23:59', status: 'active' },
+    { id: 2, title: 'Đề kiểm tra 15 phút - Đạo hàm', dueDate: '2023-10-18T10:00', status: 'active' },
+    { id: 3, title: 'Bài tập tự luyện: Tích phân', dueDate: '2023-09-30T23:59', status: 'closed' },
+    { id: 4, title: 'Đề cương ôn tập giữa kì I', dueDate: '2023-10-25T23:59', status: 'draft' }
+];
+
 /* ─── Main Component ────────────────────────────── */
 const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
-    const classData = TEACHER_CLASSES_DATA[classId] || TEACHER_CLASSES_DATA[101];
+    const [classData, setClassData] = useState(TEACHER_CLASSES_DATA[classId] || TEACHER_CLASSES_DATA[101]);
 
     const [students] = useState(classData.students);
     const [showAllStudents, setShowAllStudents] = useState(false);
@@ -174,26 +187,37 @@ const TeacherClassDetail = ({ isTA = false }) => {
     // Tab State
     const [activeTab, setActiveTab] = useState('overview');
 
+    // Expand/Collapse sessions
+    const [expandedSessionId, setExpandedSessionId] = useState(null);
+
     // Pagination for students tab
     const [studentPage, setStudentPage] = useState(1);
     const studentsPerPage = 10;
 
-    // Manage class materials state locally so we can update it
-    const [materials, setMaterials] = useState(classData.materials || []);
+    // Modals state
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [uploadTargetSession, setUploadTargetSession] = useState(null); // know which session getting the upload
 
-    // For Delete
     const [deleteMaterialId, setDeleteMaterialId] = useState(null);
+    const [deleteAssignmentId, setDeleteAssignmentId] = useState(null);
+    const [deleteTargetSession, setDeleteTargetSession] = useState(null);
 
-    // For Edit
     const [editMaterial, setEditMaterial] = useState(null);
+    const [editTargetSession, setEditTargetSession] = useState(null);
 
-    // For Detail View
     const [detailMaterial, setDetailMaterial] = useState(null);
 
     const [attendanceOpen, setAttendanceOpen] = useState(false);
     const [selectedSession, setSelectedSession] = useState(null);
     const [attendanceData, setAttendanceData] = useState(INITIAL_ATTENDANCE);
+
+    // Import Modal
+    const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
+
+    // Assignment Modals
+    const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
+    const [createAssignmentSession, setCreateAssignmentSession] = useState(null);
+    const [detailAssignment, setDetailAssignment] = useState(null);
 
     // Reset page when searching
     useEffect(() => {
@@ -213,26 +237,75 @@ const TeacherClassDetail = ({ isTA = false }) => {
         }
     };
 
-    const handleUploadMaterial = (newFiles) => {
-        // newFiles is an array of objects
-        setMaterials(prev => [...newFiles, ...prev]);
+    const handleUploadMaterial = (newFiles, saveToLibrary) => {
+        if (saveToLibrary) {
+            toast.success("Đã lưu các tài liệu vào Thư viện học liệu chung!");
+        }
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== uploadTargetSession) return s;
+                return {
+                    ...s,
+                    materials: [...newFiles, ...(s.materials || [])]
+                };
+            });
+            return { ...prev, sessions: newSessions };
+        });
         setUploadModalOpen(false);
+        setUploadTargetSession(null);
     };
 
     const handleDeleteMaterial = () => {
-        if (!deleteMaterialId) return;
-        setMaterials(prev => prev.filter(m => m.id !== deleteMaterialId));
+        if (!deleteMaterialId || !deleteTargetSession) return;
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== deleteTargetSession) return s;
+                return {
+                    ...s,
+                    materials: s.materials.filter(m => m.id !== deleteMaterialId)
+                };
+            });
+            return { ...prev, sessions: newSessions };
+        });
         setDeleteMaterialId(null);
+        setDeleteTargetSession(null);
+        toast.success("Đã xóa tài liệu khỏi buổi học!");
+    };
+
+    const handleDeleteAssignment = () => {
+        if (!deleteAssignmentId || !deleteTargetSession) return;
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== deleteTargetSession) return s;
+                return {
+                    ...s,
+                    assignments: s.assignments.filter(a => a.id !== deleteAssignmentId)
+                };
+            });
+            return { ...prev, sessions: newSessions };
+        });
+        setDeleteAssignmentId(null);
+        setDeleteTargetSession(null);
+        toast.success("Đã xóa bài tập khỏi buổi học!");
     };
 
     const handleUpdateMaterial = (updatedData) => {
-        setMaterials(prev => prev.map(m => m.id === updatedData.id ? { ...m, ...updatedData } : m));
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== editTargetSession) return s;
+                return {
+                    ...s,
+                    materials: s.materials.map(m => m.id === updatedData.id ? { ...m, ...updatedData } : m)
+                };
+            });
+            return { ...prev, sessions: newSessions };
+        });
         setEditMaterial(null);
+        setEditTargetSession(null);
     };
 
     const handleDownloadMaterial = (item) => {
         if (item.rawFile) {
-            // Đây là file vừa upload (có rawFile là File object)
             const url = URL.createObjectURL(item.rawFile);
             const a = document.createElement('a');
             a.href = url;
@@ -242,9 +315,63 @@ const TeacherClassDetail = ({ isTA = false }) => {
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         } else {
-            // Đây là file mock data, mô phỏng tải xuống
-            alert(`Đang tải xuống tài liệu: ${item.name}\n(Chức năng tải file thực tế sẽ hoạt động khi hệ thống có Backend nha)`);
+            toast.success(`Đang tải xuống tài liệu: ${item.name}`);
         }
+    };
+
+    const handleImportFromLibrary = (selectedItems) => {
+        if (!importModal.targetSession) return;
+
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== importModal.targetSession) return s;
+
+                if (importModal.type === 'material') {
+                    const importedMaterials = selectedItems.map(item => ({
+                        ...item,
+                        id: Math.random().toString(36).substr(2, 9)
+                    }));
+                    return { ...s, materials: [...s.materials, ...importedMaterials] };
+                } else {
+                    const importedAssignments = selectedItems.map(item => ({
+                        id: Math.random().toString(36).substr(2, 9),
+                        title: item.title,
+                        dueDate: item.dueDate,
+                        submissionsCount: 0,
+                    }));
+                    return { ...s, assignments: [...s.assignments, ...importedAssignments] };
+                }
+            });
+            return { ...prev, sessions: newSessions };
+        });
+
+        toast.success(`Đã thêm bài từ thư viện vào buổi học!`);
+        setImportModal({ isOpen: false, type: 'material', targetSession: null });
+    };
+
+    const handleSaveAssignment = (assignmentData) => {
+        setClassData(prev => {
+            const newSessions = prev.sessions.map(s => {
+                if (s.scheduleId !== createAssignmentSession) return s;
+                const newAssignment = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    title: assignmentData.title,
+                    dueDate: assignmentData.dueDate || 'Chưa thiết lập',
+                    status: assignmentData.status,
+                    submissionsCount: 0,
+                    description: assignmentData.description
+                };
+                return { ...s, assignments: [...s.assignments, newAssignment] };
+            });
+            return { ...prev, sessions: newSessions };
+        });
+        setIsCreateAssignmentOpen(false);
+        setCreateAssignmentSession(null);
+        toast.success("Tạo bài tập thành công!");
+    };
+
+    const handleToggleSession = (id) => {
+        setExpandedSessionId(prev => prev === id ? null : id);
     };
 
     /* --- derived --- */
@@ -293,6 +420,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
         .reverse();
 
     const futureSessions = classData.sessions.filter(s => isFuture(s.date));
+
+    // Stats
+    const materialsCount = classData.sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
+    const assignmentsCount = classData.sessions.reduce((acc, s) => acc + (s.assignments?.length || 0), 0);
 
     return (
         <div className="class-detail">
@@ -367,10 +498,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         Học sinh ({students.length})
                     </button>
                     <button
-                        className={`cd-tab-btn ${activeTab === 'materials' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('materials')}
+                        className={`cd-tab-btn ${activeTab === 'roadmap' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('roadmap')}
                     >
-                        Tài liệu học
+                        Lộ trình học ({classData.sessions.length} buổi)
                     </button>
                 </div>
 
@@ -413,7 +544,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             <tr key={session.scheduleId}>
                                                                 <td>
                                                                     <div className="att-date-cell">
-                                                                        <span className="att-session-num">Buổi {pastSessions.length - idx}</span>
+                                                                        <span className="att-session-num">Buổi {session.sessionNum} - {session.title}</span>
                                                                         <span className="att-session-date">
                                                                             {session.dayLabel}, {session.date}
                                                                         </span>
@@ -463,7 +594,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                             <Lock size={13} />
                                             <span>
                                                 {futureSessions.length} buổi sắp tới chưa mở điểm danh
-                                                &nbsp;(buổi gần nhất: {futureSessions[0].dayLabel}, {futureSessions[0].date})
+                                                &nbsp;(buổi gần nhất: Buổi {futureSessions[0].sessionNum})
                                             </span>
                                         </div>
                                     )}
@@ -570,7 +701,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         <>
                                             <div className="cd-next-session">
                                                 <CalendarClock size={14} />
-                                                <span>Buổi tiếp theo: {futureSessions[0].dayLabel}, {futureSessions[0].date}</span>
+                                                <span>Buổi tiếp theo: Buổi {futureSessions[0].sessionNum} - {futureSessions[0].date}</span>
                                             </div>
                                             {/* Disabled — chưa đến ngày */}
                                             <button className="cd-btn-attendance" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
@@ -675,71 +806,159 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                     )}
 
-                    {activeTab === 'materials' && (
-                        <div className="cd-materials-tab">
-                            <div className="cd-materials-header">
-                                <h2>Tài liệu học tập</h2>
-                                {!isTA && (
-                                    <button className="btn-upload-material" onClick={() => setUploadModalOpen(true)}>
-                                        <Plus size={18} /> Tải lên tài liệu mới
-                                    </button>
-                                )}
+                    {/* ─── TAB: ROADMAP ─── */}
+                    {activeTab === 'roadmap' && (
+                        <div className="cd-roadmap-tab" style={{ '--accent': '#3b82f6' }}>
+                            <div style={{ marginBottom: 16 }}>
+                                <h2>Lộ trình học & Tài liệu</h2>
+                                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: 4 }}>Quản lý bài giảng và bài tập theo từng buổi học. Gồm {materialsCount} tài liệu và {assignmentsCount} bài tập.</p>
                             </div>
 
-                            {materials && materials.length > 0 ? (
-                                <div className="material-items-grid">
-                                    {materials.map(item => (
-                                        <div
-                                            key={item.id}
-                                            className="material-card"
-                                            onClick={() => setDetailMaterial(item)}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <div className="material-icon">{getFileIcon(item.type)}</div>
-                                            <div className="material-info">
-                                                <h4 className="material-name">{item.name}</h4>
-                                                <div className="material-meta">
-                                                    <span>{item.size}</span>
-                                                    <span className="dot">•</span>
-                                                    <span>{item.uploadDate}</span>
-                                                    {item.description && (
-                                                        <>
-                                                            <span className="dot">•</span>
-                                                            <span style={{ fontStyle: 'italic', maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.description}</span>
-                                                        </>
-                                                    )}
+                            {classData.sessions.map((session) => {
+                                const isExpanded = expandedSessionId === session.scheduleId;
+                                const mats = session.materials || [];
+                                const asms = session.assignments || [];
+                                const hasContent = mats.length > 0 || asms.length > 0;
+
+                                return (
+                                    <div key={session.scheduleId} className="cd-session-card">
+                                        <div className="cd-session-header" onClick={() => handleToggleSession(session.scheduleId)}>
+                                            <div className="cd-session-info">
+                                                <div className="cd-session-num">Buổi {session.sessionNum}</div>
+                                                <div className="cd-session-title">
+                                                    <h4>{session.title || `Buổi học ${session.date}`}</h4>
+                                                    <div className="cd-session-meta">
+                                                        <Calendar size={13} /> {session.dayLabel}, {session.date}
+                                                        <span className="dot">•</span>
+                                                        <Clock size={13} /> {session.time}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="material-actions" onClick={(e) => e.stopPropagation()}>
-                                                <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}>
-                                                    <Download size={18} />
-                                                </button>
-                                                {!isTA && (
-                                                    <>
-                                                        <button className="btn-icon text-blue-600 hover:bg-blue-50" title="Chỉnh sửa" onClick={() => setEditMaterial(item)}>
-                                                            <Edit2 size={18} />
-                                                        </button>
-                                                        <button className="btn-icon text-red-600 hover:bg-red-50" title="Xóa" onClick={() => setDeleteMaterialId(item.id)}>
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </>
+                                            <div className="cd-session-status">
+                                                {hasContent && (
+                                                    <span className="cd-session-item-badge">
+                                                        {mats.length > 0 && <><FileText size={12} style={{ marginRight: 4 }} /> {mats.length}</>}
+                                                        {mats.length > 0 && asms.length > 0 && <span style={{ margin: '0 4px', color: '#cbd5e1' }}>|</span>}
+                                                        {asms.length > 0 && <><CheckSquare size={12} style={{ marginRight: 4 }} /> {asms.length}</>}
+                                                    </span>
                                                 )}
+                                                {isExpanded ? <ChevronUp size={20} color="#64748b" /> : <ChevronDown size={20} color="#64748b" />}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="cd-empty-state">
-                                    <FileText size={48} className="empty-icon" />
-                                    <h3>Chưa có tài liệu nào</h3>
-                                    <p>Tải lên giáo trình, bài tập hoặc video tham khảo cho lớp học này.</p>
-                                    {!isTA && (
-                                        <button className="btn-upload-material mt-4" onClick={() => setUploadModalOpen(true)}>
-                                            <Plus size={18} /> Tải lên tài liệu
-                                        </button>
-                                    )}
-                                </div>
-                            )}
+
+                                        {isExpanded && (
+                                            <div className="cd-session-content">
+                                                {/* Materials Section */}
+                                                <div className="cd-session-section">
+                                                    <div className="cd-session-section-header">
+                                                        <h5><BookOpen size={16} /> Tài liệu bài giảng</h5>
+                                                        {!isTA && (
+                                                            <div style={{ display: 'flex' }}>
+                                                                <button
+                                                                    className="cd-btn-import-lib"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setImportModal({ isOpen: true, type: 'material', targetSession: session.scheduleId });
+                                                                    }}
+                                                                >
+                                                                    <Library size={14} /> Thêm từ Thư viện
+                                                                </button>
+                                                                <button className="cd-btn-add-item" style={{ marginLeft: 12 }} onClick={() => {
+                                                                    setUploadTargetSession(session.scheduleId);
+                                                                    setUploadModalOpen(true);
+                                                                }}>
+                                                                    <Plus size={14} /> Tải lên mới
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {mats.length > 0 ? (
+                                                        <div className="material-items-grid">
+                                                            {mats.map(item => (
+                                                                <div key={item.id} className="material-card" onClick={() => setDetailMaterial(item)} style={{ cursor: 'pointer' }}>
+                                                                    <div className="material-icon">{getFileIcon(item.type)}</div>
+                                                                    <div className="material-info">
+                                                                        <h4 className="material-name">{item.name}</h4>
+                                                                        <div className="material-meta"><span>{item.size}</span><span className="dot">•</span><span>{item.uploadDate}</span></div>
+                                                                    </div>
+                                                                    <div className="material-actions" onClick={(e) => e.stopPropagation()}>
+                                                                        <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}><Download size={16} /></button>
+                                                                        {!isTA && (
+                                                                            <>
+                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => { setEditTargetSession(session.scheduleId); setEditMaterial(item); }}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.scheduleId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có tài liệu đính kèm.</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Assignments Section */}
+                                                <div className="cd-session-section" style={{ marginTop: 32 }}>
+                                                    <div className="cd-session-section-header">
+                                                        <h5><CheckSquare size={16} /> Bài tập về nhà</h5>
+                                                        {!isTA && (
+                                                            <div style={{ display: 'flex' }}>
+                                                                <button
+                                                                    className="cd-btn-import-lib"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setImportModal({ isOpen: true, type: 'assignment', targetSession: session.scheduleId });
+                                                                    }}
+                                                                >
+                                                                    <Library size={14} /> Thêm từ Bộ đề
+                                                                </button>
+                                                                <button
+                                                                    className="cd-btn-add-item"
+                                                                    style={{ marginLeft: 12 }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCreateAssignmentSession(session.scheduleId);
+                                                                        setIsCreateAssignmentOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <Plus size={14} /> Tạo bài tập
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {asms.length > 0 ? (
+                                                        <div className="material-items-grid">
+                                                            {asms.map(asm => (
+                                                                <div key={asm.id} className="material-card" style={{ borderLeft: '3px solid #f59e0b', cursor: 'pointer' }} onClick={() => setDetailAssignment(asm)}>
+                                                                    <div className="material-icon" style={{ color: '#f59e0b' }}><CheckSquare size={24} /></div>
+                                                                    <div className="material-info">
+                                                                        <h4 className="material-name">{asm.title}</h4>
+                                                                        <div className="material-meta"><Clock size={12} /> Hạn: {asm.dueDate} &nbsp;•&nbsp; {asm.submissionsCount} bài nộp</div>
+                                                                    </div>
+                                                                    <div className="material-actions" onClick={(e) => e.stopPropagation()}>
+                                                                        <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Chấm bài" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                                                                            Chấm bài
+                                                                        </Link>
+                                                                        {!isTA && (
+                                                                            <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.scheduleId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có bài tập đính kèm.</p>
+                                                    )}
+                                                </div>
+
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
@@ -790,7 +1009,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 editMaterial && (
                     <EditMaterialModal
                         isOpen={!!editMaterial}
-                        onClose={() => setEditMaterial(null)}
+                        onClose={() => { setEditMaterial(null); setEditTargetSession(null); }}
                         onUpdate={handleUpdateMaterial}
                         materialData={editMaterial}
                     />
@@ -802,8 +1021,21 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 deleteMaterialId && (
                     <DeleteMaterialModal
                         isOpen={!!deleteMaterialId}
-                        onClose={() => setDeleteMaterialId(null)}
+                        onClose={() => { setDeleteMaterialId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteMaterial}
+                        itemName="tài liệu"
+                    />
+                )
+            }
+
+            {/* Delete Assignment Modal */}
+            {
+                deleteAssignmentId && (
+                    <DeleteMaterialModal
+                        isOpen={!!deleteAssignmentId}
+                        onClose={() => { setDeleteAssignmentId(null); setDeleteTargetSession(null); }}
+                        onDelete={handleDeleteAssignment}
+                        itemName="bài tập"
                     />
                 )
             }
@@ -819,7 +1051,38 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     />
                 )
             }
-        </div >
+
+            {/* Import Library Modal */}
+            {importModal.isOpen && (
+                <ImportLibraryModal
+                    isOpen={importModal.isOpen}
+                    onClose={() => setImportModal({ isOpen: false, type: 'material', targetSession: null })}
+                    onImport={handleImportFromLibrary}
+                    type={importModal.type}
+                    libraryItems={importModal.type === 'material' ? LIBRARY_MATERIALS : LIBRARY_ASSIGNMENTS}
+                />
+            )}
+
+            {/* Create Assignment Modal */}
+            {isCreateAssignmentOpen && (
+                <CreateAssignmentModal
+                    isOpen={isCreateAssignmentOpen}
+                    onClose={() => { setIsCreateAssignmentOpen(false); setCreateAssignmentSession(null); }}
+                    onSave={handleSaveAssignment}
+                    classes={[{ id: classData.id, name: classData.name }]} /* Only allow current class */
+                />
+            )}
+
+            {/* Assignment Detail Modal */}
+            {detailAssignment && (
+                <AssignmentDetailModal
+                    isOpen={!!detailAssignment}
+                    onClose={() => setDetailAssignment(null)}
+                    assignment={{ ...detailAssignment, className: classData.name }}
+                    onDownload={handleDownloadMaterial}
+                />
+            )}
+        </div>
     );
 };
 
