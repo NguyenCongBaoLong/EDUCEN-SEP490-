@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     /// <inheritdoc />
@@ -11,6 +13,32 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "CenterProfiles",
+                columns: table => new
+                {
+                    CenterProfileId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LogoUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Tagline = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FooterTagline = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IntroTitle = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IntroDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    City = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Website = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    QuoteText = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Copyright = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CenterProfiles", x => x.CenterProfileId);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
@@ -39,19 +67,87 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 });
 
             migrationBuilder.CreateTable(
+                name: "CenterHeroImages",
+                columns: table => new
+                {
+                    HeroImageId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CenterProfileId = table.Column<int>(type: "int", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CenterHeroImages", x => x.HeroImageId);
+                    table.ForeignKey(
+                        name: "FK_CenterHeroImages_CenterProfiles_CenterProfileId",
+                        column: x => x.CenterProfileId,
+                        principalTable: "CenterProfiles",
+                        principalColumn: "CenterProfileId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CenterHighlights",
+                columns: table => new
+                {
+                    HighlightId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CenterProfileId = table.Column<int>(type: "int", nullable: false),
+                    Icon = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Text = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CenterHighlights", x => x.HighlightId);
+                    table.ForeignKey(
+                        name: "FK_CenterHighlights_CenterProfiles_CenterProfileId",
+                        column: x => x.CenterProfileId,
+                        principalTable: "CenterProfiles",
+                        principalColumn: "CenterProfileId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CenterImages",
+                columns: table => new
+                {
+                    ImageId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TenantId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CenterProfileId = table.Column<int>(type: "int", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SortOrder = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CenterImages", x => x.ImageId);
+                    table.ForeignKey(
+                        name: "FK_CenterImages_CenterProfiles_CenterProfileId",
+                        column: x => x.CenterProfileId,
+                        principalTable: "CenterProfiles",
+                        principalColumn: "CenterProfileId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
                     UserId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AccountStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RoleId = table.Column<int>(type: "int", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsAccountSent = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -105,7 +201,10 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 {
                     UserId = table.Column<int>(type: "int", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EnrollmentStatus = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    EnrollmentStatus = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Grade = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -301,7 +400,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Score = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     TeacherComment = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    GradedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    GradedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -353,6 +453,18 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         principalColumn: "UserId");
                 });
 
+            migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "RoleId", "RoleName" },
+                values: new object[,]
+                {
+                    { 1, "Admin" },
+                    { 2, "Teacher" },
+                    { 3, "Student" },
+                    { 4, "Parent" },
+                    { 5, "Assistant" }
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Assignments_ClassId",
                 table: "Assignments",
@@ -372,6 +484,21 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "IX_Attendances_UpdatedByNavigationUserId",
                 table: "Attendances",
                 column: "UpdatedByNavigationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CenterHeroImages_CenterProfileId",
+                table: "CenterHeroImages",
+                column: "CenterProfileId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CenterHighlights_CenterProfileId",
+                table: "CenterHighlights",
+                column: "CenterProfileId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CenterImages_CenterProfileId",
+                table: "CenterImages",
+                column: "CenterProfileId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Classes_AssistantId",
@@ -431,6 +558,15 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "Attendances");
 
             migrationBuilder.DropTable(
+                name: "CenterHeroImages");
+
+            migrationBuilder.DropTable(
+                name: "CenterHighlights");
+
+            migrationBuilder.DropTable(
+                name: "CenterImages");
+
+            migrationBuilder.DropTable(
                 name: "ClassStudent");
 
             migrationBuilder.DropTable(
@@ -444,6 +580,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             migrationBuilder.DropTable(
                 name: "Schedules");
+
+            migrationBuilder.DropTable(
+                name: "CenterProfiles");
 
             migrationBuilder.DropTable(
                 name: "Parents");

@@ -9,9 +9,9 @@ public partial class User
     [Key]
     public int UserId { get; set; }
 
-    public string Username { get; set; } = null!;
+    public string? Username { get; set; } = null!;
 
-    public string PasswordHash { get; set; } = null!;
+    public string? PasswordHash { get; set; } = null!;
 
     public string AccountStatus { get; set; } = null!;
 
@@ -22,6 +22,7 @@ public partial class User
     public string? Email { get; set; }
 
     public string? Address { get; set; }
+    public bool IsAccountSent { get; set; } = false;
     public virtual Assistant? Assistant { get; set; }
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();

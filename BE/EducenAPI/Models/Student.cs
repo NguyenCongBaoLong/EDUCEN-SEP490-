@@ -15,6 +15,11 @@ public partial class Student
 
     public string? EnrollmentStatus { get; set; }
 
+    public string? Grade { get; set; }
+
+    public DateTime? DateOfBirth { get; set; }
+
+    public string? Gender { get; set; }
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
     public virtual User StudentNavigation { get; set; } = null!;

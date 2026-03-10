@@ -119,5 +119,63 @@ namespace EducenAPI.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        public async Task<GeneratedAccountDto> GenerateStudentAccount(int studentId)
+        {
+            var student = await _context.Students
+                .Include(s => s.StudentNavigation)
+                .FirstOrDefaultAsync(s => s.UserId == studentId);
+
+            if (student == null)
+                throw new Exception("Student not found");
+
+            var user = student.StudentNavigation;
+
+            if (!string.IsNullOrEmpty(user.Username))
+                throw new Exception("Student already has an account");
+
+            string username;
+            bool exist;
+
+            // Generate username using timestamp + check duplicate
+            do
+            {
+                username = $"stu{studentId}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+                exist = await _context.Users
+                    .AnyAsync(x => x.Username == username);
+
+                if (exist)
+                {
+                    await Task.Delay(1000);
+                    // đợi 1 giây để timestamp khác
+                }
+
+            } while (exist);
+
+            // Generate password
+            var password = GenerateRandomPassword();
+
+            user.Username = username;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            user.AccountStatus = "Active";
+            user.IsAccountSent = false;
+
+            await _context.SaveChangesAsync();
+
+            return new GeneratedAccountDto
+            {
+                Username = username,
+                Password = password
+            };
+        }
+
+        private string GenerateRandomPassword()
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
+
+            return new string(Enumerable.Repeat(chars, 8)
+                .Select(s => s[Random.Shared.Next(s.Length)]).ToArray());
+        }
     }
 }

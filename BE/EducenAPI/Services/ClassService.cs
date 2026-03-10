@@ -1,4 +1,5 @@
 using EducenAPI.DTOs.Classes;
+using EducenAPI.DTOs.Students;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -251,6 +252,72 @@ namespace EducenAPI.Services
             existingClass.Students.Remove(student);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<bool> ClassExistsAsync(int id)
+        {
+            return await _context.Classes.AnyAsync(c => c.ClassId == id);
+        }
+
+        public async Task<bool> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Check if username or email already exists
+                var existingUser = await _context.Users
+                    .AnyAsync(u => u.Username == studentDto.Username || u.Email == studentDto.Email);
+
+                if (existingUser)
+                {
+                    return false; // Student already exists
+                }
+
+                // Get the class
+                var existingClass = await _context.Classes.FindAsync(classId);
+                if (existingClass == null)
+                {
+                    return false;
+                }
+
+                // Create user account
+                var user = new User
+                {
+                    Username = studentDto.Username,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(studentDto.Password),
+                    RoleId = (await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Student"))?.RoleId ?? 1,
+                    FullName = studentDto.FullName,
+                    Email = studentDto.Email,
+                    PhoneNumber = studentDto.PhoneNumber,
+                    AccountStatus = "Active"
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                // Create student profile
+                var student = new Student
+                {
+                    UserId = user.UserId,
+                    EnrollmentStatus = studentDto.EnrollmentStatus
+                };
+
+                _context.Students.Add(student);
+                await _context.SaveChangesAsync();
+
+                // Assign student to class
+                existingClass.Students.Add(student);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
         }
     }
 }
