@@ -54,6 +54,7 @@ public partial class EducenV2Context : DbContext
 
 
         ConfigureEntities(modelBuilder);
+        SeedRoles(modelBuilder);
         // Thêm Global Filter Multi-Tenant
         ApplyMultiTenantFilter(modelBuilder);
     }
@@ -177,4 +178,15 @@ public partial class EducenV2Context : DbContext
         .HasForeignKey(a => a.StudentId)
         .OnDelete(DeleteBehavior.NoAction);
         }
+
+    private void SeedRoles(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Role>().HasData(
+            new Role { RoleId = 1, RoleName = "Admin" },
+            new Role { RoleId = 2, RoleName = "Teacher" },
+            new Role { RoleId = 3, RoleName = "Student" },
+            new Role { RoleId = 4, RoleName = "Parent" },
+            new Role { RoleId = 5, RoleName = "Assistant" }
+        );
+    }
 }
