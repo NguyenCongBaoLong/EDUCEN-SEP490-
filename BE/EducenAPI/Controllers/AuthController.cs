@@ -74,5 +74,19 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("generate-student-account/{studentId}")]
+        public async Task<IActionResult> GenerateStudentAccount(int studentId)
+        {
+            try
+            {
+                var result = await _auth.GenerateStudentAccount(studentId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

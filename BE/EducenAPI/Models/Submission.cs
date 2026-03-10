@@ -23,6 +23,7 @@ public partial class Submission
     public string? TeacherComment { get; set; }
 
     public DateTime? GradedAt { get; set; }
+    public bool IsPublished { get; set; } = false;
 
     public virtual Assignment Asm { get; set; } = null!;
 

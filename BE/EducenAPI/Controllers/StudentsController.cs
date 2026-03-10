@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Students;
+﻿using EducenAPI.DTOs.Students;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,19 +6,26 @@ using Microsoft.AspNetCore.Http;
 using System.Data;
 using System.Text;
 using ExcelDataReader;
+using EducenAPI.Persistence.Contexts;
+using EducenAPI.Ultils;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class StudentsController : ControllerBase
     {
         private readonly IStudentService _studentService;
+        private readonly EducenV2Context _context;
+        private readonly MailService _mailService;
 
-        public StudentsController(IStudentService studentService)
+        public StudentsController(IStudentService studentService, EducenV2Context context, MailService mailService)
         {
             _studentService = studentService;
+            _context = context;
+            _mailService = mailService;
         }
 
         // GET: api/Students
@@ -118,7 +125,39 @@ namespace EducenAPI.Controllers
                 if (worksheet == null)
                     return BadRequest(new { message = "No worksheet found in Excel file" });
 
-                // Process Excel data
+                // Validate template headers
+                var headerRow = worksheet.Rows[0];
+                var actualHeaders = new List<string>();
+                for (int col = 0; col < headerRow.ItemArray.Length; col++)
+                {
+                    actualHeaders.Add(headerRow.ItemArray[col]?.ToString()?.Trim() ?? "");
+                }
+
+                var validationResult = ImportTemplate.ValidateHeaders(actualHeaders);
+                if (!validationResult.IsValid)
+                {
+                    return BadRequest(new { 
+                        message = $"Invalid template format: {validationResult.ErrorMessage}",
+                        templateInfo = new {
+                            templateName = ImportTemplate.TEMPLATE_NAME,
+                            requiredHeaders = ImportTemplate.REQUIRED_HEADERS,
+                            example = "Please use the correct template with headers: Username, Full Name, Email, Phone Number"
+                        }
+                    });
+                }
+
+                // Create column index mapping
+                var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int col = 0; col < actualHeaders.Count; col++)
+                {
+                    var normalizedHeader = actualHeaders[col].ToLower().Trim();
+                    if (ImportTemplate.HEADER_MAPPING.TryGetValue(normalizedHeader, out var mappedHeader))
+                    {
+                        columnMapping[mappedHeader] = col;
+                    }
+                }
+
+                // Process Excel data using column mapping
                 for (int row = 1; row < worksheet.Rows.Count; row++)
                 {
                     importResults.Total++;
@@ -127,20 +166,40 @@ namespace EducenAPI.Controllers
                     {
                         var rowData = worksheet.Rows[row];
                         
-                        if (rowData.ItemArray.Length < 3)
+                        // Extract data using column mapping
+                        var username = columnMapping.ContainsKey("Username") 
+                            ? rowData.ItemArray[columnMapping["Username"]]?.ToString()?.Trim() ?? ""
+                            : "";
+                            
+                        var fullName = columnMapping.ContainsKey("FullName") 
+                            ? rowData.ItemArray[columnMapping["FullName"]]?.ToString()?.Trim() ?? ""
+                            : "";
+                            
+                        var email = columnMapping.ContainsKey("Email") 
+                            ? rowData.ItemArray[columnMapping["Email"]]?.ToString()?.Trim() ?? ""
+                            : "";
+                            
+                        var phoneNumber = columnMapping.ContainsKey("PhoneNumber") 
+                            ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
+                            : null;
+
+                        // Validate required fields
+                        if (string.IsNullOrWhiteSpace(username) || 
+                            string.IsNullOrWhiteSpace(fullName) || 
+                            string.IsNullOrWhiteSpace(email))
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Insufficient data columns (need at least Username, Full Name, Email)");
+                            importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
                             continue;
                         }
 
                         var createStudentDto = new CreateStudentDto
                         {
-                            Username = rowData.ItemArray[0]?.ToString()?.Trim() ?? "",
-                            FullName = rowData.ItemArray[1]?.ToString()?.Trim() ?? "",
-                            Email = rowData.ItemArray[2]?.ToString()?.Trim() ?? "",
-                            PhoneNumber = rowData.ItemArray.Length > 3 ? rowData.ItemArray[3]?.ToString()?.Trim() : null,
-                            Password = (rowData.ItemArray[0]?.ToString()?.Trim() ?? "") + "123", // Default password
+                            Username = username,
+                            FullName = fullName,
+                            Email = email,
+                            PhoneNumber = phoneNumber,
+                            Password = username + "123", // Default password: username + "123"
                             EnrollmentStatus = "Active"
                         };
 
@@ -158,7 +217,11 @@ namespace EducenAPI.Controllers
                 {
                     message = "Import completed",
                     importResults,
-                    defaultPasswordNote = "Default passwords are: username + '123'"
+                    defaultPasswordNote = "Default passwords are: username + '123'",
+                    templateInfo = new {
+                        templateName = ImportTemplate.TEMPLATE_NAME,
+                        mappedHeaders = columnMapping.Keys.ToList()
+                    }
                 });
             }
             catch (Exception ex)
@@ -166,7 +229,41 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = $"Import failed: {ex.Message}" });
             }
         }
+        [HttpPost("send-account/{studentId}")]
+        public async Task<IActionResult> SendAccount(int studentId)
+        {
+            var user = await _context.Users
+        .Include(x => x.Student)
+        .FirstOrDefaultAsync(x => x.UserId == studentId);
 
+            if (user == null)
+                return NotFound("User không tồn tại");
+
+            if (user.Student == null || string.IsNullOrEmpty(user.Student.Email))
+                return BadRequest("Student chưa có email");
+
+            // tạo password mới
+            string newPassword = GeneratePassword();
+
+            // hash password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+
+            user.IsAccountSent = true;
+            await _context.SaveChangesAsync();
+
+            // gửi mail
+            await _mailService.SendStudentAccount(user.Student.Email, user.Username, newPassword);
+
+            return Ok("Đã gửi tài khoản thành công");
+        }
+        private string GeneratePassword(int length = 8)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var random = new Random();
+
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
         private sealed class ImportResults
         {
             public int Total { get; set; }

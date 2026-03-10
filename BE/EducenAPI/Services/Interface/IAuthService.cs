@@ -8,6 +8,7 @@ namespace EducenAPI.Services.Interface
         Task Register(RegisterDto dto);
         Task<string> RequestResetPassword(ResetPasswordDto dto);
         Task<bool> ConfirmResetPassword(ResetPasswordConfirmDto dto);
+        Task<GeneratedAccountDto> GenerateStudentAccount(int studentId);
     }
 }
 

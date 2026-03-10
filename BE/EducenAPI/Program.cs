@@ -10,43 +10,67 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.Models;
 using Microsoft.OpenApi.Models;
+using EducenAPI.Ultils;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Educen API",
-        Version = "v1"
-    });
+builder.Services.AddScoped<MailService>();
 
-    // JWT Auth
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+// ── Swagger ───────────────────────────────────────────────────────────────
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
+    { 
+        Title = "EducenAPI", 
+        Version = "v1" 
+    });
+    
+    // Add JWT Authentication
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter JWT token. Example: Bearer {your token}"
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 12345abcdef\""
     });
 
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    // API KEY (System API)
+    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
     {
+        Name = "X-API-KEY",
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Description = "Enter system API key"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        },
         {
             new OpenApiSecurityScheme
             {
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
+                    Id = "ApiKey"
                 }
             },
-            new string[] {}
+            Array.Empty<string>()
         }
     });
 });
@@ -133,9 +157,14 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "EducenAPI V1");
+        c.RoutePrefix = "swagger";
+    });
 }
 app.UseHttpsRedirection();
+app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseMiddleware<TenantResolver>();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
