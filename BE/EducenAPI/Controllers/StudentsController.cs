@@ -118,7 +118,39 @@ namespace EducenAPI.Controllers
                 if (worksheet == null)
                     return BadRequest(new { message = "No worksheet found in Excel file" });
 
-                // Process Excel data
+                // Validate template headers
+                var headerRow = worksheet.Rows[0];
+                var actualHeaders = new List<string>();
+                for (int col = 0; col < headerRow.ItemArray.Length; col++)
+                {
+                    actualHeaders.Add(headerRow.ItemArray[col]?.ToString()?.Trim() ?? "");
+                }
+
+                var validationResult = ImportTemplate.ValidateHeaders(actualHeaders);
+                if (!validationResult.IsValid)
+                {
+                    return BadRequest(new { 
+                        message = $"Invalid template format: {validationResult.ErrorMessage}",
+                        templateInfo = new {
+                            templateName = ImportTemplate.TEMPLATE_NAME,
+                            requiredHeaders = ImportTemplate.REQUIRED_HEADERS,
+                            example = "Please use the correct template with headers: Username, Full Name, Email, Phone Number"
+                        }
+                    });
+                }
+
+                // Create column index mapping
+                var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                for (int col = 0; col < actualHeaders.Count; col++)
+                {
+                    var normalizedHeader = actualHeaders[col].ToLower().Trim();
+                    if (ImportTemplate.HEADER_MAPPING.TryGetValue(normalizedHeader, out var mappedHeader))
+                    {
+                        columnMapping[mappedHeader] = col;
+                    }
+                }
+
+                // Process Excel data using column mapping
                 for (int row = 1; row < worksheet.Rows.Count; row++)
                 {
                     importResults.Total++;
@@ -127,20 +159,40 @@ namespace EducenAPI.Controllers
                     {
                         var rowData = worksheet.Rows[row];
                         
-                        if (rowData.ItemArray.Length < 3)
+                        // Extract data using column mapping
+                        var username = columnMapping.ContainsKey("Username") 
+                            ? rowData.ItemArray[columnMapping["Username"]]?.ToString()?.Trim() ?? ""
+                            : "";
+                            
+                        var fullName = columnMapping.ContainsKey("FullName") 
+                            ? rowData.ItemArray[columnMapping["FullName"]]?.ToString()?.Trim() ?? ""
+                            : "";
+                            
+                        var email = columnMapping.ContainsKey("Email") 
+                            ? rowData.ItemArray[columnMapping["Email"]]?.ToString()?.Trim() ?? ""
+                            : "";
+                            
+                        var phoneNumber = columnMapping.ContainsKey("PhoneNumber") 
+                            ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
+                            : null;
+
+                        // Validate required fields
+                        if (string.IsNullOrWhiteSpace(username) || 
+                            string.IsNullOrWhiteSpace(fullName) || 
+                            string.IsNullOrWhiteSpace(email))
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Insufficient data columns (need at least Username, Full Name, Email)");
+                            importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
                             continue;
                         }
 
                         var createStudentDto = new CreateStudentDto
                         {
-                            Username = rowData.ItemArray[0]?.ToString()?.Trim() ?? "",
-                            FullName = rowData.ItemArray[1]?.ToString()?.Trim() ?? "",
-                            Email = rowData.ItemArray[2]?.ToString()?.Trim() ?? "",
-                            PhoneNumber = rowData.ItemArray.Length > 3 ? rowData.ItemArray[3]?.ToString()?.Trim() : null,
-                            Password = (rowData.ItemArray[0]?.ToString()?.Trim() ?? "") + "123", // Default password
+                            Username = username,
+                            FullName = fullName,
+                            Email = email,
+                            PhoneNumber = phoneNumber,
+                            Password = username + "123", // Default password: username + "123"
                             EnrollmentStatus = "Active"
                         };
 
@@ -158,7 +210,11 @@ namespace EducenAPI.Controllers
                 {
                     message = "Import completed",
                     importResults,
-                    defaultPasswordNote = "Default passwords are: username + '123'"
+                    defaultPasswordNote = "Default passwords are: username + '123'",
+                    templateInfo = new {
+                        templateName = ImportTemplate.TEMPLATE_NAME,
+                        mappedHeaders = columnMapping.Keys.ToList()
+                    }
                 });
             }
             catch (Exception ex)
