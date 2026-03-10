@@ -1,5 +1,6 @@
 using EducenAPI.DTOs.Classes;
 using EducenAPI.DTOs.Students;
+using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -264,25 +265,25 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
-                        // Create student and assign to class
-                        var success = await _classService.ImportStudentToClassAsync(id, new CreateStudentDto
+                        // Add existing student to class (validate student must exist first)
+                        var result = await _classService.ImportStudentToClassAsync(id, new CreateStudentDto
                         {
                             Username = username,
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
-                            Password = username + "123", // Default password: username + "123"
+                            Password = string.Empty,
                             EnrollmentStatus = "Active"
                         });
 
-                        if (success)
+                        if (result.Success)
                         {
                             importResults.Success++;
                         }
                         else
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Failed to import student (duplicate username/email or class assignment failed)");
+                            importResults.Errors.Add($"Row {row + 1}: {result.ErrorMessage}");
                         }
                     }
                     catch (Exception ex)

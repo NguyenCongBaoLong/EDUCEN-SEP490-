@@ -59,6 +59,10 @@ namespace EducenAPI.DTOs.Students
             get => _enrollmentStatus;
             set => _enrollmentStatus = value?.Trim();
         }
+
+        public string? Grade { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
     }
 
     public class UpdateStudentDto
@@ -79,6 +83,10 @@ namespace EducenAPI.DTOs.Students
         [StringLength(50, ErrorMessage = "Enrollment status cannot exceed 50 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Enrollment status cannot be only whitespace")]
         public string? EnrollmentStatus { get; set; }
+
+        public string? Grade { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
     }
 
     public class StudentDto
@@ -89,8 +97,10 @@ namespace EducenAPI.DTOs.Students
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
+        public string? Grade { get; set; }
         public string EnrollmentStatus { get; set; } = string.Empty;
         public string AccountStatus { get; set; } = string.Empty;
+        public bool IsAccountSent { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

@@ -171,7 +171,7 @@ const StudentTable = ({
                             <th>Học Sinh</th>
                             <th>Khối</th>
                             <th>Phụ Huynh</th>
-                            <th>Ngày Nhập Học</th>
+                            <th>Email</th>
                             <th>Trạng Thái</th>
                             <th>Tài Khoản</th>
                             <th className="text-right">Hành Động</th>
@@ -228,7 +228,11 @@ const StudentTable = ({
                                             )}
                                         </div>
                                     </td>
-                                    <td>{new Date(student.enrollmentDate).toLocaleDateString('vi-VN')}</td>
+                                    <td>
+                                        <div className="student-email" style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                                            {student.email || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>Chưa có email</span>}
+                                        </div>
+                                    </td>
                                     <td>
                                         <span className={`status-badge ${student.status}`}>
                                             {getStatusLabel(student.status)}

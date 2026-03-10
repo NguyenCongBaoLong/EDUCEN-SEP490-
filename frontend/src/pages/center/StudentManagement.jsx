@@ -50,19 +50,21 @@ const StudentManagement = () => {
     const fetchStudents = async () => {
         try {
             const res = await api.get('/Students');
-            const data = res.data.map((student, index) => ({
+            const data = res.data.map((student) => ({
                 id: student.userId.toString(),
                 name: student.fullName,
                 avatar: null,
                 email: student.email,
-                grade: 6,
-                dateOfBirth: '2010-01-01',
-                gender: 'male',
+                grade: student.grade || '',
+                dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',
+                gender: student.gender || 'male',
                 linkedParentIds: [],
                 address: student.address || '',
                 enrollmentDate: student.createdAt,
-                status: student.accountStatus === 'Active' ? 'active' : 'inactive', // Dùng cho nút Ban/Unlock account
-                accountSent: true, // Auto-enable Ban/Unlock button
+                status: student.isAccountSent
+                    ? (student.accountStatus === 'Active' ? 'active' : 'inactive')
+                    : 'inactive',
+                accountSent: student.isAccountSent ?? false,
                 notes: ''
             }));
             setStudentList(data);
@@ -151,6 +153,9 @@ const StudentManagement = () => {
                     fullName: studentData.name,
                     email: studentData.email || `${studentData.name.replace(/\s/g, '').toLowerCase()}@temp.com`,
                     enrollmentStatus: studentData.status,
+                    grade: studentData.grade ? studentData.grade.toString() : null,
+                    dateOfBirth: studentData.dateOfBirth || null,
+                    gender: studentData.gender || null,
                 };
                 if (studentData.phone) updatePayload.phoneNumber = studentData.phone;
 
@@ -164,7 +169,10 @@ const StudentManagement = () => {
                     password: `${username}123`,
                     fullName: studentData.name,
                     email: studentData.email || `${username}@temp.com`,
-                    enrollmentStatus: studentData.status
+                    enrollmentStatus: studentData.status,
+                    grade: studentData.grade ? studentData.grade.toString() : null,
+                    dateOfBirth: studentData.dateOfBirth || null,
+                    gender: studentData.gender || null,
                 };
                 if (studentData.phone) payload.phoneNumber = studentData.phone;
 
@@ -202,24 +210,42 @@ const StudentManagement = () => {
         }
     };
 
-    const handleSendAccount = (studentId) => {
-        setStudentList(studentList.map(s =>
+    const handleSendAccount = async (studentId) => {
+        // Optimistic update: cập nhật UI ngay, gửi API sau
+        setStudentList(prev => prev.map(s =>
             s.id === studentId
                 ? { ...s, accountSent: true, status: 'active' }
                 : s
         ));
-        toast.success("Đã gửi tài khoản cho học sinh!");
+        toast.success('Đã gửi tài khoản cho học sinh!');
+        try {
+            await api.post(`/Students/send-account/${studentId}`);
+        } catch (error) {
+            // Rollback nếu gửi thất bại
+            setStudentList(prev => prev.map(s =>
+                s.id === studentId
+                    ? { ...s, accountSent: false, status: 'inactive' }
+                    : s
+            ));
+            toast.error(error.response?.data?.message || error.response?.data || 'Gửi tài khoản thất bại');
+        }
     };
 
-    const handleBulkSendAccount = () => {
+    const handleBulkSendAccount = async () => {
         if (selectedStudentIds.length === 0) return;
-        setStudentList(studentList.map(s =>
-            selectedStudentIds.includes(s.id)
-                ? { ...s, accountSent: true, status: 'active' }
-                : s
-        ));
-        toast.success(`Đã gửi tài khoản cho ${selectedStudentIds.length} học sinh!`);
+        let successCount = 0;
+        let failCount = 0;
+        await Promise.allSettled(
+            selectedStudentIds.map(id =>
+                api.post(`/Students/send-account/${id}`)
+                    .then(() => { successCount++; })
+                    .catch(() => { failCount++; })
+            )
+        );
+        fetchStudents(); // refresh để lấy trạng thái mới nhất
         setSelectedStudentIds([]);
+        if (successCount > 0) toast.success(`Đã gửi tài khoản cho ${successCount} học sinh!`);
+        if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
     };
 
     const handleImportStudents = () => {

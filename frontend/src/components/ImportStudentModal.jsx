@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2, DownloadCloud } from 'lucide-react';
 import PropTypes from 'prop-types';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 import '../css/components/ImportStudentModal.css';
 
@@ -32,7 +33,7 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
         if (!f) return;
         const ext = f.name.split('.').pop().toLowerCase();
         if (!['xlsx', 'xls'].includes(ext)) {
-            alert('Chỉ hỗ trợ file Excel (.xlsx, .xls). Vui lòng tải mẫu để biết định dạng.');
+            toast.error('Chỉ hỗ trợ file Excel (.xlsx, .xls). Vui lòng tải mẫu để biết định dạng.');
             return;
         }
         setFile(f);
@@ -75,8 +76,15 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                 onImport();
             }
         } catch (err) {
-            const msg = err.response?.data?.message || 'Import thất bại, vui lòng thử lại.';
-            alert(`❌ ${msg}`);
+            let msg = err.response?.data?.message || 'Import thất bại, vui lòng thử lại.';
+
+            if (msg.includes('Invalid template format') || msg.includes('template')) {
+                msg = 'File Excel không đúng định dạng. Vui lòng tải file mẫu và giữ nguyên các cột bắt buộc: Username, FullName, Email.';
+            } else if (msg.includes('No worksheet')) {
+                msg = 'Không tìm thấy dữ liệu trong file Excel.';
+            }
+
+            toast.error(msg);
         } finally {
             setLoading(false);
         }

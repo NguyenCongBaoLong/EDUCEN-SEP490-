@@ -90,6 +90,7 @@ const ClassDetail = () => {
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [importResult, setImportResult] = useState(null); // { total, success, failed, errors[] }
 
     // ── Fetch class data ──
     const fetchClassData = async () => {
@@ -173,10 +174,37 @@ const ClassDetail = () => {
         if (file) setExcelFile(file);
     };
 
-    const handleExcelConfirm = () => {
-        alert(`File "${excelFile?.name}" đã chọn. Chức năng import Excel vào lớp cụ thể đang được phát triển.`);
-        setAddStudentModal(false);
-        setExcelFile(null);
+    const handleExcelConfirm = async () => {
+        if (!excelFile) return;
+        setActionLoading(true);
+        setImportResult(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', excelFile);
+            const res = await api.post(`/Classes/${classId}/import-students`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const data = res.data;
+            const result = {
+                total: data.importResults?.total ?? 0,
+                success: data.importResults?.success ?? 0,
+                failed: data.importResults?.failed ?? 0,
+                errors: data.importResults?.errors ?? []
+            };
+            setImportResult(result);
+            setExcelFile(null);
+            if (result.success > 0) {
+                await fetchStudents();
+                toast.success(`Import xong! ${result.success}/${result.total} học sinh được thêm vào lớp.`);
+            }
+            if (result.failed > 0 && result.success === 0) {
+                toast.error(`Import thất bại: ${result.failed} dòng bị lỗi.`);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Import thất bại, vui lòng thử lại.');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     const DAY_NAME_TO_NUMBER = {
@@ -339,7 +367,7 @@ const ClassDetail = () => {
                                         <tr>
                                             <th>HỌ VÀ TÊN</th>
                                             <th>EMAIL</th>
-                                            <th>TRẠNG THÁI</th>
+                                            <th>KHỐI</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -359,13 +387,13 @@ const ClassDetail = () => {
                                                 <td>
                                                     <span style={{
                                                         fontSize: '0.75rem',
-                                                        padding: '2px 8px',
+                                                        padding: '2px 10px',
                                                         borderRadius: 12,
-                                                        background: st.enrollmentStatus?.toLowerCase() === 'active' ? '#dcfce7' : '#f1f5f9',
-                                                        color: st.enrollmentStatus?.toLowerCase() === 'active' ? '#16a34a' : '#64748b',
+                                                        background: st.grade ? '#eff6ff' : '#f1f5f9',
+                                                        color: st.grade ? '#2563eb' : '#94a3b8',
                                                         fontWeight: 600
                                                     }}>
-                                                        {st.enrollmentStatus || '—'}
+                                                        {st.grade ? `Khối ${st.grade}` : '—'}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -558,43 +586,93 @@ const ClassDetail = () => {
                                 </>
                             ) : (
                                 <div className="cd-excel-panel">
-                                    <div
-                                        className={`cd-excel-drop${excelFile ? ' has-file' : ''}`}
-                                        onClick={() => excelInputRef.current?.click()}
-                                    >
-                                        <input
-                                            ref={excelInputRef}
-                                            type="file"
-                                            accept=".xlsx,.xls,.csv"
-                                            style={{ display: 'none' }}
-                                            onChange={handleExcelUpload}
-                                        />
-                                        {excelFile ? (
-                                            <>
-                                                <FileSpreadsheet size={36} className="cd-excel-icon ok" />
-                                                <p className="cd-excel-filename">{excelFile.name}</p>
-                                                <p className="cd-excel-hint">Nhấn để chọn file khác</p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload size={36} className="cd-excel-icon" />
-                                                <p className="cd-excel-title">Kéo thả hoặc nhấn để chọn file</p>
-                                                <p className="cd-excel-hint">Hỗ trợ: .xlsx, .xls, .csv</p>
-                                            </>
-                                        )}
-                                    </div>
+                                    {!importResult ? (
+                                        <>
+                                            <div
+                                                className={`cd-excel-drop${excelFile ? ' has-file' : ''}`}
+                                                onClick={() => excelInputRef.current?.click()}
+                                            >
+                                                <input
+                                                    ref={excelInputRef}
+                                                    type="file"
+                                                    accept=".xlsx,.xls"
+                                                    style={{ display: 'none' }}
+                                                    onChange={handleExcelUpload}
+                                                />
+                                                {excelFile ? (
+                                                    <>
+                                                        <FileSpreadsheet size={36} className="cd-excel-icon ok" />
+                                                        <p className="cd-excel-filename">{excelFile.name}</p>
+                                                        <p className="cd-excel-hint">Nhấn để chọn file khác</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload size={36} className="cd-excel-icon" />
+                                                        <p className="cd-excel-title">Kéo thả hoặc nhấn để chọn file</p>
+                                                        <p className="cd-excel-hint">Hỗ trợ: .xlsx, .xls</p>
+                                                    </>
+                                                )}
+                                            </div>
 
-                                    <div className="cd-excel-template">
-                                        <a href="#" onClick={e => e.preventDefault()}>Tải file mẫu Excel</a>
-                                        <span> — Điền đúng định dạng để tránh lỗi nhập liệu</span>
-                                    </div>
+                                            <div className="cd-excel-template" style={{ marginBottom: 8 }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                                    📋 File cần có cột <strong>Username</strong> — chỉ học sinh đã có trong hệ thống mới được thêm vào lớp.
+                                                </span>
+                                            </div>
 
-                                    {excelFile && (
-                                        <div className="delete-modal-footer">
-                                            <button className="btn-delete-cancel" onClick={() => setExcelFile(null)}>Hủy</button>
-                                            <button className="btn-delete-confirm" onClick={handleExcelConfirm}>
-                                                <Upload size={15} /> Xác nhận nhập
-                                            </button>
+                                            {excelFile && (
+                                                <div className="delete-modal-footer">
+                                                    <button className="btn-delete-cancel" onClick={() => setExcelFile(null)}>Hủy</button>
+                                                    <button
+                                                        className="btn-delete-confirm"
+                                                        onClick={handleExcelConfirm}
+                                                        disabled={actionLoading}
+                                                        style={actionLoading ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                                                    >
+                                                        {actionLoading
+                                                            ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Đang import...</>
+                                                            : <><Upload size={15} /> Xác nhận nhập</>
+                                                        }
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        // Import result view
+                                        <div style={{ padding: '0.5rem 0' }}>
+                                            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                                                <div style={{ flex: 1, textAlign: 'center', padding: '10px 8px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                                                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#16a34a' }}>{importResult.success}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#15803d' }}>Thêm thành công</div>
+                                                </div>
+                                                <div style={{ flex: 1, textAlign: 'center', padding: '10px 8px', background: importResult.failed > 0 ? '#fef2f2' : '#f8fafc', borderRadius: 8, border: `1px solid ${importResult.failed > 0 ? '#fecaca' : '#e2e8f0'}` }}>
+                                                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: importResult.failed > 0 ? '#dc2626' : '#94a3b8' }}>{importResult.failed}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: importResult.failed > 0 ? '#b91c1c' : '#94a3b8' }}>Thất bại</div>
+                                                </div>
+                                            </div>
+
+                                            {importResult.errors.length > 0 && (
+                                                <div style={{ maxHeight: 160, overflowY: 'auto', marginBottom: 10 }}>
+                                                    {importResult.errors.map((err, i) => (
+                                                        <div key={i} style={{
+                                                            padding: '5px 10px', background: '#fef2f2', borderRadius: 6,
+                                                            fontSize: '0.78rem', color: '#dc2626', marginBottom: 4
+                                                        }}>
+                                                            ⚠ {err}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="delete-modal-footer">
+                                                <button className="btn-delete-cancel" onClick={() => {
+                                                    setImportResult(null);
+                                                    setAddStudentModal(false);
+                                                }}>Đóng</button>
+                                                <button className="cd-btn-primary" onClick={() => setImportResult(null)}>
+                                                    Import thêm
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

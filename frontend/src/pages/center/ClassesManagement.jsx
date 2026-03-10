@@ -67,7 +67,7 @@ const ClassesManagement = () => {
                 teacherId: c.teacherId,
                 mainTeacher: c.teacherName ? { name: c.teacherName, initials: c.teacherName.substring(0, 2).toUpperCase() } : { name: '', initials: '' },
                 assistantId: c.assistantId,
-                assistant: c.assistantName ? { name: c.assistantName, initials: c.assistantName.substring(0, 2).toUpperCase() } : { name: '', initials: '' },
+                assistant: c.assistantName ? { name: c.assistantName, initials: c.assistantName.substring(0, 2).toUpperCase() } : null,
                 currentStudents: c.studentCount,
                 scheduleSlots: (c.scheduleSlots || c.ScheduleSlots || []).map(slot => ({
                     day: reverseDayMap[slot.dayOfWeek] || reverseDayMap[slot.DayOfWeek] || 'Thứ 2',

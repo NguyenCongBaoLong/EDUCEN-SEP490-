@@ -27,8 +27,10 @@ namespace EducenAPI.Services
                     Email = s.Email ?? "",
                     PhoneNumber = s.StudentNavigation.PhoneNumber,
                    Address = s.StudentNavigation.Address,
+                    Grade = s.Grade,
                     EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                     AccountStatus = s.StudentNavigation.AccountStatus,
+                    IsAccountSent = s.StudentNavigation.IsAccountSent,
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
@@ -47,8 +49,10 @@ namespace EducenAPI.Services
                     Email = s.Email ?? "",
                     PhoneNumber = s.StudentNavigation.PhoneNumber,
                     Address = s.StudentNavigation.Address,
+                    Grade = s.Grade,
                     EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                     AccountStatus = s.StudentNavigation.AccountStatus,
+                    IsAccountSent = s.StudentNavigation.IsAccountSent,
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
@@ -82,7 +86,8 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                AccountStatus = "Active"
+                AccountStatus = "Inactive", // Inactive until admin sends account via email
+                IsAccountSent = false
             };
 
             _context.Users.Add(user);
@@ -92,7 +97,10 @@ namespace EducenAPI.Services
             {
                 UserId = user.UserId,
                 Email = dto.Email,
-                EnrollmentStatus = dto.EnrollmentStatus ?? "Active"
+                EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
+                Grade = dto.Grade,
+                DateOfBirth = dto.DateOfBirth,
+                Gender = dto.Gender
             };
 
             _context.Students.Add(student);
@@ -105,8 +113,10 @@ namespace EducenAPI.Services
                 FullName = user.FullName ?? "",
                 Email = student.Email,
                 PhoneNumber = user.PhoneNumber,
+                Grade = student.Grade,
                 EnrollmentStatus = student.EnrollmentStatus ?? "Active",
                 AccountStatus = user.AccountStatus,
+                IsAccountSent = user.IsAccountSent,
                 CreatedAt = DateTime.Now
             };
         }
@@ -140,6 +150,15 @@ namespace EducenAPI.Services
 
             if (dto.EnrollmentStatus != null)
                 student.EnrollmentStatus = dto.EnrollmentStatus;
+
+            if (dto.Grade != null)
+                student.Grade = dto.Grade;
+
+            if (dto.DateOfBirth.HasValue)
+                student.DateOfBirth = dto.DateOfBirth;
+
+            if (dto.Gender != null)
+                student.Gender = dto.Gender;
 
             await _context.SaveChangesAsync();
             return true;

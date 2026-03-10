@@ -7,8 +7,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
 {
+    public class ImportStudentToClassResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
     public class ClassService : IClassService
     {
+
         private readonly EducenV2Context _context;
 
         public ClassService(EducenV2Context context)
@@ -335,65 +342,36 @@ namespace EducenAPI.Services
             return await _context.Classes.AnyAsync(c => c.ClassId == id);
         }
 
-        public async Task<bool> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto)
+        public async Task<ImportStudentToClassResult> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Look up the existing student by username
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == studentDto.Username);
 
-            try
-            {
-                // Check if username or email already exists
-                var existingUser = await _context.Users
-                    .AnyAsync(u => u.Username == studentDto.Username || u.Email == studentDto.Email);
+            if (user == null)
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Học sinh với username '{studentDto.Username}' chưa có trong hệ thống." };
 
-                if (existingUser)
-                {
-                    return false; // Student already exists
-                }
+            // Make sure this user is actually a Student
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.UserId);
+            if (student == null)
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Tài khoản '{studentDto.Username}' không phải học sinh." };
 
-                // Get the class
-                var existingClass = await _context.Classes.FindAsync(classId);
-                if (existingClass == null)
-                {
-                    return false;
-                }
+            // Get the class (include students for duplicate check)
+            var existingClass = await _context.Classes
+                .Include(c => c.Students)
+                .FirstOrDefaultAsync(c => c.ClassId == classId);
 
-                // Create user account
-                var user = new User
-                {
-                    Username = studentDto.Username,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(studentDto.Password),
-                    RoleId = (await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Student"))?.RoleId ?? 1,
-                    FullName = studentDto.FullName,
-                    Email = studentDto.Email,
-                    PhoneNumber = studentDto.PhoneNumber,
-                    AccountStatus = "Active"
-                };
+            if (existingClass == null)
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = "Lớp học không tồn tại." };
 
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+            // Check if student already in class
+            if (existingClass.Students.Any(s => s.UserId == student.UserId))
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Học sinh '{studentDto.Username}' đã có trong lớp." };
 
-                // Create student profile
-                var student = new Student
-                {
-                    UserId = user.UserId,
-                    EnrollmentStatus = studentDto.EnrollmentStatus
-                };
+            existingClass.Students.Add(student);
+            await _context.SaveChangesAsync();
 
-                _context.Students.Add(student);
-                await _context.SaveChangesAsync();
-
-                // Assign student to class
-                existingClass.Students.Add(student);
-                await _context.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
+            return new ImportStudentToClassResult { Success = true };
         }
 
         public async Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId)
@@ -413,6 +391,7 @@ namespace EducenAPI.Services
                 FullName = s.StudentNavigation.FullName ?? "",
                 Email = s.Email ?? "",
                 PhoneNumber = s.StudentNavigation.PhoneNumber,
+                Grade = s.Grade,
                 EnrollmentStatus = s.EnrollmentStatus ?? "",
                 AccountStatus = s.StudentNavigation.AccountStatus ?? "",
                 CreatedAt = DateTime.Now

@@ -1,5 +1,7 @@
 using EducenAPI.DTOs.Classes;
 using EducenAPI.DTOs.Students;
+using EducenAPI.Services;
+
 
 namespace EducenAPI.Services.Interface
 {
@@ -15,7 +17,8 @@ namespace EducenAPI.Services.Interface
         Task<bool> AddStudentToClassAsync(int classId, int studentId);
         Task<bool> RemoveStudentFromClassAsync(int classId, int studentId);
         Task<bool> ClassExistsAsync(int id);
-        Task<bool> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto);
+        Task<ImportStudentToClassResult> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto);
+
         Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId);
     }
 }
