@@ -1,97 +1,27 @@
 import { useState, useRef } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2, DownloadCloud } from 'lucide-react';
 import PropTypes from 'prop-types';
+import toast from 'react-hot-toast';
+import api from '../services/api';
 import '../css/components/ImportStudentModal.css';
 
-// Simple CSV parser
-const parseCSV = (text) => {
-    const lines = text.trim().split('\n');
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    return lines.slice(1).map((line, idx) => {
-        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-        const row = { _rowIndex: idx + 2 };
-        headers.forEach((h, i) => { row[h] = values[i] || ''; });
-        return row;
-    });
-};
-
-const FIELD_MAP = {
-    'Họ và Tên': 'name',
-    'Ho va Ten': 'name',
-    'Name': 'name',
-    'name': 'name',
-    'Email': 'email',
-    'email': 'email',
-    'Ngày Sinh': 'dateOfBirth',
-    'Ngay Sinh': 'dateOfBirth',
-    'ngaysinh': 'dateOfBirth',
-    'DateOfBirth': 'dateOfBirth',
-    'Giới Tính': 'gender',
-    'Gioi Tinh': 'gender',
-    'Gender': 'gender',
-    'gender': 'gender',
-    'Địa Chỉ': 'address',
-    'Dia Chi': 'address',
-    'Address': 'address',
-    'address': 'address',
-    'Khối': 'grade',
-    'Khoi': 'grade',
-    'Grade': 'grade',
-    'grade': 'grade',
-    'Tên Phụ Huynh': 'parentName',
-    'Ten Phu Huynh': 'parentName',
-    'ParentName': 'parentName',
-    'SĐT Phụ Huynh': 'parentPhone',
-    'SDT Phu Huynh': 'parentPhone',
-    'ParentPhone': 'parentPhone',
-    'Email Phụ Huynh': 'parentEmail',
-    'Email Phu Huynh': 'parentEmail',
-    'ParentEmail': 'parentEmail',
-};
-
-const mapRow = (row) => {
-    const mapped = {};
-    Object.entries(row).forEach(([key, value]) => {
-        if (key === '_rowIndex') { mapped._rowIndex = value; return; }
-        const fieldName = FIELD_MAP[key] || FIELD_MAP[key.trim()] || null;
-        if (fieldName) mapped[fieldName] = value;
-    });
-    return mapped;
-};
-
-const validateRow = (row) => {
-    const errors = [];
-    if (!row.name || row.name.trim().length < 2) errors.push('Thiếu họ tên');
-    if (!row.grade) errors.push('Thiếu khối');
-    if (row.email) {
-        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email);
-        if (!emailOk) errors.push('Email không hợp lệ');
-    }
-    if (row.parentPhone) {
-        const phoneOk = /^(0[0-9]{9,10})$/.test(row.parentPhone);
-        if (!phoneOk) errors.push('SĐT phụ huynh không hợp lệ');
-    }
-    return errors;
-};
-
-// Sample CSV template content
-const SAMPLE_CSV = `Họ và Tên,Email,Ngày Sinh,Giới Tính,Khối,Địa Chỉ,Tên Phụ Huynh,SĐT Phụ Huynh,Email Phụ Huynh
-Nguyễn Văn Test,test@example.com,2010-05-01,male,8,Hà Nội,Nguyễn Văn Cha,0901234567,cha@example.com
-Trần Thị Demo,,2011-03-15,female,7,,,,`;
+// Sample Excel template columns guide
+const SAMPLE_CSV = `Username,FullName,Email,PhoneNumber\r\nsinhvien01,Nguyễn Văn Test,test@example.com,0901234567\r\nsinhvien02,Trần Thị Demo,demo@example.com,`;
 
 const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
-    const [parsedRows, setParsedRows] = useState([]);
+    const [file, setFile] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [fileName, setFileName] = useState('');
-    const [step, setStep] = useState('upload'); // 'upload' | 'preview'
+    const [step, setStep] = useState('upload'); // 'upload' | 'result'
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState(null); // { total, success, failed, errors, defaultPasswordNote }
     const fileInputRef = useRef(null);
 
     const resetState = () => {
-        setParsedRows([]);
-        setFileName('');
-        setStep('upload');
+        setFile(null);
         setIsDragging(false);
+        setStep('upload');
+        setLoading(false);
+        setResult(null);
     };
 
     const handleClose = () => {
@@ -99,30 +29,19 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
         onClose();
     };
 
-    const processFile = (file) => {
-        if (!file) return;
-        if (!file.name.match(/\.(csv)$/i)) {
-            alert('Chỉ hỗ trợ file CSV. Vui lòng tải mẫu để biết định dạng.');
+    const processFile = (f) => {
+        if (!f) return;
+        const ext = f.name.split('.').pop().toLowerCase();
+        if (!['xlsx', 'xls'].includes(ext)) {
+            toast.error('Chỉ hỗ trợ file Excel (.xlsx, .xls). Vui lòng tải mẫu để biết định dạng.');
             return;
         }
-        setFileName(file.name);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const raw = parseCSV(e.target.result);
-            const mapped = raw.map(mapRow);
-            const validated = mapped.map(row => ({
-                ...row,
-                _errors: validateRow(row),
-                _selected: validateRow(row).length === 0
-            }));
-            setParsedRows(validated);
-            setStep('preview');
-        };
-        reader.readAsText(file, 'UTF-8');
+        setFile(f);
     };
 
     const handleFileChange = (e) => {
         processFile(e.target.files[0]);
+        e.target.value = '';
     };
 
     const handleDrop = (e) => {
@@ -131,35 +50,44 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
         processFile(e.dataTransfer.files[0]);
     };
 
-    const toggleRow = (idx) => {
-        setParsedRows(prev => prev.map((r, i) =>
-            i === idx && r._errors.length === 0 ? { ...r, _selected: !r._selected } : r
-        ));
-    };
+    const handleUpload = async () => {
+        if (!file) return;
+        setLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
 
-    const removeRow = (idx) => {
-        setParsedRows(prev => prev.filter((_, i) => i !== idx));
-    };
+            const res = await api.post('/Students/import', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
-    const validCount = parsedRows.filter(r => r._errors.length === 0).length;
-    const selectedCount = parsedRows.filter(r => r._selected).length;
-    const errorCount = parsedRows.filter(r => r._errors.length > 0).length;
+            const data = res.data;
+            setResult({
+                total: data.importResults?.total ?? 0,
+                success: data.importResults?.success ?? 0,
+                failed: data.importResults?.failed ?? 0,
+                errors: data.importResults?.errors ?? [],
+                defaultPasswordNote: data.defaultPasswordNote || ''
+            });
+            setStep('result');
 
-    const handleConfirmImport = () => {
-        const toImport = parsedRows
-            .filter(r => r._selected)
-            .map(({ _rowIndex, _errors, _selected, ...rest }) => ({
-                ...rest,
-                grade: parseInt(rest.grade) || rest.grade,
-                gender: rest.gender === 'female' ? 'female' : 'male',
-                enrollmentDate: new Date().toISOString().split('T')[0],
-                status: 'active',
-                accountSent: false,
-                avatar: null,
-                notes: ''
-            }));
-        onImport(toImport);
-        handleClose();
+            // Notify parent to refresh list
+            if (data.importResults?.success > 0) {
+                onImport();
+            }
+        } catch (err) {
+            let msg = err.response?.data?.message || 'Import thất bại, vui lòng thử lại.';
+
+            if (msg.includes('Invalid template format') || msg.includes('template')) {
+                msg = 'File Excel không đúng định dạng. Vui lòng tải file mẫu và giữ nguyên các cột bắt buộc: Username, FullName, Email.';
+            } else if (msg.includes('No worksheet')) {
+                msg = 'Không tìm thấy dữ liệu trong file Excel.';
+            }
+
+            toast.error(msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const downloadSample = () => {
@@ -167,7 +95,7 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'mau_danh_sach_hoc_sinh.csv';
+        a.download = 'mau_import_hoc_sinh.csv';
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -181,7 +109,7 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                 <div className="import-modal-header">
                     <div>
                         <h2>Import Danh Sách Học Sinh</h2>
-                        <p>Tải lên file CSV để thêm nhiều học sinh cùng lúc</p>
+                        <p>Tải lên file Excel (.xlsx/.xls) để thêm nhiều học sinh cùng lúc</p>
                     </div>
                     <button className="import-modal-close" onClick={handleClose}><X size={22} /></button>
                 </div>
@@ -190,23 +118,42 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                     <div className="import-modal-body">
                         {/* Upload Zone */}
                         <div
-                            className={`upload-zone ${isDragging ? 'dragging' : ''}`}
+                            className={`upload-zone ${isDragging ? 'dragging' : ''} ${file ? 'has-file' : ''}`}
                             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                             onDragLeave={() => setIsDragging(false)}
                             onDrop={handleDrop}
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() => !file && fileInputRef.current?.click()}
                         >
-                            <Upload size={40} className="upload-icon" />
-                            <h3>Kéo thả file CSV vào đây</h3>
-                            <p>hoặc <span className="upload-link">click để chọn file</span></p>
-                            <p className="upload-hint">Chỉ hỗ trợ file .CSV</p>
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept=".csv"
+                                accept=".xlsx,.xls"
                                 style={{ display: 'none' }}
                                 onChange={handleFileChange}
                             />
+                            {file ? (
+                                <>
+                                    <CheckCircle size={40} style={{ color: '#16a34a', margin: '0 auto 12px', display: 'block' }} />
+                                    <h3 style={{ color: '#16a34a' }}>{file.name}</h3>
+                                    <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                                        {(file.size / 1024).toFixed(1)} KB
+                                    </p>
+                                    <button
+                                        className="btn-reupload"
+                                        style={{ marginTop: 8 }}
+                                        onClick={(e) => { e.stopPropagation(); setFile(null); fileInputRef.current?.click(); }}
+                                    >
+                                        Chọn file khác
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Upload size={40} className="upload-icon" />
+                                    <h3>Kéo thả file Excel vào đây</h3>
+                                    <p>hoặc <span className="upload-link">click để chọn file</span></p>
+                                    <p className="upload-hint">Hỗ trợ: .xlsx, .xls</p>
+                                </>
+                            )}
                         </div>
 
                         {/* Sample Download */}
@@ -214,126 +161,120 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                             <FileText size={18} />
                             <span>Chưa có file mẫu?</span>
                             <button className="btn-download-sample" onClick={downloadSample}>
-                                Tải file mẫu CSV
+                                <DownloadCloud size={15} /> Tải file mẫu
                             </button>
                         </div>
 
                         {/* Field Guide */}
                         <div className="import-field-guide">
-                            <h4>Các cột trong file CSV:</h4>
+                            <h4>Các cột bắt buộc trong file Excel:</h4>
                             <div className="field-guide-grid">
-                                <div className="field-item required">Họ và Tên <span>*</span></div>
-                                <div className="field-item required">Khối <span>*</span></div>
-                                <div className="field-item optional">Email</div>
-                                <div className="field-item optional">Ngày Sinh</div>
-                                <div className="field-item optional">Giới Tính</div>
-                                <div className="field-item optional">Địa Chỉ</div>
-                                <div className="field-item optional">Tên Phụ Huynh</div>
-                                <div className="field-item optional">SĐT Phụ Huynh</div>
-                                <div className="field-item optional">Email Phụ Huynh</div>
+                                <div className="field-item required">Username <span>*</span></div>
+                                <div className="field-item required">FullName <span>*</span></div>
+                                <div className="field-item required">Email <span>*</span></div>
+                                <div className="field-item optional">PhoneNumber</div>
                             </div>
-                            <p className="field-note"><span>*</span> Bắt buộc &nbsp;|&nbsp; Các cột còn lại tuỳ chọn</p>
+                            <p className="field-note">
+                                <span>*</span> Bắt buộc &nbsp;|&nbsp;
+                                Mật khẩu mặc định: <strong>username + "123"</strong>
+                            </p>
                         </div>
                     </div>
                 ) : (
+                    // Result step
                     <div className="import-modal-body">
-                        {/* Preview Stats */}
                         <div className="preview-stats">
                             <div className="stat-card total">
-                                <span className="stat-num">{parsedRows.length}</span>
+                                <span className="stat-num">{result.total}</span>
                                 <span className="stat-label">Tổng dòng</span>
                             </div>
                             <div className="stat-card success">
                                 <CheckCircle size={16} />
-                                <span className="stat-num">{validCount}</span>
-                                <span className="stat-label">Hợp lệ</span>
+                                <span className="stat-num">{result.success}</span>
+                                <span className="stat-label">Thành công</span>
                             </div>
-                            {errorCount > 0 && (
+                            {result.failed > 0 && (
                                 <div className="stat-card error">
                                     <AlertCircle size={16} />
-                                    <span className="stat-num">{errorCount}</span>
-                                    <span className="stat-label">Có lỗi</span>
+                                    <span className="stat-num">{result.failed}</span>
+                                    <span className="stat-label">Thất bại</span>
                                 </div>
                             )}
-                            <div className="stat-card selected">
-                                <span className="stat-num">{selectedCount}</span>
-                                <span className="stat-label">Sẽ import</span>
-                            </div>
-                            <div className="preview-filename">
-                                <FileText size={14} />
-                                {fileName}
-                                <button className="btn-reupload" onClick={() => { resetState(); }}>Đổi file</button>
-                            </div>
                         </div>
 
-                        {/* Preview Table */}
-                        <div className="preview-table-wrapper">
-                            <table className="preview-table">
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>#</th>
-                                        <th>Họ và Tên</th>
-                                        <th>Email</th>
-                                        <th>Khối</th>
-                                        <th>Giới Tính</th>
-                                        <th>Phụ Huynh</th>
-                                        <th>Trạng Thái</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {parsedRows.map((row, idx) => (
-                                        <tr
-                                            key={idx}
-                                            className={`${row._errors.length > 0 ? 'row-error' : ''} ${row._selected ? 'row-selected' : ''}`}
-                                        >
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={row._selected}
-                                                    disabled={row._errors.length > 0}
-                                                    onChange={() => toggleRow(idx)}
-                                                />
-                                            </td>
-                                            <td className="row-num">{row._rowIndex}</td>
-                                            <td className="row-name">{row.name || <span className="missing">—</span>}</td>
-                                            <td>{row.email || <span className="missing">—</span>}</td>
-                                            <td>{row.grade ? `Khối ${row.grade}` : <span className="missing">—</span>}</td>
-                                            <td>{row.gender === 'female' ? 'Nữ' : row.gender === 'male' ? 'Nam' : <span className="missing">—</span>}</td>
-                                            <td>{row.parentName || <span className="missing">Chưa có</span>}</td>
-                                            <td>
-                                                {row._errors.length === 0
-                                                    ? <span className="row-status ok"><CheckCircle size={13} /> Hợp lệ</span>
-                                                    : <span className="row-status err" title={row._errors.join(', ')}>
-                                                        <AlertCircle size={13} /> {row._errors[0]}
-                                                    </span>
-                                                }
-                                            </td>
-                                            <td>
-                                                <button className="btn-remove-row" onClick={() => removeRow(idx)} title="Xoá dòng này">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </td>
-                                        </tr>
+                        {result.defaultPasswordNote && (
+                            <div style={{
+                                padding: '10px 14px',
+                                background: '#f0f9ff',
+                                borderRadius: 8,
+                                fontSize: '0.85rem',
+                                color: '#0369a1',
+                                marginBottom: 12,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8
+                            }}>
+                                <CheckCircle size={15} />
+                                {result.defaultPasswordNote}
+                            </div>
+                        )}
+
+                        {result.errors.length > 0 && (
+                            <div style={{ marginTop: 8 }}>
+                                <h4 style={{ fontSize: '0.875rem', color: '#dc2626', marginBottom: 8 }}>
+                                    Chi tiết lỗi:
+                                </h4>
+                                <div className="preview-table-wrapper" style={{ maxHeight: 200 }}>
+                                    {result.errors.map((err, i) => (
+                                        <div key={i} style={{
+                                            padding: '6px 10px',
+                                            background: '#fef2f2',
+                                            borderRadius: 6,
+                                            fontSize: '0.8rem',
+                                            color: '#dc2626',
+                                            marginBottom: 4,
+                                            display: 'flex',
+                                            gap: 8,
+                                            alignItems: 'flex-start'
+                                        }}>
+                                            <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                                            {err}
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {result.success === result.total && result.total > 0 && (
+                            <div style={{ textAlign: 'center', padding: '1rem', color: '#16a34a' }}>
+                                <CheckCircle size={36} style={{ margin: '0 auto 8px', display: 'block' }} />
+                                <p style={{ fontWeight: 700 }}>Import hoàn tất thành công!</p>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* Footer */}
                 <div className="import-modal-footer">
-                    <button className="btn-cancel" onClick={handleClose}>Hủy</button>
-                    {step === 'preview' && (
+                    <button className="btn-cancel" onClick={handleClose}>
+                        {step === 'result' ? 'Đóng' : 'Hủy'}
+                    </button>
+                    {step === 'upload' && (
                         <button
                             className="btn-submit"
-                            onClick={handleConfirmImport}
-                            disabled={selectedCount === 0}
-                            style={selectedCount === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                            onClick={handleUpload}
+                            disabled={!file || loading}
+                            style={(!file || loading) ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                         >
-                            Import {selectedCount} học sinh
+                            {loading
+                                ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Đang import...</>
+                                : <><Upload size={16} /> Import học sinh</>
+                            }
+                        </button>
+                    )}
+                    {step === 'result' && result?.failed > 0 && (
+                        <button className="btn-submit" onClick={resetState}>
+                            Import file khác
                         </button>
                     )}
                 </div>

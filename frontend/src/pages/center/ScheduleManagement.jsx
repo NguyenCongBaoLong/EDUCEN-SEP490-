@@ -1,148 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import api from '../../services/api';
 import '../../css/pages/center/ScheduleManagement.css';
 import '../../css/components/DeleteModal.css';
 import { useSchedule } from '../../context/ScheduleContext';
 
 const ScheduleManagement = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState('week');
     const [teacherFilter, setTeacherFilter] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [deleteModal, setDeleteModal] = useState({ show: false, classItem: null });
+    const [viewMode, setViewMode] = useState('week'); // 'day', 'week', 'month'
+    const [hourRange, setHourRange] = useState({ min: 8, max: 20 });
 
     // Use shared schedule context (synced with CenterHome)
-    const { scheduledClasses, setScheduledClasses } = useSchedule();
+    const { scheduledClasses, setScheduledClasses, refreshSchedules } = useSchedule();
+    const [loading, setLoading] = useState(false);
+    const [subjects, setSubjects] = useState([]);
 
-    // Mock data for unscheduled classes (with pre-set schedules)
-    const unscheduledClasses = [
-        {
-            id: 8,
-            code: 'TOÁN-102',
-            name: 'Đại Số Cơ Bản',
-            teacher: 'Thầy Tuấn',
-            schedules: [
-                { day: 2, startTime: '14:00', endTime: '16:00' }, // Tuesday
-                { day: 4, startTime: '14:00', endTime: '16:00' }  // Thursday
-            ],
-            color: '#8b5cf6'
-        },
-        {
-            id: 9,
-            code: 'ANH-105',
-            name: 'Grammar Nâng Cao',
-            teacher: 'Cô Linh',
-            schedules: [
-                { day: 3, startTime: '10:00', endTime: '11:30' }, // Wednesday
-                { day: 5, startTime: '10:00', endTime: '11:30' }  // Friday
-            ],
-            color: '#06b6d4'
-        },
-        {
-            id: 10,
-            code: 'VẬT-101',
-            name: 'Cơ Học Lý Thuyết',
-            teacher: 'Thầy Đức',
-            schedules: [
-                { day: 1, startTime: '15:00', endTime: '17:00' }  // Monday
-            ],
-            color: '#f59e0b'
+    // Fetch center subjects for filter
+    useEffect(() => {
+        const fetchSubjects = async () => {
+            try {
+                const res = await api.get('/tenantadmin/Subjects');
+                setSubjects(res.data);
+            } catch (error) {
+                console.error('Lỗi khi tải môn học:', error);
+            }
+        };
+        fetchSubjects();
+    }, []);
+
+    // (fetchUnscheduledClasses và useEffect liên quan đã bị xóa)
+
+    // Calculate dynamic hour range based on actual schedules
+    useEffect(() => {
+        if (scheduledClasses.length > 0) {
+            let min = 8;
+            let max = 18;
+
+            scheduledClasses.forEach(c => {
+                const startHour = parseInt(c.startTime.split(':')[0]);
+                const endHour = parseInt(c.endTime.split(':')[0]);
+
+                if (startHour < min) min = startHour;
+                if (endHour > max) max = endHour;
+            });
+
+            // Add some padding
+            setHourRange({
+                min: Math.max(0, min - 1),
+                max: Math.min(23, max + 1)
+            });
         }
-    ];
+    }, [scheduledClasses]);
 
     const [addClassModal, setAddClassModal] = useState({ show: false });
 
-    // Modal handlers
-    const handleDeleteClass = (classItem) => {
-        setDeleteModal({ show: true, classItem });
-    };
-
-    const confirmDelete = () => {
-        if (deleteModal.classItem) {
-            setScheduledClasses(scheduledClasses.filter(c => c.id !== deleteModal.classItem.id));
-            setDeleteModal({ show: false, classItem: null });
-        }
-    };
-
-    const cancelDelete = () => {
-        setDeleteModal({ show: false, classItem: null });
-    };
-
-    // Add class handlers
-    const handleAddClassClick = () => {
-        setAddClassModal({ show: true });
-    };
-
-    const handleAddClass = (classItem) => {
-        // Convert each schedule entry to a calendar entry
-        const newEntries = classItem.schedules.map((schedule, idx) => ({
-            id: `${classItem.id}-${idx}`,
-            code: classItem.code,
-            name: classItem.name,
-            teacher: classItem.teacher,
-            day: schedule.day,
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            color: classItem.color
-        }));
-
-        setScheduledClasses([...scheduledClasses, ...newEntries]);
-    };
-
-    const handleAddAllClasses = () => {
-        const allNewEntries = [];
-        unscheduledClasses.forEach(classItem => {
-            classItem.schedules.forEach((schedule, idx) => {
-                allNewEntries.push({
-                    id: `${classItem.id}-${idx}`,
-                    code: classItem.code,
-                    name: classItem.name,
-                    teacher: classItem.teacher,
-                    day: schedule.day,
-                    startTime: schedule.startTime,
-                    endTime: schedule.endTime,
-                    color: classItem.color
-                });
-            });
-        });
-
-        setScheduledClasses([...scheduledClasses, ...allNewEntries]);
-        setAddClassModal({ show: false });
-    };
-
-    const closeAddClassModal = () => {
-        setAddClassModal({ show: false });
-    };
-
-    // Filter out classes that are already in the schedule
-    const availableClasses = unscheduledClasses.filter(unscheduledClass => {
-        // Check if this class code exists in scheduled classes
-        return !scheduledClasses.some(scheduled => scheduled.code === unscheduledClass.code);
-    });
-
-    // Get all unique class codes in schedule
-    const scheduledClassCodes = [...new Set(scheduledClasses.map(c => c.code))];
-
-    // Modified delete handler - deletes ALL slots of the class
-    const handleDeleteClassAll = (classItem) => {
-        setDeleteModal({ show: true, classItem });
-    };
-
-    const confirmDeleteAll = () => {
-        if (deleteModal.classItem) {
-            // Remove all entries with the same class code
-            setScheduledClasses(scheduledClasses.filter(c => c.code !== deleteModal.classItem.code));
-            setDeleteModal({ show: false, classItem: null });
-        }
-    };
-
-    // Get week dates (Monday to Sunday)
-    const getWeekDates = () => {
+    // Utility functions
+    const getWeekDates = useCallback(() => {
         const start = new Date(currentDate);
         const day = start.getDay();
-        // Calculate diff to get to Monday (day 1)
-        const diff = day === 0 ? -6 : 1 - day; // If Sunday, go back 6 days; otherwise go to Monday
+        const diff = day === 0 ? -6 : 1 - day;
         start.setDate(start.getDate() + diff);
 
         const dates = [];
@@ -152,18 +73,84 @@ const ScheduleManagement = () => {
             dates.push(date);
         }
         return dates;
+    }, [currentDate]);
+
+    const getDayIndexForClass = (classDay) => {
+        if (classDay === 0) return 6;
+        return classDay - 1;
+    };
+
+    // Get single day date
+    const getDayDate = () => {
+        return new Date(currentDate);
+    };
+
+    // Get month dates (all days in current month)
+    const getMonthDates = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        const dates = [];
+        for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
+            dates.push(new Date(date));
+        }
+        return dates;
+    };
+
+    // Modal handlers
+    const handleDeleteClass = (classItem) => {
+        setDeleteModal({ show: true, classItem });
+    };
+
+    const confirmDelete = async () => {
+        if (deleteModal.classItem) {
+            try {
+                await api.delete(`/Schedules/${deleteModal.classItem.id}`);
+                refreshSchedules();
+                setDeleteModal({ show: false, classItem: null });
+                toast.success('Xóa lịch học thành công!');
+            } catch (error) {
+                toast.error('Lỗi khi xóa lịch học');
+            }
+        }
+    };
+
+    const cancelDelete = () => {
+        setDeleteModal({ show: false, classItem: null });
+    };
+
+    // (Modal handlers và Add class handlers cũ đã bị xóa)
+
+    // Get all unique class codes in schedule
+    const scheduledClassCodes = [...new Set(scheduledClasses.map(c => c.code))];
+
+    // Modified delete handler - deletes ALL slots of the class
+    const handleDeleteClassAll = (classItem) => {
+        setDeleteModal({ show: true, classItem });
+    };
+
+    const confirmDeleteAll = async () => {
+        if (deleteModal.classItem) {
+            try {
+                // Find all schedule IDs for this class code
+                const schedulesToDelete = scheduledClasses.filter(c => c.code === deleteModal.classItem.code);
+                const deletePromises = schedulesToDelete.map(s => api.delete(`/Schedules/${s.id}`));
+
+                await Promise.all(deletePromises);
+                refreshSchedules();
+                setDeleteModal({ show: false, classItem: null });
+                toast.success(`Đã xóa tất cả buổi học của lớp ${deleteModal.classItem.code}!`);
+            } catch (error) {
+                console.error(error);
+                toast.error("Lỗi khi xóa lịch học hàng loạt");
+            }
+        }
     };
 
     const weekDates = getWeekDates();
     const weekDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']; // Monday to Sunday
-
-    // Map dayIndex to match the new order (0 = Monday, 6 = Sunday)
-    const getDayIndexForClass = (classDay) => {
-        // classDay: 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
-        // We need to map to 0-6 where 0 = Monday, 6 = Sunday
-        if (classDay === 0) return 6; // Sunday at the end
-        return classDay - 1; // Monday-Saturday
-    };
 
     // Format date for display
     const formatDateRange = () => {
@@ -186,52 +173,25 @@ const ScheduleManagement = () => {
         }
     };
 
-    // Navigate weeks
-    const navigateWeek = (direction) => {
+    // Navigate dates
+    const navigate = (direction) => {
         const newDate = new Date(currentDate);
-        newDate.setDate(currentDate.getDate() + (direction * 7));
-        setCurrentDate(newDate);
-    };
-
-    // Navigate days
-    const navigateDay = (direction) => {
-        const newDate = new Date(currentDate);
-        newDate.setDate(currentDate.getDate() + direction);
-        setCurrentDate(newDate);
-    };
-
-    // Navigate months
-    const navigateMonth = (direction) => {
-        const newDate = new Date(currentDate);
-        newDate.setMonth(currentDate.getMonth() + direction);
-        setCurrentDate(newDate);
-    };
-
-    // Get single day date
-    const getDayDate = () => {
-        return new Date(currentDate);
-    };
-
-    // Get month dates (all days in current month)
-    const getMonthDates = () => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-
-        const dates = [];
-        for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
-            dates.push(new Date(date));
+        if (viewMode === 'day') {
+            newDate.setDate(currentDate.getDate() + direction);
+        } else if (viewMode === 'month') {
+            newDate.setMonth(currentDate.getMonth() + direction);
+        } else {
+            // Week
+            newDate.setDate(currentDate.getDate() + (direction * 7));
         }
-        return dates;
+        setCurrentDate(newDate);
     };
 
-
-    // Time slots (08:00 to 22:00 for full day coverage)
-    const timeSlots = [
-        '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
-        '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
-    ];
+    // Dynamic Time slots based on hourRange
+    const timeSlots = [];
+    for (let h = hourRange.min; h <= hourRange.max; h++) {
+        timeSlots.push(`${String(h).padStart(2, '0')}:00`);
+    }
 
     // Get class position and height with overlap handling
     const getClassStyle = (classItem, index, totalInSlot) => {
@@ -240,7 +200,7 @@ const ScheduleManagement = () => {
         const endHour = parseInt(classItem.endTime.split(':')[0]);
         const endMin = parseInt(classItem.endTime.split(':')[1]);
 
-        const startOffset = (startHour - 8) + (startMin / 60);
+        const startOffset = (startHour - hourRange.min) + (startMin / 60);
         const duration = (endHour - startHour) + ((endMin - startMin) / 60);
 
         // Calculate width and left position for overlapping classes
@@ -248,8 +208,8 @@ const ScheduleManagement = () => {
         const leftPercentage = index * widthPercentage;
 
         return {
-            top: `${startOffset * 70}px`,
-            height: `${duration * 70 - 4}px`,
+            top: `${startOffset * 40}px`,
+            height: `${duration * 40 - 2}px`,
             backgroundColor: classItem.color,
             width: `${widthPercentage}%`,
             left: `${leftPercentage}%`
@@ -259,7 +219,7 @@ const ScheduleManagement = () => {
     // Filter classes
     const filteredClasses = scheduledClasses.filter(classItem => {
         if (teacherFilter && classItem.teacher !== teacherFilter) return false;
-        if (subjectFilter && !classItem.code.includes(subjectFilter)) return false;
+        if (subjectFilter && classItem.subjectName !== subjectFilter) return false;
         return true;
     });
 
@@ -272,33 +232,22 @@ const ScheduleManagement = () => {
                 <div className="schedule-header">
                     <div className="schedule-header-left">
                         <h1>Lịch học lớp</h1>
-                        <p className="schedule-subtitle">Điều phối {scheduledClasses.length} buổi học trong tuần này</p>
+                        <p className="schedule-subtitle">{scheduledClasses.length} buổi học tuần này</p>
                     </div>
-                    <button className="btn-add-class" onClick={handleAddClassClick}>
-                        <Plus size={20} />
-                        Thêm lớp vào lịch
-                    </button>
+                    {/* Nút thêm lớp đã bị xóa */}
                 </div>
 
                 {/* Date Navigation & Filters */}
                 <div className="schedule-controls">
                     <div className="schedule-date-nav">
-                        <button className="btn-nav" onClick={() => {
-                            if (viewMode === 'day') navigateDay(-1);
-                            else if (viewMode === 'week') navigateWeek(-1);
-                            else navigateMonth(-1);
-                        }}>
+                        <button className="btn-nav" onClick={() => navigate(-1)}>
                             <ChevronLeft size={20} />
                         </button>
                         <div className="schedule-date-display">
                             <CalendarIcon size={18} />
                             <span>{formatDateRange()}</span>
                         </div>
-                        <button className="btn-nav" onClick={() => {
-                            if (viewMode === 'day') navigateDay(1);
-                            else if (viewMode === 'week') navigateWeek(1);
-                            else navigateMonth(1);
-                        }}>
+                        <button className="btn-nav" onClick={() => navigate(1)}>
                             <ChevronRight size={20} />
                         </button>
                     </div>
@@ -310,12 +259,9 @@ const ScheduleManagement = () => {
                             onChange={(e) => setTeacherFilter(e.target.value)}
                         >
                             <option value="">Tất cả giáo viên</option>
-                            <option value="Thầy Minh">Thầy Minh</option>
-                            <option value="Cô Hương">Cô Hương</option>
-                            <option value="Thầy Nam">Thầy Nam</option>
-                            <option value="Cô Lan">Cô Lan</option>
-                            <option value="Thầy Đức">Thầy Đức</option>
-                            <option value="Cô Hà">Cô Hà</option>
+                            {[...new Set(scheduledClasses.map(c => c.teacher))].filter(Boolean).map(t => (
+                                <option key={t} value={t}>{t}</option>
+                            ))}
                         </select>
 
                         <select
@@ -324,12 +270,9 @@ const ScheduleManagement = () => {
                             onChange={(e) => setSubjectFilter(e.target.value)}
                         >
                             <option value="">Tất cả môn học</option>
-                            <option value="TOÁN">Toán</option>
-                            <option value="LÝ">Vật lý</option>
-                            <option value="HÓA">Hóa học</option>
-                            <option value="VĂN">Văn học</option>
-                            <option value="SINH">Sinh học</option>
-                            <option value="ANH">Tiếng Anh</option>
+                            {subjects.map(s => (
+                                <option key={s.subjectId} value={s.subjectName}>{s.subjectName}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -357,8 +300,8 @@ const ScheduleManagement = () => {
 
                 {/* Calendar Content */}
                 <div className="schedule-content">
-                    {/* Conditional Rendering Based on View Mode */}
-                    {viewMode === 'week' && (
+                    {/* Day & Week View */}
+                    {(viewMode === 'day' || viewMode === 'week') && (
                         <div className="schedule-calendar">
                             {/* Time column */}
                             <div className="schedule-time-column">
@@ -371,16 +314,35 @@ const ScheduleManagement = () => {
                             </div>
 
                             {/* Day columns */}
-                            {weekDates.map((date, dayIndex) => {
-                                // Get all classes for this day
-                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                            {(viewMode === 'week' ? weekDates : [getDayDate()]).map((date, dayIdxInView) => {
+                                // Normalize date for comparison
+                                const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                                const currentDayIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
+
+                                // Get all classes for this day based on recurring DayOfWeek and Date Range
+                                const dayClasses = filteredClasses.filter(c => {
+                                    const classDay = c.day === 0 ? 6 : c.day - 1; // Backend: 0=Sun, 1=Mon... -> Frontend logic: 0=Mon, 6=Sun
+
+                                    if (classDay !== currentDayIdx) return false;
+
+                                    // Check date range
+                                    if (c.startDate) {
+                                        const start = new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate());
+                                        if (compareDate < start) return false;
+                                    }
+                                    if (c.endDate) {
+                                        const end = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate());
+                                        if (compareDate > end) return false;
+                                    }
+
+                                    return true;
+                                });
 
                                 // Group overlapping classes
                                 const groupedClasses = [];
                                 dayClasses.forEach(classItem => {
                                     let added = false;
                                     for (let group of groupedClasses) {
-                                        // Check if this class overlaps with any class in the group
                                         const hasOverlap = group.some(gc => {
                                             const c1Start = parseInt(classItem.startTime.split(':')[0]) * 60 + parseInt(classItem.startTime.split(':')[1]);
                                             const c1End = parseInt(classItem.endTime.split(':')[0]) * 60 + parseInt(classItem.endTime.split(':')[1]);
@@ -400,23 +362,20 @@ const ScheduleManagement = () => {
                                 });
 
                                 return (
-                                    <div key={dayIndex} className="schedule-day-column">
+                                    <div key={dayIdxInView} className={`schedule-day-column ${viewMode === 'day' ? 'schedule-day-column-single' : ''}`}>
                                         <div className={`schedule-day-header ${date.toDateString() === new Date().toDateString() ? 'today' : ''}`}>
-                                            <div className="schedule-day-name">{weekDays[dayIndex]}</div>
+                                            <div className="schedule-day-name">{weekDays[currentDayIdx]}</div>
                                             <div className="schedule-day-date">{date.getDate()}</div>
                                         </div>
 
                                         <div className="schedule-day-grid">
                                             {timeSlots.map((time, timeIndex) => (
-                                                <div
-                                                    key={timeIndex}
-                                                    className="schedule-grid-cell"
-                                                ></div>
+                                                <div key={timeIndex} className="schedule-grid-cell"></div>
                                             ))}
 
                                             {/* Render classes for this day */}
                                             <div className="schedule-classes-container">
-                                                {groupedClasses.map((group, groupIndex) =>
+                                                {groupedClasses.map((group) =>
                                                     group.map((classItem, indexInGroup) => (
                                                         <div
                                                             key={classItem.id}
@@ -452,100 +411,7 @@ const ScheduleManagement = () => {
                         </div>
                     )}
 
-                    {viewMode === 'day' && (
-                        <div className="schedule-calendar">
-                            {/* Time column */}
-                            <div className="schedule-time-column">
-                                <div className="schedule-day-header"></div>
-                                {timeSlots.map((time) => (
-                                    <div key={time} className="schedule-time-slot">
-                                        {time}
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Single day column */}
-                            {(() => {
-                                const date = getDayDate();
-                                const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
-
-                                const groupedClasses = [];
-                                dayClasses.forEach(classItem => {
-                                    let added = false;
-                                    for (let group of groupedClasses) {
-                                        const hasOverlap = group.some(gc => {
-                                            const c1Start = parseInt(classItem.startTime.split(':')[0]) * 60 + parseInt(classItem.startTime.split(':')[1]);
-                                            const c1End = parseInt(classItem.endTime.split(':')[0]) * 60 + parseInt(classItem.endTime.split(':')[1]);
-                                            const c2Start = parseInt(gc.startTime.split(':')[0]) * 60 + parseInt(gc.startTime.split(':')[1]);
-                                            const c2End = parseInt(gc.endTime.split(':')[0]) * 60 + parseInt(gc.endTime.split(':')[1]);
-                                            return (c1Start < c2End && c1End > c2Start);
-                                        });
-                                        if (hasOverlap) {
-                                            group.push(classItem);
-                                            added = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!added) {
-                                        groupedClasses.push([classItem]);
-                                    }
-                                });
-
-                                const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-
-                                return (
-                                    <div className="schedule-day-column-single">
-                                        <div className={`schedule-day-header ${date.toDateString() === new Date().toDateString() ? 'today' : ''}`}>
-                                            <div className="schedule-day-name">{dayNames[date.getDay()]}</div>
-                                            <div className="schedule-day-date">{date.getDate()}</div>
-                                        </div>
-
-                                        <div className="schedule-day-grid">
-                                            {timeSlots.map((time, timeIndex) => (
-                                                <div
-                                                    key={timeIndex}
-                                                    className="schedule-grid-cell"
-                                                ></div>
-                                            ))}
-
-                                            <div className="schedule-classes-container">
-                                                {groupedClasses.map((group) =>
-                                                    group.map((classItem, indexInGroup) => (
-                                                        <div
-                                                            key={classItem.id}
-                                                            className="schedule-class-card"
-                                                            style={getClassStyle(classItem, indexInGroup, group.length)}
-                                                        >
-                                                            <button
-                                                                className="btn-delete-class"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteClassAll(classItem);
-                                                                }}
-                                                                title="Xóa tất cả buổi học của lớp này"
-                                                            >
-                                                                <X size={14} />
-                                                            </button>
-                                                            <div className="schedule-class-code">{classItem.code}</div>
-                                                            <div className="schedule-class-name">{classItem.name}</div>
-                                                            {classItem.teacher && (
-                                                                <div className="schedule-class-teacher">
-                                                                    <User size={12} />
-                                                                    {classItem.teacher}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-                    )}
-
+                    {/* Month View */}
                     {viewMode === 'month' && (
                         <div className="schedule-month-view">
                             <div className="month-weekdays">
@@ -568,8 +434,25 @@ const ScheduleManagement = () => {
 
                                             {/* Month days */}
                                             {monthDates.map((date, dateIndex) => {
-                                                const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                                const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                                                const currentDayIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
+
+                                                const dayClasses = filteredClasses.filter(c => {
+                                                    const classDay = c.day === 0 ? 6 : c.day - 1;
+                                                    if (classDay !== currentDayIdx) return false;
+
+                                                    // Check date range
+                                                    if (c.startDate) {
+                                                        const start = new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate());
+                                                        if (compareDate < start) return false;
+                                                    }
+                                                    if (c.endDate) {
+                                                        const end = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate());
+                                                        if (compareDate > end) return false;
+                                                    }
+
+                                                    return true;
+                                                });
                                                 const isToday = date.toDateString() === new Date().toDateString();
 
                                                 return (
@@ -606,87 +489,7 @@ const ScheduleManagement = () => {
                     )}
                 </div>
 
-                {/* Add Class Modal */}
-                {addClassModal.show && (
-                    <div className="delete-modal-overlay" onClick={closeAddClassModal}>
-                        <div className="delete-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
-                            {/* Header */}
-                            <div className="delete-modal-header">
-                                <h3>Thêm Lớp Vào Lịch</h3>
-                                <button className="delete-modal-close" onClick={closeAddClassModal}>
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {/* Body */}
-                            <div className="delete-modal-body">
-                                {availableClasses.length === 0 ? (
-                                    <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px 0' }}>
-                                        Tất cả các lớp đã được thêm vào lịch
-                                    </p>
-                                ) : (
-                                    <>
-                                        <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '0.875rem' }}>
-                                            Chọn các lớp học để thêm vào lịch (lớp đã có sẵn thời gian học)
-                                        </p>
-
-                                        <div className="add-class-list">
-                                            {availableClasses.map(classItem => (
-                                                <div key={classItem.id} className="add-class-item">
-                                                    <div className="add-class-info">
-                                                        <div className="add-class-header">
-                                                            <span className="add-class-code" style={{ color: classItem.color }}>
-                                                                {classItem.code}
-                                                            </span>
-                                                            <span className="add-class-name">{classItem.name}</span>
-                                                        </div>
-                                                        <div className="add-class-teacher">
-                                                            <User size={14} />
-                                                            {classItem.teacher}
-                                                        </div>
-                                                        <div className="add-class-schedule">
-                                                            {classItem.schedules.map((sched, idx) => {
-                                                                const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-                                                                return (
-                                                                    <span key={idx} className="schedule-badge">
-                                                                        {dayNames[sched.day]} {sched.startTime}-{sched.endTime}
-                                                                    </span>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        className="btn-add-single"
-                                                        onClick={() => {
-                                                            handleAddClass(classItem);
-                                                            closeAddClassModal();
-                                                        }}
-                                                    >
-                                                        <Plus size={16} />
-                                                        Thêm
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Footer */}
-                            {availableClasses.length > 0 && (
-                                <div className="delete-modal-footer">
-                                    <button className="btn-delete-cancel" onClick={closeAddClassModal}>
-                                        Đóng
-                                    </button>
-                                    <button className="btn-delete-confirm" onClick={handleAddAllClasses}>
-                                        <Plus size={16} />
-                                        Thêm Tất Cả
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+                {/* Add Class Modal đã bị xóa */}
 
                 {/* Delete Confirmation Modal */}
                 {deleteModal.show && (

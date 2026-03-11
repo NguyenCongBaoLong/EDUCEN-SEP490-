@@ -4,14 +4,14 @@ import PropTypes from 'prop-types';
 import TeacherAssignModal from './TeacherAssignModal';
 import '../css/components/CreateClassModal.css';
 
-const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingClasses = [], subjects = [] }) => {
+const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingClasses = [], subjects = [], teachersList = [], assistantsList = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         subject: '',
-        gradeLevel: '',
         mainTeacher: '',
         assistant: '',
-        maxStudents: '',
+        description: '',
+        syllabusContent: '',
         scheduleSlots: [{ day: '', startTime: '', endTime: '' }], // Array of time slots
         startDate: '', // Ngày bắt đầu lớp
         endDate: '', // Ngày kết thúc lớp
@@ -22,83 +22,62 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
     const [teacherType, setTeacherType] = useState('main'); // 'main' or 'assistant'
 
     useEffect(() => {
+        console.log('CreateClassModal: editingClass changed:', editingClass);
         if (editingClass) {
             let scheduleSlots = [];
 
-            // Migration: Convert old schedule format to scheduleSlots
-            if (editingClass.scheduleSlots) {
-                // New format: already has scheduleSlots
-                scheduleSlots = editingClass.scheduleSlots;
+            // Robust initialization: check for non-empty scheduleSlots first
+            if (editingClass.scheduleSlots && editingClass.scheduleSlots.length > 0 && editingClass.scheduleSlots[0].day) {
+                scheduleSlots = editingClass.scheduleSlots.map(s => ({ ...s })); // Deep copy
             } else if (editingClass.schedule) {
-                // Old format examples:
-                // "Thứ 2, Thứ 4 • 10:00 - 11:30" (with time range)
-                // "Mon, Wed • 4:30 PM" (single time, no range)
+                // ... same parsing logic as before ...
                 const parts = editingClass.schedule.split(' • ');
                 if (parts.length >= 2) {
                     const [daysStr, timeStr] = parts;
                     const days = daysStr.split(',').map(d => d.trim()).filter(Boolean);
 
                     if (timeStr.includes('-')) {
-                        // Format: "10:00 - 11:30"
                         const [startTime, endTime] = timeStr.split('-').map(t => t.trim());
-                        scheduleSlots = days.map(day => ({
-                            day,
-                            startTime,
-                            endTime
-                        }));
+                        scheduleSlots = days.map(day => ({ day, startTime, endTime }));
                     } else {
-                        // Format: "4:30 PM" or "10:00" (single time without end)
-                        // Create a default 1.5 hour slot
                         const startTime = timeStr.trim();
-
-                        // Try to calculate end time (add 1.5 hours)
                         let endTime = startTime;
                         try {
                             const timeMatch = startTime.match(/(\d{1,2}):(\d{2})/);
                             if (timeMatch) {
                                 let hours = parseInt(timeMatch[1]);
                                 let minutes = parseInt(timeMatch[2]);
-
-                                // Check for PM
-                                if (startTime.toLowerCase().includes('pm') && hours < 12) {
-                                    hours += 12;
-                                }
-
-                                // Add 90 minutes (1.5 hours)
+                                if (startTime.toLowerCase().includes('pm') && hours < 12) hours += 12;
                                 minutes += 90;
                                 if (minutes >= 60) {
                                     hours += Math.floor(minutes / 60);
                                     minutes = minutes % 60;
                                 }
-
                                 endTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
                             }
-                        } catch (e) {
-                            // If calculation fails, use same time
-                            endTime = startTime;
-                        }
-
+                        } catch (e) { endTime = startTime; }
                         scheduleSlots = days.map(day => ({
                             day,
-                            startTime: startTime.replace(/\s*(AM|PM)/i, ''), // Remove AM/PM for time input
+                            startTime: startTime.replace(/\s*(AM|PM)/i, ''),
                             endTime: endTime
                         }));
                     }
                 }
             }
 
-            // Ensure at least one empty slot
-            if (scheduleSlots.length === 0) {
+            // Ensure at least one empty slot if still empty
+            if (!scheduleSlots || scheduleSlots.length === 0) {
                 scheduleSlots = [{ day: '', startTime: '', endTime: '' }];
             }
 
+            console.log('CreateClassModal: Setting formData with slots:', scheduleSlots);
             setFormData({
                 name: editingClass.name || '',
                 subject: editingClass.subject || '',
-                gradeLevel: editingClass.gradeLevel || '',
                 mainTeacher: editingClass.mainTeacher?.name || '',
                 assistant: editingClass.assistant?.name || '',
-                maxStudents: editingClass.maxStudents?.toString() || '',
+                description: editingClass.description || '',
+                syllabusContent: editingClass.syllabusContent || '',
                 scheduleSlots,
                 startDate: editingClass.startDate || '',
                 endDate: editingClass.endDate || '',
@@ -108,10 +87,10 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             setFormData({
                 name: '',
                 subject: '',
-                gradeLevel: '',
                 mainTeacher: '',
                 assistant: '',
-                maxStudents: '',
+                description: '',
+                syllabusContent: '',
                 scheduleSlots: [{ day: '', startTime: '', endTime: '' }],
                 startDate: '',
                 endDate: '',
@@ -282,7 +261,6 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             ...formData,
             schedule, // For display compatibility
             scheduleSlots: formData.scheduleSlots, // New format
-            maxStudents: parseInt(formData.maxStudents),
             currentStudents: editingClass?.currentStudents || 0,
             mainTeacher: {
                 name: formData.mainTeacher,
@@ -330,10 +308,8 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
     // Helper function to check teacher conflicts for all schedule slots
     const checkTeacherConflictsForAllSlots = (scheduleSlots, mainTeacherName, assistantName) => {
-        const teachers = getMockTeachers(); // Use shared mock data
-
-        const checkTeacherSlots = (teacherName) => {
-            const teacher = teachers.find(t => t.name === teacherName);
+        const checkTeacherSlots = (teacherName, staffList) => {
+            const teacher = staffList.find(t => t.name === teacherName);
             if (!teacher) return [];
 
             const conflicts = [];
@@ -350,7 +326,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
                 const dayEng = dayMap[slot.day] || slot.day;
 
-                const hasConflict = teacher.schedule.some(teacherSlot =>
+                const hasConflict = teacher.schedule?.some(teacherSlot =>
                     teacherSlot.day === dayEng &&
                     timeOverlap(slot.startTime, slot.endTime, teacherSlot.startTime, teacherSlot.endTime)
                 );
@@ -372,173 +348,17 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         };
 
         return {
-            mainTeacherConflicts: mainTeacherName ? checkTeacherSlots(mainTeacherName) : [],
-            assistantConflicts: assistantName ? checkTeacherSlots(assistantName) : []
+            mainTeacherConflicts: mainTeacherName ? checkTeacherSlots(mainTeacherName, teachersList) : [],
+            assistantConflicts: assistantName ? checkTeacherSlots(assistantName, assistantsList) : []
         };
     };
 
-    // Shared mock teacher data
-    const getMockTeachers = () => [
-        {
-            id: 1,
-            name: "Dr. Sarah Jenkins",
-            schedule: [
-                { day: "MON", startTime: "10:00", endTime: "11:30" },
-                { day: "WED", startTime: "10:00", endTime: "11:30" },
-                { day: "FRI", startTime: "14:00", endTime: "15:30" }
-            ]
-        },
-        {
-            id: 2,
-            name: "Prof. Robert Fox",
-            schedule: [
-                { day: "MON", startTime: "09:00", endTime: "10:30" },
-                { day: "TUE", startTime: "14:00", endTime: "15:30" },
-                { day: "THU", startTime: "09:00", endTime: "10:30" }
-            ]
-        },
-        {
-            id: 3,
-            name: "Michael Chen",
-            schedule: [
-                { day: "TUE", startTime: "10:00", endTime: "11:30" },
-                { day: "THU", startTime: "14:00", endTime: "15:30" }
-            ]
-        },
-        {
-            id: 4,
-            name: "Emily Rodriguez",
-            schedule: [
-                { day: "MON", startTime: "14:00", endTime: "15:30" },
-                { day: "WED", startTime: "09:00", endTime: "10:30" }
-            ]
-        },
-        {
-            id: 5,
-            name: "David Kim",
-            schedule: [
-                { day: "TUE", startTime: "09:00", endTime: "10:30" },
-                { day: "THU", startTime: "09:00", endTime: "10:30" }
-            ]
-        },
-        {
-            id: 6,
-            name: "Emma Thompson",
-            schedule: [
-                { day: "MON", startTime: "11:00", endTime: "12:30" },
-                { day: "WED", startTime: "11:00", endTime: "12:30" },
-                { day: "FRI", startTime: "10:00", endTime: "11:30" }
-            ]
-        }
-    ];
+
 
     // Helper function to check teacher conflicts (duplicate from TeacherAssignModal)
     const checkTeacherConflicts = (schedule, mainTeacherName, assistantName) => {
-        // Mock teacher data (same as in TeacherAssignModal)
-        const teachers = [
-            {
-                id: 1,
-                name: "Dr. Sarah Jenkins",
-                schedule: [
-                    { day: "MON", startTime: "10:00", endTime: "11:30" },
-                    { day: "WED", startTime: "10:00", endTime: "11:30" },
-                    { day: "FRI", startTime: "14:00", endTime: "15:30" }
-                ]
-            },
-            {
-                id: 2,
-                name: "Prof. Robert Fox",
-                schedule: [
-                    { day: "MON", startTime: "09:00", endTime: "10:30" },
-                    { day: "TUE", startTime: "14:00", endTime: "15:30" },
-                    { day: "THU", startTime: "09:00", endTime: "10:30" }
-                ]
-            },
-            {
-                id: 3,
-                name: "Michael Chen",
-                schedule: [
-                    { day: "TUE", startTime: "10:00", endTime: "11:30" },
-                    { day: "THU", startTime: "13:00", endTime: "14:30" }
-                ]
-            },
-            {
-                id: 4,
-                name: "Alice Rivera",
-                schedule: [
-                    { day: "MON", startTime: "13:00", endTime: "14:30" },
-                    { day: "WED", startTime: "15:00", endTime: "16:30" }
-                ]
-            },
-            {
-                id: 5,
-                name: "Dr. James Wilson",
-                schedule: [
-                    { day: "TUE", startTime: "09:00", endTime: "10:30" },
-                    { day: "THU", startTime: "09:00", endTime: "10:30" }
-                ]
-            },
-            {
-                id: 6,
-                name: "Emma Thompson",
-                schedule: [
-                    { day: "MON", startTime: "11:00", endTime: "12:30" },
-                    { day: "WED", startTime: "11:00", endTime: "12:30" },
-                    { day: "FRI", startTime: "10:00", endTime: "11:30" }
-                ]
-            }
-        ];
-
-        const parseClassSchedule = (schedule) => {
-            if (!schedule || !schedule.includes('•')) {
-                return { days: [], time: null };
-            }
-
-            const parts = schedule.split('•');
-            if (parts.length < 2) {
-                return { days: [], time: null };
-            }
-
-            const [daysStr, timeStr] = parts.map(s => s.trim());
-
-            const dayMap = {
-                'Thứ 2': 'MON', 'Mon': 'MON',
-                'Thứ 3': 'TUE', 'Tue': 'TUE',
-                'Thứ 4': 'WED', 'Wed': 'WED',
-                'Thứ 5': 'THU', 'Thu': 'THU',
-                'Thứ 6': 'FRI', 'Fri': 'FRI',
-                'Thứ 7': 'SAT', 'Sat': 'SAT',
-                'CN': 'SUN', 'Sun': 'SUN'
-            };
-
-            if (!daysStr) {
-                return { days: [], time: timeStr || null };
-            }
-
-            const days = daysStr.split(',').map(d => {
-                const trimmed = d.trim();
-                return dayMap[trimmed] || trimmed;
-            }).filter(Boolean);
-
-            return { days, time: timeStr || null };
-        };
-
-        const timeOverlap = (start1, end1, start2, end2) => {
-            const toMinutes = (time) => {
-                const [hours, minutes] = time.split(':').map(Number);
-                return hours * 60 + minutes;
-            };
-
-            const s1 = toMinutes(start1);
-            const e1 = toMinutes(end1);
-            const s2 = toMinutes(start2);
-            const e2 = toMinutes(end2);
-
-            return s1 < e2 && e1 > s2;
-        };
-
-        const checkConflict = (teacherName) => {
-            const teacher = teachers.find(t => t.name === teacherName);
+        const checkConflict = (teacherName, staffList) => {
+            const teacher = staffList.find(t => t.name === teacherName);
             if (!teacher) return false;
 
             const { days, time } = parseClassSchedule(schedule);
@@ -552,15 +372,15 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
             const [startTime, endTime] = timeParts.map(t => t.trim());
 
-            return teacher.schedule.some(slot =>
+            return teacher.schedule?.some(slot =>
                 days.includes(slot.day) &&
                 timeOverlap(startTime, endTime, slot.startTime, slot.endTime)
             );
         };
 
         return {
-            mainTeacherConflict: mainTeacherName ? checkConflict(mainTeacherName) : false,
-            assistantConflict: assistantName ? checkConflict(assistantName) : false
+            mainTeacherConflict: mainTeacherName ? checkConflict(mainTeacherName, teachersList) : false,
+            assistantConflict: assistantName ? checkConflict(assistantName, assistantsList) : false
         };
     };
 
@@ -606,7 +426,6 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                         </option>
                                     ))
                                     : (
-                                        // Fallback nếu chưa có subjects từ API
                                         <>
                                             <option value="MATHEMATICS">Toán học</option>
                                             <option value="SCIENCE">Khoa học</option>
@@ -617,22 +436,6 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                         </>
                                     )
                                 }
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Cấp học *</label>
-                            <select
-                                name="gradeLevel"
-                                value={formData.gradeLevel}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Chọn cấp học</option>
-                                <option value="elementary">Tiểu học</option>
-                                <option value="middle">THCS</option>
-                                <option value="high">THPT</option>
-                                <option value="college">Luyện thi đại học</option>
                             </select>
                         </div>
                     </div>
@@ -683,16 +486,24 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                     </div>
 
                     <div className="form-group">
-                        <label>Số học sinh tối đa *</label>
-                        <input
-                            type="number"
-                            name="maxStudents"
-                            value={formData.maxStudents}
+                        <label>Mô tả lớp học</label>
+                        <textarea
+                            name="description"
+                            value={formData.description}
                             onChange={handleChange}
-                            placeholder="VD: 15"
-                            min="1"
-                            max="50"
-                            required
+                            placeholder="Nhập mô tả về lớp học..."
+                            rows="2"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Nội dung giáo trình</label>
+                        <textarea
+                            name="syllabusContent"
+                            value={formData.syllabusContent}
+                            onChange={handleChange}
+                            placeholder="Nhập nội dung giáo trình..."
+                            rows="3"
                         />
                     </div>
 
@@ -818,16 +629,17 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                             {editingClass ? 'Cập nhật' : 'Tạo lớp học'}
                         </button>
                     </div>
-                </form>
-            </div>
+                </form >
+            </div >
 
             <TeacherAssignModal
                 isOpen={isTeacherModalOpen}
                 onClose={() => setIsTeacherModalOpen(false)}
                 onSelectTeacher={handleSelectTeacher}
-                classSchedule={formData.day && formData.time ? `${formData.day} • ${formData.time}` : ''}
+                classSchedule={formatScheduleForDisplay(formData.scheduleSlots)}
+                teachers={teacherType === 'main' ? teachersList : assistantsList}
             />
-        </div>
+        </div >
     );
 };
 
@@ -837,6 +649,9 @@ CreateClassModal.propTypes = {
     onSubmit: PropTypes.func.isRequired,
     editingClass: PropTypes.object,
     existingClasses: PropTypes.array,
+    subjects: PropTypes.array,
+    teachersList: PropTypes.array,
+    assistantsList: PropTypes.array
 };
 
 export default CreateClassModal;

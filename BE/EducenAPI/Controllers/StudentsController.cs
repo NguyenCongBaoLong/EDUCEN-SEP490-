@@ -193,6 +193,25 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
+                        // Validate unique username and email
+                        var existingUser = await _context.Users
+                            .FirstOrDefaultAsync(u => u.Username == username);
+                        if (existingUser != null)
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists");
+                            continue;
+                        }
+
+                        var existingStudent = await _context.Students
+                            .FirstOrDefaultAsync(s => s.Email == email);
+                        if (existingStudent != null)
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists");
+                            continue;
+                        }
+
                         var createStudentDto = new CreateStudentDto
                         {
                             Username = username,
@@ -247,8 +266,8 @@ namespace EducenAPI.Controllers
 
             // hash password
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
-
             user.IsAccountSent = true;
+            user.AccountStatus = "Active"; // Kích hoạt tài khoản khi gửi mail
             await _context.SaveChangesAsync();
 
             // gửi mail

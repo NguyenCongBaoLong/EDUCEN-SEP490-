@@ -69,9 +69,15 @@ namespace EducenAPI.DTOs.Schedules
         public int ScheduleId { get; set; }
         public int ClassId { get; set; }
         public string ClassName { get; set; } = string.Empty;
+        public int? SubjectId { get; set; }
+        public string? SubjectName { get; set; }
+        public int DayOfWeek { get; set; }
         public DateTime ScheduleDate { get; set; }
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? TeacherName { get; set; }
         public string? Notes { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }

@@ -7,8 +7,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
 {
+    public class ImportStudentToClassResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
     public class ClassService : IClassService
     {
+
         private readonly EducenV2Context _context;
 
         public ClassService(EducenV2Context context)
@@ -25,6 +32,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
                 .Include(c => c.Students)
+                .Include(c => c.Schedules)
                 .Select(c => new ClassDto
                 {
                     ClassId = c.ClassId,
@@ -37,11 +45,17 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
-                    //StartDate = c.StartDate,
-                    //EndDate = c.EndDate,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList()
                 })
                 .ToListAsync();
         }
@@ -54,6 +68,7 @@ namespace EducenAPI.Services
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Schedules)
                 .Include(c => c.Students)
                 .Where(c => c.ClassId == id)
                 .Select(c => new ClassDto
@@ -68,11 +83,17 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
-                    //StartDate = c.StartDate,
-                    //EndDate = c.EndDate,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -105,13 +126,36 @@ namespace EducenAPI.Services
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
                 AssistantId = dto.AssistantId,
-                //StartDate = dto.StartDate,
-                //EndDate = dto.EndDate,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
                 Status = dto.Status ?? "Active"
             };
 
             _context.Classes.Add(newClass);
             await _context.SaveChangesAsync();
+
+            // Create schedules for this class
+            if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
+            {
+                foreach (var slot in dto.ScheduleSlots)
+                {
+                    if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
+                        throw new Exception($"Invalid start time format: {slot.StartTime}");
+                    
+                    if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
+                        throw new Exception($"Invalid end time format: {slot.EndTime}");
+
+                    var schedule = new Schedule
+                    {
+                        ClassId = newClass.ClassId,
+                        DayOfWeek = slot.DayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime
+                    };
+                    _context.Schedules.Add(schedule);
+                }
+                await _context.SaveChangesAsync();
+            }
 
             return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
         }
@@ -146,6 +190,11 @@ namespace EducenAPI.Services
                     throw new Exception("Teacher not found");
                 existingClass.TeacherId = dto.TeacherId;
             }
+            else if (dto.TeacherId == null) 
+            {
+                // Note: Consider if business logic allows unassigning
+                existingClass.TeacherId = null;
+            }
 
             if (dto.AssistantId.HasValue)
             {
@@ -153,6 +202,10 @@ namespace EducenAPI.Services
                 if (assistant == null)
                     throw new Exception("Assistant not found");
                 existingClass.AssistantId = dto.AssistantId;
+            }
+            else if (dto.AssistantId == null)
+            {
+                existingClass.AssistantId = null;
             }
 
             if (dto.StartDate.HasValue)
@@ -163,6 +216,36 @@ namespace EducenAPI.Services
 
             if (dto.Status != null)
                 existingClass.Status = dto.Status;
+
+            // Update schedules if provided
+            if (dto.ScheduleSlots != null)
+            {
+                // Remove existing schedules
+                var oldSchedules = await _context.Schedules
+                    .Where(s => s.ClassId == id)
+                    .ToListAsync();
+                _context.Schedules.RemoveRange(oldSchedules);
+
+                // Add new schedules
+                foreach (var slot in dto.ScheduleSlots)
+                {
+                    // More robust time parsing
+                    if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
+                        throw new Exception($"Invalid start time format: {slot.StartTime}. Expected HH:mm or HH:mm:ss");
+                    
+                    if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
+                        throw new Exception($"Invalid end time format: {slot.EndTime}. Expected HH:mm or HH:mm:ss");
+
+                    var schedule = new Schedule
+                    {
+                        ClassId = id,
+                        DayOfWeek = slot.DayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime
+                    };
+                    _context.Schedules.Add(schedule);
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -259,65 +342,60 @@ namespace EducenAPI.Services
             return await _context.Classes.AnyAsync(c => c.ClassId == id);
         }
 
-        public async Task<bool> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto)
+        public async Task<ImportStudentToClassResult> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Look up the existing student by username
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == studentDto.Username);
 
-            try
+            if (user == null)
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Học sinh với username '{studentDto.Username}' chưa có trong hệ thống." };
+
+            // Make sure this user is actually a Student
+            var student = await _context.Students.FirstOrDefaultAsync(s => s.UserId == user.UserId);
+            if (student == null)
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Tài khoản '{studentDto.Username}' không phải học sinh." };
+
+            // Get the class (include students for duplicate check)
+            var existingClass = await _context.Classes
+                .Include(c => c.Students)
+                .FirstOrDefaultAsync(c => c.ClassId == classId);
+
+            if (existingClass == null)
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = "Lớp học không tồn tại." };
+
+            // Check if student already in class
+            if (existingClass.Students.Any(s => s.UserId == student.UserId))
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Học sinh '{studentDto.Username}' đã có trong lớp." };
+
+            existingClass.Students.Add(student);
+            await _context.SaveChangesAsync();
+
+            return new ImportStudentToClassResult { Success = true };
+        }
+
+        public async Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId)
+        {
+            var classEntity = await _context.Classes
+                .Include(c => c.Students)
+                    .ThenInclude(s => s.StudentNavigation)
+                .FirstOrDefaultAsync(c => c.ClassId == classId);
+
+            if (classEntity == null)
+                return Enumerable.Empty<StudentDto>();
+
+            return classEntity.Students.Select(s => new StudentDto
             {
-                // Check if username or email already exists
-                var existingUser = await _context.Users
-                    .AnyAsync(u => u.Username == studentDto.Username || u.Email == studentDto.Email);
-
-                if (existingUser)
-                {
-                    return false; // Student already exists
-                }
-
-                // Get the class
-                var existingClass = await _context.Classes.FindAsync(classId);
-                if (existingClass == null)
-                {
-                    return false;
-                }
-
-                // Create user account
-                var user = new User
-                {
-                    Username = studentDto.Username,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(studentDto.Password),
-                    RoleId = (await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Student"))?.RoleId ?? 1,
-                    FullName = studentDto.FullName,
-                    Email = studentDto.Email,
-                    PhoneNumber = studentDto.PhoneNumber,
-                    AccountStatus = "Active"
-                };
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                // Create student profile
-                var student = new Student
-                {
-                    UserId = user.UserId,
-                    EnrollmentStatus = studentDto.EnrollmentStatus
-                };
-
-                _context.Students.Add(student);
-                await _context.SaveChangesAsync();
-
-                // Assign student to class
-                existingClass.Students.Add(student);
-                await _context.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
+                UserId = s.UserId,
+                Username = s.StudentNavigation.Username ?? "",
+                FullName = s.StudentNavigation.FullName ?? "",
+                Email = s.Email ?? "",
+                PhoneNumber = s.StudentNavigation.PhoneNumber,
+                Grade = s.Grade,
+                EnrollmentStatus = s.EnrollmentStatus ?? "",
+                AccountStatus = s.StudentNavigation.AccountStatus ?? "",
+                CreatedAt = DateTime.Now
+            });
         }
     }
 }
