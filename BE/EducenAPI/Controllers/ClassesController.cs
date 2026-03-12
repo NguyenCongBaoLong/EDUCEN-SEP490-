@@ -255,6 +255,34 @@ namespace EducenAPI.Controllers
                             ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
                             : null;
 
+                        var grade = columnMapping.ContainsKey("Grade") 
+                            ? rowData.ItemArray[columnMapping["Grade"]]?.ToString()?.Trim()
+                            : null;
+
+                        var dateOfBirth = columnMapping.ContainsKey("DateOfBirth") 
+                            ? rowData.ItemArray[columnMapping["DateOfBirth"]]?.ToString()?.Trim()
+                            : null;
+
+                        var gender = columnMapping.ContainsKey("Gender") 
+                            ? rowData.ItemArray[columnMapping["Gender"]]?.ToString()?.Trim()
+                            : null;
+
+                        // Parse DateOfBirth if provided
+                        DateTime? parsedDateOfBirth = null;
+                        if (!string.IsNullOrWhiteSpace(dateOfBirth))
+                        {
+                            if (DateTime.TryParse(dateOfBirth, out DateTime dob))
+                            {
+                                parsedDateOfBirth = dob;
+                            }
+                            else
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirth}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
+                                continue;
+                            }
+                        }
+
                         // Validate required fields
                         if (string.IsNullOrWhiteSpace(username) || 
                             string.IsNullOrWhiteSpace(fullName) || 
@@ -298,7 +326,7 @@ namespace EducenAPI.Controllers
                     message = "Import to class completed",
                     classId = id,
                     importResults,
-                    defaultPasswordNote = "Default passwords are: username + '123'",
+                    defaultPasswordNote = "Students must already exist in system. Use Send Account function to generate passwords.",
                     templateInfo = new {
                         templateName = ImportTemplate.TEMPLATE_NAME,
                         mappedHeaders = columnMapping.Keys.ToList()

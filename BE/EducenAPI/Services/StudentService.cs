@@ -60,6 +60,36 @@ namespace EducenAPI.Services
 
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
         {
+            // Skip user creation if username or password is null
+            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                // Create student profile without user account
+                var studentProfile = new Student
+                {
+                    UserId = 0, // Will be set when account is created
+                    Email = dto.Email,
+                    EnrollmentStatus = dto.EnrollmentStatus
+                };
+
+                _context.Students.Add(studentProfile);
+                await _context.SaveChangesAsync();
+
+                return new StudentDto
+                {
+                    UserId = studentProfile.UserId,
+                    Username = "",
+                    FullName = dto.FullName,
+                    Email = studentProfile.Email,
+                    PhoneNumber = dto.PhoneNumber, // Keep from DTO
+                    Address = null,
+                    Grade = null,
+                    EnrollmentStatus = studentProfile.EnrollmentStatus ?? "Active",
+                    AccountStatus = "Pending",
+                    IsAccountSent = false,
+                    CreatedAt = DateTime.Now
+                };
+            }
+
             var existingUser = await _context.Users
                 .AnyAsync(u => u.Username == dto.Username);
 

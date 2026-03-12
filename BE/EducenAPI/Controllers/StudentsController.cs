@@ -1,5 +1,6 @@
 ﻿using EducenAPI.DTOs.Students;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +8,6 @@ using System.Data;
 using System.Text;
 using ExcelDataReader;
 using EducenAPI.Persistence.Contexts;
-using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
@@ -183,6 +183,34 @@ namespace EducenAPI.Controllers
                             ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
                             : null;
 
+                        var grade = columnMapping.ContainsKey("Grade") 
+                            ? rowData.ItemArray[columnMapping["Grade"]]?.ToString()?.Trim()
+                            : null;
+
+                        var dateOfBirth = columnMapping.ContainsKey("DateOfBirth") 
+                            ? rowData.ItemArray[columnMapping["DateOfBirth"]]?.ToString()?.Trim()
+                            : null;
+
+                        var gender = columnMapping.ContainsKey("Gender") 
+                            ? rowData.ItemArray[columnMapping["Gender"]]?.ToString()?.Trim()
+                            : null;
+
+                        // Parse DateOfBirth if provided
+                        DateTime? parsedDateOfBirth = null;
+                        if (!string.IsNullOrWhiteSpace(dateOfBirth))
+                        {
+                            if (DateTime.TryParse(dateOfBirth, out DateTime dob))
+                            {
+                                parsedDateOfBirth = dob;
+                            }
+                            else
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirth}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
+                                continue;
+                            }
+                        }
+
                         // Validate required fields
                         if (string.IsNullOrWhiteSpace(username) || 
                             string.IsNullOrWhiteSpace(fullName) || 
@@ -218,8 +246,11 @@ namespace EducenAPI.Controllers
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
-                            Password = username + "123", // Default password: username + "123"
-                            EnrollmentStatus = "Active"
+                            Password = PasswordGenerator.GenerateSecurePassword(),
+                            EnrollmentStatus = "Active",
+                            Grade = grade,
+                            DateOfBirth = parsedDateOfBirth,
+                            Gender = gender
                         };
 
                         await _studentService.CreateStudentAsync(createStudentDto);
@@ -236,7 +267,7 @@ namespace EducenAPI.Controllers
                 {
                     message = "Import completed",
                     importResults,
-                    defaultPasswordNote = "Default passwords are: username + '123'",
+                    defaultPasswordNote = "Secure passwords have been generated for all imported students",
                     templateInfo = new {
                         templateName = ImportTemplate.TEMPLATE_NAME,
                         mappedHeaders = columnMapping.Keys.ToList()
@@ -262,7 +293,7 @@ namespace EducenAPI.Controllers
                 return BadRequest("Student chưa có email");
 
             // tạo password mới
-            string newPassword = GeneratePassword();
+            string newPassword = PasswordGenerator.GenerateSecurePassword();
 
             // hash password
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
@@ -274,14 +305,6 @@ namespace EducenAPI.Controllers
             await _mailService.SendStudentAccount(user.Student.Email, user.Username, newPassword);
 
             return Ok("Đã gửi tài khoản thành công");
-        }
-        private string GeneratePassword(int length = 8)
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var random = new Random();
-
-            return new string(Enumerable.Repeat(chars, length)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
         }
         private sealed class ImportResults
         {

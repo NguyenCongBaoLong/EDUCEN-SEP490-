@@ -2,6 +2,7 @@
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -157,7 +158,7 @@ namespace EducenAPI.Services
             } while (exist);
 
             // Generate password
-            var password = GenerateRandomPassword();
+            var password = PasswordGenerator.GenerateSecurePassword();
 
             user.Username = username;
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
@@ -171,14 +172,6 @@ namespace EducenAPI.Services
                 Username = username,
                 Password = password
             };
-        }
-
-        private string GenerateRandomPassword()
-        {
-            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
-
-            return new string(Enumerable.Repeat(chars, 8)
-                .Select(s => s[Random.Shared.Next(s.Length)]).ToArray());
         }
     }
 }
