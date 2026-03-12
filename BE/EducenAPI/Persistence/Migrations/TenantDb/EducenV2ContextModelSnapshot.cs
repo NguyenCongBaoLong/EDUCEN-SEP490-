@@ -94,7 +94,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<DateTime?>("RecordedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ScheduleId")
+                    b.Property<int>("SessionId")
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
@@ -103,19 +103,16 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<int>("StudentId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("UpdatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("UpdatedByNavigationUserId")
+                    b.Property<int?>("UpdatedByUserId")
                         .HasColumnType("int");
 
                     b.HasKey("AttendanceId");
 
-                    b.HasIndex("ScheduleId");
+                    b.HasIndex("SessionId");
 
                     b.HasIndex("StudentId");
 
-                    b.HasIndex("UpdatedByNavigationUserId");
+                    b.HasIndex("UpdatedByUserId");
 
                     b.ToTable("Attendances");
                 });
@@ -312,6 +309,37 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasIndex("TeacherId");
 
                     b.ToTable("Classes");
+                });
+
+            modelBuilder.Entity("EducenAPI.Models.ClassSession", b =>
+                {
+                    b.Property<int>("SessionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SessionId"));
+
+                    b.Property<int?>("ClassId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SessionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("SessionId");
+
+                    b.HasIndex("ClassId");
+
+                    b.HasIndex("ScheduleId");
+
+                    b.ToTable("ClassSessions");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.LessonMaterial", b =>
@@ -624,10 +652,10 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.Attendance", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Schedule", "Schedule")
+                    b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("Attendances")
-                        .HasForeignKey("ScheduleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("EducenAPI.Models.Student", "Student")
@@ -636,15 +664,15 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("EducenAPI.Models.User", "UpdatedByNavigation")
+                    b.HasOne("EducenAPI.Models.User", "UpdatedBy")
                         .WithMany("Attendances")
-                        .HasForeignKey("UpdatedByNavigationUserId");
+                        .HasForeignKey("UpdatedByUserId");
 
-                    b.Navigation("Schedule");
+                    b.Navigation("Session");
 
                     b.Navigation("Student");
 
-                    b.Navigation("UpdatedByNavigation");
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.CenterHeroImage", b =>
@@ -701,6 +729,21 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Subject");
 
                     b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("EducenAPI.Models.ClassSession", b =>
+                {
+                    b.HasOne("EducenAPI.Models.Class", null)
+                        .WithMany("Sessions")
+                        .HasForeignKey("ClassId");
+
+                    b.HasOne("EducenAPI.Models.Schedule", "Schedule")
+                        .WithMany("Sessions")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.LessonMaterial", b =>
@@ -829,6 +872,13 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("LessonMaterials");
 
                     b.Navigation("Schedules");
+
+                    b.Navigation("Sessions");
+                });
+
+            modelBuilder.Entity("EducenAPI.Models.ClassSession", b =>
+                {
+                    b.Navigation("Attendances");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Role", b =>
@@ -838,7 +888,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.Schedule", b =>
                 {
-                    b.Navigation("Attendances");
+                    b.Navigation("Sessions");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Student", b =>

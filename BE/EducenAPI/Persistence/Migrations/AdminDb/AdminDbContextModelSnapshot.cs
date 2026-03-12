@@ -38,16 +38,11 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("SystemAdminSysAdminId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("TenantId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("PaymentId");
-
-                    b.HasIndex("SystemAdminSysAdminId");
 
                     b.HasIndex("TenantId");
 
@@ -189,10 +184,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
             modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
                 {
-                    b.HasOne("EducenAPI.Models.SystemAdmin", null)
-                        .WithMany("PaymentRecords")
-                        .HasForeignKey("SystemAdminSysAdminId");
-
                     b.HasOne("EducenAPI.Models.Tenant", "Tenant")
                         .WithMany("PaymentRecords")
                         .HasForeignKey("TenantId")
@@ -224,11 +215,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
             modelBuilder.Entity("EducenAPI.Models.Plan", b =>
                 {
                     b.Navigation("Subscriptions");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.SystemAdmin", b =>
-                {
-                    b.Navigation("PaymentRecords");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Tenant", b =>

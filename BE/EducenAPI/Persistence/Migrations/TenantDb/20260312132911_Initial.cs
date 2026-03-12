@@ -420,35 +420,60 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 });
 
             migrationBuilder.CreateTable(
+                name: "ClassSessions",
+                columns: table => new
+                {
+                    SessionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ScheduleId = table.Column<int>(type: "int", nullable: false),
+                    SessionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ClassId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClassSessions", x => x.SessionId);
+                    table.ForeignKey(
+                        name: "FK_ClassSessions_Classes_ClassId",
+                        column: x => x.ClassId,
+                        principalTable: "Classes",
+                        principalColumn: "ClassId");
+                    table.ForeignKey(
+                        name: "FK_ClassSessions_Schedules_ScheduleId",
+                        column: x => x.ScheduleId,
+                        principalTable: "Schedules",
+                        principalColumn: "ScheduleId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Attendances",
                 columns: table => new
                 {
                     AttendanceId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ScheduleId = table.Column<int>(type: "int", nullable: false),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
                     StudentId = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UpdatedBy = table.Column<int>(type: "int", nullable: true),
                     RecordedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    UpdatedByNavigationUserId = table.Column<int>(type: "int", nullable: true)
+                    UpdatedByUserId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Attendances", x => x.AttendanceId);
                     table.ForeignKey(
-                        name: "FK_Attendances_Schedules_ScheduleId",
-                        column: x => x.ScheduleId,
-                        principalTable: "Schedules",
-                        principalColumn: "ScheduleId",
-                        onDelete: ReferentialAction.Cascade);
+                        name: "FK_Attendances_ClassSessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "ClassSessions",
+                        principalColumn: "SessionId");
                     table.ForeignKey(
                         name: "FK_Attendances_Students_StudentId",
                         column: x => x.StudentId,
                         principalTable: "Students",
                         principalColumn: "UserId");
                     table.ForeignKey(
-                        name: "FK_Attendances_Users_UpdatedByNavigationUserId",
-                        column: x => x.UpdatedByNavigationUserId,
+                        name: "FK_Attendances_Users_UpdatedByUserId",
+                        column: x => x.UpdatedByUserId,
                         principalTable: "Users",
                         principalColumn: "UserId");
                 });
@@ -471,9 +496,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 column: "ClassId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Attendances_ScheduleId",
+                name: "IX_Attendances_SessionId",
                 table: "Attendances",
-                column: "ScheduleId");
+                column: "SessionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Attendances_StudentId",
@@ -481,9 +506,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 column: "StudentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Attendances_UpdatedByNavigationUserId",
+                name: "IX_Attendances_UpdatedByUserId",
                 table: "Attendances",
-                column: "UpdatedByNavigationUserId");
+                column: "UpdatedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CenterHeroImages_CenterProfileId",
@@ -514,6 +539,16 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "IX_Classes_TeacherId",
                 table: "Classes",
                 column: "TeacherId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClassSessions_ClassId",
+                table: "ClassSessions",
+                column: "ClassId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClassSessions_ScheduleId",
+                table: "ClassSessions",
+                column: "ScheduleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ClassStudent_StudentsUserId",
@@ -579,7 +614,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "Submissions");
 
             migrationBuilder.DropTable(
-                name: "Schedules");
+                name: "ClassSessions");
 
             migrationBuilder.DropTable(
                 name: "CenterProfiles");
@@ -592,6 +627,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             migrationBuilder.DropTable(
                 name: "Students");
+
+            migrationBuilder.DropTable(
+                name: "Schedules");
 
             migrationBuilder.DropTable(
                 name: "Classes");
