@@ -41,6 +41,7 @@ public partial class EducenV2Context : DbContext
     public virtual DbSet<CenterImage> CenterImages { get; set; } = null!;
     public virtual DbSet<CenterHeroImage> CenterHeroImages { get; set; } = null!;
     public virtual DbSet<CenterHighlight> CenterHighlights { get; set; } = null!;
+    public DbSet<ClassSession> ClassSessions { get; set; }
 
     // ================================
     // MODEL CONFIGURATION
@@ -199,6 +200,18 @@ public partial class EducenV2Context : DbContext
             .WithMany(c => c.Highlights)
             .HasForeignKey(h => h.CenterProfileId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Attendance>()
+        .HasOne(a => a.Session)
+        .WithMany(s => s.Attendances)
+        .HasForeignKey(a => a.SessionId)
+        .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<ClassSession>()
+        .HasOne(cs => cs.Schedule)
+        .WithMany(s => s.Sessions)
+        .HasForeignKey(cs => cs.ScheduleId)
+        .OnDelete(DeleteBehavior.Cascade);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

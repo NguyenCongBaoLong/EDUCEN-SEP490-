@@ -37,4 +37,6 @@ public partial class Class
     public virtual Teacher Teacher { get; set; } = null!;
 
     public virtual ICollection<Student> Students { get; set; } = new List<Student>();
+    public ICollection<ClassSession> Sessions { get; set; }
+
 }

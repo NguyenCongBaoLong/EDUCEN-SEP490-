@@ -69,17 +69,11 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     TenantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    SystemAdminSysAdminId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PaymentRecord", x => x.PaymentId);
-                    table.ForeignKey(
-                        name: "FK_PaymentRecord_SystemAdmins_SystemAdminSysAdminId",
-                        column: x => x.SystemAdminSysAdminId,
-                        principalTable: "SystemAdmins",
-                        principalColumn: "SysAdminId");
                     table.ForeignKey(
                         name: "FK_PaymentRecord_Tenants_TenantId",
                         column: x => x.TenantId,
@@ -115,11 +109,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                         principalColumn: "TenantId",
                         onDelete: ReferentialAction.Cascade);
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PaymentRecord_SystemAdminSysAdminId",
-                table: "PaymentRecord",
-                column: "SystemAdminSysAdminId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentRecord_TenantId",
