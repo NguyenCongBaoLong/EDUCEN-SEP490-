@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.AdminDb
 {
     [DbContext(typeof(AdminDbContext))]
-    [Migration("20260314134046_Initial")]
+    [Migration("20260315134955_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -28,7 +28,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
             modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
                 {
                     b.Property<string>("PaymentId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("Amount")
@@ -83,7 +82,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
             modelBuilder.Entity("EducenAPI.Models.Subscription", b =>
                 {
                     b.Property<string>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("EndDate")
@@ -91,6 +89,9 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
                     b.Property<string>("PlanId")
                         .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PlanId1")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("StartDate")
@@ -109,7 +110,9 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
                     b.HasIndex("PlanId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("PlanId1");
+
+                    b.HasIndex("TenantId", "StartDate");
 
                     b.ToTable("Subscriptions");
                 });
@@ -150,11 +153,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("DomainUrl")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<string>("Email")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -170,6 +168,11 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("SubDomain")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("TenantName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -181,7 +184,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
                     b.HasKey("TenantId");
 
-                    b.HasIndex("DomainUrl")
+                    b.HasIndex("SubDomain")
                         .IsUnique();
 
                     b.ToTable("Tenants");
@@ -201,10 +204,14 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
             modelBuilder.Entity("EducenAPI.Models.Subscription", b =>
                 {
                     b.HasOne("EducenAPI.Models.Plan", "Plan")
-                        .WithMany("Subscriptions")
+                        .WithMany()
                         .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("EducenAPI.Models.Plan", null)
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("PlanId1");
 
                     b.HasOne("EducenAPI.Models.Tenant", "Tenant")
                         .WithMany("Subscriptions")
