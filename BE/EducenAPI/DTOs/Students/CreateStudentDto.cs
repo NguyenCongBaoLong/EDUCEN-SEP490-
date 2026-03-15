@@ -11,20 +11,6 @@ namespace EducenAPI.DTOs.Students
         private string? _phoneNumber;
         private string? _enrollmentStatus;
 
-        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
-        public string? Username 
-        { 
-            get => _username;
-            set => _username = value?.Trim();
-        }
-
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
-        public string? Password 
-        { 
-            get => _password;
-            set => _password = value?.Trim();
-        }
-
         [Required(ErrorMessage = "FullName is required")]
         [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
@@ -42,6 +28,20 @@ namespace EducenAPI.DTOs.Students
         { 
             get => _email;
             set => _email = value?.Trim() ?? string.Empty;
+        }
+
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
+        public string? Username 
+        { 
+            get => _username;
+            set => _username = value?.Trim();
+        }
+
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+        public string? Password 
+        { 
+            get => _password;
+            set => _password = value?.Trim();
         }
 
         [Phone(ErrorMessage = "Invalid phone number format")]
