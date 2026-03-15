@@ -27,14 +27,15 @@ namespace EducenAPI.Controllers
         [HttpGet]
         public IActionResult GetAll()
         {
-            var tenants = _tenantService.GetAllTenants();
+            var tenants = _tenantService.GetAllTenantDetails();
             return Ok(tenants);
         }
 
-        [HttpGet("{tenantId}")]
-        public IActionResult GetById(string tenantId)
+
+        [HttpGet("{tenantId}/details")]
+        public IActionResult GetTenantDetails(string tenantId)
         {
-            var tenant = _tenantService.GetTenantById(tenantId);
+            var tenant = _tenantService.GetTenantDetails(tenantId);
 
             if (tenant == null)
                 return NotFound();

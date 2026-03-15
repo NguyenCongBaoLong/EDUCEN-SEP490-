@@ -12,5 +12,8 @@ namespace EducenAPI.Services.TenantService
         Tenant? GetTenantById(string tenantId);
 
         Tenant? UpdateTenant(string tenantId, UpdateTenantRequest request);
+        IEnumerable<TenantWithSubscriptionRequest> GetAllTenantDetails();
+
+        TenantWithSubscriptionRequest? GetTenantDetails(string tenantId);
     }
 }

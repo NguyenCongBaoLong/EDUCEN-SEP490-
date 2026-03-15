@@ -27,7 +27,7 @@ namespace EducenAPI.DTOs
 
         //[Required]
         //[MaxLength(200)]
-        public string? DomainUrl { get; set; }      
+        public string? SubDomain { get; set; }      
 
         public bool IsActive { get; set; } = true;
     }

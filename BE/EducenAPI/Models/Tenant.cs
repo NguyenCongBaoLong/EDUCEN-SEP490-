@@ -5,7 +5,7 @@ namespace EducenAPI.Models
     public class Tenant
     {
         [Key]
-        public string TenantId { get; set; }
+        public string TenantId { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         [MaxLength(200)]
@@ -29,7 +29,7 @@ namespace EducenAPI.Models
 
         [Required]
         [MaxLength(200)]
-        public string DomainUrl { get; set; }
+        public string SubDomain { get; set; }
 
         [Required]
         public string ConnectionString { get; set; }
@@ -37,7 +37,8 @@ namespace EducenAPI.Models
         public bool IsActive { get; set; } = true;
 
         // Navigation
-        public ICollection<Subscription>? Subscriptions { get; set; }
-        public ICollection<PaymentRecord>? PaymentRecords { get; set; }
+        public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
+
+        public ICollection<PaymentRecord> PaymentRecords { get; set; } = new List<PaymentRecord>();
     }
 }
