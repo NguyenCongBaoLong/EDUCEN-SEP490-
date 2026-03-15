@@ -62,7 +62,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 });
 
             migrationBuilder.CreateTable(
-                name: "PaymentRecord",
+                name: "PaymentRecords",
                 columns: table => new
                 {
                     PaymentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -73,9 +73,9 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PaymentRecord", x => x.PaymentId);
+                    table.PrimaryKey("PK_PaymentRecords", x => x.PaymentId);
                     table.ForeignKey(
-                        name: "FK_PaymentRecord_Tenants_TenantId",
+                        name: "FK_PaymentRecords_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
                         principalColumn: "TenantId",
@@ -111,8 +111,8 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PaymentRecord_TenantId",
-                table: "PaymentRecord",
+                name: "IX_PaymentRecords_TenantId",
+                table: "PaymentRecords",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
@@ -136,7 +136,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "PaymentRecord");
+                name: "PaymentRecords");
 
             migrationBuilder.DropTable(
                 name: "Subscriptions");

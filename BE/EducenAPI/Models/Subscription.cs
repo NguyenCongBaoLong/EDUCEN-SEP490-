@@ -6,6 +6,7 @@ namespace EducenAPI.Models
     public class Subscription
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public string Id { get; set; }
 
         [Required]

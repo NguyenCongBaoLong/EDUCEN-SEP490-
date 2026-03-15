@@ -9,7 +9,7 @@ public partial class Assignment
     [Key]
     public int AsmId { get; set; }
 
-    public int ClassId { get; set; }
+    public int SessionId { get; set; }
 
     public string? Title { get; set; }
 
@@ -21,7 +21,7 @@ public partial class Assignment
 
     public DateTime? EndTime { get; set; }
 
-    public virtual Class Class { get; set; } = null!;
+    public ClassSession Session { get; set; } = null!;
 
     public virtual ICollection<Submission> Submissions { get; set; } = new List<Submission>();
 }

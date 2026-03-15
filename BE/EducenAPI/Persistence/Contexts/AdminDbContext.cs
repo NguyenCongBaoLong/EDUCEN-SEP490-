@@ -17,6 +17,7 @@ namespace EducenAPI.Persistence.Contexts
         public DbSet<Plan> Plans { get; set; }
 
         public DbSet<SystemAdmin> SystemAdmins { get; set; }
+        public DbSet<PaymentRecord> PaymentRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

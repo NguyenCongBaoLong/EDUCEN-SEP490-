@@ -212,6 +212,18 @@ public partial class EducenV2Context : DbContext
         .WithMany(s => s.Sessions)
         .HasForeignKey(cs => cs.ScheduleId)
         .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Assignment>()
+        .HasOne(a => a.Session)
+        .WithMany(s => s.Assignments)
+        .HasForeignKey(a => a.SessionId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<LessonMaterial>()
+        .HasOne(m => m.Session)
+        .WithMany(s => s.LessonMaterials)
+        .HasForeignKey(m => m.SessionId)
+        .OnDelete(DeleteBehavior.Cascade);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

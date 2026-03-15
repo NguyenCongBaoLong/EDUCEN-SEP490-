@@ -3,7 +3,7 @@ import axios from 'axios';
 // API client riêng cho hệ thống tổng (AdminDB)
 // Không gửi "tenant" header — truy cập trực tiếp AdminDbContext
 const adminApi = axios.create({
-    baseURL: 'http://localhost:5062/api',
+    baseURL: 'http://localhost:5106/api',
     headers: {
         'Content-Type': 'application/json',
     },
