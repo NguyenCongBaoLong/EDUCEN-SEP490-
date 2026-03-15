@@ -128,13 +128,32 @@ namespace EducenAPI.Controllers
                 using var reader = ExcelReaderFactory.CreateReader(stream);
                 
                 var dataSet = reader.AsDataSet();
+                
+                // Check if dataset has tables
+                if (dataSet.Tables == null || dataSet.Tables.Count == 0)
+                    return BadRequest(new { message = "Excel file contains no data" });
+                
                 var worksheet = dataSet.Tables[0];
                 
+                // Check if worksheet has rows
                 if (worksheet == null)
                     return BadRequest(new { message = "No worksheet found in Excel file" });
+                
+                // Check if worksheet has data rows
+                if (worksheet.Rows == null || worksheet.Rows.Count == 0)
+                    return BadRequest(new { message = "Worksheet contains no data" });
+                
+                // Check if worksheet has at least header row
+                if (worksheet.Rows.Count < 1)
+                    return BadRequest(new { message = "Worksheet must have at least header row" });
 
                 // Validate template headers
                 var headerRow = worksheet.Rows[0];
+                
+                // Check if header row has data
+                if (headerRow == null || headerRow.ItemArray == null || headerRow.ItemArray.Length == 0)
+                    return BadRequest(new { message = "Header row is empty or invalid" });
+                
                 var actualHeaders = new List<string>();
                 for (int col = 0; col < headerRow.ItemArray.Length; col++)
                 {
@@ -170,6 +189,10 @@ namespace EducenAPI.Controllers
                 var fileUsernames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 // Process Excel data using column mapping
+                // Check if there are data rows beyond header
+                if (worksheet.Rows.Count <= 1)
+                    return BadRequest(new { message = "Excel file contains only headers, no data rows found" });
+                
                 for (int row = 1; row < worksheet.Rows.Count; row++)
                 {
                     importResults.Total++;
@@ -178,32 +201,40 @@ namespace EducenAPI.Controllers
                     {
                         var rowData = worksheet.Rows[row];
                         
+                        // Check if row exists and has data
+                        if (rowData == null || rowData.ItemArray == null)
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Empty or invalid row data");
+                            continue;
+                        }
+                        
                         // Extract data using column mapping
-                        var username = columnMapping.ContainsKey("Username") 
+                        var username = columnMapping.ContainsKey("Username") && columnMapping["Username"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["Username"]]?.ToString()?.Trim() ?? ""
                             : "";
                             
-                        var fullName = columnMapping.ContainsKey("FullName") 
+                        var fullName = columnMapping.ContainsKey("FullName") && columnMapping["FullName"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["FullName"]]?.ToString()?.Trim() ?? ""
                             : "";
                             
-                        var email = columnMapping.ContainsKey("Email") 
+                        var email = columnMapping.ContainsKey("Email") && columnMapping["Email"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["Email"]]?.ToString()?.Trim() ?? ""
                             : "";
                             
-                        var phoneNumber = columnMapping.ContainsKey("PhoneNumber") 
+                        var phoneNumber = columnMapping.ContainsKey("PhoneNumber") && columnMapping["PhoneNumber"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
                             : null;
 
-                        var grade = columnMapping.ContainsKey("Grade") 
+                        var grade = columnMapping.ContainsKey("Grade") && columnMapping["Grade"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["Grade"]]?.ToString()?.Trim()
                             : null;
 
-                        var dateOfBirth = columnMapping.ContainsKey("DateOfBirth") 
+                        var dateOfBirth = columnMapping.ContainsKey("DateOfBirth") && columnMapping["DateOfBirth"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["DateOfBirth"]]?.ToString()?.Trim()
                             : null;
 
-                        var gender = columnMapping.ContainsKey("Gender") 
+                        var gender = columnMapping.ContainsKey("Gender") && columnMapping["Gender"] < rowData.ItemArray.Length
                             ? rowData.ItemArray[columnMapping["Gender"]]?.ToString()?.Trim()
                             : null;
 
@@ -384,12 +415,85 @@ namespace EducenAPI.Controllers
 
             return Ok("Đã gửi tài khoản thành công");
         }
+
+        [HttpPost("create-account/{studentId}")]
+        public async Task<IActionResult> CreateAccountForStudent(int studentId, [FromBody] CreateAccountRequest request)
+        {
+            try
+            {
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                    return NotFound("Student not found");
+
+                if (student.UserId.HasValue)
+                    return BadRequest("Student already has an account");
+
+                // Validate request
+                if (string.IsNullOrWhiteSpace(request.Username))
+                    return BadRequest("Username is required");
+
+                if (string.IsNullOrWhiteSpace(request.Password))
+                    return BadRequest("Password is required");
+
+                // Check duplicate username
+                var existingUser = await _context.Users
+                    .AnyAsync(u => u.Username == request.Username);
+                if (existingUser)
+                    return Conflict("Username already exists");
+
+                // Create user account
+                var studentRole = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.RoleName == "Student");
+                if (studentRole == null)
+                    return BadRequest("Student role not found");
+
+                var user = new User
+                {
+                    Username = request.Username,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    RoleId = studentRole.RoleId,
+                    FullName = request.FullName ?? student.FullName ?? "",
+                    Email = student.Email,  // Dùng email từ student
+                    PhoneNumber = request.PhoneNumber,
+                    AccountStatus = "Active",
+                    IsAccountSent = true
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                // Link student to user
+                student.UserId = user.UserId;
+                await _context.SaveChangesAsync();
+
+                // Send account email
+                await _mailService.SendStudentAccount(student.Email, request.Username, request.Password);
+
+                return Ok(new { message = "Account created and sent successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         private sealed class ImportResults
         {
             public int Total { get; set; }
             public int Success { get; set; }
             public int Failed { get; set; }
             public List<string> Errors { get; set; } = new();
+        }
+
+        public class CreateAccountRequest
+        {
+            [Required]
+            public string Username { get; set; }
+            
+            [Required]
+            public string Password { get; set; }
+            
+            public string? FullName { get; set; }
+            public string? PhoneNumber { get; set; }
         }
     }
 }
