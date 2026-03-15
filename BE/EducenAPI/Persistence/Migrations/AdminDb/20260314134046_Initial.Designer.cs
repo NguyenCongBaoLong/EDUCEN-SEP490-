@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.AdminDb
 {
     [DbContext(typeof(AdminDbContext))]
-    [Migration("20260312131932_Initial")]
+    [Migration("20260314134046_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -28,6 +28,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
             modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
                 {
                     b.Property<string>("PaymentId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("Amount")
@@ -49,7 +50,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("PaymentRecord");
+                    b.ToTable("PaymentRecords");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Plan", b =>
@@ -82,6 +83,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
             modelBuilder.Entity("EducenAPI.Models.Subscription", b =>
                 {
                     b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("EndDate")

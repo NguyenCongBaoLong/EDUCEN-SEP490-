@@ -297,30 +297,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 });
 
             migrationBuilder.CreateTable(
-                name: "Assignments",
-                columns: table => new
-                {
-                    AsmId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ClassId = table.Column<int>(type: "int", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    EndTime = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Assignments", x => x.AsmId);
-                    table.ForeignKey(
-                        name: "FK_Assignments_Classes_ClassId",
-                        column: x => x.ClassId,
-                        principalTable: "Classes",
-                        principalColumn: "ClassId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ClassStudent",
                 columns: table => new
                 {
@@ -344,28 +320,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 });
 
             migrationBuilder.CreateTable(
-                name: "LessonMaterials",
-                columns: table => new
-                {
-                    MaterialId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ClassId = table.Column<int>(type: "int", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_LessonMaterials", x => x.MaterialId);
-                    table.ForeignKey(
-                        name: "FK_LessonMaterials_Classes_ClassId",
-                        column: x => x.ClassId,
-                        principalTable: "Classes",
-                        principalColumn: "ClassId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Schedules",
                 columns: table => new
                 {
@@ -385,38 +339,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         principalTable: "Classes",
                         principalColumn: "ClassId",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Submissions",
-                columns: table => new
-                {
-                    SubId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    AsmId = table.Column<int>(type: "int", nullable: false),
-                    StudentId = table.Column<int>(type: "int", nullable: false),
-                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SubmittedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Score = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    TeacherComment = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    GradedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsPublished = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Submissions", x => x.SubId);
-                    table.ForeignKey(
-                        name: "FK_Submissions_Assignments_AsmId",
-                        column: x => x.AsmId,
-                        principalTable: "Assignments",
-                        principalColumn: "AsmId",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Submissions_Students_StudentId",
-                        column: x => x.StudentId,
-                        principalTable: "Students",
-                        principalColumn: "UserId");
                 });
 
             migrationBuilder.CreateTable(
@@ -444,6 +366,36 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         principalTable: "Schedules",
                         principalColumn: "ScheduleId",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Assignments",
+                columns: table => new
+                {
+                    AsmId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EndTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ClassId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Assignments", x => x.AsmId);
+                    table.ForeignKey(
+                        name: "FK_Assignments_ClassSessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "ClassSessions",
+                        principalColumn: "SessionId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Assignments_Classes_ClassId",
+                        column: x => x.ClassId,
+                        principalTable: "Classes",
+                        principalColumn: "ClassId");
                 });
 
             migrationBuilder.CreateTable(
@@ -478,6 +430,66 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         principalColumn: "UserId");
                 });
 
+            migrationBuilder.CreateTable(
+                name: "LessonMaterials",
+                columns: table => new
+                {
+                    MaterialId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClassId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LessonMaterials", x => x.MaterialId);
+                    table.ForeignKey(
+                        name: "FK_LessonMaterials_ClassSessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "ClassSessions",
+                        principalColumn: "SessionId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_LessonMaterials_Classes_ClassId",
+                        column: x => x.ClassId,
+                        principalTable: "Classes",
+                        principalColumn: "ClassId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Submissions",
+                columns: table => new
+                {
+                    SubId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AsmId = table.Column<int>(type: "int", nullable: false),
+                    StudentId = table.Column<int>(type: "int", nullable: false),
+                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SubmittedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Score = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    TeacherComment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    GradedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Submissions", x => x.SubId);
+                    table.ForeignKey(
+                        name: "FK_Submissions_Assignments_AsmId",
+                        column: x => x.AsmId,
+                        principalTable: "Assignments",
+                        principalColumn: "AsmId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Submissions_Students_StudentId",
+                        column: x => x.StudentId,
+                        principalTable: "Students",
+                        principalColumn: "UserId");
+                });
+
             migrationBuilder.InsertData(
                 table: "Roles",
                 columns: new[] { "RoleId", "RoleName" },
@@ -494,6 +506,11 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "IX_Assignments_ClassId",
                 table: "Assignments",
                 column: "ClassId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Assignments_SessionId",
+                table: "Assignments",
+                column: "SessionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Attendances_SessionId",
@@ -561,6 +578,11 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 column: "ClassId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_LessonMaterials_SessionId",
+                table: "LessonMaterials",
+                column: "SessionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ParentStudent_StudentsUserId",
                 table: "ParentStudent",
                 column: "StudentsUserId");
@@ -614,9 +636,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "Submissions");
 
             migrationBuilder.DropTable(
-                name: "ClassSessions");
-
-            migrationBuilder.DropTable(
                 name: "CenterProfiles");
 
             migrationBuilder.DropTable(
@@ -627,6 +646,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             migrationBuilder.DropTable(
                 name: "Students");
+
+            migrationBuilder.DropTable(
+                name: "ClassSessions");
 
             migrationBuilder.DropTable(
                 name: "Schedules");

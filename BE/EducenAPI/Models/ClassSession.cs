@@ -21,6 +21,8 @@ namespace EducenAPI.Models
         [ForeignKey("ScheduleId")]
         public Schedule Schedule { get; set; } = null!;
         public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+        public ICollection<Assignment> Assignments { get; set; }
+        public ICollection<LessonMaterial> LessonMaterials { get; set; }
 
     }
 }
