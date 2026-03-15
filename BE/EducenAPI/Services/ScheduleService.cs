@@ -98,17 +98,47 @@ namespace EducenAPI.Services
 
         public async Task<ScheduleDto> CreateScheduleAsync(CreateScheduleDto dto)
         {
+            // Validate class exists
             var classExists = await _context.Classes.FindAsync(dto.ClassId);
             if (classExists == null)
-                throw new Exception("Class not found");
+                throw new Exception("Class does not exist");
 
+            // Validate class is active
+            if (classExists.Status != "Active")
+                throw new Exception("Class is inactive");
+
+            // Validate schedule date is not in the past
+            if (dto.ScheduleDate.Date < DateTime.Today)
+                throw new Exception("Schedule cannot be in the past");
+
+            // Validate start time is not in the past for today
+            if (dto.ScheduleDate.Date == DateTime.Today && dto.StartTime < DateTime.Now.TimeOfDay)
+                throw new Exception("Schedule cannot start in the past");
+
+            // Validate time order
             if (dto.StartTime >= dto.EndTime)
-                throw new Exception("Start time must be before end time");
+                throw new Exception("EndTime must be greater than StartTime");
+
+            // Check for time overlap with existing schedules for same class
+            var dayOfWeek = (int)dto.ScheduleDate.DayOfWeek;
+            var existingSchedules = await _context.Schedules
+                .Where(s => s.ClassId == dto.ClassId && s.DayOfWeek == dayOfWeek)
+                .ToListAsync();
+
+            foreach (var existing in existingSchedules)
+            {
+                var existingStart = existing.StartTime.ToTimeSpan();
+                var existingEnd = existing.EndTime.ToTimeSpan();
+
+                // Check for overlap
+                if ((dto.StartTime < existingEnd && dto.EndTime > existingStart))
+                    throw new Exception("Schedule time overlaps with existing schedule");
+            }
 
             var schedule = new Schedule
             {
                 ClassId = dto.ClassId,
-                DayOfWeek = (int)dto.ScheduleDate.DayOfWeek,
+                DayOfWeek = dayOfWeek,
                 StartTime = TimeOnly.FromTimeSpan(dto.StartTime),
                 EndTime = TimeOnly.FromTimeSpan(dto.EndTime)
             };

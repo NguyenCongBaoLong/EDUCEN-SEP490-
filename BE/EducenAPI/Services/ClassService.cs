@@ -100,10 +100,12 @@ namespace EducenAPI.Services
 
         public async Task<ClassDto> CreateClassAsync(CreateClassDto dto)
         {
+            // Validate Subject exists
             var subject = await _context.Subjects.FindAsync(dto.SubjectId);
             if (subject == null)
                 throw new Exception("Subject not found");
 
+            // Validate Teacher exists (if provided)
             if (dto.TeacherId.HasValue)
             {
                 var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
@@ -111,11 +113,28 @@ namespace EducenAPI.Services
                     throw new Exception("Teacher not found");
             }
 
+            // Validate Assistant exists (if provided)
             if (dto.AssistantId.HasValue)
             {
                 var assistant = await _context.Assistants.FindAsync(dto.AssistantId.Value);
                 if (assistant == null)
                     throw new Exception("Assistant not found");
+            }
+
+            // Validate date range
+            if (dto.StartDate.HasValue && dto.EndDate.HasValue)
+            {
+                if (dto.StartDate > dto.EndDate)
+                    throw new Exception("StartDate cannot be greater than EndDate");
+                
+                if (dto.StartDate < DateTime.Today)
+                    throw new Exception("StartDate cannot be in the past");
+            }
+
+            // Validate and create schedules
+            if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
+            {
+                await ValidateScheduleSlots(dto.ScheduleSlots);
             }
 
             var newClass = new Class
@@ -137,27 +156,83 @@ namespace EducenAPI.Services
             // Create schedules for this class
             if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
             {
-                foreach (var slot in dto.ScheduleSlots)
-                {
-                    if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
-                        throw new Exception($"Invalid start time format: {slot.StartTime}");
-                    
-                    if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
-                        throw new Exception($"Invalid end time format: {slot.EndTime}");
-
-                    var schedule = new Schedule
-                    {
-                        ClassId = newClass.ClassId,
-                        DayOfWeek = slot.DayOfWeek,
-                        StartTime = startTime,
-                        EndTime = endTime
-                    };
-                    _context.Schedules.Add(schedule);
-                }
-                await _context.SaveChangesAsync();
+                await CreateSchedulesForClass(newClass.ClassId, dto.ScheduleSlots);
             }
 
             return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
+        }
+
+        private async Task ValidateScheduleSlots(List<CreateScheduleSlotDto> scheduleSlots)
+        {
+            foreach (var slot in scheduleSlots)
+            {
+                // Validate DayOfWeek range
+                if (slot.DayOfWeek < 0 || slot.DayOfWeek > 6)
+                    throw new Exception("DayOfWeek must be between 0 and 6");
+
+                // Validate time format
+                if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
+                    throw new Exception($"Invalid start time format: {slot.StartTime}");
+                
+                if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
+                    throw new Exception($"Invalid end time format: {slot.EndTime}");
+
+                // Validate time order
+                if (startTime >= endTime)
+                    throw new Exception("EndTime must be greater than StartTime");
+
+                // Validate time doesn't cross midnight
+                if (startTime > endTime)
+                    throw new Exception("Schedule cannot cross midnight");
+            }
+
+            // Check for duplicate slots
+            var duplicateSlots = scheduleSlots
+                .GroupBy(s => new { s.DayOfWeek, s.StartTime, s.EndTime })
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            if (duplicateSlots.Any())
+                throw new Exception("Duplicate schedule slots found");
+
+            // Check for overlapping slots on same day
+            var slotsByDay = scheduleSlots.GroupBy(s => s.DayOfWeek);
+            foreach (var daySlots in slotsByDay)
+            {
+                var timeSlots = daySlots.Select(s => new {
+                    StartTime = TimeOnly.Parse(s.StartTime),
+                    EndTime = TimeOnly.Parse(s.EndTime)
+                }).ToList();
+
+                for (int i = 0; i < timeSlots.Count; i++)
+                {
+                    for (int j = i + 1; j < timeSlots.Count; j++)
+                    {
+                        var slot1 = timeSlots[i];
+                        var slot2 = timeSlots[j];
+
+                        // Check for overlap
+                        if ((slot1.StartTime < slot2.EndTime && slot1.EndTime > slot2.StartTime))
+                            throw new Exception("Schedule time overlaps with another schedule on the same day");
+                    }
+                }
+            }
+        }
+
+        private async Task CreateSchedulesForClass(int classId, List<CreateScheduleSlotDto> scheduleSlots)
+        {
+            foreach (var slot in scheduleSlots)
+            {
+                var schedule = new Schedule
+                {
+                    ClassId = classId,
+                    DayOfWeek = slot.DayOfWeek,
+                    StartTime = TimeOnly.Parse(slot.StartTime),
+                    EndTime = TimeOnly.Parse(slot.EndTime)
+                };
+                _context.Schedules.Add(schedule);
+            }
+            await _context.SaveChangesAsync();
         }
 
         public async Task<bool> UpdateClassAsync(int id, UpdateClassDto dto)
