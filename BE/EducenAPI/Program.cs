@@ -84,7 +84,7 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<IAssistantService, AssistantService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-builder.Services.AddScoped<IFileUploadService, IFileUploadService>();
+builder.Services.AddScoped<IFileUploadService, UploadFileService>();
 builder.Services.AddScoped<ILessonMaterialService, LessonMaterialService>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
