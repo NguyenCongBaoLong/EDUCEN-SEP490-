@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Students;
+using EducenAPI.DTOs.Students;
 using EducenAPI.Services.Interface;
 using EducenAPI.Ultils;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +9,8 @@ using System.Text;
 using ExcelDataReader;
 using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using EducenAPI.Models;
 
 namespace EducenAPI.Controllers
 {
@@ -73,6 +75,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Students/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateStudent(int id, UpdateStudentDto dto)
         {
             try
@@ -91,6 +94,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Students/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteStudent(int id)
         {
             try
@@ -109,6 +113,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Students/import
         [HttpPost("import")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> ImportStudents(IFormFile file)
         {
             try
@@ -417,6 +422,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("create-account/{studentId}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateAccountForStudent(int studentId, [FromBody] CreateAccountRequest request)
         {
             try
@@ -487,10 +493,10 @@ namespace EducenAPI.Controllers
         public class CreateAccountRequest
         {
             [Required]
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             
             [Required]
-            public string Password { get; set; }
+            public string Password { get; set; } = string.Empty;
             
             public string? FullName { get; set; }
             public string? PhoneNumber { get; set; }

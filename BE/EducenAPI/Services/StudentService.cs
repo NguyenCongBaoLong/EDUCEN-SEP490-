@@ -21,27 +21,27 @@ namespace EducenAPI.Services
                 .Include(s => s.StudentNavigation)
                 .Select(s => new StudentDto
                 {
-                    UserId = s.UserId,
+                    UserId = s.UserId ?? 0,
                     Username = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.Username ?? "") 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
                         : "NO_ACCOUNT",  // Indicator
                     FullName = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.FullName ?? "") 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
                         : (s.FullName ?? ""),  // Dùng FullName từ Student
                     Email = s.Email ?? "",
                     PhoneNumber = s.UserId.HasValue 
-                        ? s.StudentNavigation?.PhoneNumber
+                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
                         : null,
                    Address = s.UserId.HasValue 
-                        ? s.StudentNavigation?.Address
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
                         : null,
                     Grade = s.Grade,
                     EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                     AccountStatus = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.AccountStatus ?? "Unknown") 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
                         : "NO_ACCOUNT",
                     IsAccountSent = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.IsAccountSent ?? false) 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
                         : false,
                     CreatedAt = DateTime.Now
                 })
@@ -55,27 +55,27 @@ namespace EducenAPI.Services
                 .Where(s => s.UserId == id)
                 .Select(s => new StudentDto
                 {
-                    UserId = s.UserId,
+                    UserId = s.UserId ?? 0,
                     Username = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.Username ?? "") 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
                         : "NO_ACCOUNT",
                     FullName = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.FullName ?? "") 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
                         : (s.FullName ?? ""),
                     Email = s.Email ?? "",
                     PhoneNumber = s.UserId.HasValue 
-                        ? s.StudentNavigation?.PhoneNumber
+                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
                         : null,
                     Address = s.UserId.HasValue 
-                        ? s.StudentNavigation?.Address
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
                         : null,
                     Grade = s.Grade,
                     EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                     AccountStatus = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.AccountStatus ?? "Unknown") 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
                         : "NO_ACCOUNT",
                     IsAccountSent = s.UserId.HasValue 
-                        ? (s.StudentNavigation?.IsAccountSent ?? false) 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
                         : false,
                     CreatedAt = DateTime.Now
                 })

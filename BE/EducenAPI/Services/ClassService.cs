@@ -461,14 +461,14 @@ namespace EducenAPI.Services
 
             return classEntity.Students.Select(s => new StudentDto
             {
-                UserId = s.UserId,
-                Username = s.StudentNavigation.Username ?? "",
-                FullName = s.StudentNavigation.FullName ?? "",
+                UserId = s.UserId ?? 0,
+                Username = s.StudentNavigation != null ? s.StudentNavigation.Username : "",
+                FullName = s.StudentNavigation != null ? s.StudentNavigation.FullName : "",
                 Email = s.Email ?? "",
-                PhoneNumber = s.StudentNavigation.PhoneNumber,
+                PhoneNumber = s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null,
                 Grade = s.Grade,
                 EnrollmentStatus = s.EnrollmentStatus ?? "",
-                AccountStatus = s.StudentNavigation.AccountStatus ?? "",
+                AccountStatus = s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "",
                 CreatedAt = DateTime.Now
             });
         }

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using EducenAPI.Models;
 using Microsoft.OpenApi.Models;
 using EducenAPI.Ultils;
@@ -17,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Services ────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddRouting();
 builder.Services.AddScoped<MailService>();
 
 // ── Swagger ───────────────────────────────────────────────────────────────
@@ -168,6 +168,8 @@ app.UseHttpsRedirection();
 app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseMiddleware<TenantResolver>();
 app.UseCors("AllowFrontend");
+
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
