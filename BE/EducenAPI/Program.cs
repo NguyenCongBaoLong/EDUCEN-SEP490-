@@ -84,7 +84,9 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<IAssistantService, AssistantService>();
 builder.Services.AddScoped<IScheduleService, ScheduleService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-
+builder.Services.AddScoped<IFileUploadService, IFileUploadService>();
+builder.Services.AddScoped<ILessonMaterialService, LessonMaterialService>();
+builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -146,6 +148,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseMiddleware<TenantResolver>();
 app.UseCors("AllowFrontend");
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
