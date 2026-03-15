@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Subscription;
+using EducenAPI.DTOs.Subscription;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -24,13 +24,34 @@ namespace EducenAPI.Services
                 throw new Exception("Tenant not found");
 
             var plan = await _context.Plans
-                .FirstOrDefaultAsync(p => p.PlanId == request.PlanId);
+                .FirstOrDefaultAsync(p => p.PlanId == request.PlanId && p.IsActive);
 
             if (plan == null)
-                throw new Exception("Plan not found");
+                throw new Exception("Plan not found or is no longer active.");
+
+            // 1. Kiểm tra xem tenant đã có gói này đang active chưa
+            var existing = await _context.Subscriptions
+                .FirstOrDefaultAsync(s => s.TenantId == request.TenantId 
+                                     && s.PlanId == request.PlanId 
+                                     && s.Status == "Active" 
+                                     && s.EndDate > DateTime.UtcNow);
+
+            if (existing != null)
+                throw new Exception("Trung tâm này đã đăng ký gói này và vẫn còn hạn sử dụng.");
+
+            // 2. Nếu đăng ký gói mới, hủy tất cả các gói active cũ (nếu có)
+            var activeSubs = await _context.Subscriptions
+                .Where(s => s.TenantId == request.TenantId && s.Status == "Active")
+                .ToListAsync();
+
+            foreach (var sub in activeSubs)
+            {
+                sub.Status = "Cancelled";
+                sub.EndDate = DateTime.UtcNow; // Hết hạn ngay lập tức
+            }
 
             var startDate = DateTime.UtcNow;
-            var endDate = startDate.AddMonths(1); // giả sử gói 1 tháng
+            var endDate = startDate.AddMonths(1); // mặc định gói 1 tháng
 
             var subscription = new Subscription
             {
@@ -68,6 +89,24 @@ namespace EducenAPI.Services
                 EndDate = subscription.EndDate,
                 Status = subscription.Status
             };
+        }
+
+        public async Task<bool> CancelSubscription(string tenantId)
+        {
+            var activeSubs = await _context.Subscriptions
+                .Where(s => s.TenantId == tenantId && s.Status == "Active")
+                .ToListAsync();
+
+            if (!activeSubs.Any()) return false;
+
+            foreach (var sub in activeSubs)
+            {
+                sub.Status = "Cancelled";
+                sub.EndDate = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

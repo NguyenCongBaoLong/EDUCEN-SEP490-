@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models
 {
@@ -19,6 +19,7 @@ namespace EducenAPI.Models
         public string? Features { get; set; }
 
         public int StorageLimit { get; set; } // GB
+        public bool IsActive { get; set; } = true;
 
         // Navigation
         public ICollection<Subscription>? Subscriptions { get; set; }

@@ -10,6 +10,9 @@ const adminApi = axios.create({
 });
 
 adminApi.interceptors.request.use((config) => {
+    // Luôn gửi system api key để truy cập admin resources
+    config.headers['X-API-KEY'] = 'EDUCEN_SYSTEM_123456';
+    // Gửi kèm JWT token nếu có (để xác thực phân quyền bên trong nếu cần)
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;

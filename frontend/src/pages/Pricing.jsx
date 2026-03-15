@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, BookOpen, Users, GraduationCap, Settings, Phone, Zap, BarChart3, Shield, Clock, Calendar, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../css/pages/Pricing.css';
 import '../css/pages/HomePage.css';
+import axios from 'axios';
 
 const Pricing = () => {
     const [billingPeriod, setBillingPeriod] = useState('monthly');
@@ -10,6 +11,17 @@ const Pricing = () => {
     const [activeCategory, setActiveCategory] = useState('management');
     const [showBenefitsMenu, setShowBenefitsMenu] = useState(false);
     const [activeBenefitCategory, setActiveBenefitCategory] = useState('efficiency');
+    const [dynamicPlans, setDynamicPlans] = useState([]);
+    const [plansLoading, setPlansLoading] = useState(true);
+
+    useEffect(() => {
+        axios.get('http://localhost:5106/api/admin/plans', {
+            headers: { 'X-API-KEY': 'EDUCEN_SYSTEM_123456' }
+        })
+            .then(res => setDynamicPlans(res.data))
+            .catch(() => setDynamicPlans([]))
+            .finally(() => setPlansLoading(false));
+    }, []);
 
     // Features menu data
     const categories = [
@@ -301,57 +313,91 @@ const Pricing = () => {
 
                 {/* Pricing Cards */}
                 <div className="pricing-cards">
-                    {plans.map((plan) => (
-                        <div
-                            key={plan.id}
-                            className={`pricing-card ${plan.highlighted ? 'highlighted' : ''}`}
-                        >
-                            {plan.highlighted && <div className="best-value-badge">GIÁ TRỊ TỐT NHẤT</div>}
+                    {plansLoading ? (
+                        <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280', gridColumn: '1/-1' }}>Đang tải gói dịch vụ...</div>
+                    ) : dynamicPlans.length > 0 ? (
+                        /* Dynamic plans from backend */
+                        dynamicPlans.map((plan, idx) => {
+                            const feats = plan.features ? plan.features.split(',').map(f => f.trim()).filter(Boolean) : [];
+                            const isHighlighted = idx === 1 || (dynamicPlans.length === 1);
+                            return (
+                                <div key={plan.planId} className={`pricing-card ${isHighlighted ? 'highlighted' : ''}`}>
+                                    {isHighlighted && <div className="best-value-badge">GIÁ TRỊ TỐT NHẤT</div>}
 
-                            <div className="plan-header">
-                                <h3>{plan.name}</h3>
-                                <div className="plan-price">
-                                    {plan.price === 'Custom' ? (
-                                        <span className="custom-price">Tùy chỉnh</span>
-                                    ) : plan.price === 'Free' ? (
-                                        <span className="free-price">Miễn phí</span>
-                                    ) : plan.priceUnit ? (
-                                        <>
-                                            <span className="amount">
-                                                {typeof plan.price === 'object'
-                                                    ? (billingPeriod === 'monthly' ? plan.price.monthly : plan.price.yearly)
-                                                    : plan.price
-                                                }
-                                            </span>
-                                            <span className="period">{plan.priceUnit}</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="currency">$</span>
-                                            <span className="amount">
-                                                {billingPeriod === 'monthly' ? plan.price.monthly : plan.price.yearly}
-                                            </span>
-                                            <span className="period">/mo</span>
-                                        </>
+                                    <div className="plan-header">
+                                        <h3 className="plan-name-badge">{plan.planName.toUpperCase()}</h3>
+                                        <div className="plan-price">
+                                            <span className="amount">{Number(plan.price).toLocaleString('vi-VN')}</span>
+                                            <div className="price-meta">
+                                                <span className="currency">VNĐ</span>
+                                                <span className="period">/ tháng</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="plan-stats-ribbon">
+                                        <div className="stat-item">
+                                            <span className="stat-value">{plan.limitUsers}</span>
+                                            <span className="stat-label">Người dùng</span>
+                                        </div>
+                                        <div className="stat-divider" />
+                                        <div className="stat-item">
+                                            <span className="stat-value">{plan.storageLimit}</span>
+                                            <span className="stat-label">MB Lưu trữ</span>
+                                        </div>
+                                    </div>
+
+                                    <button className={`plan-button ${isHighlighted ? 'primary' : ''}`}>
+                                        Chọn gói này
+                                    </button>
+
+                                    {feats.length > 0 && (
+                                        <ul className="plan-features">
+                                            {feats.map((feature, i) => (
+                                                <li key={i}>
+                                                    <Check size={18} />
+                                                    <span>{feature}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     )}
                                 </div>
-                                <p className="plan-description">{plan.description}</p>
+                            );
+                        })
+                    ) : (
+                        /* Fallback to static plans if API fails */
+                        plans.map((plan) => (
+                            <div key={plan.id} className={`pricing-card ${plan.highlighted ? 'highlighted' : ''}`}>
+                                {plan.highlighted && <div className="best-value-badge">GIÁ TRỊ TỐT NHẤT</div>}
+                                <div className="plan-header">
+                                    <h3>{plan.name}</h3>
+                                    <div className="plan-price">
+                                        {plan.price === 'Custom' ? (
+                                            <span className="custom-price">Tùy chỉnh</span>
+                                        ) : plan.price === 'Free' ? (
+                                            <span className="free-price">Miễn phí</span>
+                                        ) : (
+                                            <>
+                                                <span className="amount">
+                                                    {typeof plan.price === 'object'
+                                                        ? (billingPeriod === 'monthly' ? plan.price.monthly : plan.price.yearly)
+                                                        : plan.price}
+                                                </span>
+                                                <span className="period">{plan.priceUnit}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <p className="plan-description">{plan.description}</p>
+                                </div>
+                                <button className={`plan-button ${plan.highlighted ? 'primary' : ''}`}>{plan.buttonText}</button>
+                                <ul className="plan-features">
+                                    {plan.features.map((feature, index) => (
+                                        <li key={index}><Check size={18} /><span>{feature}</span></li>
+                                    ))}
+                                </ul>
                             </div>
-
-                            <button className={`plan-button ${plan.highlighted ? 'primary' : ''}`}>
-                                {plan.buttonText}
-                            </button>
-
-                            <ul className="plan-features">
-                                {plan.features.map((feature, index) => (
-                                    <li key={index}>
-                                        <Check size={18} />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
 
                 {/* FAQ Section */}

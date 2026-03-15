@@ -133,64 +133,96 @@
 
 /* Plan Header */
 .plan-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    gap: 1.25rem;
 }
 
-.plan-header h3 {
-    font-size: 0.875rem;
+.plan-name-badge {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 0.5rem 1.25rem;
+    border-radius: 99px;
+    font-size: 0.85rem;
     font-weight: 700;
-    color: var(--text-gray);
     letter-spacing: 1px;
-    margin-bottom: 1rem;
+    display: inline-block;
 }
 
 .plan-price {
-    margin-bottom: 1rem;
-}
-
-.custom-price {
-    font-size: 3rem;
-    font-weight: 800;
-    color: var(--text-dark);
-}
-
-.plan-price .currency {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    vertical-align: top;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .plan-price .amount {
-    font-size: 3.5rem;
-    font-weight: 800;
-    color: var(--text-dark);
-    letter-spacing: -0.02em;
-}
-
-.plan-price .period {
-    font-size: 1rem;
-    color: var(--text-gray);
-    font-weight: 500;
-}
-
-.plan-price .custom-price,
-.plan-price .free-price {
     font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--primary-blue);
-    letter-spacing: -0.02em;
+    font-weight: 850;
+    color: var(--text-dark);
+    letter-spacing: -1px;
+    line-height: 1;
 }
 
-.plan-price .free-price {
-    color: #10B981;
+.price-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    color: var(--text-gray);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.price-meta .currency {
+    color: var(--text-gray);
+    font-weight: 700;
+}
+
+/* Plan Stats Ribbon */
+.plan-stats-ribbon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: #64748b;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.stat-divider {
+    width: 1px;
+    height: 24px;
+    background: #e2e8f0;
 }
 
 .plan-description {
-    font-size: 0.9375rem;
-    color: var(--text-gray);
-    line-height: 1.5;
+    display: none;
+    /* Removed in favor of stats ribbon */
 }
 
 /* Plan Button */

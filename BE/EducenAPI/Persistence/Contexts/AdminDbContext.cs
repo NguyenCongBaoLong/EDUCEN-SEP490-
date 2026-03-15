@@ -1,4 +1,4 @@
-﻿using EducenAPI.Models;
+using EducenAPI.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Persistence.Contexts
@@ -39,7 +39,7 @@ namespace EducenAPI.Persistence.Contexts
             // Subscription - Plan
             builder.Entity<Subscription>()
                 .HasOne(s => s.Plan)
-                .WithMany()
+                .WithMany(p => p.Subscriptions)
                 .HasForeignKey(s => s.PlanId)
                 .OnDelete(DeleteBehavior.Restrict);
 

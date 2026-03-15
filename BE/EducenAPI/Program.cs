@@ -167,9 +167,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseMiddleware<TenantResolver>();
-app.UseCors("AllowFrontend");
 
 app.UseRouting();
 app.UseAuthentication();

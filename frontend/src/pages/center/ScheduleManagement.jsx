@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -8,6 +9,7 @@ import '../../css/components/DeleteModal.css';
 import { useSchedule } from '../../context/ScheduleContext';
 
 const ScheduleManagement = () => {
+    const navigateTo = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [teacherFilter, setTeacherFilter] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
@@ -32,6 +34,11 @@ const ScheduleManagement = () => {
         };
         fetchSubjects();
     }, []);
+
+    // Refresh schedules when component mounts (so data is always up-to-date when navigating here)
+    useEffect(() => {
+        refreshSchedules();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // (fetchUnscheduledClasses và useEffect liên quan đã bị xóa)
 
@@ -380,7 +387,12 @@ const ScheduleManagement = () => {
                                                         <div
                                                             key={classItem.id}
                                                             className="schedule-class-card"
-                                                            style={getClassStyle(classItem, indexInGroup, group.length)}
+                                                            style={{ ...getClassStyle(classItem, indexInGroup, group.length), cursor: 'pointer' }}
+                                                            onClick={(e) => {
+                                                                if (classItem.classId) {
+                                                                    navigateTo(`/center/classes/${classItem.classId}`);
+                                                                }
+                                                            }}
                                                         >
                                                             <button
                                                                 className="btn-delete-class"
@@ -466,8 +478,14 @@ const ScheduleManagement = () => {
                                                                 <div
                                                                     key={classItem.id}
                                                                     className="month-class-badge"
-                                                                    style={{ backgroundColor: classItem.color }}
+                                                                    style={{ backgroundColor: classItem.color, cursor: 'pointer' }}
                                                                     title={`${classItem.code} - ${classItem.name}\n${classItem.startTime} - ${classItem.endTime}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (classItem.classId) {
+                                                                            navigateTo(`/center/classes/${classItem.classId}`);
+                                                                        }
+                                                                    }}
                                                                 >
                                                                     {classItem.code}
                                                                 </div>
