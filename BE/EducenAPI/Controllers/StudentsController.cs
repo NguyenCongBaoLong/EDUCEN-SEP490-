@@ -14,18 +14,20 @@ namespace EducenAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class StudentsController : ControllerBase
     {
         private readonly IStudentService _studentService;
         private readonly EducenV2Context _context;
         private readonly MailService _mailService;
+        private readonly IClassService _classService;
 
-        public StudentsController(IStudentService studentService, EducenV2Context context, MailService mailService)
+        public StudentsController(IStudentService studentService, EducenV2Context context, MailService mailService, IClassService classService)
         {
             _studentService = studentService;
             _context = context;
             _mailService = mailService;
+            _classService = classService;
         }
 
         // GET: api/Students
@@ -50,6 +52,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Students
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStudent(CreateStudentDto dto)
         {
             try
@@ -59,7 +62,12 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                // Return 409 for conflicts (duplicate username/email)
+                if (ex.Message.Contains("already exists"))
+                    return Conflict(new { message = ex.Message });
+                
+                // Return 400 for other errors
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -141,7 +149,7 @@ namespace EducenAPI.Controllers
                         templateInfo = new {
                             templateName = ImportTemplate.TEMPLATE_NAME,
                             requiredHeaders = ImportTemplate.REQUIRED_HEADERS,
-                            example = "Please use the correct template with headers: Username, Full Name, Email, Phone Number"
+                            example = "Please use the correct template with headers: Username, Full Name, Email, Phone Number, Grade, DateOfBirth, Gender"
                         }
                     });
                 }
@@ -156,6 +164,10 @@ namespace EducenAPI.Controllers
                         columnMapping[mappedHeader] = col;
                     }
                 }
+
+                // Track duplicates within file
+                var fileEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var fileUsernames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 // Process Excel data using column mapping
                 for (int row = 1; row < worksheet.Rows.Count; row++)
@@ -221,6 +233,42 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
+                        // Validate phone/email mutual exclusion
+                        if (!string.IsNullOrWhiteSpace(phoneNumber) && !string.IsNullOrWhiteSpace(email))
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Cannot have both Phone Number and Email. Please provide either Phone Number OR Email, not both.");
+                            continue;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(email))
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Either Phone Number or Email is required.");
+                            continue;
+                        }
+
+                        // Check duplicates within file
+                        if (!string.IsNullOrWhiteSpace(email) && fileEmails.Contains(email))
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists in import file");
+                            continue;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(username) && fileUsernames.Contains(username))
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in import file");
+                            continue;
+                        }
+
+                        // Add to file tracking
+                        if (!string.IsNullOrWhiteSpace(email))
+                            fileEmails.Add(email);
+                        if (!string.IsNullOrWhiteSpace(username))
+                            fileUsernames.Add(username);
+
                         // Validate unique username and email
                         var existingUser = await _context.Users
                             .FirstOrDefaultAsync(u => u.Username == username);
@@ -240,21 +288,51 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
+                        // Check if student already exists (for existing students, don't create new account)
+                        bool isExistingStudent = existingStudent != null;
+
                         var createStudentDto = new CreateStudentDto
                         {
-                            Username = username,
+                            Username = isExistingStudent ? "" : username, // Only set username if new student
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
-                            Password = PasswordGenerator.GenerateSecurePassword(),
+                            Password = isExistingStudent ? "" : PasswordGenerator.GenerateSecurePassword(), // Only generate password for new students
                             EnrollmentStatus = "Active",
                             Grade = grade,
                             DateOfBirth = parsedDateOfBirth,
                             Gender = gender
                         };
 
-                        await _studentService.CreateStudentAsync(createStudentDto);
-                        importResults.Success++;
+                        if (isExistingStudent)
+                        {
+                            // Import existing student to class (default classId = 1)
+                            var defaultClassId = 1;
+                            var classExists = await _context.Classes.FindAsync(defaultClassId);
+                            if (classExists == null)
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: Class not found");
+                                continue;
+                            }
+
+                            var importResult = await _classService.ImportStudentToClassAsync(defaultClassId, createStudentDto);
+                            if (importResult.Success)
+                            {
+                                importResults.Success++;
+                            }
+                            else
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: {importResult.ErrorMessage}");
+                            }
+                        }
+                        else
+                        {
+                            // Create new student account
+                            await _studentService.CreateStudentAsync(createStudentDto);
+                            importResults.Success++;
+                        }
                     }
                     catch (Exception ex)
                     {

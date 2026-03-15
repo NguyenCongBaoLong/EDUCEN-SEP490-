@@ -1,10 +1,11 @@
 using EducenAPI.DTOs.Classes;
 using EducenAPI.DTOs.Students;
-using EducenAPI.Services;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text;
 using ExcelDataReader;
@@ -17,10 +18,12 @@ namespace EducenAPI.Controllers
     public class ClassesController : ControllerBase
     {
         private readonly IClassService _classService;
+        private readonly EducenV2Context _context;
 
-        public ClassesController(IClassService classService)
+        public ClassesController(IClassService classService, EducenV2Context context)
         {
             _classService = classService;
+            _context = context;
         }
 
         // GET: api/Classes
@@ -45,6 +48,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes
         [HttpPost]
+        [Authorize(Roles = "TenantAdmin")]
         public async Task<IActionResult> CreateClass(CreateClassDto dto)
         {
             try
@@ -54,7 +58,12 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                // Return 409 for conflicts
+                if (ex.Message.Contains("already exists") || ex.Message.Contains("conflict"))
+                    return Conflict(new { message = ex.Message });
+                
+                // Return 400 for validation errors
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -293,14 +302,25 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
-                        // Add existing student to class (validate student must exist first)
+                        // Check if student exists before importing to class
+                        var existingStudent = await _context.Students
+                            .FirstOrDefaultAsync(s => s.Email == email);
+                        
+                        if (existingStudent == null)
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Student with email '{email}' does not exist. Please create Student First.");
+                            continue;
+                        }
+
+                        // Add existing student to class
                         var result = await _classService.ImportStudentToClassAsync(id, new CreateStudentDto
                         {
-                            Username = username,
+                            Username = "", // Empty for existing students
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
-                            Password = string.Empty,
+                            Password = string.Empty, // Empty for existing students
                             EnrollmentStatus = "Active"
                         });
 
