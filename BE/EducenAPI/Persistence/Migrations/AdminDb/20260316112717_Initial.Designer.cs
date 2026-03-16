@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.AdminDb
 {
     [DbContext(typeof(AdminDbContext))]
-    [Migration("20260315134955_Initial")]
+    [Migration("20260316112717_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -59,6 +59,9 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
                     b.Property<string>("Features")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<int>("LimitUsers")
                         .HasColumnType("int");

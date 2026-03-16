@@ -45,7 +45,8 @@ namespace EducenAPI.Services
                 Price = request.Price,
                 LimitUsers = request.LimitUsers,
                 Features = request.Features?.Trim(),
-                StorageLimit = request.StorageLimit
+                StorageLimit = request.StorageLimit,
+                IsActive = true
             };
 
             _context.Plans.Add(plan);
@@ -92,10 +93,15 @@ namespace EducenAPI.Services
             if (plan == null)
                 return false;
 
+            // nếu plan đã từng được dùng
             if (plan.Subscriptions != null && plan.Subscriptions.Any())
-                throw new Exception("Cannot delete plan because it has subscriptions.");
-
-            _context.Plans.Remove(plan);
+            {
+                plan.IsActive = false;
+            }
+            else
+            {
+                _context.Plans.Remove(plan);
+            }
 
             await _context.SaveChangesAsync();
 
