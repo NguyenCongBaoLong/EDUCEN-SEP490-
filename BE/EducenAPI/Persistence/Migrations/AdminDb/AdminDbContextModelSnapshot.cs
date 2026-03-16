@@ -57,6 +57,9 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     b.Property<string>("Features")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int>("LimitUsers")
                         .HasColumnType("int");
 

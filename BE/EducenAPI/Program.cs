@@ -71,6 +71,17 @@ builder.Services.AddSwaggerGen(c =>
                 }
             },
             Array.Empty<string>()
+        },
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Tenant"
+                }
+            },
+            new string[] {}
         }
     });
 });
