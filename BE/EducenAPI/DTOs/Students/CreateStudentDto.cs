@@ -11,20 +11,6 @@ namespace EducenAPI.DTOs.Students
         private string? _phoneNumber;
         private string? _enrollmentStatus;
 
-        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
-        public string? Username 
-        { 
-            get => _username;
-            set => _username = value?.Trim();
-        }
-
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
-        public string? Password 
-        { 
-            get => _password;
-            set => _password = value?.Trim();
-        }
-
         [Required(ErrorMessage = "FullName is required")]
         [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
@@ -44,6 +30,20 @@ namespace EducenAPI.DTOs.Students
             set => _email = value?.Trim() ?? string.Empty;
         }
 
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
+        public string? Username 
+        { 
+            get => _username;
+            set => _username = value?.Trim();
+        }
+
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+        public string? Password 
+        { 
+            get => _password;
+            set => _password = value?.Trim();
+        }
+
         [Phone(ErrorMessage = "Invalid phone number format")]
         [StringLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
         public string? PhoneNumber 
@@ -59,6 +59,10 @@ namespace EducenAPI.DTOs.Students
             get => _enrollmentStatus;
             set => _enrollmentStatus = value?.Trim();
         }
+
+        public string? Grade { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
     }
 
     public class UpdateStudentDto
@@ -79,18 +83,24 @@ namespace EducenAPI.DTOs.Students
         [StringLength(50, ErrorMessage = "Enrollment status cannot exceed 50 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Enrollment status cannot be only whitespace")]
         public string? EnrollmentStatus { get; set; }
+
+        public string? Grade { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
     }
 
     public class StudentDto
     {
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
         public string Username { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
+        public string? Grade { get; set; }
         public string EnrollmentStatus { get; set; } = string.Empty;
         public string AccountStatus { get; set; } = string.Empty;
+        public bool IsAccountSent { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

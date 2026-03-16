@@ -12,7 +12,10 @@ namespace EducenAPI.DTOs.Students
             "username",
             "fullname",
             "email",
-            "phonenumber"
+            "phonenumber",
+            "grade",
+            "dateofbirth",
+            "gender"
         };
 
         // Header mapping for variations
@@ -28,7 +31,17 @@ namespace EducenAPI.DTOs.Students
             { "phonenumber", "PhoneNumber" },
             { "phone number", "PhoneNumber" },
             { "phone", "PhoneNumber" },
-            { "mobile", "PhoneNumber" }
+            { "mobile", "PhoneNumber" },
+            { "grade", "Grade" },
+            { "class", "Grade" },
+            { "level", "Grade" },
+            { "dateofbirth", "DateOfBirth" },
+            { "date of birth", "DateOfBirth" },
+            { "dob", "DateOfBirth" },
+            { "birthdate", "DateOfBirth" },
+            { "birth date", "DateOfBirth" },
+            { "gender", "Gender" },
+            { "sex", "Gender" }
         };
 
         // Validate template headers

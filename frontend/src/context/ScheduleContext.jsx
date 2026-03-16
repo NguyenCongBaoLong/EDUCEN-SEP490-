@@ -1,64 +1,59 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
-
-const STORAGE_KEY = 'educen_scheduled_classes';
-const CHANNEL_NAME = 'educen_schedule_channel';
-
-/* ─── Initial schedule data ────────────────────────── */
-const INITIAL_CLASSES = [
-    { id: 1, code: 'TOÁN-101', name: 'Đại Số Nâng Cao', teacher: 'Thầy Minh', day: 1, startTime: '09:00', endTime: '11:00', color: '#3b82f6' },
-    { id: 2, code: 'LÝ-202', name: 'Vật Lý Lượng Tử', teacher: null, day: 2, startTime: '09:00', endTime: '11:00', color: '#dc2626' },
-    { id: 3, code: 'HÓA-105', name: 'Hóa Hữu Cơ Thí Nghiệm', teacher: 'Cô Hương', day: 2, startTime: '10:00', endTime: '12:00', color: '#f59e0b' },
-    { id: 4, code: 'VĂN-300', name: 'Văn Học Việt Nam', teacher: 'Cô Hà', day: 4, startTime: '09:00', endTime: '11:00', color: '#8b5cf6' },
-    { id: 5, code: 'SINH-101', name: 'Sinh Học Cơ Bản', teacher: 'Thầy Nam', day: 3, startTime: '13:00', endTime: '15:00', color: '#10b981' },
-    { id: 6, code: 'ANH-201', name: 'IELTS Writing', teacher: 'Cô Lan', day: 6, startTime: '09:00', endTime: '11:00', color: '#06b6d4' },
-    { id: 7, code: 'TOÁN-205', name: 'Luyện Thi THPT QG', teacher: 'Thầy Đức', day: 0, startTime: '14:00', endTime: '16:00', color: '#ec4899' },
-];
-
-/* Read from localStorage, fall back to initial data */
-const loadClasses = () => {
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) return JSON.parse(stored);
-    } catch (_) { /* ignore */ }
-    return INITIAL_CLASSES;
-};
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../services/api';
 
 const ScheduleContext = createContext(null);
 
 export const ScheduleProvider = ({ children }) => {
-    const [scheduledClasses, setScheduledClassesRaw] = useState(loadClasses);
-    const channelRef = useRef(null);
+    const [scheduledClasses, setScheduledClasses] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    /* Open BroadcastChannel once */
-    useEffect(() => {
-        if (typeof BroadcastChannel === 'undefined') return; // SSR safety
-        const ch = new BroadcastChannel(CHANNEL_NAME);
-        channelRef.current = ch;
+    const refreshSchedules = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/Schedules');
+            // Map backend ScheduleDto to frontend format
+            const mapped = res.data.map(s => {
+                const colors = ['#3b82f6', '#dc2626', '#f59e0b', '#8b5cf6', '#10b981', '#06b6d4', '#ec4899'];
+                const color = colors[s.classId % colors.length];
+                const dateObj = new Date(s.scheduleDate);
 
-        /* Listen for updates from OTHER tabs */
-        ch.onmessage = (e) => {
-            if (e.data?.type === 'SCHEDULE_UPDATE') {
-                setScheduledClassesRaw(e.data.classes);
-            }
-        };
-
-        return () => ch.close();
+                return {
+                    id: s.scheduleId,
+                    classId: s.classId,
+                    code: s.className ? s.className.substring(0, 4).toUpperCase() : `LỚP-${s.classId}`,
+                    name: s.className || `Lớp học ${s.classId}`,
+                    teacher: s.teacherName || 'Giáo viên',
+                    subjectId: s.subjectId,
+                    subjectName: s.subjectName,
+                    day: s.dayOfWeek,
+                    date: dateObj,
+                    startDate: s.startDate ? new Date(s.startDate) : null,
+                    endDate: s.endDate ? new Date(s.endDate) : null,
+                    startTime: s.startTime.substring(0, 5),
+                    endTime: s.endTime.substring(0, 5),
+                    color: color,
+                    status: s.status
+                };
+            });
+            setScheduledClasses(mapped);
+        } catch (error) {
+            console.error('Lỗi khi tải lịch học:', error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    /* Wrapper: persist to localStorage AND broadcast to other tabs */
-    const setScheduledClasses = (updater) => {
-        setScheduledClassesRaw(prev => {
-            const next = typeof updater === 'function' ? updater(prev) : updater;
-            // Persist
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (_) { /* ignore */ }
-            // Broadcast to other tabs
-            channelRef.current?.postMessage({ type: 'SCHEDULE_UPDATE', classes: next });
-            return next;
-        });
-    };
+    useEffect(() => {
+        refreshSchedules();
+    }, [refreshSchedules]);
 
     return (
-        <ScheduleContext.Provider value={{ scheduledClasses, setScheduledClasses }}>
+        <ScheduleContext.Provider value={{
+            scheduledClasses,
+            setScheduledClasses,
+            refreshSchedules,
+            loading
+        }}>
             {children}
         </ScheduleContext.Provider>
     );

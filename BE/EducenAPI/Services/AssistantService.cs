@@ -58,6 +58,34 @@ namespace EducenAPI.Services
 
         public async Task<AssistantDto> CreateAssistantAsync(CreateAssistantDto dto)
         {
+            // Skip user creation if username or password is null
+            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                // Create assistant profile without user account
+                var assistantProfile = new Assistant
+                {
+                    UserId = 0, // Will be set when account is created
+                    SupportLevel = dto.SupportLevel
+                };
+
+                _context.Assistants.Add(assistantProfile);
+                await _context.SaveChangesAsync();
+
+                return new AssistantDto
+                {
+                    AssistantId = assistantProfile.UserId,
+                    UserId = assistantProfile.UserId,
+                    Username = "",
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    PhoneNumber = dto.PhoneNumber,
+                    SupportLevel = assistantProfile.SupportLevel,
+                    AccountStatus = "Pending",
+                    AssignedClassesCount = 0,
+                    CreatedAt = DateTime.Now
+                };
+            }
+
             var existingUser = await _context.Users
                 .AnyAsync(u => u.Username == dto.Username);
 

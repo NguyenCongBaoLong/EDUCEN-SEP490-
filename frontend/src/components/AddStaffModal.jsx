@@ -11,10 +11,11 @@ import '../css/components/CreateClassModal.css';
  * - Staff manages: Address, Date of Birth, Notes, Avatar (personal info via User Profile page)
  * - Admin can view all info in StaffDetailModal (read-only)
  */
-const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff = [] }) => {
+const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff = [], subjects = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phone: '',
         role: 'teacher',
         subject: '',
         status: 'active'
@@ -27,13 +28,14 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
             setFormData({
                 name: editingStaff.name || '',
                 email: editingStaff.email || '',
+                phone: editingStaff.phone || '',
                 role: editingStaff.role || 'teacher',
                 subject: editingStaff.subject || '',
                 status: editingStaff.status || 'active'
             });
         } else {
             setFormData({
-                name: '', email: '', role: 'teacher', subject: '', status: 'active'
+                name: '', email: '', phone: '', role: 'teacher', subject: '', status: 'active'
             });
         }
     }, [editingStaff, isOpen]);
@@ -149,6 +151,17 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                             />
                             {errors.email && <span className="error-message">{errors.email}</span>}
                         </div>
+
+                        <div className="form-group">
+                            <label>Số điện thoại</label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                placeholder="VD: 0912345678"
+                            />
+                        </div>
                     </div>
 
                     <div className="form-row">
@@ -174,11 +187,11 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                                 required
                             >
                                 <option value="">Chọn môn học</option>
-                                <option value="Toán học">Toán học</option>
-                                <option value="Vật lý">Vật lý</option>
-                                <option value="Hóa học">Hóa học</option>
-                                <option value="Sinh học">Sinh học</option>
-                                <option value="Tiếng Anh">Tiếng Anh</option>
+                                {subjects.map((sub) => (
+                                    <option key={sub.subjectId} value={sub.subjectName}>
+                                        {sub.subjectName}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>
@@ -215,7 +228,8 @@ AddStaffModal.propTypes = {
     onClose: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
     editingStaff: PropTypes.object,
-    existingStaff: PropTypes.array
+    existingStaff: PropTypes.array,
+    subjects: PropTypes.array
 };
 
 export default AddStaffModal;

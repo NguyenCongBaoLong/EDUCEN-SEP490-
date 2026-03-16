@@ -21,14 +21,28 @@ namespace EducenAPI.Services
                 .Include(s => s.StudentNavigation)
                 .Select(s => new StudentDto
                 {
-                    UserId = s.UserId,
-                    Username = s.StudentNavigation.Username,
-                    FullName = s.StudentNavigation.FullName ?? "",
+                    UserId = s.UserId ?? 0,
+                    Username = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
+                        : "NO_ACCOUNT",  // Indicator
+                    FullName = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
+                        : (s.FullName ?? ""),  // Dùng FullName từ Student
                     Email = s.Email ?? "",
-                    PhoneNumber = s.StudentNavigation.PhoneNumber,
-                   Address = s.StudentNavigation.Address,
+                    PhoneNumber = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
+                        : null,
+                   Address = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
+                        : null,
+                    Grade = s.Grade,
                     EnrollmentStatus = s.EnrollmentStatus ?? "Active",
-                    AccountStatus = s.StudentNavigation.AccountStatus,
+                    AccountStatus = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
+                        : "NO_ACCOUNT",
+                    IsAccountSent = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
+                        : false,
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
@@ -41,14 +55,28 @@ namespace EducenAPI.Services
                 .Where(s => s.UserId == id)
                 .Select(s => new StudentDto
                 {
-                    UserId = s.UserId,
-                    Username = s.StudentNavigation.Username,
-                    FullName = s.StudentNavigation.FullName ?? "",
+                    UserId = s.UserId ?? 0,
+                    Username = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
+                        : "NO_ACCOUNT",
+                    FullName = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
+                        : (s.FullName ?? ""),
                     Email = s.Email ?? "",
-                    PhoneNumber = s.StudentNavigation.PhoneNumber,
-                    Address = s.StudentNavigation.Address,
+                    PhoneNumber = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
+                        : null,
+                    Address = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
+                        : null,
+                    Grade = s.Grade,
                     EnrollmentStatus = s.EnrollmentStatus ?? "Active",
-                    AccountStatus = s.StudentNavigation.AccountStatus,
+                    AccountStatus = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
+                        : "NO_ACCOUNT",
+                    IsAccountSent = s.UserId.HasValue 
+                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
+                        : false,
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
@@ -56,24 +84,88 @@ namespace EducenAPI.Services
 
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
         {
-            var existingUser = await _context.Users
-                .AnyAsync(u => u.Username == dto.Username);
+            // 1. Validate base required fields
+            await ValidateBaseStudentData(dto);
 
-            if (existingUser)
-                throw new Exception("Username already exists");
-
+            // 2. Check duplicate email (luôn luôn check)
             var existingStudent = await _context.Students
                 .AnyAsync(s => s.Email == dto.Email);
-
             if (existingStudent)
                 throw new Exception("Email already exists");
 
+            // 3. Branch logic dựa trên username/password
+            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                // MODE: Student không có account
+                return await CreateStudentProfileOnly(dto);
+            }
+            else
+            {
+                // MODE: Student có account
+                return await CreateStudentWithAccount(dto);
+            }
+        }
+
+        private async Task<StudentDto> CreateStudentProfileOnly(CreateStudentDto dto)
+        {
+            // 1. Validate chỉ cần profile info
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                throw new Exception("Email is required for student profile");
+
+            // 2. Tạo chỉ Student record
+            var student = new Student
+            {
+                UserId = null,  // Explicit null
+                FullName = dto.FullName,  // Lưu tên vào Student
+                Email = dto.Email,
+                EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
+                Grade = dto.Grade,
+                DateOfBirth = dto.DateOfBirth,
+                Gender = dto.Gender
+            };
+
+            _context.Students.Add(student);
+            await _context.SaveChangesAsync();
+
+            // 3. Return DTO với thông tin phù hợp
+            return new StudentDto
+            {
+                UserId = null,  // Explicit null
+                Username = "NO_ACCOUNT",  // Indicator cho frontend
+                FullName = student.FullName,  // Dùng tên từ Student
+                Email = student.Email,
+                PhoneNumber = dto.PhoneNumber,
+                Address = null,
+                Grade = student.Grade,
+                EnrollmentStatus = student.EnrollmentStatus ?? "Active",
+                AccountStatus = "NO_ACCOUNT",  // Custom status
+                IsAccountSent = false,
+                CreatedAt = DateTime.Now
+            };
+        }
+
+        private async Task<StudentDto> CreateStudentWithAccount(CreateStudentDto dto)
+        {
+            // 1. Validate account info
+            if (string.IsNullOrWhiteSpace(dto.Username))
+                throw new Exception("Username is required for account creation");
+            
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                throw new Exception("Password is required for account creation");
+
+            // 2. Check duplicate username
+            var existingUser = await _context.Users
+                .AnyAsync(u => u.Username == dto.Username);
+            if (existingUser)
+                throw new Exception("Username already exists");
+
+            // 3. Get student role
             var studentRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Student");
-
             if (studentRole == null)
                 throw new Exception("Student role not found");
 
+            // 4. Create User account
             var user = new User
             {
                 Username = dto.Username,
@@ -82,22 +174,28 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                AccountStatus = "Active"
+                AccountStatus = "Inactive", // Inactive until admin sends account
+                IsAccountSent = false
             };
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            // 5. Create Student record linked to User
             var student = new Student
             {
-                UserId = user.UserId,
+                UserId = user.UserId,  // Liên kết với User
                 Email = dto.Email,
-                EnrollmentStatus = dto.EnrollmentStatus ?? "Active"
+                EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
+                Grade = dto.Grade,
+                DateOfBirth = dto.DateOfBirth,
+                Gender = dto.Gender
             };
 
             _context.Students.Add(student);
             await _context.SaveChangesAsync();
 
+            // 6. Return DTO
             return new StudentDto
             {
                 UserId = user.UserId,
@@ -105,10 +203,49 @@ namespace EducenAPI.Services
                 FullName = user.FullName ?? "",
                 Email = student.Email,
                 PhoneNumber = user.PhoneNumber,
+                Address = user.Address,
+                Grade = student.Grade,
                 EnrollmentStatus = student.EnrollmentStatus ?? "Active",
                 AccountStatus = user.AccountStatus,
+                IsAccountSent = user.IsAccountSent,
                 CreatedAt = DateTime.Now
             };
+        }
+
+        private async Task ValidateBaseStudentData(CreateStudentDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.FullName))
+                throw new Exception("FullName is required");
+            
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                throw new Exception("Email is required");
+            
+            // Validate email format
+            if (!IsValidEmail(dto.Email))
+                throw new Exception("Invalid email format");
+            
+            // Validate phone format if provided
+            if (!string.IsNullOrWhiteSpace(dto.PhoneNumber) && !IsValidPhone(dto.PhoneNumber))
+                throw new Exception("Invalid phone number format");
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool IsValidPhone(string phone)
+        {
+            // Basic phone validation - customize as needed
+            return System.Text.RegularExpressions.Regex.IsMatch(phone, @"^[\d\s\-\+\(\)]+$");
         }
 
         public async Task<bool> UpdateStudentAsync(int id, UpdateStudentDto dto)
@@ -120,8 +257,18 @@ namespace EducenAPI.Services
             if (student == null)
                 return false;
 
+            // Update Student fields
             if (!string.IsNullOrEmpty(dto.FullName))
-                student.StudentNavigation.FullName = dto.FullName;
+            {
+                if (student.UserId.HasValue && student.StudentNavigation != null)
+                {
+                    student.StudentNavigation.FullName = dto.FullName;
+                }
+                else
+                {
+                    student.FullName = dto.FullName;
+                }
+            }
 
             if (!string.IsNullOrEmpty(dto.Email))
             {
@@ -131,15 +278,32 @@ namespace EducenAPI.Services
                 if (emailExists)
                     throw new Exception("Email already exists");
 
-                student.StudentNavigation.Email = dto.Email;
+                if (student.UserId.HasValue && student.StudentNavigation != null)
+                {
+                    student.StudentNavigation.Email = dto.Email;
+                }
                 student.Email = dto.Email;
             }
 
             if (dto.PhoneNumber != null)
-                student.StudentNavigation.PhoneNumber = dto.PhoneNumber;
+            {
+                if (student.UserId.HasValue && student.StudentNavigation != null)
+                {
+                    student.StudentNavigation.PhoneNumber = dto.PhoneNumber;
+                }
+            }
 
             if (dto.EnrollmentStatus != null)
                 student.EnrollmentStatus = dto.EnrollmentStatus;
+
+            if (dto.Grade != null)
+                student.Grade = dto.Grade;
+
+            if (dto.DateOfBirth.HasValue)
+                student.DateOfBirth = dto.DateOfBirth;
+
+            if (dto.Gender != null)
+                student.Gender = dto.Gender;
 
             await _context.SaveChangesAsync();
             return true;
@@ -162,7 +326,12 @@ namespace EducenAPI.Services
             try
             {
                 _context.Students.Remove(student);
-                _context.Users.Remove(student.StudentNavigation);
+                
+                // Chỉ xóa User nếu có liên kết
+                if (student.UserId.HasValue && student.StudentNavigation != null)
+                {
+                    _context.Users.Remove(student.StudentNavigation);
+                }
                 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();

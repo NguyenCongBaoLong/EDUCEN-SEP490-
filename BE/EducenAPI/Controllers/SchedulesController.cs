@@ -56,7 +56,12 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                // Return 409 for conflicts
+                if (ex.Message.Contains("overlap") || ex.Message.Contains("conflict"))
+                    return Conflict(new { message = ex.Message });
+                
+                // Return 400 for validation errors
+                return BadRequest(new { message = ex.Message });
             }
         }
 

@@ -9,7 +9,9 @@ public partial class Student
 {
     [Key]
     [ForeignKey("User")]
-    public int UserId { get; set; }
+    public int? UserId { get; set; }
+
+    public string? FullName { get; set; }  // Thêm để lưu tên khi không có User account
 
     public string? Email { get; set; }
 
@@ -22,7 +24,7 @@ public partial class Student
     public string? Gender { get; set; }
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
-    public virtual User StudentNavigation { get; set; } = null!;
+    public virtual User? StudentNavigation { get; set; } = null;
 
     public virtual ICollection<Submission> Submissions { get; set; } = new List<Submission>();
 

@@ -52,6 +52,15 @@ namespace EducenAPI.DTOs.Classes
             get => _status;
             set => _status = value?.Trim();
         }
+
+        public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
+    }
+
+    public class CreateScheduleSlotDto
+    {
+        public int DayOfWeek { get; set; } // 0 = Sunday, 1 = Monday, ...
+        public string StartTime { get; set; } = string.Empty; // Format "HH:mm"
+        public string EndTime { get; set; } = string.Empty;   // Format "HH:mm"
     }
 
     public class UpdateClassDto
@@ -81,6 +90,8 @@ namespace EducenAPI.DTOs.Classes
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
         public string? Status { get; set; }
+
+        public List<CreateScheduleSlotDto>? ScheduleSlots { get; set; }
     }
 
     public class ClassDto
@@ -100,5 +111,6 @@ namespace EducenAPI.DTOs.Classes
         public string? Status { get; set; }
         public int StudentCount { get; set; }
         public DateTime CreatedAt { get; set; }
+        public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
     }
 }

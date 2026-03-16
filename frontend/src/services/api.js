@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5062/api',
+    baseURL: 'http://localhost:5106/api',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -23,7 +23,12 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/center';
+
+            // Tránh infinite loop nếu đã ở trang login hoặc center
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/center' && currentPath !== '/login' && currentPath !== '/') {
+                window.location.href = '/center';
+            }
         }
         return Promise.reject(error);
     }

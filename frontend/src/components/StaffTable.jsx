@@ -16,7 +16,8 @@ const StaffTable = ({
     setStatusFilter,
     onView,
     onEdit,
-    onToggleLock
+    onToggleLock,
+    subjects = []
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, staff: null });
@@ -77,11 +78,11 @@ const StaffTable = ({
                             onChange={(e) => setSubjectFilter(e.target.value)}
                         >
                             <option value="">Môn học</option>
-                            <option value="Toán học">Toán học</option>
-                            <option value="Vật lý">Vật lý</option>
-                            <option value="Hóa học">Hóa học</option>
-                            <option value="Sinh học">Sinh học</option>
-                            <option value="Tiếng Anh">Tiếng Anh</option>
+                            {subjects.map((sub) => (
+                                <option key={sub.subjectId} value={sub.subjectName}>
+                                    {sub.subjectName}
+                                </option>
+                            ))}
                         </select>
 
                         <select
@@ -281,7 +282,8 @@ StaffTable.propTypes = {
     setStatusFilter: PropTypes.func.isRequired,
     onView: PropTypes.func.isRequired,
     onEdit: PropTypes.func.isRequired,
-    onToggleLock: PropTypes.func.isRequired
+    onToggleLock: PropTypes.func.isRequired,
+    subjects: PropTypes.array
 };
 
 export default StaffTable;

@@ -6,7 +6,7 @@ namespace EducenAPI.Models
     public class Subscription
     {
         [Key]
-        public string Id { get; set; }
+        public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         public string TenantId { get; set; }

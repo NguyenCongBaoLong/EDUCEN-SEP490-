@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import api from '../../services/api';
 import StaffTable from '../../components/StaffTable';
 import AddStaffModal from '../../components/AddStaffModal';
 import StaffDetailModal from '../../components/StaffDetailModal';
@@ -15,87 +17,59 @@ const StaffManagement = () => {
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    // Mock data - All staff combined with role field
-    const [staffList, setStaffList] = useState([
-        {
-            id: 'T-1024',
-            name: 'Nguyễn Văn An',
-            avatar: null,
-            role: 'teacher',
-            subject: 'Toán học',
-            email: 'nguyenvanan@trungcam.edu.vn',
-            phone: '0901234567',
-            dateOfBirth: '1985-03-15',
-            address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-            notes: 'Giảng viên giỏi, nhiều kinh nghiệm',
-            status: 'active'
-        },
-        {
-            id: 'T-1025',
-            name: 'Trần Thị Bình',
-            avatar: null,
-            role: 'teacher',
-            subject: 'Vật lý',
-            email: 'tranthib@trungcam.edu.vn',
-            phone: '0912345678',
-            dateOfBirth: '1988-07-22',
-            address: '456 Lê Lợi, Quận 3, TP.HCM',
-            notes: '',
-            status: 'active'
-        },
-        {
-            id: 'T-1026',
-            name: 'Lê Văn Cường',
-            avatar: null,
-            role: 'teacher',
-            subject: 'Tiếng Anh',
-            email: 'levanc@trungcam.edu.vn',
-            phone: '0923456789',
-            dateOfBirth: '1990-11-05',
-            address: '789 Trần Hưng Đạo, Quận 5, TP.HCM',
-            notes: 'Tạm nghỉ phép',
-            status: 'inactive'
-        },
-        {
-            id: 'T-1027',
-            name: 'Phạm Thị Dùng',
-            avatar: null,
-            role: 'teacher',
-            subject: 'Hóa học',
-            email: 'phamthid@trungcam.edu.vn',
-            phone: '0934567890',
-            dateOfBirth: '1987-04-18',
-            address: '321 Hai Bà Trưng, Quận 1, TP.HCM',
-            notes: '',
-            status: 'active'
-        },
-        {
-            id: 'A-2001',
-            name: 'Hoàng Văn Em',
-            avatar: null,
-            role: 'assistant',
-            subject: 'Toán học',
-            email: 'hoangvane@trungcam.edu.vn',
-            phone: '0934567890',
-            dateOfBirth: '1995-09-10',
-            address: '654 Võ Văn Tần, Quận 3, TP.HCM',
-            notes: 'Trợ giảng nhiệt tình',
-            status: 'active'
-        },
-        {
-            id: 'A-2002',
-            name: 'Phạm Thị Giang',
-            avatar: null,
-            role: 'assistant',
-            subject: 'Vật lý',
-            email: 'phamthig@trungcam.edu.vn',
-            phone: '0945678901',
-            dateOfBirth: '1996-12-25',
-            address: '987 Nguyễn Thị Minh Khai, Quận 3, TP.HCM',
-            notes: '',
-            status: 'active'
+    const [staffList, setStaffList] = useState([]);
+    const [subjects, setSubjects] = useState([]);
+
+    useEffect(() => {
+        fetchStaff();
+    }, []);
+
+    const fetchStaff = async () => {
+        try {
+            const [teachersRes, assistantsRes, subjectsRes] = await Promise.all([
+                api.get('/Teachers'),
+                api.get('/Assistants'),
+                api.get('/tenantadmin/Subjects')
+            ]);
+
+            setSubjects(subjectsRes.data);
+
+            const teachers = teachersRes.data.map(t => ({
+                id: t.teacherId.toString(),
+                userId: t.userId,
+                name: t.fullName,
+                avatar: null,
+                role: 'teacher',
+                subject: t.specialization || 'Chưa cập nhật',
+                email: t.email,
+                phone: t.phoneNumber || '',
+                dateOfBirth: '',
+                address: '',
+                notes: t.degree || '',
+                status: t.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive'
+            }));
+
+            const assistants = assistantsRes.data.map(a => ({
+                id: a.assistantId.toString(),
+                userId: a.userId,
+                name: a.fullName,
+                avatar: null,
+                role: 'assistant',
+                subject: a.supportLevel || 'Chưa cập nhật',
+                email: a.email,
+                phone: a.phoneNumber || '',
+                dateOfBirth: '',
+                address: '',
+                notes: '',
+                status: a.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive'
+            }));
+
+            setStaffList([...teachers, ...assistants]);
+        } catch (error) {
+            console.error("Fetch staff error:", error);
+            toast.error("Không thể tải danh sách nhân viên");
         }
-    ]);
+    };
 
     const handleAddStaff = () => {
         setEditingStaff(null);
@@ -111,28 +85,73 @@ const StaffManagement = () => {
         setIsModalOpen(true);
     };
 
-    const handleToggleLockStaff = (staffId) => {
-        setStaffList(staffList.map(s =>
-            s.id === staffId
-                ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' }
-                : s
-        ));
+    const handleToggleLockStaff = async (staffId) => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff) return;
+
+        try {
+            const endpoint = staff.status === 'active'
+                ? `/admin/users/${staff.userId}/lock`
+                : `/admin/users/${staff.userId}/unlock`;
+            await api.put(endpoint);
+
+            setStaffList(staffList.map(s =>
+                s.id === staffId
+                    ? { ...s, status: s.status === 'active' ? 'inactive' : 'active' }
+                    : s
+            ));
+            toast.success("Đổi trạng thái thành công!");
+        } catch (error) {
+            console.error("Lỗi khi đổi trạng thái:", error);
+            toast.error(error.response?.data?.message || "Không thể đổi trạng thái");
+        }
     };
 
-    const handleSubmitStaff = (staffData) => {
-        if (editingStaff) {
-            // Update existing staff
-            setStaffList(staffList.map(s => s.id === staffData.id ? staffData : s));
-        } else {
-            // Create new staff
-            const prefix = staffData.role === 'teacher' ? 'T-' : 'A-';
-            const newId = prefix + Math.floor(Math.random() * 9000 + 1000);
-            const newStaff = {
-                ...staffData,
-                id: newId,
-                avatar: null
+    const handleSubmitStaff = async (staffData) => {
+        try {
+            const isTeacher = staffData.role === 'teacher';
+            const endpoint = isTeacher ? '/Teachers' : '/Assistants';
+
+            let payload = {
+                username: `staff_${Date.now()}`,
+                password: `Staff123!`,
+                fullName: staffData.name,
+                email: staffData.email,
             };
-            setStaffList([...staffList, newStaff]);
+            if (staffData.phone) payload.phoneNumber = staffData.phone;
+
+            if (isTeacher) {
+                payload.specialization = staffData.subject || 'General';
+            } else {
+                payload.supportLevel = staffData.subject || 'Basic';
+            }
+
+            if (editingStaff) {
+                // Edit
+                const editEndpoint = `${endpoint}/${staffData.id}`;
+                const updatePayload = {
+                    fullName: staffData.name,
+                    email: staffData.email,
+                };
+                if (staffData.phone) updatePayload.phoneNumber = staffData.phone;
+                if (isTeacher) {
+                    updatePayload.specialization = staffData.subject || 'General';
+                } else {
+                    updatePayload.supportLevel = staffData.subject || 'Basic';
+                }
+
+                await api.put(editEndpoint, updatePayload);
+                toast.success('Cập nhật nhân viên thành công!');
+            } else {
+                // Add
+                await api.post(endpoint, payload);
+                toast.success('Thêm nhân viên thành công!');
+            }
+            fetchStaff();
+            setIsModalOpen(false);
+            setEditingStaff(null);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
@@ -184,6 +203,7 @@ const StaffManagement = () => {
                     onView={handleViewStaff}
                     onEdit={handleEditStaff}
                     onToggleLock={handleToggleLockStaff}
+                    subjects={subjects}
                 />
             </main>
 
@@ -197,6 +217,7 @@ const StaffManagement = () => {
                 onSubmit={handleSubmitStaff}
                 editingStaff={editingStaff}
                 existingStaff={staffList}
+                subjects={subjects}
             />
 
             {/* Staff Detail Modal */}

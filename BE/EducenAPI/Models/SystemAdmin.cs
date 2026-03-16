@@ -14,7 +14,5 @@ namespace EducenAPI.Models
         [Required]
         public string PasswordHash { get; set; }
 
-        // Navigation
-        public ICollection<PaymentRecord>? PaymentRecords { get; set; }
     }
 }

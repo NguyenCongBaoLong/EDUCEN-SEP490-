@@ -20,7 +20,7 @@ namespace EducenAPI.Services
         {
             var material = new LessonMaterial
             {
-                ClassId = dto.ClassId,
+                SessionId = dto.SessionId,
                 Title = dto.Title
             };
 

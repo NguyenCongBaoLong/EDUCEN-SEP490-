@@ -74,6 +74,13 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         if (!email) return '';
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) return 'Email không hợp lệ';
+        // Kiểm tra trùng email trong danh sách học sinh hiện có
+        const isDuplicate = existingStudents.some(s => {
+            // Nếu đang chỉnh sửa, bỏ qua học sinh hiện tại
+            if (editingStudent && s.id === editingStudent.id) return false;
+            return s.email?.toLowerCase() === email.toLowerCase();
+        });
+        if (isDuplicate) return 'Email này đã được sử dụng bởi học sinh khác';
         return '';
     };
 
@@ -87,8 +94,19 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
+        // Validate email realtime khi user đang nhập
+        if (name === 'email') {
+            const emailErr = validateEmail(value);
+            setErrors(prev => ({ ...prev, email: emailErr }));
+        } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        if (name === 'email') {
+            setErrors(prev => ({ ...prev, email: validateEmail(value) }));
         }
     };
 
@@ -177,6 +195,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
+                            onBlur={handleBlur}
                             placeholder="student@example.com"
                             className={errors.email ? 'input-error' : ''}
                         />

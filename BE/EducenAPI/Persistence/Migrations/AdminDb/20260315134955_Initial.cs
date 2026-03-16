@@ -52,7 +52,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     Address = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
-                    DomainUrl = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    SubDomain = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     ConnectionString = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
@@ -62,26 +62,20 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 });
 
             migrationBuilder.CreateTable(
-                name: "PaymentRecord",
+                name: "PaymentRecords",
                 columns: table => new
                 {
                     PaymentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     TenantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    SystemAdminSysAdminId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PaymentRecord", x => x.PaymentId);
+                    table.PrimaryKey("PK_PaymentRecords", x => x.PaymentId);
                     table.ForeignKey(
-                        name: "FK_PaymentRecord_SystemAdmins_SystemAdminSysAdminId",
-                        column: x => x.SystemAdminSysAdminId,
-                        principalTable: "SystemAdmins",
-                        principalColumn: "SysAdminId");
-                    table.ForeignKey(
-                        name: "FK_PaymentRecord_Tenants_TenantId",
+                        name: "FK_PaymentRecords_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
                         principalColumn: "TenantId",
@@ -97,7 +91,8 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     PlanId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PlanId1 = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -107,7 +102,12 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                         column: x => x.PlanId,
                         principalTable: "Plans",
                         principalColumn: "PlanId",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Subscriptions_Plans_PlanId1",
+                        column: x => x.PlanId1,
+                        principalTable: "Plans",
+                        principalColumn: "PlanId");
                     table.ForeignKey(
                         name: "FK_Subscriptions_Tenants_TenantId",
                         column: x => x.TenantId,
@@ -117,13 +117,8 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_PaymentRecord_SystemAdminSysAdminId",
-                table: "PaymentRecord",
-                column: "SystemAdminSysAdminId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PaymentRecord_TenantId",
-                table: "PaymentRecord",
+                name: "IX_PaymentRecords_TenantId",
+                table: "PaymentRecords",
                 column: "TenantId");
 
             migrationBuilder.CreateIndex(
@@ -132,14 +127,19 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 column: "PlanId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Subscriptions_TenantId",
+                name: "IX_Subscriptions_PlanId1",
                 table: "Subscriptions",
-                column: "TenantId");
+                column: "PlanId1");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tenants_DomainUrl",
+                name: "IX_Subscriptions_TenantId_StartDate",
+                table: "Subscriptions",
+                columns: new[] { "TenantId", "StartDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tenants_SubDomain",
                 table: "Tenants",
-                column: "DomainUrl",
+                column: "SubDomain",
                 unique: true);
         }
 
@@ -147,7 +147,7 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "PaymentRecord");
+                name: "PaymentRecords");
 
             migrationBuilder.DropTable(
                 name: "Subscriptions");

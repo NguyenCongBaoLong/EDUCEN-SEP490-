@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using System;
@@ -10,7 +10,7 @@ namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/tenantadmin/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class SubjectsController : ControllerBase
     {
         private readonly ISubjectService _subjectService;

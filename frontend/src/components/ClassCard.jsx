@@ -26,7 +26,7 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
         return colors[subject] || 'gray';
     };
 
-    const isFull = classData.currentStudents >= classData.maxStudents;
+    const isFull = false; // logic removed
 
     return (
         <div className={`class-card ${isDeleting ? 'deleting' : ''}`} onClick={handleCardClick} style={{ cursor: 'pointer' }}>
@@ -89,8 +89,7 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
                     <Users size={14} />
                     <span className="students-label">HỌC SINH</span>
                     <span className="students-count">
-                        {classData.currentStudents} / {classData.maxStudents}
-                        {isFull && <span className="students-full"> [Đã đầy]</span>}
+                        {classData.currentStudents}
                     </span>
                 </div>
 

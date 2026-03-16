@@ -39,7 +39,7 @@ namespace EducenAPI.Services
 
             var assignment = new Assignment
             {
-                ClassId = dto.ClassId,
+                SessionId = dto.SessionId,
                 Title = dto.Title,
                 Description = dto.Description,
                 FileUrl = fileUrl,

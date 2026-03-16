@@ -1,9 +1,11 @@
 using EducenAPI.DTOs.Classes;
 using EducenAPI.DTOs.Students;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Text;
 using ExcelDataReader;
@@ -16,10 +18,12 @@ namespace EducenAPI.Controllers
     public class ClassesController : ControllerBase
     {
         private readonly IClassService _classService;
+        private readonly EducenV2Context _context;
 
-        public ClassesController(IClassService classService)
+        public ClassesController(IClassService classService, EducenV2Context context)
         {
             _classService = classService;
+            _context = context;
         }
 
         // GET: api/Classes
@@ -44,6 +48,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes
         [HttpPost]
+        [Authorize(Roles = "TenantAdmin")]
         public async Task<IActionResult> CreateClass(CreateClassDto dto)
         {
             try
@@ -53,7 +58,12 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                // Return 409 for conflicts
+                if (ex.Message.Contains("already exists") || ex.Message.Contains("conflict"))
+                    return Conflict(new { message = ex.Message });
+                
+                // Return 400 for validation errors
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -254,6 +264,34 @@ namespace EducenAPI.Controllers
                             ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
                             : null;
 
+                        var grade = columnMapping.ContainsKey("Grade") 
+                            ? rowData.ItemArray[columnMapping["Grade"]]?.ToString()?.Trim()
+                            : null;
+
+                        var dateOfBirth = columnMapping.ContainsKey("DateOfBirth") 
+                            ? rowData.ItemArray[columnMapping["DateOfBirth"]]?.ToString()?.Trim()
+                            : null;
+
+                        var gender = columnMapping.ContainsKey("Gender") 
+                            ? rowData.ItemArray[columnMapping["Gender"]]?.ToString()?.Trim()
+                            : null;
+
+                        // Parse DateOfBirth if provided
+                        DateTime? parsedDateOfBirth = null;
+                        if (!string.IsNullOrWhiteSpace(dateOfBirth))
+                        {
+                            if (DateTime.TryParse(dateOfBirth, out DateTime dob))
+                            {
+                                parsedDateOfBirth = dob;
+                            }
+                            else
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirth}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
+                                continue;
+                            }
+                        }
+
                         // Validate required fields
                         if (string.IsNullOrWhiteSpace(username) || 
                             string.IsNullOrWhiteSpace(fullName) || 
@@ -264,25 +302,36 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
-                        // Create student and assign to class
-                        var success = await _classService.ImportStudentToClassAsync(id, new CreateStudentDto
+                        // Check if student exists before importing to class
+                        var existingStudent = await _context.Students
+                            .FirstOrDefaultAsync(s => s.Email == email);
+                        
+                        if (existingStudent == null)
                         {
-                            Username = username,
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Student with email '{email}' does not exist. Please create Student First.");
+                            continue;
+                        }
+
+                        // Add existing student to class
+                        var result = await _classService.ImportStudentToClassAsync(id, new CreateStudentDto
+                        {
+                            Username = "", // Empty for existing students
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
-                            Password = username + "123", // Default password: username + "123"
+                            Password = string.Empty, // Empty for existing students
                             EnrollmentStatus = "Active"
                         });
 
-                        if (success)
+                        if (result.Success)
                         {
                             importResults.Success++;
                         }
                         else
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Failed to import student (duplicate username/email or class assignment failed)");
+                            importResults.Errors.Add($"Row {row + 1}: {result.ErrorMessage}");
                         }
                     }
                     catch (Exception ex)
@@ -297,7 +346,7 @@ namespace EducenAPI.Controllers
                     message = "Import to class completed",
                     classId = id,
                     importResults,
-                    defaultPasswordNote = "Default passwords are: username + '123'",
+                    defaultPasswordNote = "Students must already exist in system. Use Send Account function to generate passwords.",
                     templateInfo = new {
                         templateName = ImportTemplate.TEMPLATE_NAME,
                         mappedHeaders = columnMapping.Keys.ToList()
@@ -310,6 +359,14 @@ namespace EducenAPI.Controllers
             }
         }
 
+        // GET: api/Classes/5/students
+        [HttpGet("{id:int}/students")]
+        public async Task<IActionResult> GetStudentsByClass(int id)
+        {
+            var students = await _classService.GetStudentsByClassIdAsync(id);
+            return Ok(students);
+        }
+
         private sealed class ImportResults
         {
             public int Total { get; set; }
@@ -319,3 +376,4 @@ namespace EducenAPI.Controllers
         }
     }
 }
+

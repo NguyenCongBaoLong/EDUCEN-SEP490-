@@ -1,11 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EducenAPI.Models
 {
     public class PaymentRecord
     {
         [Key]
-        public string PaymentId { get; set; }
+        public string PaymentId { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
         public string TenantId { get; set; }
@@ -19,7 +20,8 @@ namespace EducenAPI.Models
         public DateTime PaymentDate { get; set; }
 
         // Navigation
-        public Tenant Tenant { get; set; }
+        [ForeignKey(nameof(TenantId))]
+        public Tenant Tenant { get; set; } = null!;
 
     }
 }

@@ -5,7 +5,7 @@ namespace EducenAPI.DTOs.Assignments
     public class CreateAssignmentDto
     {
         [Required]
-        public int ClassId { get; set; }
+        public int SessionId { get; set; }
 
         [Required]
         public string Title { get; set; } = null!;
