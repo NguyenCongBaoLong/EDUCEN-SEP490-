@@ -1,0 +1,47 @@
+﻿using EducenAPI.DTOs.LessionMaterials;
+using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace EducenAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class MaterialsController : ControllerBase
+    {
+        private readonly ILessonMaterialService _lessonMaterialService;
+        public MaterialsController(ILessonMaterialService lessonMaterialService)
+        {
+            _lessonMaterialService = lessonMaterialService;
+        }
+
+        [HttpPost("save")]
+        public async Task<IActionResult> SaveMaterial([FromBody] SaveMaterialDto dto)
+        {
+            var result = await _lessonMaterialService.SaveMaterials(dto);
+            return Ok(result);
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadMaterial([FromForm] UploadMaterialDto dto)
+        {
+            var result = await _lessonMaterialService.UploadMaterials(dto);
+            return Ok(result);
+        }
+        [HttpGet("Get-By-Session/{sessionId}")]
+        public async Task<IActionResult> GetBySession(int sessionId)
+        {
+            
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var result = await _lessonMaterialService.GetMaterialsBySessionAsync(sessionId, baseUrl);
+
+            if (result == null || result.Count == 0)
+            {
+                return NotFound(new { message = "Không tìm thấy tài liệu nào cho buổi học này." });
+            }
+
+            return Ok(result);
+        }
+    }
+}

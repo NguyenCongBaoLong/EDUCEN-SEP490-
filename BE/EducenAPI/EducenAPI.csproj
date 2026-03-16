@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <Folder Include="Hubs\" />
+    <Folder Include="wwwroot\" />
     <Folder Include="Persistence\Migrations\AdminDb\" />
     <Folder Include="Persistence\Migrations\TenantDb\" />
   </ItemGroup>
