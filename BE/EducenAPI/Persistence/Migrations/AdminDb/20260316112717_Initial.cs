@@ -20,7 +20,8 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     LimitUsers = table.Column<int>(type: "int", nullable: false),
                     Features = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StorageLimit = table.Column<int>(type: "int", nullable: false)
+                    StorageLimit = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
