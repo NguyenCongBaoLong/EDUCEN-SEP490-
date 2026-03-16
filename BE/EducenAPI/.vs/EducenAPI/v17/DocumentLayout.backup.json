@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\dtos\\lessionmaterials\\savematerialdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:dtos\\lessionmaterials\\savematerialdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -102,7 +106,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 12,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -126,7 +130,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAAA8AAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-03-16T01:15:46.51Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "AssignmentsController.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AssignmentsController.cs",
               "RelativeDocumentMoniker": "Controllers\\AssignmentsController.cs",
@@ -138,7 +155,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "Program.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -151,7 +168,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "IAssignmentService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IAssignmentService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IAssignmentService.cs",
@@ -163,7 +180,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "Assignment.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Assignment.cs",
               "RelativeDocumentMoniker": "Models\\Assignment.cs",
@@ -175,7 +192,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "AuthService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AuthService.cs",
               "RelativeDocumentMoniker": "Services\\AuthService.cs",
@@ -187,7 +204,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "ILessonMaterialService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\ILessonMaterialService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\ILessonMaterialService.cs",
@@ -199,7 +216,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "UploadMaterialDto.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\LessionMaterials\\UploadMaterialDto.cs",
               "RelativeDocumentMoniker": "DTOs\\LessionMaterials\\UploadMaterialDto.cs",
@@ -211,20 +228,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "SaveMaterialDto.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\LessionMaterials\\SaveMaterialDto.cs",
               "RelativeDocumentMoniker": "DTOs\\LessionMaterials\\SaveMaterialDto.cs",
               "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\LessionMaterials\\SaveMaterialDto.cs",
               "RelativeToolTip": "DTOs\\LessionMaterials\\SaveMaterialDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAASAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-15T16:16:01.186Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "IPlanService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IPlanService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IPlanService.cs",
@@ -236,7 +253,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "MaterialsController.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\MaterialsController.cs",
               "RelativeDocumentMoniker": "Controllers\\MaterialsController.cs",
@@ -248,7 +265,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "AssistantService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AssistantService.cs",
               "RelativeDocumentMoniker": "Services\\AssistantService.cs",
@@ -260,7 +277,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "FileUploadDto.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\FileUpload\\FileUploadDto.cs",
               "RelativeDocumentMoniker": "DTOs\\FileUpload\\FileUploadDto.cs",
@@ -272,7 +289,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "ICurrentTenantService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\ICurrentTenantService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\ICurrentTenantService.cs",
@@ -284,7 +301,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "IClassService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IClassService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IClassService.cs",
@@ -296,7 +313,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "IAuthService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IAuthService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IAuthService.cs",
@@ -308,7 +325,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 17,
               "Title": "IStudentService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IStudentService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IStudentService.cs",
@@ -320,7 +337,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "IScheduleService.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IScheduleService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IScheduleService.cs",
@@ -332,7 +349,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "AdminController.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminController.cs",
               "RelativeDocumentMoniker": "Controllers\\AdminController.cs",
@@ -344,7 +361,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "Subject.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Subject.cs",
               "RelativeDocumentMoniker": "Models\\Subject.cs",
@@ -356,7 +373,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 21,
               "Title": "AdminDbContext.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Persistence\\Contexts\\AdminDbContext.cs",
               "RelativeDocumentMoniker": "Persistence\\Contexts\\AdminDbContext.cs",
@@ -368,7 +385,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "EducenV2Context.cs",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Persistence\\Contexts\\EducenV2Context.cs",
               "RelativeDocumentMoniker": "Persistence\\Contexts\\EducenV2Context.cs",
@@ -380,7 +397,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 22,
               "Title": "docker-compose.yml",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\docker-compose.yml",
               "RelativeDocumentMoniker": "docker-compose.yml",
@@ -392,7 +409,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 23,
               "Title": "Dockerfile",
               "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Dockerfile",
               "RelativeDocumentMoniker": "Dockerfile",
