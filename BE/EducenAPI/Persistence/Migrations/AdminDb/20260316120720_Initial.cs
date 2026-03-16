@@ -42,6 +42,24 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                 });
 
             migrationBuilder.CreateTable(
+                name: "TenantRegistrations",
+                columns: table => new
+                {
+                    RegistrationId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CenterName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    ContactPerson = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TenantRegistrations", x => x.RegistrationId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tenants",
                 columns: table => new
                 {
@@ -155,6 +173,9 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
             migrationBuilder.DropTable(
                 name: "SystemAdmins");
+
+            migrationBuilder.DropTable(
+                name: "TenantRegistrations");
 
             migrationBuilder.DropTable(
                 name: "Plans");
