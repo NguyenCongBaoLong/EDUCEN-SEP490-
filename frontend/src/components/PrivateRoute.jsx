@@ -22,9 +22,10 @@ const PrivateRoute = ({ children, allowedRoles }) => {
         return null;
     }
 
-    // Chưa đăng nhập → về login
+    // Chưa đăng nhập → về đúng trang login tương ứng
     if (!user) {
-        return <Navigate to="/login" replace />;
+        const isSysAdminPath = window.location.pathname.startsWith('/sysadmin');
+        return <Navigate to={isSysAdminPath ? "/sysadmin/login" : "/login"} replace />;
     }
 
     // Đã login nhưng role không được phép → redirect về trang đúng role
