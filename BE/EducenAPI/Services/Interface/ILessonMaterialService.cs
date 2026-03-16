@@ -9,5 +9,7 @@ namespace EducenAPI.Services.Interface
         Task<LessonMaterial> UploadMaterials(UploadMaterialDto dto);
 
         Task<LessonMaterial> SaveMaterials(SaveMaterialDto dto);
+
+        Task<List<MaterialResponseDto>> GetMaterialsBySessionAsync(int sessionId, string baseUrl);
     }
 }

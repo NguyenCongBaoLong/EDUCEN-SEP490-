@@ -28,5 +28,20 @@ namespace EducenAPI.Controllers
             var result = await _lessonMaterialService.UploadMaterials(dto);
             return Ok(result);
         }
+        [HttpGet("Get-By-Session/{sessionId}")]
+        public async Task<IActionResult> GetBySession(int sessionId)
+        {
+            
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var result = await _lessonMaterialService.GetMaterialsBySessionAsync(sessionId, baseUrl);
+
+            if (result == null || result.Count == 0)
+            {
+                return NotFound(new { message = "Không tìm thấy tài liệu nào cho buổi học này." });
+            }
+
+            return Ok(result);
+        }
     }
 }

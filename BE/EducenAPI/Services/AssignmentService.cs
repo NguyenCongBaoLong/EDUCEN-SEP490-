@@ -52,5 +52,26 @@ namespace EducenAPI.Services
 
             return assignment;
         }
+        public async Task<List<AssignmentResponseDto>> GetAssignmentsBySessionAsync(int sessionId, string baseUrl)
+        {
+            var assignments = await _context.Assignments
+                .Where(a => a.SessionId == sessionId)
+                .Select(a => new AssignmentResponseDto
+                {
+                    AsmId = a.AsmId,
+                    SessionId = a.SessionId,
+                    Title = a.Title,
+                    Description = a.Description,
+                    StartTime = a.StartTime,
+                    EndTime = a.EndTime,
+                    // Xử lý biến đường dẫn vật lý thành URL truy cập được
+                    FileUrl = !string.IsNullOrEmpty(a.FileUrl)
+                        ? $"{baseUrl}/{a.FileUrl.Replace("wwwroot/", "").Replace("\\", "/")}"
+                        : null
+                })
+                .ToListAsync();
+
+            return assignments;
+        }
     }
 }

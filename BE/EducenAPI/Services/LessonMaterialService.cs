@@ -56,5 +56,25 @@ namespace EducenAPI.Services
 
             return material;
         }
+
+        public async Task<List<MaterialResponseDto>> GetMaterialsBySessionAsync(int sessionId, string baseUrl)
+        {
+            var materials = await _context.LessonMaterials
+                .Where(x => x.SessionId == sessionId)
+                .Select(x => new MaterialResponseDto
+                {
+                    MaterialId = x.MaterialId,
+                    SessionId = x.SessionId ,
+                    Title = x.Title,
+                    ContentType = x.ContentType,
+                    // Xử lý link file tương tự Assignment
+                    FileUrl = !string.IsNullOrEmpty(x.FileUrl)
+                        ? $"{baseUrl}/{x.FileUrl.Replace("wwwroot/", "").Replace("wwwroot\\", "").Replace("\\", "/")}"
+                        : null
+                })
+                .ToListAsync();
+
+            return materials;
+        }
     }
 }
