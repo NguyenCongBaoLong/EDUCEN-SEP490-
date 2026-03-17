@@ -4,30 +4,31 @@ namespace EducenAPI.DTOs
 {
     public class CreateTenantRequest
     {
-        //[Required]
-        //[MaxLength(100)]
-        public string? TenantId { get; set; }
+        [Required]
+        [MaxLength(100)]
+        public string TenantId { get; set; } = string.Empty;
 
-        //[Required]
-        //[MaxLength(200)]
-        public string? TenantName { get; set; }
+        [Required]
+        [MaxLength(200)]
+        public string TenantName { get; set; } = string.Empty;
 
-        //[MaxLength(200)]
+        [MaxLength(200)]
         public string? ContactPerson { get; set; }
 
-        //[MaxLength(150)]
-        //[EmailAddress]
+        [MaxLength(150)]
+        [EmailAddress]
         public string? Email { get; set; }
 
-        //[MaxLength(20)]
+        [MaxLength(20)]
+        [Phone]
         public string? PhoneNumber { get; set; }
 
-        //[MaxLength(300)]
+        [MaxLength(300)]
         public string? Address { get; set; }
 
-        //[Required]
-        //[MaxLength(200)]
-        public string? SubDomain { get; set; }      
+        [Required]
+        [MaxLength(200)]
+        public string SubDomain { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
     }
