@@ -169,6 +169,7 @@ var app = builder.Build();
 // ===============================
 // MIDDLEWARE PIPELINE
 // ===============================
+app.UseMiddleware<GlobalExceptionHandler>();
 
 if (app.Environment.IsDevelopment())
 {

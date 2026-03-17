@@ -48,26 +48,15 @@ const AssignmentDetailModal = ({ isOpen, onClose, assignment, onDownload }) => {
                                     {assignment.title}
                                 </h3>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                {getStatusBadge(assignment.status)}
-                                <span style={{ fontSize: '0.875rem', color: '#475569', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                    Lớp: {assignment.className}
-                                </span>
-                            </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', color: '#64748b', fontSize: '0.875rem' }}>
+                            <span>Lớp: <strong>{assignment.className}</strong></span>
+                            <span className="dot">•</span>
+                            <span>Hạn nộp: <strong>{formatDate(assignment.endTime)}</strong></span>
+                            <span className="dot">•</span>
+                            <span>Tệp đính kèm: <strong>{assignment.fileName}</strong></span>
                         </div>
                     </div>
-
-                    {/* Metadata */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#334155' }}>
-                            <Clock size={16} color="#64748b" />
-                            <span>Hạn nộp: <strong>{formatDate(assignment.dueDate)}</strong></span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#334155' }}>
-                            <CheckCircle size={16} color="#64748b" />
-                            <span>Đã nhận: <strong>{assignment.submittedCount} / {assignment.totalStudents}</strong> học sinh nộp bài</span>
-                        </div>
-                    </div>
+                </div>
 
                     {/* Description */}
                     {assignment.description && (

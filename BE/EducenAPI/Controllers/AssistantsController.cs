@@ -87,5 +87,13 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // GET: api/Assistants/5/classes
+        [HttpGet("{id:int}/classes")]
+        public async Task<IActionResult> GetAssistantClasses(int id)
+        {
+            var classes = await _assistantService.GetAssistantClassesAsync(id);
+            return Ok(classes);
+        }
     }
 }

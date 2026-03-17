@@ -207,5 +207,49 @@ namespace EducenAPI.Services
                 throw;
             }
         }
+
+        public async Task<object> GetAssistantClassesAsync(int id)
+        {
+            var assistant = await _context.Assistants
+                .Include(a => a.AssistantNavigation)
+                .FirstOrDefaultAsync(a => a.UserId == id);
+
+            if (assistant == null)
+                return new { message = "Assistant not found" };
+
+            var classes = await _context.Classes
+                .Include(c => c.Subject)
+                .Include(c => c.Teacher)
+                    .ThenInclude(t => t!.TeacherNavigation)
+                .Include(c => c.Assistant)
+                    .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Schedules)
+                .Where(c => c.AssistantId == id)
+                .Select(c => new
+                {
+                    c.ClassId,
+                    c.ClassName,
+                    c.Description,
+                    c.Status,
+                    c.StartDate,
+                    c.EndDate,
+                    SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
+                    TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : "",
+                    AssistantName = assistant.AssistantNavigation.FullName ?? "",
+                    StudentCount = _context.Classes
+                        .Where(cl => cl.ClassId == c.ClassId)
+                        .Select(cl => cl.Students.Count)
+                        .FirstOrDefault(),
+                    ScheduleSlots = c.Schedules.Select(s => new
+                    {
+                        s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return classes;
+        }
     }
 }

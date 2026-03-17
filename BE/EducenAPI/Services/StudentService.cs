@@ -85,7 +85,7 @@ namespace EducenAPI.Services
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
         {
             // 1. Validate base required fields
-            await ValidateBaseStudentData(dto);
+            ValidateBaseStudentData(dto);
 
             // 2. Check duplicate email (luôn luôn check)
             var existingStudent = await _context.Students
@@ -212,7 +212,7 @@ namespace EducenAPI.Services
             };
         }
 
-        private async Task ValidateBaseStudentData(CreateStudentDto dto)
+        private void ValidateBaseStudentData(CreateStudentDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.FullName))
                 throw new Exception("FullName is required");

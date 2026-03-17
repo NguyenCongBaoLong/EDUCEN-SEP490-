@@ -1,13 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.DTOs.LessionMaterials
 {
     public class SaveMaterialDto
     {
-        [Required]
-        public int SessionId { get; set; }
+        public int? SessionId { get; set; }
+        public int? ClassId { get; set; }
 
         [Required]
         public string Title { get; set; } = null!;
+
+        public bool SaveToLibrary { get; set; }
+        
+        public IFormFile? File { get; set; }
     }
 }

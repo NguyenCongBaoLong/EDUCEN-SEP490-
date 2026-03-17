@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -9,7 +9,9 @@ public partial class Assignment
     [Key]
     public int AsmId { get; set; }
 
-    public int SessionId { get; set; }
+    public int? SessionId { get; set; }
+
+    public int? ClassId { get; set; }
 
     public string? Title { get; set; }
 
@@ -21,7 +23,7 @@ public partial class Assignment
 
     public DateTime? EndTime { get; set; }
 
-    public ClassSession Session { get; set; } = null!;
+    public virtual ClassSession? Session { get; set; }
 
     public virtual ICollection<Submission> Submissions { get; set; } = new List<Submission>();
 }

@@ -1,11 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.DTOs.Assignments
 {
     public class CreateAssignmentDto
     {
-        [Required]
-        public int SessionId { get; set; }
+        public int? SessionId { get; set; }
+        public int? ClassId { get; set; }
 
         [Required]
         public string Title { get; set; } = null!;
@@ -19,5 +19,7 @@ namespace EducenAPI.DTOs.Assignments
         public DateTime? EndTime { get; set; }
 
         public IFormFile? File { get; set; }
+
+        public bool SaveToLibrary { get; set; }
     }
 }

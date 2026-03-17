@@ -12,4 +12,6 @@ services:
       - ConnectionStrings__DefaultTenantConnection=Server=host.docker.internal,1433;Database=EducenV2;User Id=sa;Password=123;TrustServerCertificate=True;
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./wwwroot/uploads:/app/wwwroot/uploads
     restart: on-failure
