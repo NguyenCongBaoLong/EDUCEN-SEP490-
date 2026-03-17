@@ -111,6 +111,12 @@ namespace EducenAPI.Services
                 var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
                 if (teacher == null)
                     throw new Exception("Teacher not found");
+                
+                // Check if teacher is already assigned to another active class at this time
+                if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
+                {
+                    await ValidateTeacherAvailability(dto.TeacherId.Value, dto.ScheduleSlots, dto.StartDate, dto.EndDate);
+                }
             }
 
             // Validate Assistant exists (if provided)
@@ -119,6 +125,12 @@ namespace EducenAPI.Services
                 var assistant = await _context.Assistants.FindAsync(dto.AssistantId.Value);
                 if (assistant == null)
                     throw new Exception("Assistant not found");
+                
+                // Check if assistant is already assigned to another active class at this time
+                if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
+                {
+                    await ValidateAssistantAvailability(dto.AssistantId.Value, dto.ScheduleSlots, dto.StartDate, dto.EndDate);
+                }
             }
 
             // Validate date range
@@ -130,6 +142,11 @@ namespace EducenAPI.Services
                 if (dto.StartDate < DateTime.Today)
                     throw new Exception("StartDate cannot be in the past");
             }
+
+            // Validate ClassStatus
+            var validStatuses = new[] { "Active", "Inactive", "Completed", "Cancelled" };
+            if (dto.Status != null && !validStatuses.Contains(dto.Status))
+                throw new Exception($"Status must be one of: {string.Join(", ", validStatuses)}");
 
             // Validate and create schedules
             if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
@@ -160,6 +177,72 @@ namespace EducenAPI.Services
             }
 
             return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
+        }
+
+        private async Task ValidateTeacherAvailability(int teacherId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        {
+            var teacherClasses = await _context.Classes
+                .Include(c => c.Schedules)
+                .Where(c => c.TeacherId == teacherId && c.Status == "Active")
+                .ToListAsync();
+
+            foreach (var existingClass in teacherClasses)
+            {
+                // Check date overlap
+                if (startDate.HasValue && endDate.HasValue && existingClass.StartDate.HasValue && existingClass.EndDate.HasValue)
+                {
+                    if (startDate > existingClass.EndDate || endDate < existingClass.StartDate)
+                        continue; // No date overlap
+                }
+
+                // Check schedule time overlap
+                foreach (var newSlot in scheduleSlots)
+                {
+                    var newStart = TimeOnly.Parse(newSlot.StartTime);
+                    var newEnd = TimeOnly.Parse(newSlot.EndTime);
+
+                    foreach (var existingSlot in existingClass.Schedules.Where(s => s.DayOfWeek == newSlot.DayOfWeek))
+                    {
+                        if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
+                        {
+                            throw new Exception($"Teacher is already assigned to class '{existingClass.ClassName}' at this time");
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task ValidateAssistantAvailability(int assistantId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        {
+            var assistantClasses = await _context.Classes
+                .Include(c => c.Schedules)
+                .Where(c => c.AssistantId == assistantId && c.Status == "Active")
+                .ToListAsync();
+
+            foreach (var existingClass in assistantClasses)
+            {
+                // Check date overlap
+                if (startDate.HasValue && endDate.HasValue && existingClass.StartDate.HasValue && existingClass.EndDate.HasValue)
+                {
+                    if (startDate > existingClass.EndDate || endDate < existingClass.StartDate)
+                        continue;
+                }
+
+                // Check schedule time overlap
+                foreach (var newSlot in scheduleSlots)
+                {
+                    var newStart = TimeOnly.Parse(newSlot.StartTime);
+                    var newEnd = TimeOnly.Parse(newSlot.EndTime);
+
+                    foreach (var existingSlot in existingClass.Schedules.Where(s => s.DayOfWeek == newSlot.DayOfWeek))
+                    {
+                        if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
+                        {
+                            throw new Exception($"Assistant is already assigned to class '{existingClass.ClassName}' at this time");
+                        }
+                    }
+                }
+            }
         }
 
         private async Task ValidateScheduleSlots(List<CreateScheduleSlotDto> scheduleSlots)
@@ -263,11 +346,23 @@ namespace EducenAPI.Services
                 var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
                 if (teacher == null)
                     throw new Exception("Teacher not found");
+                
+                // Validate teacher availability if changing teacher or updating schedules
+                if (existingClass.TeacherId != dto.TeacherId.Value || dto.ScheduleSlots != null)
+                {
+                    var scheduleSlots = dto.ScheduleSlots ?? existingClass.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList();
+                    
+                    await ValidateTeacherAvailability(dto.TeacherId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                }
                 existingClass.TeacherId = dto.TeacherId;
             }
             else if (dto.TeacherId == null) 
             {
-                // Note: Consider if business logic allows unassigning
                 existingClass.TeacherId = null;
             }
 
@@ -276,6 +371,19 @@ namespace EducenAPI.Services
                 var assistant = await _context.Assistants.FindAsync(dto.AssistantId.Value);
                 if (assistant == null)
                     throw new Exception("Assistant not found");
+                
+                // Validate assistant availability if changing assistant or updating schedules
+                if (existingClass.AssistantId != dto.AssistantId.Value || dto.ScheduleSlots != null)
+                {
+                    var scheduleSlots = dto.ScheduleSlots ?? existingClass.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList();
+                    
+                    await ValidateAssistantAvailability(dto.AssistantId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                }
                 existingClass.AssistantId = dto.AssistantId;
             }
             else if (dto.AssistantId == null)
@@ -290,7 +398,12 @@ namespace EducenAPI.Services
                 existingClass.EndDate = dto.EndDate;
 
             if (dto.Status != null)
+            {
+                var validStatuses = new[] { "Active", "Inactive", "Completed", "Cancelled" };
+                if (!validStatuses.Contains(dto.Status))
+                    throw new Exception($"Status must be one of: {string.Join(", ", validStatuses)}");
                 existingClass.Status = dto.Status;
+            }
 
             // Update schedules if provided
             if (dto.ScheduleSlots != null)

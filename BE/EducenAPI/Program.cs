@@ -112,6 +112,7 @@ builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
 });
 
 // ── Auth Service ────────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
@@ -141,7 +142,7 @@ builder.Services.AddCors(options =>
               )
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .SetIsOriginAllowed(_ => true);
+              .AllowCredentials();
     });
 });
 

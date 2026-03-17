@@ -15,33 +15,16 @@ namespace EducenAPI.Services
             _context = context;
         }
 
-        public async Task<IEnumerable<ScheduleDto>> GetAllSchedulesAsync()
+        private DateTime GetNextScheduleDate(int scheduleDayOfWeek)
         {
-            return await _context.Schedules
-                .Include(s => s.Class)
-                    .ThenInclude(c => c.Teacher)
-                        .ThenInclude(t => t!.TeacherNavigation)
-                .Include(s => s.Class)
-                    .ThenInclude(c => c.Subject)
-                .Select(s => new ScheduleDto
-                {
-                    ScheduleId = s.ScheduleId,
-                    ClassId = s.ClassId,
-                    ClassName = s.Class.ClassName ?? "",
-                    SubjectId = s.Class.SubjectId,
-                    SubjectName = s.Class.Subject.SubjectName,
-                    DayOfWeek = s.DayOfWeek,
-                    ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
-                    StartTime = s.StartTime.ToTimeSpan(),
-                    EndTime = s.EndTime.ToTimeSpan(),
-                    StartDate = s.Class.StartDate,
-                    EndDate = s.Class.EndDate,
-                    TeacherName = s.Class.Teacher != null ? s.Class.Teacher.TeacherNavigation.FullName : null,
-                    Notes = null,
-                    Status = "Active",
-                    CreatedAt = DateTime.Now
-                })
-                .ToListAsync();
+            var today = DateTime.Today;
+            int currentDayOfWeek = (int)today.DayOfWeek;
+            
+            int daysToAdd = scheduleDayOfWeek - currentDayOfWeek;
+            if (daysToAdd <= 0)
+                daysToAdd += 7;
+                
+            return today.AddDays(daysToAdd);
         }
 
         public async Task<IEnumerable<ScheduleDto>> GetSchedulesByClassIdAsync(int classId)
@@ -58,7 +41,7 @@ namespace EducenAPI.Services
                     SubjectId = s.Class.SubjectId,
                     SubjectName = s.Class.Subject.SubjectName,
                     DayOfWeek = s.DayOfWeek,
-                    ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
+                    ScheduleDate = GetNextScheduleDate(s.DayOfWeek),
                     StartTime = s.StartTime.ToTimeSpan(),
                     EndTime = s.EndTime.ToTimeSpan(),
                     StartDate = s.Class.StartDate,
@@ -84,7 +67,7 @@ namespace EducenAPI.Services
                     SubjectId = s.Class.SubjectId,
                     SubjectName = s.Class.Subject.SubjectName,
                     DayOfWeek = s.DayOfWeek,
-                    ScheduleDate = DateTime.Now.AddDays(s.DayOfWeek - (int)DateTime.Now.DayOfWeek),
+                    ScheduleDate = GetNextScheduleDate(s.DayOfWeek),
                     StartTime = s.StartTime.ToTimeSpan(),
                     EndTime = s.EndTime.ToTimeSpan(),
                     StartDate = s.Class.StartDate,
@@ -99,7 +82,9 @@ namespace EducenAPI.Services
         public async Task<ScheduleDto> CreateScheduleAsync(CreateScheduleDto dto)
         {
             // Validate class exists
-            var classExists = await _context.Classes.FindAsync(dto.ClassId);
+            var classExists = await _context.Classes
+                .Include(c => c.Teacher)
+                .FirstOrDefaultAsync(c => c.ClassId == dto.ClassId);
             if (classExists == null)
                 throw new Exception("Class does not exist");
 
@@ -133,6 +118,31 @@ namespace EducenAPI.Services
                 // Check for overlap
                 if ((dto.StartTime < existingEnd && dto.EndTime > existingStart))
                     throw new Exception("Schedule time overlaps with existing schedule");
+            }
+
+            // Check for teacher conflict with other classes
+            if (classExists.TeacherId.HasValue)
+            {
+                var teacherClasses = await _context.Classes
+                    .Include(c => c.Schedules)
+                    .Where(c => c.TeacherId == classExists.TeacherId 
+                        && c.ClassId != dto.ClassId 
+                        && c.Status == "Active")
+                    .ToListAsync();
+
+                var newStart = TimeOnly.FromTimeSpan(dto.StartTime);
+                var newEnd = TimeOnly.FromTimeSpan(dto.EndTime);
+
+                foreach (var otherClass in teacherClasses)
+                {
+                    foreach (var existingSlot in otherClass.Schedules.Where(s => s.DayOfWeek == dayOfWeek))
+                    {
+                        if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
+                        {
+                            throw new Exception($"Teacher is already assigned to class '{otherClass.ClassName}' at this time");
+                        }
+                    }
+                }
             }
 
             var schedule = new Schedule
@@ -179,22 +189,6 @@ namespace EducenAPI.Services
 
             _context.Schedules.Remove(schedule);
             await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> ApproveScheduleAsync(int id)
-        {
-            var schedule = await _context.Schedules.FindAsync(id);
-            if (schedule == null)
-                return false;
-            return true;
-        }
-
-        public async Task<bool> RejectScheduleAsync(int id, string? reason)
-        {
-            var schedule = await _context.Schedules.FindAsync(id);
-            if (schedule == null)
-                return false;
             return true;
         }
     }

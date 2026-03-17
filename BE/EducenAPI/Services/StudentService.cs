@@ -314,6 +314,8 @@ namespace EducenAPI.Services
             var student = await _context.Students
                 .Include(s => s.StudentNavigation)
                 .Include(s => s.Classes)
+                .Include(s => s.Attendances)
+                .Include(s => s.Submissions)
                 .FirstOrDefaultAsync(s => s.UserId == id);
 
             if (student == null)
@@ -325,9 +327,36 @@ namespace EducenAPI.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                // Xóa các related data trước
+                
+                // 1. Xóa Submissions
+                if (student.Submissions.Any())
+                {
+                    _context.Submissions.RemoveRange(student.Submissions);
+                }
+                
+                // 2. Xóa Attendances
+                if (student.Attendances.Any())
+                {
+                    _context.Attendances.RemoveRange(student.Attendances);
+                }
+                
+                // 3. Xóa Student khỏi các Class (ClassStudent relationship)
+                student.Classes.Clear();
+                
+                // 4. Xóa Parent-Student relationships
+                var parentStudents = await _context.Set<Dictionary<string, object>>("ParentStudent")
+                    .Where(ps => ps["StudentsUserId"] == id)
+                    .ToListAsync();
+                if (parentStudents.Any())
+                {
+                    _context.Set<Dictionary<string, object>>("ParentStudent").RemoveRange(parentStudents);
+                }
+                
+                // 5. Xóa Student
                 _context.Students.Remove(student);
                 
-                // Chỉ xóa User nếu có liên kết
+                // 6. Xóa User nếu có liên kết
                 if (student.UserId.HasValue && student.StudentNavigation != null)
                 {
                     _context.Users.Remove(student.StudentNavigation);
