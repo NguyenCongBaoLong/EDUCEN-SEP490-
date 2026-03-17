@@ -136,12 +136,15 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:5173",  // Vite dev server
-                "http://localhost:3000"   // CRA fallback
+                "http://localhost:3000",   // CRA fallback
+                "http://localhost:5106"   // Backend HTTP
               )
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .SetIsOriginAllowed(_ => true);
     });
 });
+
 
 // ── JWT Authentication ──────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt");
