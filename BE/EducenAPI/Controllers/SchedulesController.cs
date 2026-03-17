@@ -100,46 +100,6 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
-        // PUT: api/Schedules/5/approve
-        [HttpPut("{id:int}/approve")]
-        public async Task<IActionResult> ApproveSchedule(int id)
-        {
-            try
-            {
-                var success = await _scheduleService.ApproveScheduleAsync(id);
-                if (!success)
-                    return NotFound(new { message = "Schedule not found" });
-
-                return Ok(new { message = "Schedule approved successfully", scheduleId = id, status = "Approved" });
-            }
-            catch (Exception ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-        }
-
-        // PUT: api/Schedules/5/reject
-        [HttpPut("{id:int}/reject")]
-        public async Task<IActionResult> RejectSchedule(int id, [FromBody] RejectScheduleRequest? request)
-        {
-            try
-            {
-                var success = await _scheduleService.RejectScheduleAsync(id, request?.Reason);
-                if (!success)
-                    return NotFound(new { message = "Schedule not found" });
-
-                return Ok(new { message = "Schedule rejected successfully", scheduleId = id, status = "Rejected" });
-            }
-            catch (Exception ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-        }
-    }
-
-    public class RejectScheduleRequest
-    {
-        public string? Reason { get; set; }
     }
 }
+

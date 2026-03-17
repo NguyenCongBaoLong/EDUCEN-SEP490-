@@ -13,7 +13,7 @@ namespace EducenAPI.DTOs.Students
 
         [Required(ErrorMessage = "FullName is required")]
         [StringLength(100, ErrorMessage = "FullName cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
+        [RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
         public string FullName 
         { 
             get => _fullName;
@@ -23,13 +23,15 @@ namespace EducenAPI.DTOs.Students
         [Required(ErrorMessage = "Email is required")]
         [EmailAddress(ErrorMessage = "Invalid email format")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
+        [RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string Email 
         { 
             get => _email;
             set => _email = value?.Trim() ?? string.Empty;
         }
 
+        // Nếu muốn tạo account cho student thì Username và Password bắt buộc
+        // Nếu để trống -> tạo student profile không có account
         [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
         public string? Username 
         { 
@@ -53,7 +55,7 @@ namespace EducenAPI.DTOs.Students
         }
 
         [StringLength(50, ErrorMessage = "Enrollment status cannot exceed 50 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Enrollment status cannot be only whitespace")]
+        [RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Enrollment status cannot be only whitespace")]
         public string? EnrollmentStatus 
         { 
             get => _enrollmentStatus;

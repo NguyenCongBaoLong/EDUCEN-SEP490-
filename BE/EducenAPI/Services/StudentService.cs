@@ -346,7 +346,7 @@ namespace EducenAPI.Services
                 
                 // 4. Xóa Parent-Student relationships
                 var parentStudents = await _context.Set<Dictionary<string, object>>("ParentStudent")
-                    .Where(ps => ps["StudentsUserId"] == id)
+                    .Where(ps => (int)ps["StudentsUserId"] == id)
                     .ToListAsync();
                 if (parentStudents.Any())
                 {

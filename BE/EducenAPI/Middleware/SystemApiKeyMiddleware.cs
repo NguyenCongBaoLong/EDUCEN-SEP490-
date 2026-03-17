@@ -35,7 +35,7 @@ namespace EducenAPI.Middleware
             var systemApiKey = configuration["SystemApiKey"];
 
             // Kiểm tra API key bằng constant-time comparison để tránh timing attack
-            if (string.IsNullOrEmpty(systemApiKey) || !ConstantTimeEquals(apiKeyFromRequest ?? "", systemApiKey))
+            if (string.IsNullOrEmpty(systemApiKey) || !ConstantTimeEquals(apiKeyFromRequest.ToString(), systemApiKey))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Invalid API Key");

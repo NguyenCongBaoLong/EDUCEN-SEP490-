@@ -42,6 +42,8 @@ namespace EducenAPI.Controllers
                 user.UserId,
                 user.Username,
                 user.FullName,
+                user.Email,
+                user.PhoneNumber,
                 user.RoleId,
                 RoleName = user.Role?.RoleName,
                 user.AccountStatus,
@@ -51,11 +53,8 @@ namespace EducenAPI.Controllers
                 // Assistant info
                 SupportLevel = user.Assistant?.SupportLevel,
                 // Student info
-                //Email = user.Student?.Email,
-                //PhoneNumber = user.Student?.PhoneNumber ?? user.Parent?.PhoneNumber,
-                //EnrollmentStatus = user.Student?.EnrollmentStatus,
-                //// Parent info
-                //Address = user.Parent?.Address
+                Grade = user.Student?.Grade,
+                EnrollmentStatus = user.Student?.EnrollmentStatus
             };
 
             return Ok(result);
@@ -73,7 +72,24 @@ namespace EducenAPI.Controllers
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            user.FullName = request.FullName;
+            // Cập nhật FullName
+            if (!string.IsNullOrWhiteSpace(request.FullName))
+                user.FullName = request.FullName.Trim();
+
+            // Cập nhật Email nếu có và không trùng
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                var existingUser = _context.Users
+                    .Any(u => u.Email == request.Email && u.UserId != user.UserId);
+                if (existingUser)
+                    return Conflict(new { message = "Email already exists" });
+                
+                user.Email = request.Email.Trim();
+            }
+
+            // Cập nhật PhoneNumber nếu có
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+                user.PhoneNumber = request.PhoneNumber.Trim();
 
             _context.SaveChanges();
 
