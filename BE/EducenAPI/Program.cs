@@ -48,6 +48,14 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Enter system API key"
     });
 
+    c.AddSecurityDefinition("Tenant", new OpenApiSecurityScheme
+    {
+        Name = "Tenant",
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Description = "Enter Tenant ID or Subdomain"
+    });
+
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
     {
         {
