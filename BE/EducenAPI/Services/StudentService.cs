@@ -17,69 +17,43 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<StudentDto>> GetAllStudentsAsync()
         {
-            return await _context.Students
+            var students = await _context.Students
                 .Include(s => s.StudentNavigation)
-                .Select(s => new StudentDto
-                {
-                    UserId = s.UserId ?? 0,
-                    Username = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
-                        : "NO_ACCOUNT",  // Indicator
-                    FullName = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
-                        : (s.FullName ?? ""),  // Dùng FullName từ Student
-                    Email = s.Email ?? "",
-                    PhoneNumber = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
-                        : null,
-                   Address = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
-                        : null,
-                    Grade = s.Grade,
-                    EnrollmentStatus = s.EnrollmentStatus ?? "Active",
-                    AccountStatus = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
-                        : "NO_ACCOUNT",
-                    IsAccountSent = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
-                        : false,
-                    CreatedAt = DateTime.Now
-                })
                 .ToListAsync();
+
+            return students.Select(MapToStudentDto);
         }
 
         public async Task<StudentDto?> GetStudentByIdAsync(int id)
         {
-            return await _context.Students
+            var student = await _context.Students
                 .Include(s => s.StudentNavigation)
-                .Where(s => s.UserId == id)
-                .Select(s => new StudentDto
-                {
-                    UserId = s.UserId ?? 0,
-                    Username = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
-                        : "NO_ACCOUNT",
-                    FullName = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
-                        : (s.FullName ?? ""),
-                    Email = s.Email ?? "",
-                    PhoneNumber = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
-                        : null,
-                    Address = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
-                        : null,
-                    Grade = s.Grade,
-                    EnrollmentStatus = s.EnrollmentStatus ?? "Active",
-                    AccountStatus = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
-                        : "NO_ACCOUNT",
-                    IsAccountSent = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
-                        : false,
-                    CreatedAt = DateTime.Now
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(s => s.UserId == id);
+
+            return student != null ? MapToStudentDto(student) : null;
+        }
+
+        /// <summary>
+        /// Maps a Student entity to StudentDto - refactored to eliminate duplicate code
+        /// </summary>
+        private static StudentDto MapToStudentDto(Student s)
+        {
+            var hasUser = s.UserId.HasValue && s.StudentNavigation != null;
+
+            return new StudentDto
+            {
+                UserId = s.UserId ?? 0,
+                Username = hasUser ? s.StudentNavigation.Username ?? "" : "NO_ACCOUNT",
+                FullName = hasUser ? s.StudentNavigation.FullName ?? "" : "",
+                Email = s.Email ?? "",
+                PhoneNumber = hasUser ? s.StudentNavigation.PhoneNumber : null,
+                Address = hasUser ? s.StudentNavigation.Address : null,
+                Grade = s.Grade,
+                EnrollmentStatus = s.EnrollmentStatus ?? "Active",
+                AccountStatus = hasUser ? s.StudentNavigation.AccountStatus : "NO_ACCOUNT",
+                IsAccountSent = hasUser && s.StudentNavigation.IsAccountSent,
+                CreatedAt = DateTime.Now
+            };
         }
 
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
@@ -112,11 +86,10 @@ namespace EducenAPI.Services
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new Exception("Email is required for student profile");
 
-            // 2. Tạo chỉ Student record
+            // 2. Tạo chỉ Student record (FullName chỉ lưu trong DTO, không vào DB)
             var student = new Student
             {
                 UserId = null,  // Explicit null
-                FullName = dto.FullName,  // Lưu tên vào Student
                 Email = dto.Email,
                 EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
                 Grade = dto.Grade,
@@ -132,7 +105,7 @@ namespace EducenAPI.Services
             {
                 UserId = null,  // Explicit null
                 Username = "NO_ACCOUNT",  // Indicator cho frontend
-                FullName = student.FullName,  // Dùng tên từ Student
+                FullName = dto.FullName,  // Dùng tên từ input DTO
                 Email = student.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = null,
@@ -257,17 +230,14 @@ namespace EducenAPI.Services
             if (student == null)
                 return false;
 
-            // Update Student fields
+            // Update Student fields (FullName chỉ có trong User, không có trong Student table)
             if (!string.IsNullOrEmpty(dto.FullName))
             {
                 if (student.UserId.HasValue && student.StudentNavigation != null)
                 {
                     student.StudentNavigation.FullName = dto.FullName;
                 }
-                else
-                {
-                    student.FullName = dto.FullName;
-                }
+                // Nếu không có User, FullName vẫn được trả về từ DTO input nhưng không lưu vào DB
             }
 
             if (!string.IsNullOrEmpty(dto.Email))
@@ -314,6 +284,8 @@ namespace EducenAPI.Services
             var student = await _context.Students
                 .Include(s => s.StudentNavigation)
                 .Include(s => s.Classes)
+                .Include(s => s.Attendances)
+                .Include(s => s.Submissions)
                 .FirstOrDefaultAsync(s => s.UserId == id);
 
             if (student == null)
@@ -325,9 +297,36 @@ namespace EducenAPI.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                // Xóa các related data trước
+                
+                // 1. Xóa Submissions
+                if (student.Submissions.Any())
+                {
+                    _context.Submissions.RemoveRange(student.Submissions);
+                }
+                
+                // 2. Xóa Attendances
+                if (student.Attendances.Any())
+                {
+                    _context.Attendances.RemoveRange(student.Attendances);
+                }
+                
+                // 3. Xóa Student khỏi các Class (ClassStudent relationship)
+                student.Classes.Clear();
+                
+                // 4. Xóa Parent-Student relationships
+                var parentStudents = await _context.Set<Dictionary<string, object>>("ParentStudent")
+                    .Where(ps => (int)ps["StudentsUserId"] == id)
+                    .ToListAsync();
+                if (parentStudents.Any())
+                {
+                    _context.Set<Dictionary<string, object>>("ParentStudent").RemoveRange(parentStudents);
+                }
+                
+                // 5. Xóa Student
                 _context.Students.Remove(student);
                 
-                // Chỉ xóa User nếu có liên kết
+                // 6. Xóa User nếu có liên kết
                 if (student.UserId.HasValue && student.StudentNavigation != null)
                 {
                     _context.Users.Remove(student.StudentNavigation);

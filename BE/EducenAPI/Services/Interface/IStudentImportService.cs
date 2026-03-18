@@ -5,7 +5,7 @@ namespace EducenAPI.Services.Interface
 {
     public interface IStudentImportService
     {
-        Task<object> ImportStudentsAsync(IFormFile file);
+        Task<object> ImportStudentsAsync(IFormFile file, int? classId = null);
     }
 }
 

@@ -4,6 +4,7 @@ using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using EducenAPI.Services.TenantService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -14,7 +15,28 @@ using EducenAPI.Ultils;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Custom validation error response
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .Select(e => new
+                {
+                    Field = e.Key,
+                    Errors = e.Value?.Errors.Select(err => err.ErrorMessage)
+                });
+
+            return new BadRequestObjectResult(new
+            {
+                statusCode = 400,
+                message = "Validation failed",
+                errors = errors
+            });
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddRouting();
 builder.Services.AddScoped<MailService>();
@@ -46,6 +68,14 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.ApiKey,
         In = ParameterLocation.Header,
         Description = "Enter system API key"
+    });
+
+    c.AddSecurityDefinition("Tenant", new OpenApiSecurityScheme
+    {
+        Name = "Tenant",
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Description = "Enter Tenant ID or Subdomain"
     });
 
     c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
@@ -104,6 +134,7 @@ builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
 });
 
 // ── Auth Service ────────────────────────────────────────────────────────────
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
@@ -128,12 +159,15 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "http://localhost:5173",  // Vite dev server
-                "http://localhost:3000"   // CRA fallback
+                "http://localhost:3000",   // CRA fallback
+                "http://localhost:5106"   // Backend HTTP
               )
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
+
 
 // ── JWT Authentication ──────────────────────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt");

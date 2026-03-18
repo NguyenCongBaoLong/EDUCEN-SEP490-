@@ -8,8 +8,17 @@ namespace EducenAPI.Services
         private readonly AdminDbContext _context;
         private readonly IConfiguration _configuration;
 
-        public string? TenantId { get; set; }
-        public string? ConnectionString { get; set; }
+        public string? TenantId 
+        { 
+            get => _httpContextAccessor?.HttpContext?.Items[TENANT_KEY] as string;
+            set => _httpContextAccessor!.HttpContext!.Items[TENANT_KEY] = value;
+        }
+        
+        public string? ConnectionString 
+        { 
+            get => _httpContextAccessor?.HttpContext?.Items[CONNECTION_KEY] as string;
+            set => _httpContextAccessor!.HttpContext!.Items[CONNECTION_KEY] = value;
+        }
 
         public CurrentTenantService(AdminDbContext context, IConfiguration configuration)
         {

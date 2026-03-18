@@ -19,7 +19,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules (public - no auth required for center home page)
         [HttpGet]
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedules()
         {
             var schedules = await _scheduleService.GetAllSchedulesAsync();
@@ -28,7 +28,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules/class/5 (public)
         [HttpGet("class/{classId:int}")]
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedulesByClass(int classId)
         {
             var schedules = await _scheduleService.GetSchedulesByClassIdAsync(classId);
@@ -37,6 +37,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedule(int id)
         {
             var schedule = await _scheduleService.GetScheduleByIdAsync(id);
@@ -49,6 +50,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Schedules
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateSchedule(CreateScheduleDto dto)
         {
             try
@@ -69,6 +71,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Schedules/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateSchedule(int id, UpdateScheduleDto dto)
         {
             try
@@ -87,6 +90,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Schedules/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteSchedule(int id)
         {
             try
@@ -102,46 +106,6 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-
-        // PUT: api/Schedules/5/approve
-        [HttpPut("{id:int}/approve")]
-        public async Task<IActionResult> ApproveSchedule(int id)
-        {
-            try
-            {
-                var success = await _scheduleService.ApproveScheduleAsync(id);
-                if (!success)
-                    return NotFound(new { message = "Schedule not found" });
-
-                return Ok(new { message = "Schedule approved successfully", scheduleId = id, status = "Approved" });
-            }
-            catch (Exception ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-        }
-
-        // PUT: api/Schedules/5/reject
-        [HttpPut("{id:int}/reject")]
-        public async Task<IActionResult> RejectSchedule(int id, [FromBody] RejectScheduleRequest? request)
-        {
-            try
-            {
-                var success = await _scheduleService.RejectScheduleAsync(id, request?.Reason);
-                if (!success)
-                    return NotFound(new { message = "Schedule not found" });
-
-                return Ok(new { message = "Schedule rejected successfully", scheduleId = id, status = "Rejected" });
-            }
-            catch (Exception ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-        }
-    }
-
-    public class RejectScheduleRequest
-    {
-        public string? Reason { get; set; }
     }
 }
+

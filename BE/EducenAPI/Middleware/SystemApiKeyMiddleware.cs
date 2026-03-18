@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace EducenAPI.Middleware
 {
@@ -32,8 +34,8 @@ namespace EducenAPI.Middleware
             // Lấy API key từ appsettings
             var systemApiKey = configuration["SystemApiKey"];
 
-            // Kiểm tra API key
-            if (string.IsNullOrEmpty(systemApiKey) || apiKeyFromRequest != systemApiKey)
+            // Kiểm tra API key bằng constant-time comparison để tránh timing attack
+            if (string.IsNullOrEmpty(systemApiKey) || !ConstantTimeEquals(apiKeyFromRequest.ToString(), systemApiKey))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Invalid API Key");
@@ -41,6 +43,13 @@ namespace EducenAPI.Middleware
             }
 
             await _next(context);
+        }
+
+        private static bool ConstantTimeEquals(string a, string b)
+        {
+            var aBytes = Encoding.UTF8.GetBytes(a);
+            var bBytes = Encoding.UTF8.GetBytes(b);
+            return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
         }
     }
 }

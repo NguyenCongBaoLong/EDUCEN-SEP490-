@@ -37,6 +37,7 @@ namespace EducenAPI.Middleware
                 NotFoundException => HttpStatusCode.NotFound,
                 BadRequestException => HttpStatusCode.BadRequest,
                 UnauthorizedException => HttpStatusCode.Unauthorized,
+                ArgumentException => HttpStatusCode.BadRequest,
                 _ => HttpStatusCode.InternalServerError
             };
 
@@ -51,6 +52,38 @@ namespace EducenAPI.Middleware
 
             var jsonResponse = JsonSerializer.Serialize(response);
             return context.Response.WriteAsync(jsonResponse);
+        }
+    }
+
+    /// <summary>
+    /// Middleware to handle ModelState validation errors
+    /// </summary>
+    public class ModelStateValidationMiddleware
+    {
+        private readonly RequestDelegate _next;
+
+        public ModelStateValidationMiddleware(RequestDelegate next)
+        {
+            _next = next;
+        }
+
+        public async Task InvokeAsync(HttpContext context)
+        {
+            if (!context.Request.Path.StartsWithSegments("/api"))
+            {
+                await _next(context);
+                return;
+            }
+
+            if (!context.Request.Method.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+                !context.Request.Method.Equals("PUT", StringComparison.OrdinalIgnoreCase) &&
+                !context.Request.Method.Equals("DELETE", StringComparison.OrdinalIgnoreCase))
+            {
+                await _next(context);
+                return;
+            }
+
+            await _next(context);
         }
     }
 }

@@ -33,7 +33,7 @@ public class StudentImportService : IStudentImportService
         public List<string> Errors { get; set; } = new();
     }
 
-    public async Task<object> ImportStudentsAsync(IFormFile file)
+    public async Task<object> ImportStudentsAsync(IFormFile file, int? classId = null)
     {
         if (file == null || file.Length == 0)
             throw new ArgumentException("No file uploaded");
@@ -97,159 +97,195 @@ public class StudentImportService : IStudentImportService
         if (worksheet.Rows.Count <= 1)
             throw new ArgumentException("Excel file contains only headers, no data rows found");
 
-        for (int row = 1; row < worksheet.Rows.Count; row++)
+        // Use transaction for batch import
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            importResults.Total++;
-
-            try
+            for (int row = 1; row < worksheet.Rows.Count; row++)
             {
-                var rowData = worksheet.Rows[row];
-                if (rowData == null || rowData.ItemArray == null)
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Empty or invalid row data");
-                    continue;
-                }
+                importResults.Total++;
 
-                string GetValue(string key)
+                try
                 {
-                    if (!columnMapping.ContainsKey(key)) return string.Empty;
-                    var index = columnMapping[key];
-                    if (index >= rowData.ItemArray.Length) return string.Empty;
-                    return rowData.ItemArray[index]?.ToString()?.Trim() ?? string.Empty;
-                }
-
-                var username = GetValue("Username");
-                var fullName = GetValue("FullName");
-                var email = GetValue("Email");
-                var phoneNumber = GetValue("PhoneNumber");
-                var grade = GetValue("Grade");
-                var dateOfBirthRaw = GetValue("DateOfBirth");
-                var gender = GetValue("Gender");
-
-                DateTime? parsedDateOfBirth = null;
-                if (!string.IsNullOrWhiteSpace(dateOfBirthRaw))
-                {
-                    if (DateTime.TryParse(dateOfBirthRaw, out DateTime dob))
-                    {
-                        parsedDateOfBirth = dob;
-                    }
-                    else
+                    var rowData = worksheet.Rows[row];
+                    if (rowData == null || rowData.ItemArray == null)
                     {
                         importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirthRaw}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
-                        continue;
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(username) ||
-                    string.IsNullOrWhiteSpace(fullName) ||
-                    string.IsNullOrWhiteSpace(email))
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(phoneNumber) && !string.IsNullOrWhiteSpace(email))
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Cannot have both Phone Number and Email. Please provide either Phone Number OR Email, not both.");
-                    continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(email))
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Either Phone Number or Email is required.");
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(email) && fileEmails.Contains(email))
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists in import file");
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(username) && fileUsernames.Contains(username))
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in import file");
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(email))
-                    fileEmails.Add(email);
-                if (!string.IsNullOrWhiteSpace(username))
-                    fileUsernames.Add(username);
-
-                var existingUser = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Username == username);
-                if (existingUser != null)
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists");
-                    continue;
-                }
-
-                var existingStudent = await _context.Students
-                    .FirstOrDefaultAsync(s => s.Email == email);
-                if (existingStudent != null)
-                {
-                    importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists");
-                    continue;
-                }
-
-                bool isExistingStudent = existingStudent != null;
-
-                var createStudentDto = new CreateStudentDto
-                {
-                    Username = isExistingStudent ? "" : username,
-                    FullName = fullName,
-                    Email = email,
-                    PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
-                    Password = isExistingStudent ? "" : PasswordGenerator.GenerateSecurePassword(),
-                    EnrollmentStatus = "Active",
-                    Grade = grade,
-                    DateOfBirth = parsedDateOfBirth,
-                    Gender = gender
-                };
-
-                if (isExistingStudent)
-                {
-                    var defaultClassId = 1;
-                    var classExists = await _context.Classes.FindAsync(defaultClassId);
-                    if (classExists == null)
-                    {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Class not found");
+                        importResults.Errors.Add($"Row {row + 1}: Empty or invalid row data");
                         continue;
                     }
 
-                    var importResult = await _classService.ImportStudentToClassAsync(defaultClassId, createStudentDto);
-                    if (importResult.Success)
+                    string GetValue(string key)
                     {
+                        if (!columnMapping.ContainsKey(key)) return string.Empty;
+                        var index = columnMapping[key];
+                        if (index >= rowData.ItemArray.Length) return string.Empty;
+                        return rowData.ItemArray[index]?.ToString()?.Trim() ?? string.Empty;
+                    }
+
+                    var username = GetValue("Username");
+                    var fullName = GetValue("FullName");
+                    var email = GetValue("Email");
+                    var phoneNumber = GetValue("PhoneNumber");
+                    var grade = GetValue("Grade");
+                    var dateOfBirthRaw = GetValue("DateOfBirth");
+                    var gender = GetValue("Gender");
+
+                    DateTime? parsedDateOfBirth = null;
+                    if (!string.IsNullOrWhiteSpace(dateOfBirthRaw))
+                    {
+                        if (DateTime.TryParse(dateOfBirthRaw, out DateTime dob))
+                        {
+                            parsedDateOfBirth = dob;
+                        }
+                        else
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirthRaw}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
+                            continue;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(username) ||
+                        string.IsNullOrWhiteSpace(fullName) ||
+                        string.IsNullOrWhiteSpace(email))
+                    {
+                        importResults.Failed++;
+                        importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
+                        continue;
+                    }
+
+                    // ✅ VALIDATION ĐÃ SỬA: Cho phép có cả PhoneNumber VÀ Email (để tiện liên lạc)
+                    // Validation: Phải có ít nhất 1 trong PhoneNumber hoặc Email
+                    if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(email))
+                    {
+                        importResults.Failed++;
+                        importResults.Errors.Add($"Row {row + 1}: Either Phone Number or Email is required.");
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(email) && fileEmails.Contains(email))
+                    {
+                        importResults.Failed++;
+                        importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists in import file");
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(username) && fileUsernames.Contains(username))
+                    {
+                        importResults.Failed++;
+                        importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in import file");
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(email))
+                        fileEmails.Add(email);
+                    if (!string.IsNullOrWhiteSpace(username))
+                        fileUsernames.Add(username);
+
+                    var existingUser = await _context.Users
+                        .FirstOrDefaultAsync(u => u.Username == username);
+                    if (existingUser != null)
+                    {
+                        importResults.Failed++;
+                        importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in system");
+                        continue;
+                    }
+
+                    // ✅ FIX: Kiểm tra student đã tồn tại chưa để quyết định:
+                    // - Nếu Student đã tồn tại (theo email) → thêm vào class (không tạo mới)
+                    // - Nếu Student chưa tồn tại → tạo mới student + account
+                    var existingStudent = await _context.Students
+                        .FirstOrDefaultAsync(s => s.Email == email);
+                    
+                    bool isExistingStudent = existingStudent != null;
+
+                    // Nếu là student mới, validate email chưa tồn tại
+                    if (!isExistingStudent)
+                    {
+                        // Email chưa tồn tại → tạo mới student
+                        var createStudentDto = new CreateStudentDto
+                        {
+                            Username = username,  // ✅ Sửa: Username phải có giá trị
+                            FullName = fullName,
+                            Email = email,
+                            PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
+                            Password = PasswordGenerator.GenerateSecurePassword(),  // ✅ Generate secure password
+                            EnrollmentStatus = "Active",
+                            Grade = grade,
+                            DateOfBirth = parsedDateOfBirth,
+                            Gender = gender
+                        };
+
+                        await _studentService.CreateStudentAsync(createStudentDto);
                         importResults.Success++;
                     }
                     else
                     {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: {importResult.ErrorMessage}");
+                        // ✅ Student đã tồn tại → thêm vào class (nếu có classId)
+                        if (classId.HasValue)
+                        {
+                            var classExists = await _context.Classes.FindAsync(classId.Value);
+                            if (classExists == null)
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: Class with ID {classId} not found");
+                                continue;
+                            }
+
+                            // Thêm student vào class
+                            var importResult = await _classService.ImportStudentToClassAsync(classId.Value, new CreateStudentDto
+                            {
+                                Username = "",  // Empty for existing students
+                                FullName = fullName,
+                                Email = email,
+                                PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
+                                Password = "",  // Empty for existing students
+                                EnrollmentStatus = "Active",
+                                Grade = grade,
+                                DateOfBirth = parsedDateOfBirth,
+                                Gender = gender
+                            });
+
+                            if (importResult.Success)
+                            {
+                                importResults.Success++;
+                            }
+                            else
+                            {
+                                importResults.Failed++;
+                                importResults.Errors.Add($"Row {row + 1}: {importResult.ErrorMessage}");
+                            }
+                        }
+                        else
+                        {
+                            // Không có classId → chỉ thông báo student đã tồn tại
+                            importResults.Success++;
+                            importResults.Errors.Add($"Row {row + 1}: Student with email '{email}' already exists in system. Student was NOT added to class (no classId provided)");
+                        }
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    await _studentService.CreateStudentAsync(createStudentDto);
-                    importResults.Success++;
+                    importResults.Failed++;
+                    importResults.Errors.Add($"Row {row + 1}: Error - {ex.Message}");
                 }
             }
-            catch (Exception ex)
+
+            // Commit transaction if all successful, otherwise rollback will happen
+            if (importResults.Failed > 0 && importResults.Success == 0)
             {
-                importResults.Failed++;
-                importResults.Errors.Add($"Row {row + 1}: Error - {ex.Message}");
+                await transaction.RollbackAsync();
             }
+            else
+            {
+                await transaction.CommitAsync();
+            }
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
         }
 
         return new
@@ -260,8 +296,7 @@ public class StudentImportService : IStudentImportService
             templateInfo = new
             {
                 templateName = ImportTemplate.TEMPLATE_NAME,
-                // We return mapped headers keys, which is a detail consumers might use
-                mappedHeaders = _context.Students.Select(_ => ImportTemplate.HEADER_MAPPING.Keys).FirstOrDefault()
+                mappedHeaders = columnMapping.Keys.ToList()
             }
         };
     }

@@ -10,7 +10,5 @@ namespace EducenAPI.Services.Interface
         Task<ScheduleDto> CreateScheduleAsync(CreateScheduleDto dto);
         Task<bool> UpdateScheduleAsync(int id, UpdateScheduleDto dto);
         Task<bool> DeleteScheduleAsync(int id);
-        Task<bool> ApproveScheduleAsync(int id);
-        Task<bool> RejectScheduleAsync(int id, string? reason);
     }
 }

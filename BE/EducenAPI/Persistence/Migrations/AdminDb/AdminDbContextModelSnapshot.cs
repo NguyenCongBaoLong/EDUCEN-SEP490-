@@ -190,6 +190,43 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     b.ToTable("Tenants");
                 });
 
+            modelBuilder.Entity("EducenAPI.Models.TenantRegistration", b =>
+                {
+                    b.Property<string>("RegistrationId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CenterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("RegistrationId");
+
+                    b.ToTable("TenantRegistrations");
+                });
+
             modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
                 {
                     b.HasOne("EducenAPI.Models.Tenant", "Tenant")
