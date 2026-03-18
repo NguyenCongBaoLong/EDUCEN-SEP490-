@@ -40,6 +40,19 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 });
 
             migrationBuilder.CreateTable(
+                name: "Grades",
+                columns: table => new
+                {
+                    GradeId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    GradeName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Grades", x => x.GradeId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
                 {
@@ -50,6 +63,19 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Roles", x => x.RoleId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Rooms",
+                columns: table => new
+                {
+                    RoomId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoomName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Rooms", x => x.RoomId);
                 });
 
             migrationBuilder.CreateTable(
@@ -268,6 +294,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     TeacherId = table.Column<int>(type: "int", nullable: true),
                     AssistantId = table.Column<int>(type: "int", nullable: true),
                     SubjectId = table.Column<int>(type: "int", nullable: false),
+                    GradeId = table.Column<int>(type: "int", nullable: true),
+                    RoomId = table.Column<int>(type: "int", nullable: true),
                     ClassName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SyllabusContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -283,6 +311,18 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         column: x => x.AssistantId,
                         principalTable: "Assistants",
                         principalColumn: "UserId");
+                    table.ForeignKey(
+                        name: "FK_Classes_Grades_GradeId",
+                        column: x => x.GradeId,
+                        principalTable: "Grades",
+                        principalColumn: "GradeId",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Classes_Rooms_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "Rooms",
+                        principalColumn: "RoomId",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Classes_Subjects_SubjectId",
                         column: x => x.SubjectId,
@@ -375,6 +415,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     AsmId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     SessionId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: true),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -396,6 +437,12 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         column: x => x.ClassId,
                         principalTable: "Classes",
                         principalColumn: "ClassId");
+                    table.ForeignKey(
+                        name: "FK_Assignments_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -437,6 +484,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     MaterialId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     SessionId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: true),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ContentType = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -456,6 +504,12 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         column: x => x.ClassId,
                         principalTable: "Classes",
                         principalColumn: "ClassId");
+                    table.ForeignKey(
+                        name: "FK_LessonMaterials_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -513,6 +567,11 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 column: "SessionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Assignments_UserId",
+                table: "Assignments",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Attendances_SessionId",
                 table: "Attendances",
                 column: "SessionId");
@@ -548,6 +607,16 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 column: "AssistantId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Classes_GradeId",
+                table: "Classes",
+                column: "GradeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Classes_RoomId",
+                table: "Classes",
+                column: "RoomId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Classes_SubjectId",
                 table: "Classes",
                 column: "SubjectId");
@@ -581,6 +650,11 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "IX_LessonMaterials_SessionId",
                 table: "LessonMaterials",
                 column: "SessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LessonMaterials_UserId",
+                table: "LessonMaterials",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ParentStudent_StudentsUserId",
@@ -658,6 +732,12 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             migrationBuilder.DropTable(
                 name: "Assistants");
+
+            migrationBuilder.DropTable(
+                name: "Grades");
+
+            migrationBuilder.DropTable(
+                name: "Rooms");
 
             migrationBuilder.DropTable(
                 name: "Subjects");
