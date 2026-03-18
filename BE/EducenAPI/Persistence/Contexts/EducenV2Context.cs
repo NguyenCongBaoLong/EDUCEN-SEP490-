@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
@@ -214,16 +214,26 @@ public partial class EducenV2Context : DbContext
         .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Assignment>()
-        .HasOne(a => a.Session)
-        .WithMany(s => s.Assignments)
-        .HasForeignKey(a => a.SessionId)
-        .OnDelete(DeleteBehavior.Cascade);
+            .Property(a => a.ClassId)
+            .IsRequired(false);
+
+        modelBuilder.Entity<Assignment>()
+            .HasOne(a => a.Session)
+            .WithMany(s => s.Assignments)
+            .HasForeignKey(a => a.SessionId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<LessonMaterial>()
-        .HasOne(m => m.Session)
-        .WithMany(s => s.LessonMaterials)
-        .HasForeignKey(m => m.SessionId)
-        .OnDelete(DeleteBehavior.Cascade);
+            .Property(m => m.ClassId)
+            .IsRequired(false);
+
+        modelBuilder.Entity<LessonMaterial>()
+            .HasOne(m => m.Session)
+            .WithMany(s => s.LessonMaterials)
+            .HasForeignKey(m => m.SessionId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

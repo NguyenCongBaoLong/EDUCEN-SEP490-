@@ -221,24 +221,40 @@ namespace EducenAPI.Services
         public async Task<object> GetTeacherClassesAsync(int id)
         {
             var teacher = await _context.Teachers
-                .Include(t => t.Classes)
-                .ThenInclude(c => c.Subject)
-                .Include(t => t.Classes)
-                .ThenInclude(c => c.Students)
+                .Include(t => t.TeacherNavigation)
                 .FirstOrDefaultAsync(t => t.UserId == id);
 
             if (teacher == null)
                 return new { message = "Teacher not found" };
 
-            return teacher.Classes.Select(c => new
-            {
-                c.ClassId,
-                c.ClassName,
-                c.Description,
-                c.Status,
-                SubjectName = c.Subject.SubjectName,
-                StudentCount = c.Students?.Count ?? 0
-            }).ToList();
+            var classes = await _context.Classes
+                .Include(c => c.Subject)
+                .Include(c => c.Assistant)
+                    .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Schedules)
+                .Where(c => c.TeacherId == id)
+                .Select(c => new
+                {
+                    c.ClassId,
+                    c.ClassName,
+                    c.Description,
+                    c.Status,
+                    c.StartDate,
+                    c.EndDate,
+                    SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
+                    TeacherName = teacher.TeacherNavigation.FullName ?? "",
+                    AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : "",
+                    StudentCount = c.Students.Count,
+                    ScheduleSlots = c.Schedules.Select(s => new
+                    {
+                        s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm")
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return classes;
         }
     }
 }

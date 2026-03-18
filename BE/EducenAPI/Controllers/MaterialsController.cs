@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.LessionMaterials;
+using EducenAPI.DTOs.LessionMaterials;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,9 +16,16 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("save")]
-        public async Task<IActionResult> SaveMaterial([FromBody] SaveMaterialDto dto)
+        public async Task<IActionResult> SaveMaterial([FromForm] SaveMaterialDto dto)
         {
             var result = await _lessonMaterialService.SaveMaterials(dto);
+            return Ok(result);
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateMaterial(int id, [FromForm] SaveMaterialDto dto)
+        {
+            var result = await _lessonMaterialService.UpdateMaterialAsync(id, dto);
             return Ok(result);
         }
 
@@ -28,6 +35,14 @@ namespace EducenAPI.Controllers
             var result = await _lessonMaterialService.UploadMaterials(dto);
             return Ok(result);
         }
+        [HttpGet]
+        public async Task<IActionResult> GetMaterials()
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var result = await _lessonMaterialService.GetAllMaterialsAsync(baseUrl);
+            return Ok(result);
+        }
+
         [HttpGet("Get-By-Session/{sessionId}")]
         public async Task<IActionResult> GetBySession(int sessionId)
         {
@@ -38,10 +53,24 @@ namespace EducenAPI.Controllers
 
             if (result == null || result.Count == 0)
             {
-                return NotFound(new { message = "Không tìm thấy tài liệu nào cho buổi học này." });
+                return Ok(new List<MaterialResponseDto>());
             }
 
             return Ok(result);
+        }
+
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportMaterial([FromBody] EducenAPI.DTOs.Common.ImportDto dto)
+        {
+            var result = await _lessonMaterialService.ImportMaterialAsync(dto.SourceId, dto.TargetSessionId);
+            return Ok(result);
+        }
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteMaterial(int id)
+        {
+            var success = await _lessonMaterialService.DeleteMaterialAsync(id);
+            if (!success) return NotFound();
+            return NoContent();
         }
     }
 }

@@ -15,8 +15,7 @@ const SystemAdminSidebar = () => {
     ];
 
     const handleLogout = () => {
-        logout();
-        navigate('/');
+        logout('/sysadmin/login');
     };
 
     return (

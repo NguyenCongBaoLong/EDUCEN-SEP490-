@@ -20,5 +20,6 @@ namespace EducenAPI.Services.Interface
         Task<ImportStudentToClassResult> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto);
 
         Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId);
+        Task<IEnumerable<SessionResponseDto>> GetSessionsByClassIdAsync(int classId);
     }
 }

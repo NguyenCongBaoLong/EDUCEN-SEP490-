@@ -90,12 +90,18 @@ const LogoDisplay = ({ logoSrc, name }) => (
 /* ─── Component ─────────────────────────────────────── */
 const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     const navigate = useNavigate();
-    const { scheduledClasses = [] } = useSchedule() || {};
+    const { scheduledClasses = [], refreshSchedules } = useSchedule() || {};
     const { user, logout } = useAuth();
     const logoInputRef = useRef(null);
 
     // Chỉ Admin mới thấy thanh quản lý
     const isAdmin = isAdminProp && user?.role === 'Admin';
+
+    // Fetch fresh schedule data only if logged in
+    useEffect(() => {
+        if (refreshSchedules) refreshSchedules();
+    }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
     /* Enrollment form */
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });

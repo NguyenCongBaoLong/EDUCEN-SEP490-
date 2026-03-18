@@ -1,39 +1,53 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, FileText, Link as LinkIcon, AlertCircle } from 'lucide-react';
-import '../css/components/CreateAssignmentModal.css';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
-const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes, isTemplate = false }) => {
+const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData, classes, isTemplate = false, currentClassId }) => {
     const [formData, setFormData] = useState({
         title: '',
-        classId: '',
         dueDate: '',
+        classId: currentClassId || '',
         description: '',
         status: 'active',
         file: null
     });
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+
+    const formatForDateTimeLocal = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
 
     // Cập nhật formData nếu đang edit
     useEffect(() => {
         if (initialData) {
             setFormData({
                 title: initialData.title || '',
-                classId: initialData.classId || '',
-                dueDate: initialData.dueDate || '',
+                dueDate: formatForDateTimeLocal(initialData.endTime),
+                classId: initialData.classId || currentClassId || '',
                 description: initialData.description || '',
                 status: initialData.status || 'active',
-                file: initialData.file || null
+                file: (initialData.fileUrl || (initialData.file && initialData.file.name)) ? { name: initialData.originalFileName || (initialData.file && initialData.file.name) || 'Tệp hiện tại', isExisting: true } : null
             });
+        } else if (currentClassId) {
+            setFormData(prev => ({ ...prev, classId: currentClassId }));
         }
-    }, [initialData]);
+    }, [initialData, currentClassId]);
 
     if (!isOpen) return null;
 
     const validate = () => {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = 'Tên bài tập không được để trống';
-        if (!isTemplate && !formData.classId) newErrors.classId = 'Vui lòng chọn lớp học';
 
         // validate dueDate có thể trống nếu là draft, nhưng active thì nên có
         if (!isTemplate) {
@@ -67,10 +81,39 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes, 
         if (fileInput) fileInput.value = '';
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (validate()) {
-            onSave(formData);
+        if (!validate()) return;
+
+        try {
+            setIsSubmitting(true);
+            const data = new FormData();
+
+            if (sessionId) {
+                data.append('SessionId', sessionId);
+            }
+            if (formData.classId) {
+                data.append('ClassId', formData.classId);
+            }
+
+            data.append('Title', formData.title);
+            data.append('Description', formData.description || '');
+
+            if (formData.dueDate) {
+                data.append('EndTime', new Date(formData.dueDate).toISOString());
+            }
+            if (formData.file && !formData.file.isExisting) {
+                data.append('File', formData.file);
+            }
+
+            // Instead of call api here, pass data to parent
+            await onSave(data);
+            onClose();
+        } catch (error) {
+            console.error('Error creating assignment:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo bài tập.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -101,20 +144,22 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes, 
                     {/* Hàng 2: Lớp học & Hạn nộp */}
                     {!isTemplate && (
                         <div className="cam-form-row">
-                            <div className="cam-form-group">
-                                <label>Chọn Lớp <span className="req">*</span></label>
-                                <select
-                                    value={formData.classId}
-                                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
-                                    className={errors.classId ? 'error' : ''}
-                                >
-                                    <option value="">-- Chọn một lớp --</option>
-                                    {classes.map(cls => (
-                                        <option key={cls.id} value={cls.id}>{cls.name}</option>
-                                    ))}
-                                </select>
-                                {errors.classId && <span className="error-text">{errors.classId}</span>}
-                            </div>
+                            {(!currentClassId || isTemplate) && (
+                                <div className="cam-form-group">
+                                    <label>Chọn Lớp <span className="req">*</span></label>
+                                    <select
+                                        value={formData.classId}
+                                        onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                                        className={errors.classId ? 'error' : ''}
+                                    >
+                                        <option value="">-- Chọn một lớp --</option>
+                                        {classes.map(cls => (
+                                            <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                                        ))}
+                                    </select>
+                                    {errors.classId && <span className="error-text">{errors.classId}</span>}
+                                </div>
+                            )}
 
                             <div className="cam-form-group">
                                 <label>Hạn nộp bài</label>
@@ -184,7 +229,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes, 
                                 id="assignment-file"
                                 className="cam-file-input"
                                 onChange={handleFileChange}
-                                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar"
+                                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.zip,.rar"
                             />
 
                             {!formData.file ? (
@@ -212,8 +257,8 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, initialData, classes, 
 
                     <div className="cam-modal-footer">
                         <button type="button" className="btn-cancel" onClick={onClose}>Hủy</button>
-                        <button type="submit" className="btn-save">
-                            {initialData ? 'Cập nhật' : 'Tạo bài tập'}
+                        <button type="submit" className="btn-save" disabled={isSubmitting}>
+                            {isSubmitting ? 'Đang lưu...' : (initialData ? 'Cập nhật' : 'Tạo bài tập')}
                         </button>
                     </div>
                 </form>

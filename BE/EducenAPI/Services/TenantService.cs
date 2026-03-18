@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs;
+using EducenAPI.DTOs;
 using EducenAPI.DTOs.Tenant;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
@@ -117,7 +117,7 @@ namespace EducenAPI.Services.TenantService
             {
                 var subscription = _adminDbContext.Subscriptions
                     .Include(s => s.Plan)
-                    .Where(s => s.TenantId == tenant.TenantId)
+                    .Where(s => s.TenantId == tenant.TenantId && s.Status == "Active")
                     .OrderByDescending(s => s.StartDate)
                     .FirstOrDefault();
 
@@ -125,11 +125,22 @@ namespace EducenAPI.Services.TenantService
 
                 result.Add(new TenantWithSubscriptionRequest
                 {
+                    TenantId = tenant.TenantId,
                     TenantName = tenant.TenantName,
+                    SubDomain = tenant.SubDomain,
+                    IsActive = tenant.IsActive,
+
+                    ContactPerson = tenant.ContactPerson,
+                    Email = tenant.Email,
+                    PhoneNumber = tenant.PhoneNumber,
+                    Address = tenant.Address,
 
                     PlanName = subscription?.Plan?.PlanName,
-                    IsSubscribed = subscription != null && subscription.EndDate > DateTime.UtcNow,
+                    IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                     ExpiredAt = subscription?.EndDate,
+
+                    LimitUsers = subscription?.Plan?.LimitUsers,
+                    StorageLimit = subscription?.Plan?.StorageLimit,
 
                     TotalUsers = usage.TotalUsers,
                     TotalStudents = usage.TotalStudents,
@@ -151,7 +162,7 @@ namespace EducenAPI.Services.TenantService
 
             var subscription = _adminDbContext.Subscriptions
                 .Include(s => s.Plan)
-                .Where(s => s.TenantId == tenantId)
+                .Where(s => s.TenantId == tenantId && s.Status == "Active")
                 .OrderByDescending(s => s.StartDate)
                 .FirstOrDefault();
 
@@ -159,11 +170,22 @@ namespace EducenAPI.Services.TenantService
 
             return new TenantWithSubscriptionRequest
             {
+                TenantId = tenant.TenantId,
                 TenantName = tenant.TenantName,
+                SubDomain = tenant.SubDomain,
+                IsActive = tenant.IsActive,
+
+                ContactPerson = tenant.ContactPerson,
+                Email = tenant.Email,
+                PhoneNumber = tenant.PhoneNumber,
+                Address = tenant.Address,
 
                 PlanName = subscription?.Plan?.PlanName,
-                IsSubscribed = subscription != null && subscription.EndDate > DateTime.UtcNow,
+                IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                 ExpiredAt = subscription?.EndDate,
+
+                LimitUsers = subscription?.Plan?.LimitUsers,
+                StorageLimit = subscription?.Plan?.StorageLimit,
 
                 TotalUsers = usage.TotalUsers,
                 TotalStudents = usage.TotalStudents,
@@ -177,7 +199,13 @@ namespace EducenAPI.Services.TenantService
 
             var db = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
 
-            db.Database.SetConnectionString(tenant.ConnectionString);
+            // Fix connection string for Docker environment dynamically
+            var baseConnStr = _configuration.GetConnectionString("DefaultTenantConnection");
+            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr);
+            var tenantBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(tenant.ConnectionString);
+            
+            baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;
+            db.Database.SetConnectionString(baseBuilder.ConnectionString);
 
             int users = db.Users.Count();
             int students = db.Students.Count();

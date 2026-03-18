@@ -59,7 +59,17 @@ namespace EducenAPI.Services
 
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
         {
-            try
+            // 1. Validate base required fields
+            ValidateBaseStudentData(dto);
+
+            // 2. Check duplicate email (luôn luôn check)
+            var existingStudent = await _context.Students
+                .AnyAsync(s => s.Email == dto.Email);
+            if (existingStudent)
+                throw new Exception("Email already exists");
+
+            // 3. Branch logic dựa trên username/password
+            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
             {
                 // 1. Validate base required fields
                 await ValidateBaseStudentData(dto);
@@ -260,7 +270,7 @@ namespace EducenAPI.Services
             };
         }
 
-        private async Task ValidateBaseStudentData(CreateStudentDto dto)
+        private void ValidateBaseStudentData(CreateStudentDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.FullName))
                 throw new Exception("FullName is required");

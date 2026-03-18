@@ -26,9 +26,9 @@ api.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('user');
 
-            // Tránh infinite loop nếu đã ở trang login hoặc center
+            // Tránh infinite loop nếu đã ở trang login hoặc center hoặc sysadmin
             const currentPath = window.location.pathname;
-            if (currentPath !== '/center' && currentPath !== '/login' && currentPath !== '/') {
+            if (currentPath !== '/center' && currentPath !== '/login' && currentPath !== '/' && !currentPath.startsWith('/sysadmin')) {
                 window.location.href = '/center';
             }
         }

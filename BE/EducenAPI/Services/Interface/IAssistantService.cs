@@ -9,5 +9,6 @@ namespace EducenAPI.Services.Interface
         Task<AssistantDto> CreateAssistantAsync(CreateAssistantDto dto);
         Task<bool> UpdateAssistantAsync(int id, UpdateAssistantDto dto);
         Task<bool> DeleteAssistantAsync(int id);
+        Task<object> GetAssistantClassesAsync(int id);
     }
 }

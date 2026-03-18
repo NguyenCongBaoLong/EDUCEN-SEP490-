@@ -371,6 +371,26 @@ namespace EducenAPI.Services
             await _context.SaveChangesAsync();
         }
 
+        private async Task GenerateSessionsForClass(int classId, DateTime startDate, DateTime endDate, List<Schedule> schedules)
+        {
+            for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
+            {
+                var dayOfWeek = (int)date.DayOfWeek;
+                var matchingSchedule = schedules.FirstOrDefault(s => s.DayOfWeek == dayOfWeek);
+                if (matchingSchedule != null)
+                {
+                    _context.ClassSessions.Add(new ClassSession
+                    {
+                        ClassId = classId,
+                        ScheduleId = matchingSchedule.ScheduleId,
+                        SessionDate = date,
+                        Status = "Scheduled"
+                    });
+                }
+            }
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<bool> UpdateClassAsync(int id, UpdateClassDto dto)
         {
             var existingClass = await _context.Classes
@@ -643,26 +663,57 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId)
         {
-            var classEntity = await _context.Classes
-                .Include(c => c.Students)
-                    .ThenInclude(s => s.StudentNavigation)
-                .FirstOrDefaultAsync(c => c.ClassId == classId);
+            // Dùng projection rõ ràng để tránh SELECT cột FullName chưa có trong DB
+            var students = await _context.Classes
+                .Where(c => c.ClassId == classId)
+                .SelectMany(c => c.Students)
+                .Select(s => new
+                {
+                    s.UserId,
+                    s.Email,
+                    s.Grade,
+                    s.EnrollmentStatus,
+                    UserUsername = s.StudentNavigation != null ? s.StudentNavigation.Username : null,
+                    UserFullName = s.StudentNavigation != null ? s.StudentNavigation.FullName : null,
+                    UserPhone = s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null,
+                    UserStatus = s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : null,
+                })
+                .ToListAsync();
 
-            if (classEntity == null)
-                return Enumerable.Empty<StudentDto>();
-
-            return classEntity.Students.Select(s => new StudentDto
+            return students.Select(s => new StudentDto
             {
-                UserId = s.UserId,
-                Username = s.StudentNavigation != null ? s.StudentNavigation.Username : "",
-                FullName = s.StudentNavigation != null ? s.StudentNavigation.FullName : "",
+                UserId = s.UserId ?? 0,
+                Username = s.UserUsername ?? "",
+                FullName = s.UserFullName ?? "",
                 Email = s.Email ?? "",
-                PhoneNumber = s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null,
+                PhoneNumber = s.UserPhone,
                 Grade = s.Grade,
                 EnrollmentStatus = s.EnrollmentStatus ?? "",
-                AccountStatus = s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "",
+                AccountStatus = s.UserStatus ?? "",
                 CreatedAt = DateTime.Now
-            });
+            }).ToList();
+        }
+
+        public async Task<IEnumerable<SessionResponseDto>> GetSessionsByClassIdAsync(int classId)
+        {
+            var sessions = await _context.ClassSessions
+                .Include(s => s.Schedule)
+                .Where(s => s.ClassId == classId || (s.Schedule != null && s.Schedule.ClassId == classId))
+                .OrderBy(s => s.SessionDate)
+                .ToListAsync();
+
+            var dayLabels = new[] { "Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy" };
+
+            return sessions.Select(s => new SessionResponseDto
+            {
+                SessionId = s.SessionId,
+                ScheduleId = s.ScheduleId,
+                SessionDate = s.SessionDate,
+                Status = s.Status,
+                DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
+                Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
+                Title = $"Buổi {sessions.IndexOf(s) + 1}: Ngày {s.SessionDate:dd/MM/yyyy}"
+            }).ToList();
         }
     }
 }

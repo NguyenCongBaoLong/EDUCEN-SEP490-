@@ -90,10 +90,10 @@ function App() {
 
               {/* ── System Admin Routes ── */}
               <Route path="/sysadmin/login" element={<SystemAdminLogin />} />
-              <Route path="/sysadmin" element={<Navigate to="/sysadmin/dashboard" />} />
-              <Route path="/sysadmin/dashboard" element={<SystemAdminDashboard />} />
-              <Route path="/sysadmin/tenants" element={<TenantManagement />} />
-              <Route path="/sysadmin/plans" element={<PlansManagement />} />
+              <Route path="/sysadmin" element={<PrivateRoute allowedRoles={['SystemAdmin']}><Navigate to="/sysadmin/dashboard" /></PrivateRoute>} />
+              <Route path="/sysadmin/dashboard" element={<PrivateRoute allowedRoles={['SystemAdmin']}><SystemAdminDashboard /></PrivateRoute>} />
+              <Route path="/sysadmin/tenants" element={<PrivateRoute allowedRoles={['SystemAdmin']}><TenantManagement /></PrivateRoute>} />
+              <Route path="/sysadmin/plans" element={<PrivateRoute allowedRoles={['SystemAdmin']}><PlansManagement /></PrivateRoute>} />
 
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

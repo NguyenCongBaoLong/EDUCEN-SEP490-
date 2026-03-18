@@ -203,6 +203,7 @@ var app = builder.Build();
 // ===============================
 // MIDDLEWARE PIPELINE
 // ===============================
+app.UseMiddleware<GlobalExceptionHandler>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -214,9 +215,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseMiddleware<TenantResolver>();
-app.UseCors("AllowFrontend");
 app.UseRouting();
 app.UseStaticFiles();
 app.UseAuthentication();

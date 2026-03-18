@@ -31,6 +31,8 @@ function getRedirectPath(role) {
             return '/student/classes';
         case 'Parent':
             return '/parent/classes';
+        case 'SystemAdmin':
+            return '/sysadmin/dashboard';
         default:
             return '/';
     }
@@ -47,6 +49,12 @@ export function AuthProvider({ children }) {
             const decoded = decodeToken(token);
             if (decoded) {
                 setUser(decoded);
+            } else if (token === 'sysadmin-session') {
+                // Hỗ trợ login System Admin bằng case đặc biệt (không dùng JWT)
+                const storedUser = localStorage.getItem('user');
+                if (storedUser) {
+                    setUser(JSON.parse(storedUser));
+                }
             } else {
                 // Token không hợp lệ → xóa
                 localStorage.removeItem('token');
@@ -73,14 +81,30 @@ export function AuthProvider({ children }) {
         return decoded;
     };
 
-    const logout = () => {
+    const logout = (redirectPath) => {
+        const isSysAdmin = user?.role === 'SystemAdmin';
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('systemApiKey');
         setUser(null);
+
+        // Nếu là SystemAdmin thì mặc định về trang chủ tổng (/)
+        const finalPath = redirectPath || (isSysAdmin ? '/sysadmin/login' : null);
+        if (finalPath) {
+            window.location.href = finalPath;
+        }
+    };
+
+    const sysadminLogin = (apiKey) => {
+        const adminUser = { username: 'System Admin', role: 'SystemAdmin' };
+        localStorage.setItem('systemApiKey', apiKey);
+        localStorage.setItem('token', 'sysadmin-session');
+        localStorage.setItem('user', JSON.stringify(adminUser));
+        setUser(adminUser);
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading, getRedirectPath }}>
+        <AuthContext.Provider value={{ user, login, logout, sysadminLogin, loading, getRedirectPath }}>
             {children}
         </AuthContext.Provider>
     );
