@@ -324,6 +324,15 @@ namespace EducenAPI.Services
             // Update schedules if provided
             if (dto.ScheduleSlots != null)
             {
+                // Need to remove sessions and their attendances before removing schedules due to FK constraints
+                var sessions = await _context.ClassSessions.Where(s => s.ClassId == id).ToListAsync();
+                var sessionIds = sessions.Select(s => s.SessionId).ToList();
+                
+                var attendances = await _context.Attendances.Where(a => sessionIds.Contains(a.SessionId)).ToListAsync();
+                _context.Attendances.RemoveRange(attendances);
+                
+                _context.ClassSessions.RemoveRange(sessions);
+
                 // Remove existing schedules
                 var oldSchedules = await _context.Schedules
                     .Where(s => s.ClassId == id)
@@ -352,6 +361,19 @@ namespace EducenAPI.Services
             }
 
             await _context.SaveChangesAsync();
+
+            // Re-generate sessions if schedule was updated
+            if (dto.ScheduleSlots != null)
+            {
+                var startDate = existingClass.StartDate;
+                var endDate = existingClass.EndDate;
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    var newSchedules = await _context.Schedules.Where(s => s.ClassId == id).ToListAsync();
+                    await GenerateSessionsForClass(id, startDate.Value, endDate.Value, newSchedules);
+                }
+            }
+
             return true;
         }
 
@@ -366,6 +388,24 @@ namespace EducenAPI.Services
 
             if (existingClass.Students.Any())
                 throw new Exception("Cannot delete class: class has students enrolled");
+
+            // Manually cascade delete avoiding SQL Server multiple path error
+            var sessions = await _context.ClassSessions.Where(s => s.ClassId == id).ToListAsync();
+            var sessionIds = sessions.Select(s => s.SessionId).ToList();
+            
+            var attendances = await _context.Attendances.Where(a => sessionIds.Contains(a.SessionId)).ToListAsync();
+            _context.Attendances.RemoveRange(attendances);
+
+            var assignments = await _context.Assignments.Where(a => a.ClassId == id).ToListAsync();
+            _context.Assignments.RemoveRange(assignments);
+
+            var lessonMaterials = await _context.LessonMaterials.Where(m => m.ClassId == id).ToListAsync();
+            _context.LessonMaterials.RemoveRange(lessonMaterials);
+
+            _context.ClassSessions.RemoveRange(sessions);
+            
+            var schedules = await _context.Schedules.Where(s => s.ClassId == id).ToListAsync();
+            _context.Schedules.RemoveRange(schedules);
 
             _context.Classes.Remove(existingClass);
             await _context.SaveChangesAsync();

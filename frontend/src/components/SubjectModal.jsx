@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { X, BookOpen } from 'lucide-react';
 import PropTypes from 'prop-types';
+import api from '../services/api';
 import '../css/components/SubjectModal.css';
-
-const API_BASE = 'http://localhost:5062/api/tenantadmin';
-const authHeader = () => ({
-    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-});
 
 const SubjectModal = ({ isOpen, onClose, onSuccess, editingSubject }) => {
     const [formData, setFormData] = useState({ subjectName: '', description: '' });
@@ -48,28 +44,15 @@ const SubjectModal = ({ isOpen, onClose, onSuccess, editingSubject }) => {
 
             let response;
             if (editingSubject) {
-                response = await fetch(`${API_BASE}/Subjects/${editingSubject.subjectId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', ...authHeader() },
-                    body: JSON.stringify(payload)
-                });
+                response = await api.put(`/tenantadmin/Subjects/${editingSubject.subjectId}`, payload);
             } else {
-                response = await fetch(`${API_BASE}/Subjects`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', ...authHeader() },
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(errText || 'Có lỗi xảy ra');
+                response = await api.post('/tenantadmin/Subjects', payload);
             }
 
             onSuccess();
             onClose();
         } catch (err) {
-            setError(err.message || 'Không thể kết nối đến server!');
+            setError(err.response?.data?.message || err.message || 'Không thể kết nối đến server!');
         } finally {
             setLoading(false);
         }
