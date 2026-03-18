@@ -1,5 +1,6 @@
 using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace EducenAPI.Services
 {
@@ -7,6 +8,10 @@ namespace EducenAPI.Services
     {
         private readonly AdminDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        
+        private const string TENANT_KEY = "TenantId";
+        private const string CONNECTION_KEY = "ConnectionString";
 
         public string? TenantId 
         { 
@@ -20,10 +25,11 @@ namespace EducenAPI.Services
             set => _httpContextAccessor!.HttpContext!.Items[CONNECTION_KEY] = value;
         }
 
-        public CurrentTenantService(AdminDbContext context, IConfiguration configuration)
+        public CurrentTenantService(AdminDbContext context, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<bool> SetTenant(string tenant)
