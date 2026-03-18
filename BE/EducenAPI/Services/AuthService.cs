@@ -49,14 +49,12 @@ namespace EducenAPI.Services
                 .Include(x => x.Role)
                 .FirstOrDefaultAsync(x => x.Username == dto.Username);
 
-            if (user == null)
-                throw new Exception("Sai tài khoản");
+            // Unified error message to prevent username enumeration
+            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+                throw new Exception("Tài khoản hoặc mật khẩu không đúng");
 
             if (user.AccountStatus != "Active")
                 throw new Exception("Tài khoản của bạn đã bị khóa");
-
-            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-                throw new Exception("Sai mật khẩu");
 
             return GenerateToken(user);
         }
@@ -66,8 +64,13 @@ namespace EducenAPI.Services
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
+            // Unified message to prevent email enumeration
+            // If email exists, token will be generated (but not revealed in response)
             if (user == null)
-                throw new Exception("Email not found");
+            {
+                // Still return success to prevent email enumeration
+                return "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi";
+            }
 
             // Generate reset token (valid for 1 hour)
             var resetToken = Guid.NewGuid().ToString("N");

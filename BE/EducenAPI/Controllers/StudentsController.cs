@@ -34,6 +34,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Students
         [HttpGet]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetStudents()
         {
             var students = await _studentService.GetAllStudentsAsync();
@@ -42,6 +43,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Students/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetStudent(int id)
         {
             var student = await _studentService.GetStudentByIdAsync(id);
@@ -111,10 +113,10 @@ namespace EducenAPI.Controllers
             }
         }
 
-        // POST: api/Students/import
+        // POST: api/Students/import?classId=1
         [HttpPost("import")]
         [Authorize(Roles = "Admin,TenantAdmin")]
-        public async Task<IActionResult> ImportStudents(IFormFile file)
+        public async Task<IActionResult> ImportStudents(IFormFile file, [FromQuery] int? classId)
         {
             try
             {
@@ -124,6 +126,15 @@ namespace EducenAPI.Controllers
                 var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
                 if (extension != ".xlsx" && extension != ".xls")
                     return BadRequest(new { message = "Only Excel files (.xlsx, .xls) are allowed" });
+
+                // Validate classId if provided
+                int? targetClassId = classId;
+                if (targetClassId.HasValue)
+                {
+                    var classExists = await _context.Classes.FindAsync(targetClassId.Value);
+                    if (classExists == null)
+                        return BadRequest(new { message = $"Class with ID {targetClassId} not found" });
+                }
 
                 var importResults = new ImportResults();
 
@@ -269,18 +280,15 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
-                        // Validate phone/email mutual exclusion
-                        if (!string.IsNullOrWhiteSpace(phoneNumber) && !string.IsNullOrWhiteSpace(email))
+                        // Validate email format
+                        try
                         {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Cannot have both Phone Number and Email. Please provide either Phone Number OR Email, not both.");
-                            continue;
+                            var _ = new System.Net.Mail.MailAddress(email);
                         }
-
-                        if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(email))
+                        catch
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Either Phone Number or Email is required.");
+                            importResults.Errors.Add($"Row {row + 1}: Invalid email format");
                             continue;
                         }
 
@@ -324,51 +332,25 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
-                        // Check if student already exists (for existing students, don't create new account)
-                        bool isExistingStudent = existingStudent != null;
+                        // Note: PhoneNumber is stored in User table, not Student table
+                        // So we don't check for duplicate phone numbers here
 
+                        // Create new student account
                         var createStudentDto = new CreateStudentDto
                         {
-                            Username = isExistingStudent ? "" : username, // Only set username if new student
+                            Username = username,
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
-                            Password = isExistingStudent ? "" : PasswordGenerator.GenerateSecurePassword(), // Only generate password for new students
+                            Password = PasswordGenerator.GenerateSecurePassword(),
                             EnrollmentStatus = "Active",
                             Grade = grade,
                             DateOfBirth = parsedDateOfBirth,
                             Gender = gender
                         };
 
-                        if (isExistingStudent)
-                        {
-                            // Import existing student to class (default classId = 1)
-                            var defaultClassId = 1;
-                            var classExists = await _context.Classes.FindAsync(defaultClassId);
-                            if (classExists == null)
-                            {
-                                importResults.Failed++;
-                                importResults.Errors.Add($"Row {row + 1}: Class not found");
-                                continue;
-                            }
-
-                            var importResult = await _classService.ImportStudentToClassAsync(defaultClassId, createStudentDto);
-                            if (importResult.Success)
-                            {
-                                importResults.Success++;
-                            }
-                            else
-                            {
-                                importResults.Failed++;
-                                importResults.Errors.Add($"Row {row + 1}: {importResult.ErrorMessage}");
-                            }
-                        }
-                        else
-                        {
-                            // Create new student account
-                            await _studentService.CreateStudentAsync(createStudentDto);
-                            importResults.Success++;
-                        }
+                        await _studentService.CreateStudentAsync(createStudentDto);
+                        importResults.Success++;
                     }
                     catch (Exception ex)
                     {
