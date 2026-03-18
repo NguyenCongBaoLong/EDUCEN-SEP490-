@@ -28,6 +28,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Classes
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student")]
         public async Task<IActionResult> GetClasses()
         {
             var classes = await _classService.GetAllClassesAsync();
@@ -36,6 +37,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Classes/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student")]
         public async Task<IActionResult> GetClass(int id)
         {
             var classItem = await _classService.GetClassByIdAsync(id);
@@ -48,7 +50,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes
         [HttpPost]
-        [Authorize(Roles = "TenantAdmin")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateClass(CreateClassDto dto)
         {
             try
@@ -69,6 +71,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Classes/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateClass(int id, UpdateClassDto dto)
         {
             try
@@ -87,6 +90,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Classes/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteClass(int id)
         {
             try

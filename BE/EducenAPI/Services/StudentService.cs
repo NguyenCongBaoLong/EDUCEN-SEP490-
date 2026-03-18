@@ -17,69 +17,43 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<StudentDto>> GetAllStudentsAsync()
         {
-            return await _context.Students
+            var students = await _context.Students
                 .Include(s => s.StudentNavigation)
-                .Select(s => new StudentDto
-                {
-                    UserId = s.UserId ?? 0,
-                    Username = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
-                        : "NO_ACCOUNT",  // Indicator
-                    FullName = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
-                        : (s.FullName ?? ""),  // Dùng FullName từ Student
-                    Email = s.Email ?? "",
-                    PhoneNumber = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
-                        : null,
-                   Address = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
-                        : null,
-                    Grade = s.Grade,
-                    EnrollmentStatus = s.EnrollmentStatus ?? "Active",
-                    AccountStatus = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
-                        : "NO_ACCOUNT",
-                    IsAccountSent = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
-                        : false,
-                    CreatedAt = DateTime.Now
-                })
                 .ToListAsync();
+
+            return students.Select(MapToStudentDto);
         }
 
         public async Task<StudentDto?> GetStudentByIdAsync(int id)
         {
-            return await _context.Students
+            var student = await _context.Students
                 .Include(s => s.StudentNavigation)
-                .Where(s => s.UserId == id)
-                .Select(s => new StudentDto
-                {
-                    UserId = s.UserId ?? 0,
-                    Username = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Username : "" 
-                        : "NO_ACCOUNT",
-                    FullName = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.FullName : "" 
-                        : (s.FullName ?? ""),
-                    Email = s.Email ?? "",
-                    PhoneNumber = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null
-                        : null,
-                    Address = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.Address : null
-                        : null,
-                    Grade = s.Grade,
-                    EnrollmentStatus = s.EnrollmentStatus ?? "Active",
-                    AccountStatus = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : "Unknown"
-                        : "NO_ACCOUNT",
-                    IsAccountSent = s.UserId.HasValue 
-                        ? s.StudentNavigation != null ? s.StudentNavigation.IsAccountSent : false
-                        : false,
-                    CreatedAt = DateTime.Now
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(s => s.UserId == id);
+
+            return student != null ? MapToStudentDto(student) : null;
+        }
+
+        /// <summary>
+        /// Maps a Student entity to StudentDto - refactored to eliminate duplicate code
+        /// </summary>
+        private static StudentDto MapToStudentDto(Student s)
+        {
+            var hasUser = s.UserId.HasValue && s.StudentNavigation != null;
+
+            return new StudentDto
+            {
+                UserId = s.UserId ?? 0,
+                Username = hasUser ? s.StudentNavigation.Username ?? "" : "NO_ACCOUNT",
+                FullName = hasUser ? s.StudentNavigation.FullName ?? "" : (s.FullName ?? ""),
+                Email = s.Email ?? "",
+                PhoneNumber = hasUser ? s.StudentNavigation.PhoneNumber : null,
+                Address = hasUser ? s.StudentNavigation.Address : null,
+                Grade = s.Grade,
+                EnrollmentStatus = s.EnrollmentStatus ?? "Active",
+                AccountStatus = hasUser ? s.StudentNavigation.AccountStatus : "NO_ACCOUNT",
+                IsAccountSent = hasUser && s.StudentNavigation.IsAccountSent,
+                CreatedAt = DateTime.Now
+            };
         }
 
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)

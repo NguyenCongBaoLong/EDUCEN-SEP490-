@@ -69,6 +69,7 @@ namespace EducenAPI.Services
             if (user == null)
             {
                 // Still return success to prevent email enumeration
+                // In production: Send email with reset link regardless
                 return "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi";
             }
 
@@ -77,10 +78,24 @@ namespace EducenAPI.Services
             
             // In production, you would:
             // 1. Store this token in database with expiration
-            // 2. Send email with reset link
+            // 2. Send email with reset link containing the token
             
-            // For now, return token directly (in production, send via email)
-            return $"Reset token generated for {dto.Email}. Token: {resetToken} (valid for 1 hour)";
+            // TODO: Store token in database with expiration (PasswordResetToken table)
+            // Example:
+            // var resetRecord = new PasswordResetToken {
+            //     UserId = user.UserId,
+            //     Token = resetToken,
+            //     ExpiresAt = DateTime.UtcNow.AddHours(1),
+            //     IsUsed = false
+            // };
+            // _context.PasswordResetTokens.Add(resetRecord);
+            // await _context.SaveChangesAsync();
+            
+            // TODO: Send email with reset link
+            // await _mailService.SendPasswordResetEmail(user.Email, resetToken);
+
+            // For development: return message without exposing token
+            return "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi";
         }
 
         public async Task<bool> ConfirmResetPassword(ResetPasswordConfirmDto dto)
@@ -91,7 +106,21 @@ namespace EducenAPI.Services
             if (user == null)
                 throw new Exception("Email not found");
 
-            // In production, validate the reset token from database
+            // TODO: Validate the reset token from database
+            // Example:
+            // var resetToken = await _context.PasswordResetTokens
+            //     .Where(t => t.UserId == user.UserId && t.Token == dto.Token && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow)
+            //     .FirstOrDefaultAsync();
+            // 
+            // if (resetToken == null)
+            //     throw new Exception("Invalid or expired reset token");
+            //
+            // // Mark token as used
+            // resetToken.IsUsed = true;
+
+            // Validate password meets requirements
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+                throw new Exception("Password must be at least 6 characters");
             
             // Update password
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
@@ -137,6 +166,9 @@ namespace EducenAPI.Services
                 throw new Exception("Student not found");
 
             var user = student.StudentNavigation;
+
+            if (user == null)
+                throw new Exception("Student does not have a linked user account");
 
             if (!string.IsNullOrEmpty(user.Username))
                 throw new Exception("Student already has an account");

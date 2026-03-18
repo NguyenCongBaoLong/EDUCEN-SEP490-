@@ -19,6 +19,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedules()
         {
             var schedules = await _scheduleService.GetAllSchedulesAsync();
@@ -27,6 +28,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules/class/5
         [HttpGet("class/{classId:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedulesByClass(int classId)
         {
             var schedules = await _scheduleService.GetSchedulesByClassIdAsync(classId);
@@ -35,6 +37,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedule(int id)
         {
             var schedule = await _scheduleService.GetScheduleByIdAsync(id);
@@ -47,6 +50,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Schedules
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateSchedule(CreateScheduleDto dto)
         {
             try
@@ -67,6 +71,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Schedules/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateSchedule(int id, UpdateScheduleDto dto)
         {
             try
@@ -85,6 +90,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Schedules/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteSchedule(int id)
         {
             try

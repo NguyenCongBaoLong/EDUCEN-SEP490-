@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using System.Data;
 using System.Text;
-using ExcelDataReader;
 using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -23,13 +22,20 @@ namespace EducenAPI.Controllers
         private readonly EducenV2Context _context;
         private readonly MailService _mailService;
         private readonly IClassService _classService;
+        private readonly IStudentImportService _studentImportService;
 
-        public StudentsController(IStudentService studentService, EducenV2Context context, MailService mailService, IClassService classService)
+        public StudentsController(
+            IStudentService studentService, 
+            EducenV2Context context, 
+            MailService mailService, 
+            IClassService classService,
+            IStudentImportService studentImportService)
         {
             _studentService = studentService;
             _context = context;
             _mailService = mailService;
             _classService = classService;
+            _studentImportService = studentImportService;
         }
 
         // GET: api/Students
@@ -128,247 +134,20 @@ namespace EducenAPI.Controllers
                     return BadRequest(new { message = "Only Excel files (.xlsx, .xls) are allowed" });
 
                 // Validate classId if provided
-                int? targetClassId = classId;
-                if (targetClassId.HasValue)
+                if (classId.HasValue)
                 {
-                    var classExists = await _context.Classes.FindAsync(targetClassId.Value);
+                    var classExists = await _context.Classes.FindAsync(classId.Value);
                     if (classExists == null)
-                        return BadRequest(new { message = $"Class with ID {targetClassId} not found" });
+                        return BadRequest(new { message = $"Class with ID {classId} not found" });
                 }
 
-                var importResults = new ImportResults();
-
-                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-
-                using var stream = file.OpenReadStream();
-                using var reader = ExcelReaderFactory.CreateReader(stream);
-                
-                var dataSet = reader.AsDataSet();
-                
-                // Check if dataset has tables
-                if (dataSet.Tables == null || dataSet.Tables.Count == 0)
-                    return BadRequest(new { message = "Excel file contains no data" });
-                
-                var worksheet = dataSet.Tables[0];
-                
-                // Check if worksheet has rows
-                if (worksheet == null)
-                    return BadRequest(new { message = "No worksheet found in Excel file" });
-                
-                // Check if worksheet has data rows
-                if (worksheet.Rows == null || worksheet.Rows.Count == 0)
-                    return BadRequest(new { message = "Worksheet contains no data" });
-                
-                // Check if worksheet has at least header row
-                if (worksheet.Rows.Count < 1)
-                    return BadRequest(new { message = "Worksheet must have at least header row" });
-
-                // Validate template headers
-                var headerRow = worksheet.Rows[0];
-                
-                // Check if header row has data
-                if (headerRow == null || headerRow.ItemArray == null || headerRow.ItemArray.Length == 0)
-                    return BadRequest(new { message = "Header row is empty or invalid" });
-                
-                var actualHeaders = new List<string>();
-                for (int col = 0; col < headerRow.ItemArray.Length; col++)
-                {
-                    actualHeaders.Add(headerRow.ItemArray[col]?.ToString()?.Trim() ?? "");
-                }
-
-                var validationResult = ImportTemplate.ValidateHeaders(actualHeaders);
-                if (!validationResult.IsValid)
-                {
-                    return BadRequest(new { 
-                        message = $"Invalid template format: {validationResult.ErrorMessage}",
-                        templateInfo = new {
-                            templateName = ImportTemplate.TEMPLATE_NAME,
-                            requiredHeaders = ImportTemplate.REQUIRED_HEADERS,
-                            example = "Please use the correct template with headers: Username, Full Name, Email, Phone Number, Grade, DateOfBirth, Gender"
-                        }
-                    });
-                }
-
-                // Create column index mapping
-                var columnMapping = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                for (int col = 0; col < actualHeaders.Count; col++)
-                {
-                    var normalizedHeader = actualHeaders[col].ToLower().Trim();
-                    if (ImportTemplate.HEADER_MAPPING.TryGetValue(normalizedHeader, out var mappedHeader))
-                    {
-                        columnMapping[mappedHeader] = col;
-                    }
-                }
-
-                // Track duplicates within file
-                var fileEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                var fileUsernames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                // Process Excel data using column mapping
-                // Check if there are data rows beyond header
-                if (worksheet.Rows.Count <= 1)
-                    return BadRequest(new { message = "Excel file contains only headers, no data rows found" });
-                
-                for (int row = 1; row < worksheet.Rows.Count; row++)
-                {
-                    importResults.Total++;
-                    
-                    try
-                    {
-                        var rowData = worksheet.Rows[row];
-                        
-                        // Check if row exists and has data
-                        if (rowData == null || rowData.ItemArray == null)
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Empty or invalid row data");
-                            continue;
-                        }
-                        
-                        // Extract data using column mapping
-                        var username = columnMapping.ContainsKey("Username") && columnMapping["Username"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["Username"]]?.ToString()?.Trim() ?? ""
-                            : "";
-                            
-                        var fullName = columnMapping.ContainsKey("FullName") && columnMapping["FullName"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["FullName"]]?.ToString()?.Trim() ?? ""
-                            : "";
-                            
-                        var email = columnMapping.ContainsKey("Email") && columnMapping["Email"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["Email"]]?.ToString()?.Trim() ?? ""
-                            : "";
-                            
-                        var phoneNumber = columnMapping.ContainsKey("PhoneNumber") && columnMapping["PhoneNumber"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["PhoneNumber"]]?.ToString()?.Trim()
-                            : null;
-
-                        var grade = columnMapping.ContainsKey("Grade") && columnMapping["Grade"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["Grade"]]?.ToString()?.Trim()
-                            : null;
-
-                        var dateOfBirth = columnMapping.ContainsKey("DateOfBirth") && columnMapping["DateOfBirth"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["DateOfBirth"]]?.ToString()?.Trim()
-                            : null;
-
-                        var gender = columnMapping.ContainsKey("Gender") && columnMapping["Gender"] < rowData.ItemArray.Length
-                            ? rowData.ItemArray[columnMapping["Gender"]]?.ToString()?.Trim()
-                            : null;
-
-                        // Parse DateOfBirth if provided
-                        DateTime? parsedDateOfBirth = null;
-                        if (!string.IsNullOrWhiteSpace(dateOfBirth))
-                        {
-                            if (DateTime.TryParse(dateOfBirth, out DateTime dob))
-                            {
-                                parsedDateOfBirth = dob;
-                            }
-                            else
-                            {
-                                importResults.Failed++;
-                                importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirth}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
-                                continue;
-                            }
-                        }
-
-                        // Validate required fields
-                        if (string.IsNullOrWhiteSpace(username) || 
-                            string.IsNullOrWhiteSpace(fullName) || 
-                            string.IsNullOrWhiteSpace(email))
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
-                            continue;
-                        }
-
-                        // Validate email format
-                        try
-                        {
-                            var _ = new System.Net.Mail.MailAddress(email);
-                        }
-                        catch
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Invalid email format");
-                            continue;
-                        }
-
-                        // Check duplicates within file
-                        if (!string.IsNullOrWhiteSpace(email) && fileEmails.Contains(email))
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists in import file");
-                            continue;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(username) && fileUsernames.Contains(username))
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in import file");
-                            continue;
-                        }
-
-                        // Add to file tracking
-                        if (!string.IsNullOrWhiteSpace(email))
-                            fileEmails.Add(email);
-                        if (!string.IsNullOrWhiteSpace(username))
-                            fileUsernames.Add(username);
-
-                        // Validate unique username and email
-                        var existingUser = await _context.Users
-                            .FirstOrDefaultAsync(u => u.Username == username);
-                        if (existingUser != null)
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists");
-                            continue;
-                        }
-
-                        var existingStudent = await _context.Students
-                            .FirstOrDefaultAsync(s => s.Email == email);
-                        if (existingStudent != null)
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists");
-                            continue;
-                        }
-
-                        // Note: PhoneNumber is stored in User table, not Student table
-                        // So we don't check for duplicate phone numbers here
-
-                        // Create new student account
-                        var createStudentDto = new CreateStudentDto
-                        {
-                            Username = username,
-                            FullName = fullName,
-                            Email = email,
-                            PhoneNumber = phoneNumber,
-                            Password = PasswordGenerator.GenerateSecurePassword(),
-                            EnrollmentStatus = "Active",
-                            Grade = grade,
-                            DateOfBirth = parsedDateOfBirth,
-                            Gender = gender
-                        };
-
-                        await _studentService.CreateStudentAsync(createStudentDto);
-                        importResults.Success++;
-                    }
-                    catch (Exception ex)
-                    {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Error - {ex.Message}");
-                    }
-                }
-
-                return Ok(new
-                {
-                    message = "Import completed",
-                    importResults,
-                    defaultPasswordNote = "Secure passwords have been generated for all imported students",
-                    templateInfo = new {
-                        templateName = ImportTemplate.TEMPLATE_NAME,
-                        mappedHeaders = columnMapping.Keys.ToList()
-                    }
-                });
+                // Use StudentImportService to handle import logic (pass classId)
+                var result = await _studentImportService.ImportStudentsAsync(file, classId);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {

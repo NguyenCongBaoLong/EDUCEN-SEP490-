@@ -49,6 +49,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("reset-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> RequestResetPassword(ResetPasswordDto dto)
         {
             try
@@ -63,6 +64,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("reset-password/confirm")]
+        [AllowAnonymous]
         public async Task<IActionResult> ConfirmResetPassword(ResetPasswordConfirmDto dto)
         {
             try
@@ -80,6 +82,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("generate-student-account/{studentId}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GenerateStudentAccount(int studentId)
         {
             try

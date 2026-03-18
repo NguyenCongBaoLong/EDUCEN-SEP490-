@@ -4,6 +4,7 @@ using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using EducenAPI.Services.TenantService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -14,7 +15,28 @@ using EducenAPI.Ultils;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Custom validation error response
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .Select(e => new
+                {
+                    Field = e.Key,
+                    Errors = e.Value?.Errors.Select(err => err.ErrorMessage)
+                });
+
+            return new BadRequestObjectResult(new
+            {
+                statusCode = 400,
+                message = "Validation failed",
+                errors = errors
+            });
+        };
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddRouting();
 builder.Services.AddScoped<MailService>();
