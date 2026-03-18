@@ -11,8 +11,6 @@ public partial class Student
     [ForeignKey("User")]
     public int? UserId { get; set; }
 
-    public string? FullName { get; set; }  // Thêm để lưu tên khi không có User account
-
     public string? Email { get; set; }
 
     public string? EnrollmentStatus { get; set; }

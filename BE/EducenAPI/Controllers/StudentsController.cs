@@ -220,7 +220,7 @@ namespace EducenAPI.Controllers
                     Username = request.Username,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                     RoleId = studentRole.RoleId,
-                    FullName = request.FullName ?? student.FullName ?? "",
+                    FullName = request.FullName ?? "",  // FullName từ request hoặc để trống
                     Email = student.Email,  // Dùng email từ student
                     PhoneNumber = request.PhoneNumber,
                     AccountStatus = "Active",

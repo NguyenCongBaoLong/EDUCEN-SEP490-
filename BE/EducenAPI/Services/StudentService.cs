@@ -44,7 +44,7 @@ namespace EducenAPI.Services
             {
                 UserId = s.UserId ?? 0,
                 Username = hasUser ? s.StudentNavigation.Username ?? "" : "NO_ACCOUNT",
-                FullName = hasUser ? s.StudentNavigation.FullName ?? "" : (s.FullName ?? ""),
+                FullName = hasUser ? s.StudentNavigation.FullName ?? "" : "",
                 Email = s.Email ?? "",
                 PhoneNumber = hasUser ? s.StudentNavigation.PhoneNumber : null,
                 Address = hasUser ? s.StudentNavigation.Address : null,
@@ -86,11 +86,10 @@ namespace EducenAPI.Services
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new Exception("Email is required for student profile");
 
-            // 2. Tạo chỉ Student record
+            // 2. Tạo chỉ Student record (FullName chỉ lưu trong DTO, không vào DB)
             var student = new Student
             {
                 UserId = null,  // Explicit null
-                FullName = dto.FullName,  // Lưu tên vào Student
                 Email = dto.Email,
                 EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
                 Grade = dto.Grade,
@@ -106,7 +105,7 @@ namespace EducenAPI.Services
             {
                 UserId = null,  // Explicit null
                 Username = "NO_ACCOUNT",  // Indicator cho frontend
-                FullName = student.FullName,  // Dùng tên từ Student
+                FullName = dto.FullName,  // Dùng tên từ input DTO
                 Email = student.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = null,
@@ -231,17 +230,14 @@ namespace EducenAPI.Services
             if (student == null)
                 return false;
 
-            // Update Student fields
+            // Update Student fields (FullName chỉ có trong User, không có trong Student table)
             if (!string.IsNullOrEmpty(dto.FullName))
             {
                 if (student.UserId.HasValue && student.StudentNavigation != null)
                 {
                     student.StudentNavigation.FullName = dto.FullName;
                 }
-                else
-                {
-                    student.FullName = dto.FullName;
-                }
+                // Nếu không có User, FullName vẫn được trả về từ DTO input nhưng không lưu vào DB
             }
 
             if (!string.IsNullOrEmpty(dto.Email))
