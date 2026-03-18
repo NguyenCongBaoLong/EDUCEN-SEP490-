@@ -98,11 +98,32 @@ namespace EducenAPI.Services
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new Exception("Email is required for student profile");
 
-            // 2. Tạo chỉ Student record (FullName chỉ lưu trong DTO, không vào DB)
-            // UserId là nullable và là cả PK + FK, nên cần xử lý đặc biệt
+            // 2. Lấy student role
+            var studentRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.RoleName == "Student");
+            if (studentRole == null)
+                throw new Exception("Student role not found");
+
+            // 3. Tạo User với null username/password (không có account)
+            var user = new User
+            {
+                Username = null,  // Không có username
+                PasswordHash = null,  // Không có password
+                RoleId = studentRole.RoleId,
+                FullName = dto.FullName,
+                Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                AccountStatus = "NoAccount",
+                IsAccountSent = false
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // 4. Tạo Student record với UserId
             var student = new Student
             {
-                UserId = 0,  // Use 0 instead of null for profile-only students
+                UserId = user.UserId,  // Liên kết với User đã tạo
                 Email = dto.Email,
                 EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
                 Grade = dto.Grade,
@@ -111,21 +132,20 @@ namespace EducenAPI.Services
             };
 
             _context.Students.Add(student);
-            
             await _context.SaveChangesAsync();
 
-            // 3. Return DTO với thông tin phù hợp
+            // 5. Return DTO với thông tin phù hợp
             return new StudentDto
             {
-                UserId = null,  // Explicit null
+                UserId = user.UserId,
                 Username = "NO_ACCOUNT",  // Indicator cho frontend
-                FullName = dto.FullName,  // Dùng tên từ input DTO
+                FullName = dto.FullName,
                 Email = student.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = null,
                 Grade = student.Grade,
                 EnrollmentStatus = student.EnrollmentStatus ?? "Active",
-                AccountStatus = "NO_ACCOUNT",  // Custom status
+                AccountStatus = "NoAccount",
                 IsAccountSent = false,
                 CreatedAt = DateTime.Now
             };

@@ -47,12 +47,21 @@ namespace EducenAPI.DTOs.Students
         // Validate template headers
         public static ValidationResult ValidateHeaders(List<string> actualHeaders)
         {
-            var normalizedActualHeaders = actualHeaders
-                .Select(h => h?.Trim().ToLower() ?? "")
-                .ToList();
+            // Normalize actual headers using mapping (e.g., "Phone Number" -> "phonenumber")
+            var normalizedActualHeaders = new List<string>();
+            foreach (var header in actualHeaders)
+            {
+                var normalized = header?.Trim().ToLower() ?? "";
+                // Apply mapping if exists
+                if (HEADER_MAPPING.TryGetValue(normalized, out var mappedHeader))
+                {
+                    normalized = mappedHeader.ToLower();
+                }
+                normalizedActualHeaders.Add(normalized);
+            }
 
             var missingHeaders = REQUIRED_HEADERS
-                .Where(required => !normalizedActualHeaders.Contains(required))
+                .Where(required => !normalizedActualHeaders.Contains(required.ToLower()))
                 .ToList();
 
             if (missingHeaders.Any())
