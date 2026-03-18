@@ -3,6 +3,22 @@
   "WorkspaceRootPath": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\models\\student.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:models\\student.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\controllers\\studentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:controllers\\studentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\services\\scheduleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\scheduleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -11,24 +27,12 @@
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\services\\interface\\istudentimportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\interface\\istudentimportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\services\\studentimportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\studentimportservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\models\\tenant.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:models\\tenant.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:models\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\models\\student.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:models\\student.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\models\\teacher.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -59,16 +63,8 @@
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:models\\classsession.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\controllers\\studentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:controllers\\studentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -94,7 +90,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 220,
+          "SelectedChildIndex": 213,
           "Children": [
             {
               "$type": "Bookmark",
@@ -910,33 +906,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "IStudentImportService.cs",
-              "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IStudentImportService.cs",
-              "RelativeDocumentMoniker": "Services\\Interface\\IStudentImportService.cs",
-              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IStudentImportService.cs",
-              "RelativeToolTip": "Services\\Interface\\IStudentImportService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-18T12:33:23.03Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "StudentImportService.cs",
-              "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\StudentImportService.cs",
-              "RelativeDocumentMoniker": "Services\\StudentImportService.cs",
-              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\StudentImportService.cs",
-              "RelativeToolTip": "Services\\StudentImportService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAAFIAAAAAAAAAAAAcwGAAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-18T12:33:03.715Z",
+              "WhenOpened": "2026-03-18T15:08:22.276Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "Tenant.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Tenant.cs",
               "RelativeDocumentMoniker": "Models\\Tenant.cs",
@@ -949,7 +932,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "Teacher.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Teacher.cs",
               "RelativeDocumentMoniker": "Models\\Teacher.cs",
@@ -962,7 +945,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "AuthService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AuthService.cs",
               "RelativeDocumentMoniker": "Services\\AuthService.cs",
@@ -975,7 +958,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "SubjectsController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\SubjectsController.cs",
               "RelativeDocumentMoniker": "Controllers\\SubjectsController.cs",
@@ -987,7 +970,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "StudentService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\StudentService.cs",
               "RelativeDocumentMoniker": "Services\\StudentService.cs",
@@ -999,7 +982,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "Class.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Class.cs",
               "RelativeDocumentMoniker": "Models\\Class.cs",
@@ -1011,7 +994,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "ClassSession.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\ClassSession.cs",
               "RelativeDocumentMoniker": "Models\\ClassSession.cs",
@@ -1023,7 +1006,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 1,
               "Title": "launchSettings.json",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "Properties\\launchSettings.json",
@@ -1031,11 +1014,12 @@
               "RelativeToolTip": "Properties\\launchSettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-03-17T10:46:47.658Z"
+              "WhenOpened": "2026-03-17T10:46:47.658Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 5,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -1048,20 +1032,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 0,
               "Title": "Student.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Student.cs",
               "RelativeDocumentMoniker": "Models\\Student.cs",
               "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\Student.cs",
               "RelativeToolTip": "Models\\Student.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAgwBYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-17T10:19:27.241Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "User.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\User.cs",
               "RelativeDocumentMoniker": "Models\\User.cs",
@@ -1074,7 +1058,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 16,
               "Title": "AdminController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminController.cs",
               "RelativeDocumentMoniker": "Controllers\\AdminController.cs",
@@ -1086,7 +1070,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 17,
               "Title": "IAssistantService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IAssistantService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IAssistantService.cs",
@@ -1110,19 +1094,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 2,
               "Title": "StudentsController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\StudentsController.cs",
               "RelativeDocumentMoniker": "Controllers\\StudentsController.cs",
-              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\StudentsController.cs",
-              "RelativeToolTip": "Controllers\\StudentsController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAIgBAABBAAAAAAAAAA==",
+              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\StudentsController.cs*",
+              "RelativeToolTip": "Controllers\\StudentsController.cs*",
+              "ViewState": "AgIAAPEAAAAAAAAAAAAcwA0BAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-15T08:50:33.916Z"
+              "WhenOpened": "2026-03-15T08:50:33.916Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 4,
               "Title": "ScheduleService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\ScheduleService.cs",
               "RelativeDocumentMoniker": "Services\\ScheduleService.cs",
@@ -1135,7 +1120,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 18,
               "Title": "IScheduleService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IScheduleService.cs",
               "RelativeDocumentMoniker": "Services\\Interface\\IScheduleService.cs",
@@ -1147,7 +1132,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 19,
               "Title": "CreateScheduleDto.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\Schedules\\CreateScheduleDto.cs",
               "RelativeDocumentMoniker": "DTOs\\Schedules\\CreateScheduleDto.cs",
@@ -1159,7 +1144,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "SchedulesController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\SchedulesController.cs",
               "RelativeDocumentMoniker": "Controllers\\SchedulesController.cs",

@@ -9,7 +9,7 @@ public partial class Student
 {
     [Key]
     [ForeignKey("User")]
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 
     public string? Email { get; set; }
 
