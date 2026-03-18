@@ -62,8 +62,8 @@ export function AuthProvider({ children }) {
             password,
         });
 
-        // Backend trả về token dạng string trực tiếp
-        const token = response.data;
+        // Backend trả về ApiResponse<string> nên cần lấy token từ response.data.data
+        const token = response.data.data;
         localStorage.setItem('token', token);
 
         const decoded = decodeToken(token);
