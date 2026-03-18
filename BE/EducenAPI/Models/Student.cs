@@ -9,9 +9,7 @@ public partial class Student
 {
     [Key]
     [ForeignKey("User")]
-    public int? UserId { get; set; }
-
-    public string? FullName { get; set; }  // Thêm để lưu tên khi không có User account
+    public int UserId { get; set; }
 
     public string? Email { get; set; }
 

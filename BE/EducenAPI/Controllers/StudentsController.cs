@@ -193,7 +193,9 @@ namespace EducenAPI.Controllers
                 if (student == null)
                     return NotFound("Student not found");
 
-                if (student.UserId.HasValue)
+                // Since UserId is now non-nullable and always created with User, check if User exists
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == student.UserId);
+                if (userExists)
                     return BadRequest("Student already has an account");
 
                 // Validate request
@@ -204,9 +206,9 @@ namespace EducenAPI.Controllers
                     return BadRequest("Password is required");
 
                 // Check duplicate username
-                var existingUser = await _context.Users
+                var existingUsername = await _context.Users
                     .AnyAsync(u => u.Username == request.Username);
-                if (existingUser)
+                if (existingUsername)
                     return Conflict("Username already exists");
 
                 // Create user account
@@ -220,7 +222,7 @@ namespace EducenAPI.Controllers
                     Username = request.Username,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                     RoleId = studentRole.RoleId,
-                    FullName = request.FullName ?? student.FullName ?? "",
+                    FullName = request.FullName ?? "",
                     Email = student.Email,  // Dùng email từ student
                     PhoneNumber = request.PhoneNumber,
                     AccountStatus = "Active",

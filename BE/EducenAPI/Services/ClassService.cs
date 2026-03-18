@@ -653,7 +653,7 @@ namespace EducenAPI.Services
 
             return classEntity.Students.Select(s => new StudentDto
             {
-                UserId = s.UserId ?? 0,
+                UserId = s.UserId,
                 Username = s.StudentNavigation != null ? s.StudentNavigation.Username : "",
                 FullName = s.StudentNavigation != null ? s.StudentNavigation.FullName : "",
                 Email = s.Email ?? "",
