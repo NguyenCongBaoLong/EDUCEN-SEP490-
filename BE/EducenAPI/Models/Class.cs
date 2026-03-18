@@ -12,7 +12,8 @@ public partial class Class
     public int? AssistantId { get; set; }
 
     public int SubjectId { get; set; }
-
+    public int? GradeId { get; set; }
+    public int? RoomId { get; set; }
     public string? ClassName { get; set; }
 
     public string? SyllabusContent { get; set; }
@@ -38,5 +39,7 @@ public partial class Class
 
     public virtual ICollection<Student> Students { get; set; } = new List<Student>();
     public ICollection<ClassSession> Sessions { get; set; }
+    public virtual Grade? Grade { get; set; }
+    public virtual Room? Room { get; set; }
 
 }

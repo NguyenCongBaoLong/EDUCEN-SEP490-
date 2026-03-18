@@ -10,6 +10,8 @@ public partial class LessonMaterial
     public int MaterialId { get; set; }
 
     public int SessionId { get; set; }
+    public int? UserId { get; set; }
+
 
     public string? Title { get; set; }
 
@@ -18,4 +20,6 @@ public partial class LessonMaterial
     public string? ContentType { get; set; }
 
     public ClassSession Session { get; set; } = null!;
+    public virtual User? User { get; set; }
+
 }
