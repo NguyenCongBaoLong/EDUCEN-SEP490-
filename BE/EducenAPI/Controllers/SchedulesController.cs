@@ -19,7 +19,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Schedules (public - no auth required for center home page)
         [HttpGet]
-        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSchedules()
         {
             var schedules = await _scheduleService.GetAllSchedulesAsync();

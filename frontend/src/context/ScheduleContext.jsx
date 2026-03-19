@@ -16,6 +16,19 @@ export const ScheduleProvider = ({ children }) => {
     };
 
     const refreshSchedules = useCallback(async () => {
+        // Không gọi API trên trang sysadmin vì admin hệ thống không quản lý lịch học
+        if (window.location.pathname.startsWith('/sysadmin')) return;
+
+        // Cho phép fetch nếu chưa đăng nhập (khách trên trang chủ)
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                // Đảm bảo an toàn nếu là SystemAdmin
+                if (user.role === 'SystemAdmin') return;
+            } catch (e) {}
+        }
+
         setLoading(true);
         try {
             const res = await api.get('/Schedules');

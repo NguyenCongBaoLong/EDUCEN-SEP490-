@@ -3,7 +3,7 @@ import {
     MapPin, Phone, Mail, Globe, Clock, BookOpen, Star, Quote, Users, Award,
     TrendingUp, Pencil, X, Check, LayoutDashboard, Eye, Plus, Trash2, ImageIcon, Upload, LogOut
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSchedule } from '../../context/ScheduleContext';
 import { useAuth } from '../../context/AuthContext';
 import '../../css/pages/center/CenterHome.css';
@@ -97,10 +97,22 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     // Chỉ Admin mới thấy thanh quản lý
     const isAdmin = isAdminProp && user?.role === 'Admin';
 
-    // Fetch fresh schedule data only if logged in
+    const location = useLocation();
+
+    // Hỗ trợ nhận diện tenant từ URL (ví dụ: ?tenant=center1)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tenantParam = params.get('tenant');
+        if (tenantParam) {
+            localStorage.setItem('tenantId', tenantParam);
+            if (refreshSchedules) refreshSchedules();
+        }
+    }, [location.search, refreshSchedules]);
+
+    // Fetch fresh schedule data only if logged in or if tenant is identified
     useEffect(() => {
         if (refreshSchedules) refreshSchedules();
-    }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [user, refreshSchedules]);
 
 
     /* Enrollment form */

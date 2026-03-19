@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Building2, Plus, Search, Edit2, Eye, Lock, Unlock, Package,
-    X, CheckCircle, AlertCircle, Loader2
+    X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter
 } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import adminApi from '../../services/adminApi';
@@ -17,6 +17,12 @@ const TenantManagement = () => {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'registrations'
+    const [registrations, setRegistrations] = useState([]);
+    const [loadingReg, setLoadingReg] = useState(false);
+    const [filterStatus, setFilterStatus] = useState('Pending'); // 'All', 'Pending', 'Approved', 'Rejected'
+    const [viewRegTarget, setViewRegTarget] = useState(null);
+
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null); // null = create mode
 
@@ -24,6 +30,7 @@ const TenantManagement = () => {
     const [viewTarget, setViewTarget] = useState(null);
     const [subscribeTarget, setSubscribeTarget] = useState(null);
     const [selectedPlanId, setSelectedPlanId] = useState('');
+    const [registrationApprovalTarget, setRegistrationApprovalTarget] = useState(null);
 
     const [form, setForm] = useState(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
@@ -46,11 +53,29 @@ const TenantManagement = () => {
             .catch(() => console.error('Error fetching plans'));
     };
 
+    const fetchRegistrations = () => {
+        setLoadingReg(true);
+        adminApi.get('/registrations')
+            .then(res => setRegistrations(res.data))
+            .catch(() => showToast('Không thể tải danh sách đăng ký.', 'error'))
+            .finally(() => setLoadingReg(false));
+    };
+
     useEffect(() => {
         fetchTenants();
         fetchPlans();
+        fetchRegistrations();
     }, []);
 
+    const handleUpdateRegistrationStatus = async (id, status) => {
+        try {
+            await adminApi.put(`/registrations/${id}/status?status=${status}`);
+            showToast(status === 'Approved' ? 'Đã duyệt yêu cầu đăng ký!' : 'Đã từ chối yêu cầu.');
+            fetchRegistrations();
+        } catch {
+            showToast('Có lỗi xảy ra khi cập nhật.', 'error');
+        }
+    };
 
 
     const showToast = (msg, type = 'success') => {
@@ -78,6 +103,21 @@ const TenantManagement = () => {
         setModalOpen(true);
     };
 
+    const openApproveModal = (reg) => {
+        setRegistrationApprovalTarget(reg);
+        setEditTarget(null);
+        setForm({
+            tenantId: '',
+            tenantName: reg.centerName || '',
+            subDomain: '',
+            contactPerson: reg.contactPerson || '',
+            email: reg.email || '',
+            phoneNumber: reg.phoneNumber || '',
+            address: '',
+        });
+        setModalOpen(true);
+    };
+
     const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
     const handleSubmit = async (e) => {
@@ -98,8 +138,12 @@ const TenantManagement = () => {
             } else {
                 await adminApi.post('/Tenants', form);
                 showToast('Tạo trung tâm thành công! DB mới đã được khởi tạo.');
+                if (registrationApprovalTarget) {
+                    await handleUpdateRegistrationStatus(registrationApprovalTarget.registrationId, 'Approved');
+                }
             }
             setModalOpen(false);
+            setRegistrationApprovalTarget(null);
             fetchTenants();
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || 'Có lỗi xảy ra.';
@@ -181,6 +225,16 @@ const TenantManagement = () => {
         t.subDomain?.toLowerCase().includes(search.toLowerCase())
     );
 
+    const filteredRegistrations = registrations.filter(r => {
+        const matchSearch = r.centerName?.toLowerCase().includes(search.toLowerCase()) ||
+            r.email?.toLowerCase().includes(search.toLowerCase()) ||
+            r.contactPerson?.toLowerCase().includes(search.toLowerCase());
+        const matchStatus = filterStatus === 'All' ? true : r.status === filterStatus;
+        return matchSearch && matchStatus;
+    });
+
+    const pendingCount = registrations.filter(r => r.status === 'Pending').length;
+
     return (
         <div className="sa-page">
             <SystemAdminSidebar />
@@ -197,11 +251,34 @@ const TenantManagement = () => {
                 {/* Header */}
                 <div className="sa-page-header">
                     <div>
-                        <h1 className="sa-page-title">Quản Lý Trung Tâm</h1>
-                        <p className="sa-page-subtitle">Tạo và quản lý các trung tâm gia sư trong hệ thống</p>
+                        <h1 className="sa-page-title">{activeTab === 'tenants' ? 'Quản Lý Trung Tâm' : 'Yêu Cầu Đăng Ký'}</h1>
+                        <p className="sa-page-subtitle">
+                            {activeTab === 'tenants' ? 'Tạo và quản lý các trung tâm gia sư trong hệ thống' : 'Kiểm duyệt các yêu cầu đăng ký mở trung tâm mới'}
+                        </p>
                     </div>
-                    <button className="sa-btn-primary" onClick={openCreate}>
-                        <Plus size={18} /> Thêm Trung Tâm
+                    {activeTab === 'tenants' && (
+                        <button className="sa-btn-primary" onClick={openCreate}>
+                            <Plus size={18} /> Thêm Trung Tâm
+                        </button>
+                    )}
+                </div>
+
+                {/* Tabs */}
+                <div className="sa-tabs">
+                    <button 
+                        className={`sa-tab-btn ${activeTab === 'tenants' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('tenants')}
+                    >
+                        <Building2 size={18} /> Quản Lý Trung Tâm
+                    </button>
+                    <button 
+                        className={`sa-tab-btn ${activeTab === 'registrations' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('registrations')}
+                    >
+                        <ClipboardList size={18} /> Yêu Cầu Đăng Ký
+                        {pendingCount > 0 && (
+                            <span className="sa-tab-badge">{pendingCount}</span>
+                        )}
                     </button>
                 </div>
 
@@ -211,18 +288,40 @@ const TenantManagement = () => {
                         <Search size={16} className="sa-search-icon" />
                         <input
                             className="sa-search-input"
-                            placeholder="Tìm kiếm theo tên, domain, email..."
+                            placeholder={activeTab === 'tenants' ? "Tìm kiếm theo tên, domain, email..." : "Tìm kiếm theo tên trung tâm, email..."}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
+
+                    {activeTab === 'registrations' && (
+                        <div className="sa-filter-wrap">
+                            <Filter size={14} className="sa-filter-label" style={{ color: '#6366f1' }} />
+                            <span className="sa-filter-label">Trạng thái:</span>
+                            <select 
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="sa-filter-select"
+                            >
+                                <option value="All">Tất cả</option>
+                                <option value="Pending">Chờ duyệt</option>
+                                <option value="Approved">Đã duyệt</option>
+                                <option value="Rejected">Từ chối</option>
+                            </select>
+                        </div>
+                    )}
                     <span className="sa-count-badge">
-                        <Building2 size={14} /> {filtered.length} trung tâm
+                        {activeTab === 'tenants' ? (
+                            <><Building2 size={14} /> {filtered.length} trung tâm</>
+                        ) : (
+                            <><ClipboardList size={14} /> {filteredRegistrations.length} yêu cầu</>
+                        )}
                     </span>
                 </div>
 
-                {/* Table */}
-                <div className="sa-table-card">
+                {/* Tab content: Tenants */}
+                {activeTab === 'tenants' && (
+                    <div className="sa-table-card">
                     {loading ? (
                         <div className="sa-loading"><Loader2 size={24} className="spin" /> Đang tải...</div>
                     ) : filtered.length === 0 ? (
@@ -315,14 +414,172 @@ const TenantManagement = () => {
                         </table>
                     )}
                 </div>
+                )}
 
-                {/* Create/Edit Modal */}
+                {/* Tab content: Registrations */}
+                {activeTab === 'registrations' && (
+                    <div className="sa-table-card">
+                        {/* List Area */}
+
+                        {loadingReg ? (
+                            <div className="sa-loading"><Loader2 size={24} className="spin" /> Đang tải...</div>
+                        ) : filteredRegistrations.length === 0 ? (
+                            <div className="sa-empty">
+                                <ClipboardList size={40} />
+                                <p>{search ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có yêu cầu đăng ký nào.'}</p>
+                            </div>
+                        ) : (
+                            <table className="sa-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tên Trung Tâm</th>
+                                        <th>Người Liên Hệ</th>
+                                        <th>Ngày Gửi</th>
+                                        <th>Trạng Thái</th>
+                                        <th>Phê Duyệt</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredRegistrations.map(r => (
+                                        <tr key={r.registrationId}>
+                                            <td>
+                                                <div className="sa-tenant-name-cell">
+                                                    <div className="sa-tenant-avatar" style={{ background: '#f3f4f6', color: '#374151' }}>
+                                                        {r.centerName?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="sa-tenant-name">{r.centerName}</div>
+                                                        <div className="sa-tenant-id" style={{ whiteSpace: 'normal', maxWidth: '300px' }}>
+                                                            {r.message ? `Lời nhắn: ${r.message.length > 50 ? r.message.substring(0, 50) + '...' : r.message}` : 'Không có lời nhắn'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div style={{ fontWeight: 500, color: '#111827' }}>{r.contactPerson || '—'}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                                    {r.email} {r.phoneNumber ? `• ${r.phoneNumber}` : ''}
+                                                </div>
+                                            </td>
+                                            <td>{new Date(r.createdAt).toLocaleDateString('vi-VN')}</td>
+                                            <td>
+                                                <span className={`sa-status-badge ${r.status === 'Pending' ? 'pending' : r.status === 'Approved' ? 'active' : 'inactive'}`} style={r.status === 'Pending' ? { background: '#fef3c7', color: '#d97706' } : r.status === 'Rejected' ? { background: '#fef2f2', color: '#ef4444' } : {}}>
+                                                    {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                                                </span>
+                                            </td>
+                                            <td className="sa-actions-td">
+                                                <div className="sa-action-buttons">
+                                                    <button
+                                                        className="sa-action-btn view"
+                                                        title="Xem chi tiết"
+                                                        onClick={() => setViewRegTarget(r)}
+                                                        style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+                                                    >
+                                                        <Eye size={18} />
+                                                    </button>
+                                                    {r.status === 'Pending' && (
+                                                        <>
+                                                            <button
+                                                                className="sa-action-btn subscribe"
+                                                                title="Phê duyệt (Tạo trung tâm)"
+                                                                onClick={() => openApproveModal(r)}
+                                                                style={{ background: '#ecfdf5', border: '1px solid #10b981' }}
+                                                            >
+                                                                <Check size={18} />
+                                                            </button>
+                                                            <button
+                                                                className="sa-action-btn lock"
+                                                                title="Từ chối yêu cầu"
+                                                                onClick={() => handleUpdateRegistrationStatus(r.registrationId, 'Rejected')}
+                                                                style={{ background: '#fef2f2', border: '1px solid #ef4444' }}
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
+
+                {/* MODALS SECTION */}
+                
+                {/* Registration Detail Modal */}
+                {viewRegTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => setViewRegTarget(null)} />
+                        <div className="sa-modal">
+                            <div className="sa-modal-header">
+                                <h2>Chi Tiết Yêu Cầu Đăng Ký</h2>
+                                <button className="sa-modal-close" onClick={() => setViewRegTarget(null)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form" style={{ gap: '1rem', paddingBottom: '1.5rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                    {[
+                                        { label: 'Tên trung tâm', value: viewRegTarget.centerName, span: true },
+                                        { label: 'Người liên hệ', value: viewRegTarget.contactPerson },
+                                        { label: 'Email', value: viewRegTarget.email },
+                                        { label: 'Số điện thoại', value: viewRegTarget.phoneNumber },
+                                        { label: 'Trạng thái', value: viewRegTarget.status === 'Pending' ? 'Chưa duyệt' : viewRegTarget.status === 'Approved' ? 'Đã duyệt' : 'Từ chối' },
+                                        { label: 'Ngày gửi', value: new Date(viewRegTarget.createdAt).toLocaleString('vi-VN') },
+                                        { label: 'Lời nhắn / Yêu cầu', value: viewRegTarget.message || 'Không có', span: true },
+                                    ].map(({ label, value, span }) => (
+                                        <div key={label} style={{
+                                            background: '#f8fafc', padding: '0.75rem 1rem',
+                                            borderRadius: '8px', gridColumn: span ? '1 / -1' : undefined
+                                        }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 500, whiteSpace: 'pre-wrap' }}>{value || '—'}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {viewRegTarget.status === 'Pending' && (
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+                                        <button
+                                            className="sa-btn-primary"
+                                            style={{ flex: 1, background: '#10b981' }}
+                                            onClick={() => {
+                                                openApproveModal(viewRegTarget);
+                                                setViewRegTarget(null);
+                                            }}
+                                        >
+                                            <Check size={18} /> Phê Duyệt Ngay
+                                        </button>
+                                        <button
+                                            className="sa-btn-cancel"
+                                            style={{ flex: 1, color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2' }}
+                                            onClick={() => {
+                                                handleUpdateRegistrationStatus(viewRegTarget.registrationId, 'Rejected');
+                                                setViewRegTarget(null);
+                                            }}
+                                        >
+                                            <X size={18} /> Từ Chối
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Create/Edit Modal - Also used for registration approval */}
                 {modalOpen && (
                     <>
                         <div className="sa-modal-overlay" onClick={() => !saving && setModalOpen(false)} />
                         <div className="sa-modal">
                             <div className="sa-modal-header">
-                                <h2>{editTarget ? 'Chỉnh Sửa Trung Tâm' : 'Thêm Trung Tâm Mới'}</h2>
+                                <h2>
+                                    {editTarget 
+                                        ? 'Chỉnh Sửa Trung Tâm' 
+                                        : registrationApprovalTarget 
+                                            ? 'Phê Duyệt & Tạo Trung Tâm' 
+                                            : 'Thêm Trung Tâm Mới'}
+                                </h2>
                                 <button className="sa-modal-close" onClick={() => !saving && setModalOpen(false)}>
                                     <X size={20} />
                                 </button>
@@ -390,7 +647,7 @@ const TenantManagement = () => {
                                             name="phoneNumber"
                                             value={form.phoneNumber}
                                             onChange={handleChange}
-                                            placeholder="0901234567"
+                                            placeholder="0912 345 678"
                                         />
                                     </div>
                                     <div className="sa-form-group">
@@ -421,6 +678,7 @@ const TenantManagement = () => {
                         </div>
                     </>
                 )}
+
                 {/* Detail Modal */}
                 {viewTarget && (
                     <>

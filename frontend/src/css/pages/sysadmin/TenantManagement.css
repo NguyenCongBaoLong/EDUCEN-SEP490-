@@ -35,6 +35,49 @@
     margin: 0;
 }
 
+/* Tabs */
+.sa-tabs {
+    display: flex;
+    gap: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 0.5rem;
+}
+
+.sa-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -2px; /* overlap border */
+}
+
+.sa-tab-btn:hover {
+    color: #374151;
+}
+
+.sa-tab-btn.active {
+    color: #6366f1;
+    border-bottom-color: #6366f1;
+}
+
+.sa-tab-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 99px;
+    margin-left: 0.25rem;
+}
+
 /* Buttons */
 .sa-btn-primary {
     display: inline-flex;
@@ -157,6 +200,43 @@
     border: 1px solid #e5e7eb;
     padding: 0.5rem 1rem;
     border-radius: 10px;
+}
+
+.sa-filter-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    padding: 0.5rem 0.875rem;
+    border-radius: 10px;
+    height: 42px;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.sa-filter-wrap:focus-within {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.sa-filter-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.sa-filter-select {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #111827;
+    cursor: pointer;
+    font-family: inherit;
+    padding-right: 0.25rem;
 }
 
 /* Table Card */
