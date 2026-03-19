@@ -58,6 +58,11 @@ namespace EducenAPI.Services
                 }
             }
 
+            var isTitleUnique = await _context.LessonMaterials.AnyAsync(e => dto.SessionId != null 
+                    && dto.SessionId == e.SessionId
+                    && e.Title == dto.Title);
+            if (isTitleUnique)
+                throw new Exception("Title đang bị trùng");
             var material = new LessonMaterial
             {
                 SessionId = dto.SessionId,
