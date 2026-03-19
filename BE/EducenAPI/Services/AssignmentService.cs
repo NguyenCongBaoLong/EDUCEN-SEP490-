@@ -57,6 +57,14 @@ namespace EducenAPI.Services
                 if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
             }
 
+            if(!string.IsNullOrEmpty(dto.Title))
+            {
+                var isUniqueTitle = await _context.Assignments.AnyAsync(e => dto.SessionId != null
+                        && dto.SessionId == e.SessionId 
+                        && e.Title == dto.Title);
+                if (isUniqueTitle) throw new Exception("Title đang bị trùng vui lòng đặt lại");
+            }
+
             var assignment = new Assignment
             {
                 SessionId = dto.SessionId,
