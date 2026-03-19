@@ -1,21 +1,22 @@
-import { useState, useRef } from 'react';
-import { X, UploadCloud, File, Trash2, FileText, CheckCircle } from 'lucide-react';
-import '../css/components/CreateAssignmentModal.css';
+import React, { useState, useRef } from 'react';
+import { X, UploadCloud, FileText, CheckCircle, Trash2 } from 'lucide-react';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
-const UploadMaterialModal = ({ isOpen, onClose, onUpload }) => {
-    if (!isOpen) return null;
-
+const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId }) => {
     const [formData, setFormData] = useState({
         title: '',
-        description: '',
     });
 
     const [files, setFiles] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [saveToLibrary, setSaveToLibrary] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const fileInputRef = useRef(null);
 
-    // Xử lý kéo thả
+    if (!isOpen) return null;
+
+    // ... (keep drag & drop logic)
     const handleDragOver = (e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -60,25 +61,40 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload }) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (files.length === 0) {
-            alert("Vui lòng chọn ít nhất 1 file tài liệu để tải lên.");
+            toast.error("Vui lòng chọn ít nhất 1 file tài liệu để tải lên.");
             return;
         }
 
-        // Tạo cục data để render (mô phỏng)
-        const newMaterialItems = files.map(f => ({
-            id: f.id,
-            name: formData.title || f.name, // Nếu nhập title thì lấy, ko thì lấy tên gốc
-            size: f.size,
-            uploadDate: new Date().toLocaleDateString('vi-VN'),
-            type: f.type === 'pdf' ? 'pdf' : (['doc', 'docx'].includes(f.type) ? 'word' : (['mp4', 'mov'].includes(f.type) ? 'video' : 'other')),
-            description: formData.description,
-            rawFile: f.file
-        }));
+        try {
+            setIsSubmitting(true);
+            const uploadPromises = files.map(async (f) => {
+                const uploadFormData = new FormData();
+                if (sessionId) {
+                    uploadFormData.append('SessionId', sessionId);
+                }
+                uploadFormData.append('Title', formData.title || f.name);
+                uploadFormData.append('SaveToLibrary', saveToLibrary);
+                uploadFormData.append('File', f.file);
 
-        onUpload(newMaterialItems, saveToLibrary);
+                await api.post('/Materials/save', uploadFormData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            });
+
+            await Promise.all(uploadPromises);
+
+            toast.success("Tải lên tài liệu thành công!");
+            onUpload(); // Triggers refresh in parent
+        } catch (error) {
+            console.error('Error uploading materials:', error);
+            const msg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi tải lên tài liệu.';
+            toast.error(msg);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -168,17 +184,6 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload }) => {
                             />
                         </div>
 
-                        <div className="cam-field">
-                            <label className="cam-label">Mô tả ngắn (Tùy chọn)</label>
-                            <textarea
-                                className="cam-input cam-textarea"
-                                name="description"
-                                placeholder="Ghi chú thêm về bộ tài liệu này cho học sinh..."
-                                value={formData.description}
-                                onChange={handleChange}
-                                rows={2}
-                            ></textarea>
-                        </div>
 
                         <div className="cam-field" style={{ marginTop: '0.5rem' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>

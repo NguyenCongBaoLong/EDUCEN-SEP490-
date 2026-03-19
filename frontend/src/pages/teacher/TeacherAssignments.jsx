@@ -1,82 +1,112 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, BookOpen, Clock, FileText, CheckCircle, AlertCircle, Edit, Trash2, X, AlertTriangle, Library, FileUp, Download, PlayCircle } from 'lucide-react';
+import { Search, Plus, BookOpen, Clock, FileText, CheckCircle, AlertCircle, Edit, Trash2, X, AlertTriangle, Library, FileUp, Download, PlayCircle, Loader2, Presentation, FileArchive, Image as ImageIcon } from 'lucide-react';
+import toast from 'react-hot-toast';
+import api from '../../services/api';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import CreateAssignmentModal from '../../components/CreateAssignmentModal';
 import AssignmentDetailModal from '../../components/AssignmentDetailModal';
 import UploadMaterialModal from '../../components/UploadMaterialModal';
 import DeleteMaterialModal from '../../components/DeleteMaterialModal';
 import MaterialDetailModal from '../../components/MaterialDetailModal';
+import EditMaterialModal from '../../components/EditMaterialModal';
 import '../../css/pages/teacher/TeacherAssignments.css';
 import '../../css/components/DeleteModal.css';
 
-// Mock data
-const MY_CLASSES = [
-    { id: 101, name: 'Đại Số Nâng Cao' },
-    { id: 102, name: 'Giải Tích Cơ Bản' },
-    { id: 103, name: 'Toán Nâng Cao Lớp 12' },
-    { id: 104, name: 'Ôn Thi THPT Quốc Gia - Toán' },
-];
-
-const INITIAL_TEMPLATES = [
-    {
-        id: 1, title: 'Bài tập về nhà Chương 1: Hàm số',
-        description: 'Hoàn thành các bài tập từ 1 đến 15 trang 42 SGK.',
-        fileUrl: '#', fileName: 'bai_tap_chuong_1.pdf'
-    },
-    {
-        id: 2, title: 'Đề kiểm tra 15 phút - Đạo hàm',
-        description: 'Làm bài trực tuyến trên hệ thống, thời gian 15 phút.',
-        fileUrl: '#', fileName: 'de_kiem_tra_dao_ham.docx'
-    },
-    {
-        id: 3, title: 'Bài tập tự luyện: Tích phân',
-        description: 'Giải 50 câu trắc nghiệm mức độ vận dụng cao.',
-        fileUrl: '#', fileName: '50_cau_trac_nghiem.pdf'
-    }
-];
-
-const INITIAL_ASSIGNMENTS = [
-    {
-        id: 1, title: 'Bài tập về nhà Chương 1: Hàm số', classId: 101, className: 'Đại Số Nâng Cao',
-        dueDate: '2023-10-15T23:59', description: 'Hoàn thành các bài tập từ 1 đến 15 trang 42 SGK.',
-        status: 'active', submittedCount: 12, totalStudents: 15, createdAt: '2023-10-10T08:00'
-    },
-    {
-        id: 2, title: 'Đề kiểm tra 15 phút - Đạo hàm', classId: 102, className: 'Giải Tích Cơ Bản',
-        dueDate: '2023-10-18T10:00', description: 'Làm bài trực tuyến trên hệ thống, thời gian 15 phút.',
-        status: 'active', submittedCount: 8, totalStudents: 10, createdAt: '2023-10-12T14:30'
-    },
-    {
-        id: 3, title: 'Bài tập tự luyện: Tích phân', classId: 103, className: 'Toán Nâng Cao Lớp 12',
-        dueDate: '2023-09-30T23:59', description: 'Giải 50 câu trắc nghiệm mức độ vận dụng cao.',
-        status: 'closed', submittedCount: 8, totalStudents: 8, createdAt: '2023-09-25T09:00',
-        fileUrl: '#', fileName: '50_cau_trac_nghiem_tich_phan.pdf'
-    },
-    {
-        id: 4, title: 'Đề cương ôn tập giữa kì I', classId: 104, className: 'Ôn Thi THPT Quốc Gia - Toán',
-        dueDate: '2023-10-25T23:59', description: 'Hoàn thiện đề cương theo file đính kèm.',
-        status: 'draft', submittedCount: 0, totalStudents: 15, createdAt: '2023-10-15T16:00',
-        fileUrl: '#', fileName: 'de_cuong_giua_ki_1.docx'
-    }
-];
-
-const INITIAL_MATERIALS = [
-    { id: 101, name: 'Giáo trình Toán Học Đại cương Tập 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Sách giáo khoa điện tử chương trình cơ bản.', targetLevel: 'Lớp 10', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
-    { id: 102, name: 'Video Hướng dẫn Giải Phương trình Bậc 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'Cách bấm máy tính Casio để giải nhanh.', targetLevel: 'Lớp 9', url: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-    { id: 103, name: 'Bài Tập Trắc Nghiệm Chương 1 (Bản gốc).docx', size: '1.2 MB', uploadDate: '10/09/2023', type: 'word', description: 'Dùng để soạn đề cho các lớp.', targetLevel: 'Lớp 11', url: '' },
-    { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.', targetLevel: 'Lớp 12', url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
-];
 
 const TeacherAssignments = ({ isTA = false }) => {
     const navigate = useNavigate();
 
+
     // Core state
     const [activeTab, setActiveTab] = useState('materials'); // 'materials' | 'templates' | 'assignments'
+    const [loading, setLoading] = useState(true);
 
-    const [templates, setTemplates] = useState(INITIAL_TEMPLATES);
-    const [assignments, setAssignments] = useState(INITIAL_ASSIGNMENTS);
-    const [materials, setMaterials] = useState(INITIAL_MATERIALS);
+    const [templates, setTemplates] = useState([]);
+    const [assignments, setAssignments] = useState([]);
+    const [materials, setMaterials] = useState([]);
+    const [classes, setClasses] = useState([]);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [matsRes, asmsRes, classesRes] = await Promise.all([
+                api.get('/Materials'),
+                api.get('/Assignments'),
+                api.get('/Classes')
+            ]);
+            
+            const classesMap = (classesRes.data || []).reduce((acc, cls) => {
+                acc[cls.classId] = cls.className;
+                return acc;
+            }, {});
+
+            const getOriginalFileName = (url) => {
+                if (!url) return 'Tệp không tên';
+                const parts = url.split('/');
+                const fileName = parts[parts.length - 1];
+                // Remove the GUID prefix if it exists (e.g. guid_filename.ext)
+                return fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName;
+            };
+
+            const getFileType = (url) => {
+                if (!url) return 'other';
+                return url.split('.').pop().toLowerCase();
+            };
+
+            setMaterials((matsRes.data || []).map(m => ({
+                ...m,
+                id: m.materialId || m.MaterialId,
+                materialId: m.materialId || m.MaterialId,
+                title: m.title || m.Title,
+                fileName: getOriginalFileName(m.fileUrl || m.FileUrl),
+                type: getFileType(m.fileUrl || m.FileUrl),
+                fileSize: m.fileSize,
+                originalFileName: m.originalFileName
+            })));
+
+            const allAsms = asmsRes.data || [];
+            
+            setAssignments(allAsms.filter(a => a.classId || a.ClassId).map(a => ({
+                ...a,
+                id: a.asmId || a.AsmId,
+                asmId: a.asmId || a.AsmId,
+                title: a.title || a.Title,
+                endTime: a.endTime || a.EndTime,
+                fileUrl: a.fileUrl || a.FileUrl,
+                className: classesMap[a.classId || a.ClassId] || 'Chưa gán',
+                status: ((a.endTime || a.EndTime) && new Date(a.endTime || a.EndTime) < new Date()) ? 'closed' : 'active',
+                fileName: getOriginalFileName(a.fileUrl || a.FileUrl),
+                type: getFileType(a.fileUrl || a.FileUrl),
+                fileSize: a.fileSize,
+                originalFileName: a.originalFileName
+            })));
+
+            setClasses(classesRes.data || []);
+            setTemplates(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
+                ...a,
+                id: a.asmId || a.AsmId,
+                asmId: a.asmId || a.AsmId,
+                title: a.title || a.Title,
+                endTime: a.endTime || a.EndTime,
+                fileUrl: a.fileUrl || a.FileUrl,
+                fileName: getOriginalFileName(a.fileUrl || a.FileUrl),
+                type: getFileType(a.fileUrl || a.FileUrl),
+                fileSize: a.fileSize,
+                originalFileName: a.originalFileName
+            })));
+
+        } catch (error) {
+            console.error("Error fetching library data:", error);
+            toast.error("Không thể tải dữ liệu thư viện");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -98,40 +128,38 @@ const TeacherAssignments = ({ isTA = false }) => {
     const [isUploadMaterialOpen, setIsUploadMaterialOpen] = useState(false);
     const [deleteMaterialId, setDeleteMaterialId] = useState(null);
     const [detailMaterial, setDetailMaterial] = useState(null);
+    const [editMaterialData, setEditMaterialData] = useState(null);
 
-    const getFileIcon = (type) => {
-        switch (type) {
-            case 'pdf': return <FileText size={24} color="#ef4444" />;
-            case 'word': return <FileText size={24} color="#2563eb" />;
-            case 'video': return <PlayCircle size={24} color="#8b5cf6" />;
-            default: return <FileText size={24} color="#64748b" />;
-        }
+    const getFileStyles = (type) => {
+        const t = type?.toLowerCase() || '';
+        if (t.includes('pdf')) return { icon: <FileText size={20} />, className: 'icon-pdf', color: '#ef4444' };
+        if (t.includes('word') || t.includes('doc')) return { icon: <FileText size={20} />, className: 'icon-word', color: '#2563eb' };
+        if (t.includes('excel') || t.includes('xls')) return { icon: <BookOpen size={20} />, className: 'icon-excel', color: '#16a34a' };
+        if (t.includes('video') || t.includes('mp4')) return { icon: <PlayCircle size={20} />, className: 'icon-video', color: '#8b5cf6' };
+        if (t.includes('powerpoint') || t.includes('ppt')) return { icon: <Presentation size={20} />, className: 'icon-ppt', color: '#f97316' };
+        if (t.includes('zip') || t.includes('rar') || t.includes('7z')) return { icon: <FileArchive size={20} />, className: 'icon-zip', color: '#ca8a04' };
+        if (t.includes('image') || t.includes('png') || t.includes('jpg') || t.includes('jpeg')) return { icon: <ImageIcon size={20} />, className: 'icon-image', color: '#d946ef' };
+        return { icon: <FileText size={20} />, className: 'icon-other', color: '#64748b' };
     };
 
     /* --- FILTERS --- */
     const filteredTemplates = templates.filter(t =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase())
+        t.title?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const filteredAssignments = assignments.filter(assignment => {
-        const matchesSearch = assignment.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesClass = !classFilter || assignment.classId.toString() === classFilter;
-        const matchesStatus = !statusFilter || assignment.status === statusFilter;
+        const matchesSearch = assignment.title?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesClass = !classFilter || assignment.classId?.toString() === classFilter;
+        const matchesStatus = !statusFilter || (assignment.endTime && new Date(assignment.endTime) < new Date() ? 'closed' : 'active') === statusFilter;
         return matchesSearch && matchesClass && matchesStatus;
     });
 
     const filteredMaterials = materials
         .filter(m => {
-            const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            const matchesSearch = m.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));
             const matchesLevel = !levelFilter || m.targetLevel === levelFilter;
             return matchesSearch && matchesLevel;
-        })
-        .sort((a, b) => {
-            // Sort by uploadDate descending (newest first). Assumes DD/MM/YYYY format.
-            const dateA = a.uploadDate.split('/').reverse().join('');
-            const dateB = b.uploadDate.split('/').reverse().join('');
-            return dateB.localeCompare(dateA);
         });
 
     // Pagination Logic
@@ -142,73 +170,82 @@ const TeacherAssignments = ({ isTA = false }) => {
 
     /* --- TEMPLATE HANDLERS --- */
     // Note: Reusing Assignment UI for templating for simplicity currently
-    const handleSaveAssignment = (assignmentData) => {
-        if (activeTab === 'templates') {
+    const handleSaveAssignment = async (assignmentData) => {
+        try {
             if (editingAssignment) {
-                setTemplates(templates.map(t =>
-                    t.id === editingAssignment.id ? { ...t, ...assignmentData } : t
-                ));
+                // Update existing assignment
+                const targetId = editingAssignment.asmId;
+                await api.put(`/Assignments/${targetId}`, assignmentData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success("Cập nhật bài tập thành công");
             } else {
-                const newId = Math.max(...templates.map(t => t.id), 0) + 1;
-                setTemplates([...templates, { ...assignmentData, id: newId }]);
+                // Create new assignment
+                await api.post('/Assignments/Create-Assignments', assignmentData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success("Tạo bài tập thành công");
             }
-        } else {
-            // Assignment logic
-            if (editingAssignment) {
-                setAssignments(assignments.map(a =>
-                    a.id === editingAssignment.id ? { ...a, ...assignmentData, className: MY_CLASSES.find(c => c.id.toString() === assignmentData.classId.toString())?.name } : a
-                ));
-            } else {
-                const newId = Math.max(...assignments.map(a => a.id), 0) + 1;
-                const newAssignment = {
-                    ...assignmentData, id: newId,
-                    className: MY_CLASSES.find(c => c.id.toString() === assignmentData.classId.toString())?.name,
-                    submittedCount: 0, totalStudents: 15, createdAt: new Date().toISOString()
-                };
-                setAssignments([...assignments, newAssignment]);
-            }
+            fetchData();
+        } catch (error) {
+            console.error("Error saving assignment:", error);
+            toast.error(error.response?.data?.message || "Không thể lưu bài tập");
         }
         setIsAssignmentModalOpen(false);
     };
 
-    const confirmDeleteAssignment = () => {
+    const confirmDeleteAssignment = async () => {
         if (deleteAssignmentModal.assignment) {
-            if (activeTab === 'templates') {
-                setTemplates(templates.filter(t => t.id !== deleteAssignmentModal.assignment.id));
-            } else {
-                setAssignments(assignments.filter(a => a.id !== deleteAssignmentModal.assignment.id));
+            try {
+                const id = deleteAssignmentModal.assignment.asmId;
+                await api.delete(`/Assignments/${id}`);
+                toast.success("Xóa bài tập thành công");
+                fetchData();
+            } catch (error) {
+                console.error("Error deleting assignment:", error);
+                toast.error("Không thể xóa bài tập");
             }
             setDeleteAssignmentModal({ show: false, assignment: null });
         }
     };
 
     /* --- MATERIAL HANDLERS --- */
-    const handleUploadMaterial = (newFiles) => {
-        const newItems = newFiles.map(f => ({
-            id: Math.random(),
-            name: f.name,
-            size: f.size + " bytes",
-            uploadDate: f.uploadDate,
-            type: f.type,
-            description: f.description
-        }));
-        setMaterials([
-            ...newItems,
-            ...materials
-        ]);
+    const handleUploadMaterial = async (newFiles) => {
+        // newFiles is expected to be an array of files or material data
+        // For simplicity, we refresh everything after upload
+        fetchData();
         setIsUploadMaterialOpen(false);
-        setCurrentPage(1); // Reset to first page when new item is uploaded
+        setCurrentPage(1);
     };
 
-    const confirmDeleteMaterial = () => {
+    const confirmDeleteMaterial = async () => {
         if (deleteMaterialId) {
-            setMaterials(materials.filter(m => m.id !== deleteMaterialId));
+            try {
+                await api.delete(`/Materials/${deleteMaterialId}`);
+                toast.success("Xóa tài liệu thành công");
+                fetchData();
+            } catch (error) {
+                console.error("Error deleting material:", error);
+                toast.error("Không thể xóa tài liệu");
+            }
             setDeleteMaterialId(null);
         }
     };
 
     const handleDownload = (item) => {
-        alert(`Đang tải xuống: ${item.title || item.name}`);
+        const downloadUrl = item.fileUrl || item.FileUrl || item.url;
+        if (downloadUrl) {
+            toast.success(`Đang tải xuống: ${item.fileName || item.title}`);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = item.fileName || item.title;
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            toast.error("Không có đường dẫn tải về");
+        }
     };
 
     return (
@@ -279,7 +316,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                             <>
                                 <select className="filter-select" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
                                     <option value="">Tất cả các lớp</option>
-                                    {MY_CLASSES.map(cls => <option key={cls.id} value={cls.id}>{cls.name}</option>)}
+                                    {classes.map(cls => <option key={cls.classId} value={cls.classId}>{cls.className}</option>)}
                                 </select>
                                 <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                                     <option value="">Tất cả trạng thái</option>
@@ -319,43 +356,55 @@ const TeacherAssignments = ({ isTA = false }) => {
                 </div>
 
                 {/* Content Area */}
-                <div style={{ flex: 1, overflowY: 'auto' }}>
-                    {activeTab === 'materials' ? (
+                <div style={{ flex: 1, overflowY: 'auto', position: 'relative', minHeight: '300px' }}>
+                    {loading ? (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.7)', zIndex: 10 }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <Loader2 className="animate-spin" size={40} color="#3b82f6" style={{ margin: '0 auto 12px' }} />
+                                <p style={{ color: '#64748b', fontWeight: 500 }}>Đang tải thư viện...</p>
+                            </div>
+                        </div>
+                    ) : activeTab === 'materials' ? (
                         /* MATERIALS VIEW */
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div className="materials-list">
                             {currentMaterials.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '48px 0', color: '#64748b' }}>
+                                <div className="ta-empty-state" style={{ gridColumn: '1/-1' }}>
                                     <Library size={48} style={{ opacity: 0.5, margin: '0 auto 16px' }} />
                                     <p>Không tìm thấy tài liệu nào.</p>
                                 </div>
                             ) : (
                                 <>
-                                    {currentMaterials.map(item => (
-                                        <div key={item.id} className="ta-material-row" style={{ cursor: 'pointer', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', transition: 'all 0.2s' }} onClick={() => setDetailMaterial(item)}>
-                                            <div style={{ flexShrink: 0, padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
-                                                {getFileIcon(item.type)}
-                                            </div>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <h4 style={{ margin: '0 0 6px', fontSize: '1rem', fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    {item.name}
-                                                </h4>
-                                                <div style={{ fontSize: '0.875rem', color: '#64748b', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                    <span>{item.targetLevel || 'Khác'}</span>
-                                                    <span className="dot">•</span>
-                                                    <span>{item.size}</span>
-                                                    <span className="dot">•</span>
-                                                    <span>Đăng: {item.uploadDate}</span>
+                                    {currentMaterials.map(item => {
+                                        const { icon, className } = getFileStyles(item.type);
+                                        return (
+                                            <div key={item.materialId} className="ta-material-row" onClick={() => setDetailMaterial(item)} style={{ '--accent-color': getFileStyles(item.type).color }}>
+                                                <div className={`file-icon-container ${className}`}>
+                                                    {icon}
                                                 </div>
-                                            </div>
-                                            {!isTA && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={e => e.stopPropagation()}>
-                                                    <button onClick={() => setDeleteMaterialId(item.id)} className="btn-icon delete" style={{ background: '#fee2e2', border: 'none', color: '#ef4444', padding: '8px', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}>
-                                                        <Trash2 size={18} />
+                                                <div className="ta-material-info" style={{ flex: 1, minWidth: 0 }}>
+                                                    <h4 style={{ margin: 0, fontSize: '0.9375rem' }}>{item.title}</h4>
+                                                    <div className="ta-material-meta" style={{ marginTop: '2px' }}>
+                                                        <span>{item.fileName}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="ta-actions-inline" onClick={e => e.stopPropagation()}>
+                                                    <button onClick={() => handleDownload(item)} className="btn-icon-action download" title="Tải xuống">
+                                                        <Download size={14} />
                                                     </button>
+                                                    {!isTA && (
+                                                        <>
+                                                            <button onClick={() => setEditMaterialData(item)} className="btn-icon-action edit" title="Chỉnh sửa">
+                                                                <Edit size={14} />
+                                                            </button>
+                                                            <button onClick={() => setDeleteMaterialId(item.materialId)} className="btn-icon-action delete" title="Xóa">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                            </div>
+                                        );
+                                    })}
 
                                     {/* Pagination UI */}
                                     {filteredMaterials.length > materialsPerPage && (
@@ -396,26 +445,36 @@ const TeacherAssignments = ({ isTA = false }) => {
                                     <h3>Không tìm thấy bộ đề nào</h3>
                                 </div>
                             ) : (
-                                <div className="ta-grid">
+                                <div className="ta-vertical-list">
                                     {filteredTemplates.map(template => (
-                                        <div key={template.id} className="ta-card" style={{ cursor: 'pointer' }}>
-                                            <div className="ta-card-header">
-                                                <span className="ta-status-badge draft">
-                                                    Bản nháp
-                                                </span>
-                                                {!isTA && (
-                                                    <div className="ta-card-actions" onClick={(e) => e.stopPropagation()}>
-                                                        <button className="btn-icon edit" onClick={() => { setEditingAssignment(template); setIsAssignmentModalOpen(true); }}><Edit size={16} /></button>
-                                                        <button className="btn-icon delete" onClick={() => setDeleteAssignmentModal({ show: true, assignment: template })}><Trash2 size={16} /></button>
-                                                    </div>
-                                                )}
+                                        <div 
+                                            key={template.asmId} 
+                                            className="ta-assignment-row" 
+                                            style={{ cursor: 'pointer', '--accent-color': getFileStyles(template.type).color }} 
+                                            onClick={() => setDetailAssignment(template)}
+                                        >
+                                            <div className={`file-icon-container ${getFileStyles(template.type).className}`}>
+                                                {getFileStyles(template.type).icon}
                                             </div>
-
-                                            <h3 className="ta-card-title">{template.title}</h3>
-                                            <p className="ta-card-desc" style={{ minHeight: '40px' }}>{template.description}</p>
-
-                                            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6', fontSize: '0.875rem', fontWeight: '500' }}>
-                                                <FileText size={16} /> <span>{template.fileName}</span>
+                                            <div className="ta-material-info" style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <h4 style={{ margin: 0 }}>{template.title}</h4>
+                                                    <span className="ta-row-status draft">Bản nháp</span>
+                                                </div>
+                                                <div className="ta-material-meta">
+                                                    <span>{template.fileName || 'Chưa có file'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="ta-actions-inline" onClick={e => e.stopPropagation()}>
+                                                <button className="btn-icon-action download" onClick={() => handleDownload(template)} title="Tải xuống">
+                                                    <Download size={14} />
+                                                </button>
+                                                {!isTA && (
+                                                    <>
+                                                        <button className="btn-icon-action edit" onClick={() => { setEditingAssignment(template); setIsAssignmentModalOpen(true); }}><Edit size={14} /></button>
+                                                        <button className="btn-icon-action delete" onClick={() => setDeleteAssignmentModal({ show: true, assignment: template })}><Trash2 size={14} /></button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -431,44 +490,66 @@ const TeacherAssignments = ({ isTA = false }) => {
                                     <h3>Chưa có bài tập nào được giao</h3>
                                 </div>
                             ) : (
-                                <div className="ta-grid">
-                                    {filteredAssignments.map(assignment => (
-                                        <div key={assignment.id} className="ta-card" onClick={() => setDetailAssignment(assignment)} style={{ cursor: 'pointer' }}>
-                                            <div className="ta-card-header">
-                                                <span className={`ta-status-badge ${assignment.status}`}>
-                                                    {assignment.status === 'active' ? 'Đang mở' : assignment.status === 'closed' ? 'Đã đóng' : 'Bản nháp'}
-                                                </span>
-                                            </div>
-
-                                            <h3 className="ta-card-title">{assignment.title}</h3>
-                                            <div className="ta-card-class">{assignment.className}</div>
-                                            <p className="ta-card-desc">{assignment.description}</p>
-
-                                            <div className="ta-card-meta">
-                                                <div className="meta-item deadline"><Clock size={14} /> Hạn: {new Date(assignment.dueDate).toLocaleDateString('vi-VN')}</div>
-                                            </div>
-
-                                            <div className="ta-card-footer" onClick={(e) => e.stopPropagation()}>
-                                                <div className="ta-progress-wrap">
-                                                    <div className="ta-progress-text">
-                                                        <span>Nộp bài</span>
-                                                        <span className="ta-progress-count">{assignment.submittedCount} / {assignment.totalStudents}</span>
+                                <div className="ta-vertical-list">
+                                    {filteredAssignments.map(assignment => {
+                                        const { icon, className } = getFileStyles(assignment.type);
+                                        return (
+                                            <div 
+                                                key={assignment.asmId} 
+                                                className="ta-assignment-row" 
+                                                onClick={() => setDetailAssignment(assignment)}
+                                                style={{ '--accent-color': getFileStyles(assignment.type).color }}
+                                            >
+                                                <div className={`file-icon-container ${className}`}>
+                                                    {icon}
+                                                </div>
+                                                <div className="ta-material-info" style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <h4 style={{ margin: 0 }}>{assignment.title}</h4>
+                                                        <span className="ta-card-class-sm">{assignment.className}</span>
+                                                        <span className={`ta-row-status ${assignment.status}`}>
+                                                            {assignment.status === 'active' ? 'Đang mở' : 'Đã kết thúc'}
+                                                        </span>
                                                     </div>
-                                                    <div className="ta-progress-bar">
-                                                        <div className={`ta-progress-fill ${assignment.submittedCount === assignment.totalStudents ? 'complete' : ''}`} style={{ width: `${(assignment.submittedCount / Math.max(assignment.totalStudents, 1)) * 100}%` }}></div>
+                                                    <div className="ta-material-meta" style={{ display: 'flex', gap: '15px' }}>
+                                                        <span className="ta-row-deadline">
+                                                            <Clock size={12} /> Hạn: {assignment.endTime ? new Date(assignment.endTime).toLocaleDateString('vi-VN') : 'Không giới hạn'}
+                                                        </span>
+                                                        <span>{assignment.fileName}</span>
                                                     </div>
                                                 </div>
-                                                <button
-                                                    className={`btn-grade ${assignment.status === 'draft' ? 'disabled' : ''}`}
-                                                    onClick={() => assignment.status !== 'draft' && navigate(isTA ? `/ta/assignments/${assignment.id}/grade` : `/teacher/assignments/${assignment.id}/grade`)}
-                                                    disabled={assignment.status === 'draft'}
-                                                    style={{ opacity: assignment.status === 'draft' ? 0.5 : 1 }}
-                                                >
-                                                    Chấm bài
-                                                </button>
+                                                <div className="ta-actions-inline" onClick={e => e.stopPropagation()}>
+                                                    <button className="btn-icon-action download" onClick={() => handleDownload(assignment)} title="Tải xuống">
+                                                        <Download size={14} />
+                                                    </button>
+                                                    {!isTA && (
+                                                        <>
+                                                            <button
+                                                                className="btn-icon-action edit"
+                                                                onClick={() => { setEditingAssignment(assignment); setIsAssignmentModalOpen(true); }}
+                                                                title="Chỉnh sửa"
+                                                            >
+                                                                <Edit size={14} />
+                                                            </button>
+                                                            <button
+                                                                className="btn-icon-action delete"
+                                                                onClick={() => setDeleteAssignmentModal({ show: true, assignment })}
+                                                                title="Xóa"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        className="btn-grade"
+                                                        onClick={() => navigate(`${isTA ? '/ta' : '/teacher'}/assignments/${assignment.asmId}/grade`)}
+                                                    >
+                                                        Chấm bài
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -480,7 +561,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             {isAssignmentModalOpen && (
                 <CreateAssignmentModal
                     isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)}
-                    onSave={handleSaveAssignment} initialData={editingAssignment} classes={MY_CLASSES}
+                    onSave={handleSaveAssignment} initialData={editingAssignment} classes={classes}
                     isTemplate={activeTab === 'templates'}
                 />
             )}
@@ -528,6 +609,15 @@ const TeacherAssignments = ({ isTA = false }) => {
                 <MaterialDetailModal
                     isOpen={!!detailMaterial} onClose={() => setDetailMaterial(null)}
                     material={detailMaterial} onDownload={handleDownload}
+                />
+            )}
+
+            {editMaterialData && (
+                <EditMaterialModal
+                    isOpen={!!editMaterialData}
+                    onClose={() => setEditMaterialData(null)}
+                    onUpdate={fetchData}
+                    materialData={editMaterialData}
                 />
             )}
         </div>

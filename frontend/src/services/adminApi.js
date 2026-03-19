@@ -10,6 +10,12 @@ const adminApi = axios.create({
 });
 
 adminApi.interceptors.request.use((config) => {
+    // Luôn gửi system api key để truy cập admin resources (nếu có)
+    const systemApiKey = localStorage.getItem('systemApiKey');
+    if (systemApiKey) {
+        config.headers['X-API-KEY'] = systemApiKey;
+    }
+    // Gửi kèm JWT token nếu có (để xác thực phân quyền bên trong nếu cần)
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -23,7 +29,8 @@ adminApi.interceptors.response.use(
         if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/sysadmin/login';
+            localStorage.removeItem('systemApiKey');
+            window.location.href = '/';
         }
         return Promise.reject(error);
     }

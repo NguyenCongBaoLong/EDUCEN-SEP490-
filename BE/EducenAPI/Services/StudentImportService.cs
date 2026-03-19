@@ -146,16 +146,17 @@ public class StudentImportService : IStudentImportService
                         }
                     }
 
-                    if (string.IsNullOrWhiteSpace(username) ||
-                        string.IsNullOrWhiteSpace(fullName) ||
+                    // ✅ SỬA: Cho phép import khi username null (tạo profile không có account)
+                    // Validation: FullName và Email là bắt buộc, Username là optional
+                    if (string.IsNullOrWhiteSpace(fullName) ||
                         string.IsNullOrWhiteSpace(email))
                     {
                         importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
+                        importResults.Errors.Add($"Row {row + 1}: Missing required data (Full Name, Email)");
                         continue;
                     }
 
-                    // ✅ VALIDATION ĐÃ SỬA: Cho phép có cả PhoneNumber VÀ Email (để tiện liên lạc)
+                    // ✅ VALIDATION: Cho phép có cả PhoneNumber VÀ Email (để tiện liên lạc)
                     // Validation: Phải có ít nhất 1 trong PhoneNumber hoặc Email
                     if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(email))
                     {
@@ -164,53 +165,51 @@ public class StudentImportService : IStudentImportService
                         continue;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(email) && fileEmails.Contains(email))
+                    // Chỉ validate duplicate username nếu username có giá trị
+                    if (!string.IsNullOrWhiteSpace(username))
                     {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Email '{email}' already exists in import file");
-                        continue;
-                    }
+                        if (fileUsernames.Contains(username))
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in import file");
+                            continue;
+                        }
+                        fileUsernames.Add(username);
 
-                    if (!string.IsNullOrWhiteSpace(username) && fileUsernames.Contains(username))
-                    {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in import file");
-                        continue;
+                        // Kiểm tra username đã tồn tại trong hệ thống
+                        var existingUser = await _context.Users
+                            .FirstOrDefaultAsync(u => u.Username == username);
+                        if (existingUser != null)
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in system");
+                            continue;
+                        }
                     }
 
                     if (!string.IsNullOrWhiteSpace(email))
                         fileEmails.Add(email);
-                    if (!string.IsNullOrWhiteSpace(username))
-                        fileUsernames.Add(username);
 
-                    var existingUser = await _context.Users
-                        .FirstOrDefaultAsync(u => u.Username == username);
-                    if (existingUser != null)
-                    {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Username '{username}' already exists in system");
-                        continue;
-                    }
-
-                    // ✅ FIX: Kiểm tra student đã tồn tại chưa để quyết định:
+                    // ✅ SỬA: Kiểm tra student đã tồn tại chưa để quyết định:
                     // - Nếu Student đã tồn tại (theo email) → thêm vào class (không tạo mới)
-                    // - Nếu Student chưa tồn tại → tạo mới student + account
+                    // - Nếu Student chưa tồn tại → tạo mới student (với hoặc không có account)
                     var existingStudent = await _context.Students
                         .FirstOrDefaultAsync(s => s.Email == email);
                     
                     bool isExistingStudent = existingStudent != null;
 
-                    // Nếu là student mới, validate email chưa tồn tại
+                    // Nếu là student mới
                     if (!isExistingStudent)
                     {
                         // Email chưa tồn tại → tạo mới student
+                        // Nếu có username → tạo account, không thì chỉ tạo profile
                         var createStudentDto = new CreateStudentDto
                         {
-                            Username = username,  // ✅ Sửa: Username phải có giá trị
+                            Username = string.IsNullOrWhiteSpace(username) ? null : username,
+                            Password = string.IsNullOrWhiteSpace(username) ? null : PasswordGenerator.GenerateSecurePassword(),
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
-                            Password = PasswordGenerator.GenerateSecurePassword(),  // ✅ Generate secure password
                             EnrollmentStatus = "Active",
                             Grade = grade,
                             DateOfBirth = parsedDateOfBirth,
@@ -292,7 +291,7 @@ public class StudentImportService : IStudentImportService
         {
             message = "Import completed",
             importResults,
-            defaultPasswordNote = "Secure passwords have been generated for all imported students",
+            defaultPasswordNote = "Secure passwords have been generated only for students with username. Students without username are created as profile only (no account).",
             templateInfo = new
             {
                 templateName = ImportTemplate.TEMPLATE_NAME,

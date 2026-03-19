@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Plans;
+using EducenAPI.DTOs.Plans;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -17,7 +17,7 @@ namespace EducenAPI.Services
 
         public async Task<List<Plan>> GetAllPlansAsync()
         {
-            return await _context.Plans.ToListAsync();
+            return await _context.Plans.Where(p => p.IsActive).ToListAsync();
         }
 
         public async Task<Plan?> GetPlanByIdAsync(string id)
@@ -31,12 +31,6 @@ namespace EducenAPI.Services
                 throw new Exception("Plan name cannot be empty.");
 
             var name = request.PlanName.Trim();
-
-            var exists = await _context.Plans
-                .AnyAsync(p => p.PlanName == name);
-
-            if (exists)
-                throw new Exception("Plan name already exists.");
 
             var plan = new Plan
             {
@@ -66,12 +60,6 @@ namespace EducenAPI.Services
                 throw new Exception("Plan name cannot be empty.");
 
             var name = request.PlanName.Trim();
-
-            var duplicate = await _context.Plans
-                .AnyAsync(p => p.PlanName == name && p.PlanId != id);
-
-            if (duplicate)
-                throw new Exception("Plan name already exists.");
 
             existingPlan.PlanName = name;
             existingPlan.Price = request.Price;

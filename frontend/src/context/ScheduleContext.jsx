@@ -7,7 +7,28 @@ export const ScheduleProvider = ({ children }) => {
     const [scheduledClasses, setScheduledClasses] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    // Parse date string as local date (not UTC) to avoid timezone off-by-one issues
+    const parseLocalDate = (dateStr) => {
+        if (!dateStr) return null;
+        // "2025-03-10T00:00:00" or "2025-03-10" → parse as local
+        const parts = dateStr.substring(0, 10).split('-');
+        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    };
+
     const refreshSchedules = useCallback(async () => {
+        // Không gọi API trên trang sysadmin vì admin hệ thống không quản lý lịch học
+        if (window.location.pathname.startsWith('/sysadmin')) return;
+
+        // Cho phép fetch nếu chưa đăng nhập (khách trên trang chủ)
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                // Đảm bảo an toàn nếu là SystemAdmin
+                if (user.role === 'SystemAdmin') return;
+            } catch (e) {}
+        }
+
         setLoading(true);
         try {
             const res = await api.get('/Schedules');
@@ -15,7 +36,6 @@ export const ScheduleProvider = ({ children }) => {
             const mapped = res.data.map(s => {
                 const colors = ['#3b82f6', '#dc2626', '#f59e0b', '#8b5cf6', '#10b981', '#06b6d4', '#ec4899'];
                 const color = colors[s.classId % colors.length];
-                const dateObj = new Date(s.scheduleDate);
 
                 return {
                     id: s.scheduleId,
@@ -26,9 +46,8 @@ export const ScheduleProvider = ({ children }) => {
                     subjectId: s.subjectId,
                     subjectName: s.subjectName,
                     day: s.dayOfWeek,
-                    date: dateObj,
-                    startDate: s.startDate ? new Date(s.startDate) : null,
-                    endDate: s.endDate ? new Date(s.endDate) : null,
+                    startDate: parseLocalDate(s.startDate),
+                    endDate: parseLocalDate(s.endDate),
                     startTime: s.startTime.substring(0, 5),
                     endTime: s.endTime.substring(0, 5),
                     color: color,
@@ -43,6 +62,7 @@ export const ScheduleProvider = ({ children }) => {
         }
     }, []);
 
+    // Fetch on mount (only if token exists)
     useEffect(() => {
         refreshSchedules();
     }, [refreshSchedules]);

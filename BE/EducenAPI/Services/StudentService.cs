@@ -62,84 +62,23 @@ namespace EducenAPI.Services
             try
             {
                 // 1. Validate base required fields
-                await ValidateBaseStudentData(dto);
+                ValidateBaseStudentData(dto);
 
-                // 2. Check duplicate email trong cả Users và Students
-                // Cho phép nếu User tồn tại nhưng chưa có Student record
-                var existingUserWithStudent = await _context.Users
-                    .Include(u => u.Student)
-                    .AnyAsync(u => u.Email == dto.Email && u.Student != null);
-                if (existingUserWithStudent)
-                    throw new Exception("Email already exists in Users (with Student)");
-
+                // 2. Check duplicate email (luôn luôn check)
                 var existingStudent = await _context.Students
                     .AnyAsync(s => s.Email == dto.Email);
                 if (existingStudent)
-                    throw new Exception("Email already exists in Students");
+                    throw new Exception("Email already exists");
 
-                // 3. Check duplicate username (nếu có username)
-                if (!string.IsNullOrWhiteSpace(dto.Username))
+                // 3. Branch logic dựa trên username/password
+                if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
                 {
-                    var existingUsername = await _context.Users
-                        .AnyAsync(u => u.Username == dto.Username);
-                    if (existingUsername)
-                        throw new Exception("Username already exists");
+                    return await CreateStudentProfileOnly(dto);
                 }
-
-                // 4. Lấy student role
-                var studentRole = await _context.Roles
-                    .FirstOrDefaultAsync(r => r.RoleName == "Student");
-                
-                if (studentRole == null)
-                    throw new Exception("Student role not found");
-
-                // 5. Tạo User (username/password để null nếu không có input)
-                var user = new User
+                else
                 {
-                    Username = string.IsNullOrWhiteSpace(dto.Username) ? null : dto.Username,
-                    PasswordHash = string.IsNullOrWhiteSpace(dto.Password) ? null : BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                    RoleId = studentRole.RoleId,
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
-                    AccountStatus = "NoAccount",
-                    IsAccountSent = false
-                };
-
-                _context.Users.Add(user);
-
-                // Lưu User trước để lấy UserId
-                await _context.SaveChangesAsync();
-
-                // 6. Tạo Student với UserId
-                var newStudent = new Student
-                {
-                    UserId = user.UserId,
-                    Email = dto.Email,
-                    EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
-                    Grade = dto.Grade,
-                    DateOfBirth = dto.DateOfBirth,
-                    Gender = dto.Gender
-                };
-
-                _context.Students.Add(newStudent);
-                await _context.SaveChangesAsync();
-
-                // 7. Return DTO
-                return new StudentDto
-                {
-                    UserId = user.UserId,
-                    Username = dto.Username ?? "NO_ACCOUNT",
-                    FullName = dto.FullName ?? "",
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
-                    Address = null,
-                    Grade = dto.Grade,
-                    EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
-                    AccountStatus = "NoAccount",
-                    IsAccountSent = false,
-                    CreatedAt = DateTime.Now
-                };
+                    return await CreateStudentWithAccount(dto);
+                }
             }
             catch (Exception ex)
             {
@@ -159,10 +98,32 @@ namespace EducenAPI.Services
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new Exception("Email is required for student profile");
 
-            // 2. Tạo chỉ Student record (FullName chỉ lưu trong DTO, không vào DB)
-            // UserId là nullable và là cả PK + FK, nên cần xử lý đặc biệt
+            // 2. Lấy student role
+            var studentRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.RoleName == "Student");
+            if (studentRole == null)
+                throw new Exception("Student role not found");
+
+            // 3. Tạo User với null username/password (không có account)
+            var user = new User
+            {
+                Username = null,  // Không có username
+                PasswordHash = null,  // Không có password
+                RoleId = studentRole.RoleId,
+                FullName = dto.FullName,
+                Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                AccountStatus = "NoAccount",
+                IsAccountSent = false
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // 4. Tạo Student record với UserId
             var student = new Student
             {
+                UserId = user.UserId,  // Liên kết với User đã tạo
                 Email = dto.Email,
                 EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
                 Grade = dto.Grade,
@@ -170,23 +131,21 @@ namespace EducenAPI.Services
                 Gender = dto.Gender
             };
 
-            // Sử dụng DbContext.Add thay vì DbSet.Add để EF hiểu rõ đây là entity mới
-            _context.Add(student);
-            
+            _context.Students.Add(student);
             await _context.SaveChangesAsync();
 
-            // 3. Return DTO với thông tin phù hợp
+            // 5. Return DTO với thông tin phù hợp
             return new StudentDto
             {
-                UserId = null,  // Explicit null
+                UserId = user.UserId,
                 Username = "NO_ACCOUNT",  // Indicator cho frontend
-                FullName = dto.FullName,  // Dùng tên từ input DTO
+                FullName = dto.FullName,
                 Email = student.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = null,
                 Grade = student.Grade,
                 EnrollmentStatus = student.EnrollmentStatus ?? "Active",
-                AccountStatus = "NO_ACCOUNT",  // Custom status
+                AccountStatus = "NoAccount",
                 IsAccountSent = false,
                 CreatedAt = DateTime.Now
             };
@@ -260,7 +219,7 @@ namespace EducenAPI.Services
             };
         }
 
-        private async Task ValidateBaseStudentData(CreateStudentDto dto)
+        private void ValidateBaseStudentData(CreateStudentDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.FullName))
                 throw new Exception("FullName is required");

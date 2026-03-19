@@ -2,11 +2,21 @@ import { useState } from 'react';
 import { X, Search, FileText, PlayCircle, BookOpen, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import '../css/components/CreateAssignmentModal.css';
 
-const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems }) => {
+const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, existingItems = [] }) => {
     if (!isOpen) return null;
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItems, setSelectedItems] = useState([]);
+    const [isImporting, setIsImporting] = useState(false);
+
+    const isAlreadyInSession = (item) => {
+        // Kiểm tra dựa trên Tên file gốc và Dung lượng (Chính xác hơn tiêu đề)
+        return existingItems.some(existing => 
+            existing.originalFileName === item.originalFileName && 
+            existing.fileSize === item.fileSize &&
+            item.originalFileName // Đảm bảo mục thư viện có file
+        );
+    };
 
     const filteredItems = libraryItems.filter(item => {
         const query = searchQuery.toLowerCase();
@@ -32,6 +42,7 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems }) =
     };
 
     const toggleSelection = (item) => {
+        if (isAlreadyInSession(item)) return;
         if (selectedItems.some(i => i.id === item.id)) {
             setSelectedItems(selectedItems.filter(i => i.id !== item.id));
         } else {
@@ -39,8 +50,14 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems }) =
         }
     };
 
-    const handleImport = () => {
-        onImport(selectedItems);
+    const handleImport = async () => {
+        if (isImporting) return;
+        setIsImporting(true);
+        try {
+            await onImport(selectedItems);
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     return (
@@ -79,34 +96,47 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems }) =
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {filteredItems.map(item => {
                                     const isSelected = selectedItems.some(i => i.id === item.id);
+                                    const alreadyAdded = isAlreadyInSession(item);
                                     return (
                                         <div
                                             key={item.id}
-                                            onClick={() => toggleSelection(item)}
+                                            onClick={() => !alreadyAdded && toggleSelection(item)}
                                             style={{
-                                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: isSelected ? '#eff6ff' : 'white',
-                                                border: `1px solid ${isSelected ? '#bfdbfe' : '#e2e8f0'}`, borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s'
+                                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
+                                                background: alreadyAdded ? '#f1f5f9' : (isSelected ? '#eff6ff' : 'white'),
+                                                border: `1px solid ${alreadyAdded ? '#e2e8f0' : (isSelected ? '#bfdbfe' : '#e2e8f0')}`, 
+                                                borderRadius: '8px', cursor: alreadyAdded ? 'not-allowed' : 'pointer', 
+                                                transition: 'all 0.2s',
+                                                opacity: alreadyAdded ? 0.7 : 1
                                             }}
                                         >
-                                            <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: `1px solid ${isSelected ? '#3b82f6' : '#cbd5e1'}`, background: isSelected ? '#3b82f6' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {isSelected && <CheckCircle size={14} color="white" />}
+                                            <div style={{ 
+                                                width: '20px', height: '20px', borderRadius: '4px', 
+                                                border: `1px solid ${alreadyAdded ? '#cbd5e1' : (isSelected ? '#3b82f6' : '#cbd5e1')}`, 
+                                                background: alreadyAdded ? '#cbd5e1' : (isSelected ? '#3b82f6' : 'white'), 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                            }}>
+                                                {alreadyAdded ? <CheckCircle size={14} color="#64748b" /> : (isSelected && <CheckCircle size={14} color="white" />)}
                                             </div>
 
                                             {type === 'material' ? (
                                                 <>
                                                     {getMaterialIcon(item.type)}
                                                     <div style={{ flex: 1 }}>
-                                                        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1e293b' }}>{item.name}</div>
+                                                        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: alreadyAdded ? '#64748b' : '#1e293b' }}>
+                                                            {item.name}
+                                                            {alreadyAdded && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>(Đã thêm)</span>}
+                                                        </div>
                                                         <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>{item.size} • Đăng: {item.uploadDate}</div>
                                                     </div>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <BookOpen size={20} color="#6366f1" />
+                                                    <BookOpen size={20} color={alreadyAdded ? '#94a3b8' : "#6366f1"} />
                                                     <div style={{ flex: 1 }}>
-                                                        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1e293b', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: alreadyAdded ? '#64748b' : '#1e293b', display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                             {item.title}
-                                                            {getAssignmentStatusBadge(item.status)}
+                                                            {alreadyAdded ? <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>(Đã thêm)</span> : getAssignmentStatusBadge(item.status)}
                                                         </div>
                                                         <div style={{ fontSize: '0.8125rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                             <Clock size={12} /> Hạn: {new Date(item.dueDate).toLocaleDateString('vi-VN')}
@@ -127,8 +157,8 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems }) =
                         Đã chọn <strong>{selectedItems.length}</strong> mục
                     </div>
                     <button type="button" className="cam-btn-cancel" onClick={onClose}>Hủy bỏ</button>
-                    <button type="button" className="cam-btn-submit" disabled={selectedItems.length === 0} onClick={handleImport}>
-                        Import {selectedItems.length > 0 ? `(${selectedItems.length})` : ''}
+                    <button type="button" className="cam-btn-submit" disabled={selectedItems.length === 0 || isImporting} onClick={handleImport}>
+                        {isImporting ? 'Đang xử lý...' : `Import ${selectedItems.length > 0 ? `(${selectedItems.length})` : ''}`}
                     </button>
                 </div>
             </div>

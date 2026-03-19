@@ -17,16 +17,16 @@ namespace EducenAPI.Controllers
             _scheduleService = scheduleService;
         }
 
-        // GET: api/Schedules
+        // GET: api/Schedules (public - no auth required for center home page)
         [HttpGet]
-        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSchedules()
         {
             var schedules = await _scheduleService.GetAllSchedulesAsync();
             return Ok(schedules);
         }
 
-        // GET: api/Schedules/class/5
+        // GET: api/Schedules/class/5 (public)
         [HttpGet("class/{classId:int}")]
         [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedulesByClass(int classId)

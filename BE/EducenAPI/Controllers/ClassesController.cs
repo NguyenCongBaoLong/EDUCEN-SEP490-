@@ -378,6 +378,21 @@ namespace EducenAPI.Controllers
             public int Failed { get; set; }
             public List<string> Errors { get; set; } = new();
         }
+
+        // GET: api/Classes/5/sessions
+        [HttpGet("{id:int}/sessions")]
+        public async Task<IActionResult> GetSessions(int id)
+        {
+            try
+            {
+                var sessions = await _classService.GetSessionsByClassIdAsync(id);
+                return Ok(sessions);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
 

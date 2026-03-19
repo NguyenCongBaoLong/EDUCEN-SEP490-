@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import {
     ChevronLeft, Calendar, Clock, ChevronRight,
     Search, X,
@@ -33,87 +35,26 @@ today.setHours(0, 0, 0, 0);
 const isPast = (dateStr) => parseDate(dateStr) <= today;
 const isFuture = (dateStr) => parseDate(dateStr) > today;
 
-/* ─── Mock data ─────────────────────────────────── */
-const TEACHER_CLASSES_DATA = {
-    101: {
-        id: 101, code: 'TOÁN-G10-ADV', name: 'Đại Số Nâng Cao',
-        subject: 'Toán học', gradeLevel: 'THPT', status: 'active',
-        schedule: 'Thứ Hai & Thứ Tư', scheduleTime: '16:30 - 18:00 (90 phút)',
-        startDate: '04/09/2023', duration: '12 tuần', maxStudents: 15,
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM', subject: 'Chuyên gia Toán học' },
-        assistant: { name: 'Cô Lê Hoa', initials: 'LH', subject: 'Trợ giảng Toán' },
-        students: [
-            { id: 'ST-001', name: 'Nguyễn Văn An', avatar: 'NA', attendance: 95, lastAttended: '12/10/2023', grade: 'A' },
-            { id: 'ST-002', name: 'Trần Thị Bích', avatar: 'TB', attendance: 82, lastAttended: '12/10/2023', grade: 'B+' },
-            { id: 'ST-003', name: 'Lê Minh Cường', avatar: 'LC', attendance: 98, lastAttended: '12/10/2023', grade: 'A+' },
-            { id: 'ST-004', name: 'Phạm Thị Dung', avatar: 'PD', attendance: 76, lastAttended: '10/10/2023', grade: 'B' },
-            { id: 'ST-005', name: 'Hoàng Văn Em', avatar: 'HE', attendance: 90, lastAttended: '12/10/2023', grade: 'A-' },
-            { id: 'ST-006', name: 'Vũ Minh Thu', avatar: 'VT', attendance: 85, lastAttended: '12/10/2023', grade: 'B' },
-        ],
-        sessions: [
-            {
-                scheduleId: 1, sessionNum: 1, date: '04/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00',
-                title: 'Bài 1: Giới thiệu Phương trình bậc hai',
-                materials: [
-                    { id: 1, name: 'Slide Bài 1 - Giới thiệu.pdf', size: '2.4 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Tài liệu giới thiệu về phương trình bậc hai' },
-                    { id: 2, name: 'Bài tập trắc nghiệm C1.docx', size: '1.1 MB', uploadDate: '05/09/2023', type: 'word', description: 'Gồm 20 câu dễ' }
-                ],
-                assignments: [
-                    { id: 'A1', title: 'Bài tập chương 1 - Phương trình bậc hai', dueDate: '20/09/2023', submissionsCount: 12 }
-                ]
-            },
-            {
-                scheduleId: 2, sessionNum: 2, date: '06/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00',
-                title: 'Bài 2: Hệ phương trình',
-                materials: [
-                    { id: 3, name: 'Video hướng dẫn giải PT.mp4', size: '45.2 MB', uploadDate: '15/09/2023', type: 'video' }
-                ],
-                assignments: []
-            },
-            { scheduleId: 3, sessionNum: 3, date: '11/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 3: Bất phương trình', materials: [], assignments: [] },
-            { scheduleId: 4, sessionNum: 4, date: '13/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', title: 'Bài 4: Bất phương trình bậc hai', materials: [], assignments: [] },
-            { scheduleId: 5, sessionNum: 5, date: '18/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 5: Luyện tập', materials: [], assignments: [] },
-            { scheduleId: 6, sessionNum: 6, date: '20/09/2023', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', title: 'Kiểm tra 15 phút', materials: [{ id: 4, name: 'Đề kiểm tra 15p.pdf', size: '850 KB', uploadDate: '20/09/2023', type: 'pdf' }], assignments: [] },
-            { scheduleId: 7, sessionNum: 7, date: '25/09/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 6: Ôn tập giữa kỳ', materials: [], assignments: [] },
-            { scheduleId: 8, sessionNum: 8, date: '12/10/2023', dayLabel: 'Thứ Hai', time: '16:30 - 18:00', title: 'Bài 7: Hàm số', materials: [], assignments: [] },
-            { scheduleId: 9, sessionNum: 9, date: '28/02/2026', dayLabel: 'Thứ Bảy', time: '16:30 - 18:00', title: 'Kiểm tra giữa kỳ', materials: [], assignments: [] },
-            {
-                scheduleId: 10, sessionNum: 10, date: '04/03/2026', dayLabel: 'Thứ Tư', time: '16:30 - 18:00', title: 'Bài 8: Hàm số bậc hai', materials: [], assignments: [
-                    { id: 'A4', title: 'Bài tập chương 3 - Hàm số', dueDate: '04/03/2026', submissionsCount: 0 }
-                ]
-            },
-        ],
-        activities: [
-            { id: 1, type: 'note', title: 'Ghi chú buổi học', desc: 'Đã dạy xong chương 3 - Phương trình bậc hai.', time: '2 giờ trước', by: 'Thầy Nguyễn Minh' },
-            { id: 2, type: 'enroll', title: 'Học sinh nhập học', desc: 'Hoàng Văn Em đã được ghi danh vào lớp.', time: 'Hôm qua', by: 'Hệ thống' },
-            { id: 3, type: 'schedule', title: 'Cập nhật lịch học', desc: 'Phòng học đã được đổi từ 201 sang 302.', time: '10/10/2023', by: 'Quản trị viên' },
-        ],
-        classesCompleted: 8,
-        totalClasses: 10,
-    },
-    102: {
-        id: 102, code: 'TOÁN-G11-CB', name: 'Giải Tích Cơ Bản',
-        subject: 'Toán học', gradeLevel: 'THPT', status: 'active',
-        schedule: 'Thứ Ba & Thứ Năm', scheduleTime: '17:00 - 18:30 (90 phút)',
-        startDate: '01/09/2023', duration: '10 tuần', maxStudents: 15,
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM', subject: 'Chuyên gia Toán học' },
-        assistant: null,
-        students: [
-            { id: 'ST-006', name: 'Vũ Thị Phương', avatar: 'VP', attendance: 88, lastAttended: '11/10/2023', grade: 'B+' },
-            { id: 'ST-007', name: 'Đặng Văn Giang', avatar: 'DG', attendance: 100, lastAttended: '11/10/2023', grade: 'A' },
-        ],
-        sessions: [
-            { scheduleId: 9, sessionNum: 1, date: '05/09/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30', title: 'Unit 1', materials: [], assignments: [] },
-            { scheduleId: 10, sessionNum: 2, date: '07/09/2023', dayLabel: 'Thứ Năm', time: '17:00 - 18:30', title: 'Unit 2', materials: [], assignments: [] },
-            { scheduleId: 11, sessionNum: 3, date: '11/10/2023', dayLabel: 'Thứ Ba', time: '17:00 - 18:30', title: 'Unit 3', materials: [], assignments: [] },
-        ],
-        activities: [
-            { id: 1, type: 'note', title: 'Ghi chú buổi học', desc: 'Hoàn thành chương giới hạn và liên tục.', time: '1 ngày trước', by: 'Thầy Nguyễn Minh' },
-        ],
-        classesCompleted: 3,
-        totalClasses: 10,
-    },
+const formatSize = (bytes) => {
+    if (!bytes) return '0 KB';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
+
+/* ─── Helpers format ngày từ API ─────────────────── */
+const DAY_LABELS = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+function formatDateVN(isoDate) {
+    const d = new Date(isoDate);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+
 
 const INITIAL_ATTENDANCE = {
     1: [
@@ -168,19 +109,197 @@ const LIBRARY_MATERIALS = [
     { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.' },
 ];
 
-const LIBRARY_ASSIGNMENTS = [
-    { id: 1, title: 'Bài tập về nhà Chương 1: Hàm số', dueDate: '2023-10-15T23:59', status: 'active' },
-    { id: 2, title: 'Đề kiểm tra 15 phút - Đạo hàm', dueDate: '2023-10-18T10:00', status: 'active' },
-    { id: 3, title: 'Bài tập tự luyện: Tích phân', dueDate: '2023-09-30T23:59', status: 'closed' },
-    { id: 4, title: 'Đề cương ôn tập giữa kì I', dueDate: '2023-10-25T23:59', status: 'draft' }
-];
+// Centralized mapping functions to ensure consistency
+const mapMaterial = (m) => ({
+    id: m.materialId || m.MaterialId,
+    materialId: m.materialId || m.MaterialId,
+    name: m.title || m.Title || '',
+    title: m.title || m.Title || '', // Added title for EditMaterialModal consumption
+    size: formatSize(m.fileSize || m.FileSize),
+    fileSize: m.fileSize || m.FileSize,
+    originalFileName: m.originalFileName || m.OriginalFileName || '',
+    fileName: m.originalFileName || m.OriginalFileName || '', // For modal consistency
+    uploadDate: '',
+    type: (m.contentType || m.ContentType)?.toLowerCase().includes('pdf') ? 'pdf'
+        : (m.contentType || m.ContentType)?.toLowerCase().includes('word') ? 'word'
+        : (m.contentType || m.ContentType)?.toLowerCase().includes('video') ? 'video' : 'other',
+    fileUrl: m.fileUrl || m.FileUrl,
+    description: m.description || m.Description || '',
+    sessionId: m.sessionId || m.SessionId,
+    classId: m.classId || m.ClassId
+});
+
+const mapAssignment = (a) => ({
+    id: a.asmId || a.AsmId,
+    asmId: a.asmId || a.AsmId,
+    title: a.title || a.Title || '',
+    description: a.description || a.Description || '',
+    dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
+    endTime: a.endTime || a.EndTime,
+    startTime: a.startTime || a.StartTime,
+    submissionsCount: 0,
+    fileUrl: a.fileUrl || a.FileUrl,
+    fileSize: a.fileSize || a.FileSize,
+    originalFileName: a.originalFileName || a.OriginalFileName || '',
+    fileName: a.originalFileName || a.OriginalFileName || '', // For modal consistency
+    sessionId: a.sessionId || a.SessionId,
+    classId: a.classId || a.ClassId
+});
 
 /* ─── Main Component ────────────────────────────── */
 const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
-    const [classData, setClassData] = useState(TEACHER_CLASSES_DATA[classId] || TEACHER_CLASSES_DATA[101]);
 
-    const [students] = useState(classData.students);
+    // API data state
+    const [classInfo, setClassInfo] = useState(null);
+    const [sessions, setSessions] = useState([]);
+    const [students, setStudents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [libraryMaterials, setLibraryMaterials] = useState([]);
+    const [libraryAssignments, setLibraryAssignments] = useState([]);
+
+    // classData dùng trong UI — gộp từ API + defaults
+    const [classData, setClassData] = useState({
+        id: null, name: '', subject: '', gradeLevel: '', status: 'active',
+        schedule: '', scheduleTime: '', startDate: '', duration: '',
+        mainTeacher: { name: '', initials: '?' },
+        assistant: null,
+        sessions: [],
+        activities: [],
+        classesCompleted: 0,
+        totalClasses: 0,
+    });
+
+    // Fetch class info
+    useEffect(() => {
+        if (!classId) return;
+        const fetchAll = async () => {
+            setLoading(true);
+            try {
+                const [classRes, sessionsRes, studentsRes] = await Promise.all([
+                    api.get(`/Classes/${classId}`),
+                    api.get(`/Classes/${classId}/sessions`),
+                    api.get(`/Classes/${classId}/students`),
+                ]);
+
+                const c = classRes.data;
+                const rawSessions = sessionsRes.data || [];
+                const rawStudents = studentsRes.data || [];
+
+                // Map sessions từ BE sang format UI
+                const mappedSessions = rawSessions.map((s, idx) => ({
+                    sessionId: s.sessionId,
+                    sessionNum: idx + 1,
+                    date: formatDateVN(s.sessionDate),
+                    dayLabel: s.dayLabel || DAY_LABELS[new Date(s.sessionDate).getDay()],
+                    time: s.time || '',
+                    title: s.title || `Buổi ${idx + 1}`,
+                    status: s.status,
+                    materials: [],
+                    assignments: [],
+                }));
+
+                // Map students từ BE
+                const mappedStudents = rawStudents.map(st => ({
+                    id: Number(st.userId),
+                    name: st.fullName || st.username || '',
+                    avatar: (st.fullName || st.username || '?').split(' ').map(w => w[0]).slice(-2).join('').toUpperCase(),
+                    attendance: 0,
+                    lastAttended: '',
+                    grade: '',
+                }));
+
+                // Build schedule display string
+                const scheduleSlots = c.scheduleSlots || [];
+                const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                const scheduleStr = scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(' & ');
+                const timeStr = scheduleSlots.length > 0
+                    ? `${scheduleSlots[0].startTime} - ${scheduleSlots[0].endTime}`
+                    : '';
+
+                setClassData({
+                    id: c.classId,
+                    name: c.className || '',
+                    subject: c.subjectName || '',
+                    gradeLevel: '',
+                    status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
+                    schedule: scheduleStr,
+                    scheduleTime: timeStr,
+                    startDate: c.startDate ? formatDateVN(c.startDate) : '',
+                    duration: c.startDate && c.endDate
+                        ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuần`
+                        : '',
+                    mainTeacher: {
+                        name: c.teacherName || '',
+                        initials: (c.teacherName || '?').split(' ').pop().charAt(0),
+                        subject: '',
+                    },
+                    assistant: c.assistantName ? {
+                        name: c.assistantName,
+                        initials: c.assistantName.split(' ').pop().charAt(0),
+                        subject: '',
+                    } : null,
+                    sessions: mappedSessions,
+                    activities: [],
+                    classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
+                    totalClasses: mappedSessions.length,
+                });
+
+                setStudents(mappedStudents);
+                setSessions(mappedSessions);
+
+                // Fetch materials and assignments per session
+                const sessionsWithItems = await Promise.all(
+                    mappedSessions.map(async (s) => {
+                        try {
+                            const [matRes, asmRes] = await Promise.all([
+                                api.get(`/Materials/Get-By-Session/${s.sessionId}`),
+                                api.get(`/Assignments/Get-By-Session/${s.sessionId}`)
+                            ]);
+                            
+                            const mats = (matRes.data || []).map(mapMaterial);
+                            const asms = (asmRes.data || []).map(mapAssignment);
+
+                            return { ...s, materials: mats, assignments: asms };
+                        } catch {
+                            return { ...s, materials: [], assignments: [] };
+                        }
+                    })
+                );
+
+                setClassData(prev => ({ ...prev, sessions: sessionsWithItems }));
+
+                // Fetch libraries
+                try {
+                    const [libMatRes, libAsmRes] = await Promise.all([
+                        api.get('/Materials'),
+                        api.get('/Assignments')
+                    ]);
+                    
+                    const allMaterials = libMatRes.data || [];
+                    setLibraryMaterials(allMaterials.map(mapMaterial));
+
+                    const allAssignments = libAsmRes.data || [];
+                    setLibraryAssignments(allAssignments.map(mapAssignment));
+                } catch {
+                    setLibraryMaterials([]);
+                    setLibraryAssignments([]);
+                }
+            } catch (err) {
+                console.error('Failed to fetch class detail:', err);
+                toast.error('Không thể tải thông tin lớp học.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAll();
+    }, [classId]);
+
+
+    // Modals state
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [uploadTargetSession, setUploadTargetSession] = useState(null); // know which session getting the upload
+
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
 
@@ -193,10 +312,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
     // Pagination for students tab
     const [studentPage, setStudentPage] = useState(1);
     const studentsPerPage = 10;
-
-    // Modals state
-    const [uploadModalOpen, setUploadModalOpen] = useState(false);
-    const [uploadTargetSession, setUploadTargetSession] = useState(null); // know which session getting the upload
 
     const [deleteMaterialId, setDeleteMaterialId] = useState(null);
     const [deleteAssignmentId, setDeleteAssignmentId] = useState(null);
@@ -217,6 +332,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     // Assignment Modals
     const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
     const [createAssignmentSession, setCreateAssignmentSession] = useState(null);
+    const [editAssignment, setEditAssignment] = useState(null);
     const [detailAssignment, setDetailAssignment] = useState(null);
 
     // Reset page when searching
@@ -237,137 +353,213 @@ const TeacherClassDetail = ({ isTA = false }) => {
         }
     };
 
-    const handleUploadMaterial = (newFiles, saveToLibrary) => {
-        if (saveToLibrary) {
-            toast.success("Đã lưu các tài liệu vào Thư viện học liệu chung!");
+    // Fetch materials/assignments for a single session (re-fetch sau khi upload/import)
+    const refreshSessionMaterials = async (sessionId) => {
+        try {
+            const [matRes, asmRes] = await Promise.all([
+                api.get(`/Materials/Get-By-Session/${sessionId}`),
+                api.get(`/Assignments/Get-By-Session/${sessionId}`)
+            ]);
+            
+            const mats = (matRes.data || []).map(mapMaterial);
+            const asms = (asmRes.data || []).map(mapAssignment);
+
+            setClassData(prev => ({
+                ...prev,
+                sessions: prev.sessions.map(s =>
+                    Number(s.sessionId) === Number(sessionId) ? { ...s, materials: mats, assignments: asms } : s
+                ),
+            }));
+        } catch {
+            /* ignore */ 
         }
-        setClassData(prev => {
-            const newSessions = prev.sessions.map(s => {
-                if (s.scheduleId !== uploadTargetSession) return s;
-                return {
-                    ...s,
-                    materials: [...newFiles, ...(s.materials || [])]
-                };
-            });
-            return { ...prev, sessions: newSessions };
-        });
+    };
+
+    const handleUploadMaterial = async () => {
+        // UploadMaterialModal đã tự gọi API và upload xong → chỉ cần refresh
+        if (uploadTargetSession) {
+            await refreshSessionMaterials(uploadTargetSession);
+        }
         setUploadModalOpen(false);
         setUploadTargetSession(null);
     };
 
-    const handleDeleteMaterial = () => {
+    const handleDeleteMaterial = async () => {
         if (!deleteMaterialId || !deleteTargetSession) return;
-        setClassData(prev => {
-            const newSessions = prev.sessions.map(s => {
-                if (s.scheduleId !== deleteTargetSession) return s;
-                return {
-                    ...s,
-                    materials: s.materials.filter(m => m.id !== deleteMaterialId)
-                };
+        try {
+            await api.delete(`/Materials/${deleteMaterialId}`);
+            setClassData(prev => {
+                const newSessions = prev.sessions.map(s => {
+                    if (s.sessionId !== deleteTargetSession) return s;
+                    return {
+                        ...s,
+                        materials: s.materials.filter(m => m.id !== deleteMaterialId)
+                    };
+                });
+                return { ...prev, sessions: newSessions };
             });
-            return { ...prev, sessions: newSessions };
-        });
-        setDeleteMaterialId(null);
-        setDeleteTargetSession(null);
-        toast.success("Đã xóa tài liệu khỏi buổi học!");
+            toast.success("Đã xóa tài liệu khỏi buổi học!");
+        } catch (err) {
+            console.error('Delete material error:', err);
+            toast.error('Không thể xóa tài liệu. Vui lòng thử lại.');
+        } finally {
+            setDeleteMaterialId(null);
+            setDeleteTargetSession(null);
+        }
     };
 
-    const handleDeleteAssignment = () => {
+    const handleDeleteAssignment = async () => {
         if (!deleteAssignmentId || !deleteTargetSession) return;
-        setClassData(prev => {
-            const newSessions = prev.sessions.map(s => {
-                if (s.scheduleId !== deleteTargetSession) return s;
-                return {
-                    ...s,
-                    assignments: s.assignments.filter(a => a.id !== deleteAssignmentId)
-                };
+        try {
+            await api.delete(`/Assignments/${deleteAssignmentId}`);
+            setClassData(prev => {
+                const newSessions = prev.sessions.map(s => {
+                    if (s.sessionId !== deleteTargetSession) return s;
+                    return {
+                        ...s,
+                        assignments: s.assignments.filter(a => a.id !== deleteAssignmentId)
+                    };
+                });
+                return { ...prev, sessions: newSessions };
             });
-            return { ...prev, sessions: newSessions };
-        });
-        setDeleteAssignmentId(null);
-        setDeleteTargetSession(null);
-        toast.success("Đã xóa bài tập khỏi buổi học!");
+            toast.success("Đã xóa bài tập khỏi buổi học!");
+        } catch (err) {
+            console.error('Delete assignment error:', err);
+            toast.error('Không thể xóa bài tập. Vui lòng thử lại.');
+        } finally {
+            setDeleteAssignmentId(null);
+            setDeleteTargetSession(null);
+        }
     };
 
     const handleUpdateMaterial = (updatedData) => {
-        setClassData(prev => {
-            const newSessions = prev.sessions.map(s => {
-                if (s.scheduleId !== editTargetSession) return s;
-                return {
-                    ...s,
-                    materials: s.materials.map(m => m.id === updatedData.id ? { ...m, ...updatedData } : m)
-                };
-            });
-            return { ...prev, sessions: newSessions };
-        });
+        // updatedData có thể là null nếu modal gọi onClose/onUpdate() không kèm tham số
+        // Chúng ta vẫn cần refresh nếu có editTargetSession
+        const sessId = editTargetSession;
+        
         setEditMaterial(null);
         setEditTargetSession(null);
+        
+        // Luôn refresh để đảm bảo ID và meta chuẩn từ server
+        if (sessId) {
+            refreshSessionMaterials(sessId);
+        }
+    };
+
+    const handleEditAssignment = (asm, sessionId) => {
+        setEditTargetSession(sessionId);
+        setEditAssignment(asm);
+        setIsCreateAssignmentOpen(true);
+    };
+
+    const handleImportFromLibrary = async (selectedItems) => {
+        const targetSession = importModal.targetSession;
+        const type = importModal.type;
+        try {
+            const endpoint = type === 'material' ? '/Materials/import' : '/Assignments/import';
+            
+            // Tìm buổi tiếp theo để làm hạn nộp mặc định (nếu là assignment)
+            let defaultEndTime = null;
+            if (type === 'assignment') {
+                const currentIdx = classData.sessions.findIndex(s => Number(s.sessionId) === Number(targetSession));
+                const nextSess = classData.sessions[currentIdx + 1];
+                if (nextSess && nextSess.date) {
+                    // Chuyển format DD/MM/YYYY sang YYYY-MM-DD để tạo Date object
+                    const [d, m, y] = nextSess.date.split('/');
+                    defaultEndTime = new Date(`${y}-${m}-${d}T23:59:00`).toISOString();
+                } else {
+                    // Mặc định 7 ngày sau buổi hiện tại
+                    const currSess = classData.sessions[currentIdx];
+                    if (currSess && currSess.date) {
+                        const [d, m, y] = currSess.date.split('/');
+                        const dt = new Date(`${y}-${m}-${d}`);
+                        dt.setDate(dt.getDate() + 7);
+                        defaultEndTime = dt.toISOString();
+                    }
+                }
+            }
+
+            await Promise.all(selectedItems.map(item =>
+                api.post(endpoint, {
+                    sourceId: item.id,
+                    targetSessionId: targetSession,
+                    endTime: defaultEndTime
+                })
+            ));
+
+            toast.success(`Đã import ${selectedItems.length} mục vào buổi học!`);
+            await refreshSessionMaterials(targetSession);
+        } catch (err) {
+            console.error('Import error:', err);
+            toast.error('Lỗi khi import từ thư viện.');
+        }
+        setImportModal({ isOpen: false, type: 'material', targetSession: null });
     };
 
     const handleDownloadMaterial = (item) => {
+        const downloadUrl = item.fileUrl || item.url;
         if (item.rawFile) {
             const url = URL.createObjectURL(item.rawFile);
             const a = document.createElement('a');
             a.href = url;
-            a.download = item.name;
+            a.download = item.name || item.title;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } else if (downloadUrl) {
+            toast.success(`Đang tải xuống: ${item.name || item.title}`);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = item.name || item.title;
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         } else {
-            toast.success(`Đang tải xuống tài liệu: ${item.name}`);
+            toast.error("Không có đường dẫn tải về");
         }
     };
 
-    const handleImportFromLibrary = (selectedItems) => {
-        if (!importModal.targetSession) return;
 
-        setClassData(prev => {
-            const newSessions = prev.sessions.map(s => {
-                if (s.scheduleId !== importModal.targetSession) return s;
+    const handleSaveAssignment = async (assignmentFormData) => {
+        try {
+            let savedAsm = null;
+            if (editAssignment) {
+                const res = await api.put(`/Assignments/${editAssignment.id}`, assignmentFormData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                savedAsm = res.data;
+                toast.success("Cập nhật bài tập thành công!");
+            } else {
+                const res = await api.post('/Assignments/Create-Assignments', assignmentFormData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                savedAsm = res.data;
+                toast.success("Tạo bài tập thành công!");
+            }
 
-                if (importModal.type === 'material') {
-                    const importedMaterials = selectedItems.map(item => ({
-                        ...item,
-                        id: Math.random().toString(36).substr(2, 9)
-                    }));
-                    return { ...s, materials: [...s.materials, ...importedMaterials] };
-                } else {
-                    const importedAssignments = selectedItems.map(item => ({
-                        id: Math.random().toString(36).substr(2, 9),
-                        title: item.title,
-                        dueDate: item.dueDate,
-                        submissionsCount: 0,
-                    }));
-                    return { ...s, assignments: [...s.assignments, ...importedAssignments] };
+            const targetSessionId = editTargetSession || createAssignmentSession || (savedAsm && (savedAsm.sessionId || savedAsm.SessionId));
+            
+            setIsCreateAssignmentOpen(false);
+            setEditAssignment(null);
+            setEditTargetSession(null);
+            setCreateAssignmentSession(null);
+
+            // Cập nhật state local ngay lập tức hoặc refresh
+            if (targetSessionId) {
+                await refreshSessionMaterials(targetSessionId);
+                
+                // Nếu đang xem chi tiết bài tập này -> cập nhật luôn detail
+                if (savedAsm && detailAssignment && (detailAssignment.id === (savedAsm.asmId || savedAsm.AsmId || savedAsm.id || savedAsm.Id))) {
+                    setDetailAssignment(mapAssignment({ ...savedAsm, sessionId: targetSessionId, classId: classData.id }));
                 }
-            });
-            return { ...prev, sessions: newSessions };
-        });
-
-        toast.success(`Đã thêm bài từ thư viện vào buổi học!`);
-        setImportModal({ isOpen: false, type: 'material', targetSession: null });
-    };
-
-    const handleSaveAssignment = (assignmentData) => {
-        setClassData(prev => {
-            const newSessions = prev.sessions.map(s => {
-                if (s.scheduleId !== createAssignmentSession) return s;
-                const newAssignment = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    title: assignmentData.title,
-                    dueDate: assignmentData.dueDate || 'Chưa thiết lập',
-                    status: assignmentData.status,
-                    submissionsCount: 0,
-                    description: assignmentData.description
-                };
-                return { ...s, assignments: [...s.assignments, newAssignment] };
-            });
-            return { ...prev, sessions: newSessions };
-        });
-        setIsCreateAssignmentOpen(false);
-        setCreateAssignmentSession(null);
-        toast.success("Tạo bài tập thành công!");
+            }
+        } catch (error) {
+            console.error('Error saving assignment:', error);
+            const msg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu bài tập.';
+            toast.error(msg);
+        }
     };
 
     const handleToggleSession = (id) => {
@@ -424,6 +616,17 @@ const TeacherClassDetail = ({ isTA = false }) => {
     // Stats
     const materialsCount = classData.sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
     const assignmentsCount = classData.sessions.reduce((acc, s) => acc + (s.assignments?.length || 0), 0);
+
+    if (loading) {
+        return (
+            <div className="class-detail">
+                <TeacherSidebar isTA={isTA} />
+                <main className="cd-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+                    <p style={{ color: '#64748b', fontSize: '1rem' }}>Đang tải thông tin lớp học...</p>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="class-detail">
@@ -538,10 +741,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                 </thead>
                                                 <tbody>
                                                     {pastSessions.map((session, idx) => {
-                                                        const done = !!attendanceData[session.scheduleId];
-                                                        const { present, absent } = getSessionSummary(session.scheduleId);
+                                                        const done = !!attendanceData[session.sessionId];
+                                                        const { present, absent } = getSessionSummary(session.sessionId);
                                                         return (
-                                                            <tr key={session.scheduleId}>
+                                                            <tr key={session.sessionId}>
                                                                 <td>
                                                                     <div className="att-date-cell">
                                                                         <span className="att-session-num">Buổi {session.sessionNum} - {session.title}</span>
@@ -806,7 +1009,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                     )}
 
-                    {/* ─── TAB: ROADMAP ─── */}
                     {activeTab === 'roadmap' && (
                         <div className="cd-roadmap-tab" style={{ '--accent': '#3b82f6' }}>
                             <div style={{ marginBottom: 16 }}>
@@ -815,14 +1017,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             </div>
 
                             {classData.sessions.map((session) => {
-                                const isExpanded = expandedSessionId === session.scheduleId;
+                                const isExpanded = expandedSessionId === session.sessionId;
                                 const mats = session.materials || [];
                                 const asms = session.assignments || [];
                                 const hasContent = mats.length > 0 || asms.length > 0;
 
                                 return (
-                                    <div key={session.scheduleId} className="cd-session-card">
-                                        <div className="cd-session-header" onClick={() => handleToggleSession(session.scheduleId)}>
+                                    <div key={session.sessionId} className="cd-session-card">
+                                        <div className="cd-session-header" onClick={() => handleToggleSession(session.sessionId)}>
                                             <div className="cd-session-info">
                                                 <div className="cd-session-num">Buổi {session.sessionNum}</div>
                                                 <div className="cd-session-title">
@@ -858,13 +1060,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     className="cd-btn-import-lib"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setImportModal({ isOpen: true, type: 'material', targetSession: session.scheduleId });
+                                                                        setImportModal({ isOpen: true, type: 'material', targetSession: session.sessionId });
                                                                     }}
                                                                 >
                                                                     <Library size={14} /> Thêm từ Thư viện
                                                                 </button>
                                                                 <button className="cd-btn-add-item" style={{ marginLeft: 12 }} onClick={() => {
-                                                                    setUploadTargetSession(session.scheduleId);
+                                                                    setUploadTargetSession(session.sessionId);
                                                                     setUploadModalOpen(true);
                                                                 }}>
                                                                     <Plus size={14} /> Tải lên mới
@@ -886,8 +1088,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}><Download size={16} /></button>
                                                                         {!isTA && (
                                                                             <>
-                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => { setEditTargetSession(session.scheduleId); setEditMaterial(item); }}><Edit2 size={16} /></button>
-                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.scheduleId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
+                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => { setEditTargetSession(session.sessionId); setEditMaterial({ ...item, sessionId: session.sessionId, classId: classData.id }); }}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -909,7 +1111,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     className="cd-btn-import-lib"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setImportModal({ isOpen: true, type: 'assignment', targetSession: session.scheduleId });
+                                                                        setImportModal({ isOpen: true, type: 'assignment', targetSession: session.sessionId });
                                                                     }}
                                                                 >
                                                                     <Library size={14} /> Thêm từ Bộ đề
@@ -919,7 +1121,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     style={{ marginLeft: 12 }}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setCreateAssignmentSession(session.scheduleId);
+                                                                        setCreateAssignmentSession(session.sessionId);
                                                                         setIsCreateAssignmentOpen(true);
                                                                     }}
                                                                 >
@@ -943,7 +1145,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                             Chấm bài
                                                                         </Link>
                                                                         {!isTA && (
-                                                                            <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.scheduleId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
+                                                                            <>
+                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId, classId: classData.id }, session.sessionId)}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
+                                                                            </>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -1000,6 +1205,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         isOpen={uploadModalOpen}
                         onClose={() => setUploadModalOpen(false)}
                         onUpload={handleUploadMaterial}
+                        sessionId={uploadTargetSession}
                     />
                 )
             }
@@ -1059,7 +1265,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     onClose={() => setImportModal({ isOpen: false, type: 'material', targetSession: null })}
                     onImport={handleImportFromLibrary}
                     type={importModal.type}
-                    libraryItems={importModal.type === 'material' ? LIBRARY_MATERIALS : LIBRARY_ASSIGNMENTS}
+                    libraryItems={importModal.type === 'material' ? libraryMaterials : libraryAssignments}
+                    existingItems={
+                        classData.sessions.find(s => Number(s.sessionId) === Number(importModal.targetSession))?.[importModal.type === 'material' ? 'materials' : 'assignments'] || []
+                    }
                 />
             )}
 
@@ -1067,9 +1276,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
             {isCreateAssignmentOpen && (
                 <CreateAssignmentModal
                     isOpen={isCreateAssignmentOpen}
-                    onClose={() => { setIsCreateAssignmentOpen(false); setCreateAssignmentSession(null); }}
+                    onClose={() => { setIsCreateAssignmentOpen(false); setEditAssignment(null); setCreateAssignmentSession(null); }}
                     onSave={handleSaveAssignment}
-                    classes={[{ id: classData.id, name: classData.name }]} /* Only allow current class */
+                    sessionId={createAssignmentSession || editTargetSession}
+                    initialData={editAssignment}
+                    classes={[{ classId: classData.id, className: classData.name }]}
+                    currentClassId={classData.id}
                 />
             )}
 
