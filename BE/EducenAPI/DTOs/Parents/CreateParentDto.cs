@@ -59,6 +59,8 @@ namespace EducenAPI.DTOs.Parents
             get => _address;
             set => _address = value?.Trim();
         }
+
+        public List<int>? StudentIds { get; set; }
     }
 
     public class UpdateParentDto
@@ -116,6 +118,8 @@ namespace EducenAPI.DTOs.Parents
             get => _address;
             set => _address = value?.Trim();
         }
+
+        public List<int>? StudentIds { get; set; }
     }
 
     public class ParentDto
@@ -129,6 +133,8 @@ namespace EducenAPI.DTOs.Parents
         public string? Address { get; set; }
         public string AccountStatus { get; set; } = string.Empty;
         public int ChildrenCount { get; set; }
+        public List<string> StudentNames { get; set; } = new List<string>();
+        public List<int> StudentIds { get; set; } = new List<int>();
         public DateTime CreatedAt { get; set; }
     }
 }

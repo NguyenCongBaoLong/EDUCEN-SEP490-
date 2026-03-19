@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.DTOs.Students
@@ -65,6 +66,7 @@ namespace EducenAPI.DTOs.Students
         public string? Grade { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
+        public List<int>? ParentIds { get; set; }
     }
 
     public class UpdateStudentDto
@@ -89,6 +91,7 @@ namespace EducenAPI.DTOs.Students
         public string? Grade { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
+        public List<int>? ParentIds { get; set; }
     }
 
     public class StudentDto
@@ -104,5 +107,7 @@ namespace EducenAPI.DTOs.Students
         public string AccountStatus { get; set; } = string.Empty;
         public bool IsAccountSent { get; set; }
         public DateTime CreatedAt { get; set; }
+        public List<string> ParentNames { get; set; } = new List<string>();
+        public List<int> ParentIds { get; set; } = new List<int>();
     }
 }

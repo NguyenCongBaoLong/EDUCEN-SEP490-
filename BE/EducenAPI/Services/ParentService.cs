@@ -2,6 +2,7 @@ using EducenAPI.DTOs.Parents;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
@@ -9,10 +10,12 @@ namespace EducenAPI.Services
     public class ParentService : IParentService
     {
         private readonly EducenV2Context _context;
+        private readonly MailService _mailService;
 
-        public ParentService(EducenV2Context context)
+        public ParentService(EducenV2Context context, MailService mailService)
         {
             _context = context;
+            _mailService = mailService;
         }
 
         public async Task<IEnumerable<ParentDto>> GetAllParentsAsync()
@@ -27,9 +30,11 @@ namespace EducenAPI.Services
                     FullName = p.ParentNavigation.FullName ?? "",
                     Email = p.ParentNavigation.Email ?? "",
                     PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = null, // Parent model doesn't have Address field
+                    Address = null,
                     AccountStatus = p.ParentNavigation.AccountStatus,
                     ChildrenCount = p.Students.Count,
+                    StudentNames = p.Students.Select(s => s.StudentNavigation.FullName ?? s.StudentNavigation.Username).ToList(),
+                    StudentIds = p.Students.Select(s => s.UserId).ToList(),
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
@@ -48,9 +53,11 @@ namespace EducenAPI.Services
                     FullName = p.ParentNavigation.FullName ?? "",
                     Email = p.ParentNavigation.Email ?? "",
                     PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = null, // Parent model doesn't have Address field
+                    Address = null,
                     AccountStatus = p.ParentNavigation.AccountStatus,
                     ChildrenCount = p.Students.Count,
+                    StudentNames = p.Students.Select(s => s.StudentNavigation.FullName ?? s.StudentNavigation.Username).ToList(),
+                    StudentIds = p.Students.Select(s => s.UserId).ToList(),
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
@@ -58,38 +65,25 @@ namespace EducenAPI.Services
 
         public async Task<ParentDto> CreateParentAsync(CreateParentDto dto)
         {
-            // Skip user creation if username or password is null
-            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
+            string username = dto.Username;
+            string password = dto.Password;
+            string accountStatus = "Active";
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                // Create parent profile without user account
-                var parentProfile = new Parent
-                {
-                    UserId = 0 // Will be set when account is created
-                };
-
-                _context.Parents.Add(parentProfile);
-                await _context.SaveChangesAsync();
-
-                return new ParentDto
-                {
-                    ParentId = parentProfile.UserId,
-                    UserId = parentProfile.UserId,
-                    Username = "",
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
-                    Address = null, // Parent model doesn't have Address field
-                    AccountStatus = "Pending",
-                    ChildrenCount = 0,
-                    CreatedAt = DateTime.Now
-                };
+                username = null;
+                password = null;
+                accountStatus = "NoAccount";
             }
 
-            var existingUser = await _context.Users
-                .AnyAsync(u => u.Username == dto.Username);
+            if (username != null)
+            {
+                var existingUser = await _context.Users
+                    .AnyAsync(u => u.Username == username);
 
-            if (existingUser)
-                throw new Exception("Username already exists");
+                if (existingUser)
+                    throw new Exception("Username already exists");
+            }
 
             var existingEmail = await _context.Users
                 .AnyAsync(u => u.Email == dto.Email);
@@ -105,23 +99,34 @@ namespace EducenAPI.Services
 
             var user = new User
             {
-                Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Username = username,
+                PasswordHash = password != null ? BCrypt.Net.BCrypt.HashPassword(password) : null,
                 RoleId = parentRole.RoleId,
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                AccountStatus = "Active"
+                AccountStatus = accountStatus,
+                IsAccountSent = false
             };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
 
             var parent = new Parent
             {
-                UserId = user.UserId
+                ParentNavigation = user
             };
 
+            // Link Students
+            if (dto.StudentIds != null && dto.StudentIds.Any())
+            {
+                var students = await _context.Students
+                    .Where(s => dto.StudentIds.Contains(s.UserId))
+                    .ToListAsync();
+                foreach (var student in students)
+                {
+                    parent.Students.Add(student);
+                }
+            }
+
+            _context.Users.Add(user);
             _context.Parents.Add(parent);
             await _context.SaveChangesAsync();
 
@@ -133,9 +138,11 @@ namespace EducenAPI.Services
                 FullName = user.FullName ?? "",
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber,
-                Address = null, // Parent model doesn't have Address field
+                Address = null,
                 AccountStatus = user.AccountStatus,
-                ChildrenCount = 0,
+                ChildrenCount = parent.Students.Count,
+                StudentNames = parent.Students.Select(s => s.StudentNavigation.FullName ?? s.StudentNavigation.Username).ToList(),
+                StudentIds = parent.Students.Select(s => s.UserId).ToList(),
                 CreatedAt = DateTime.Now
             };
         }
@@ -169,6 +176,31 @@ namespace EducenAPI.Services
             }
 
             // Parent model doesn't have Address field to update
+            if (dto.Address != null)
+            {
+                // Not supported in Parent model yet, skipping for now or handle via User
+                if (existingParent.ParentNavigation != null)
+                {
+                    // Update address in User if possible, but User doesn't have Address field either in current model?
+                    // Let's stick to fields that exist.
+                }
+            }
+
+            // Update Linked Students
+            if (dto.StudentIds != null)
+            {
+                // Load existing links
+                await _context.Entry(existingParent).Collection(p => p.Students).LoadAsync();
+                
+                existingParent.Students.Clear();
+                var students = await _context.Students
+                    .Where(s => dto.StudentIds.Contains(s.UserId))
+                    .ToListAsync();
+                foreach (var student in students)
+                {
+                    existingParent.Students.Add(student);
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;
@@ -188,6 +220,46 @@ namespace EducenAPI.Services
 
             _context.Parents.Remove(existingParent);
             await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> SendAccountAsync(int parentId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Parent)
+                .FirstOrDefaultAsync(u => u.UserId == parentId);
+
+            if (user == null) return false;
+
+            if (string.IsNullOrEmpty(user.Email))
+                throw new Exception("Parent has no email address");
+
+            // Generate Username if not exists
+            if (string.IsNullOrEmpty(user.Username))
+            {
+                // Ensure unique username
+                string baseUsername = user.Email.Trim().Split('@')[0].ToLower();
+                string uniqueUsername = baseUsername;
+                int counter = 1;
+                while (await _context.Users.AnyAsync(u => u.Username == uniqueUsername))
+                {
+                    uniqueUsername = $"{baseUsername}{counter++}";
+                }
+                user.Username = uniqueUsername;
+            }
+
+            // Generate Secure Password
+            string newPassword = PasswordGenerator.GenerateSecurePassword();
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            
+            user.AccountStatus = "Active";
+            user.IsAccountSent = true;
+
+            await _context.SaveChangesAsync();
+
+            // Send Email
+            await _mailService.SendParentAccount(user.Email, user.Username, newPassword);
+
             return true;
         }
     }

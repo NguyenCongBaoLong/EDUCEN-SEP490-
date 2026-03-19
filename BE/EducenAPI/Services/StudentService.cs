@@ -19,6 +19,8 @@ namespace EducenAPI.Services
         {
             var students = await _context.Students
                 .Include(s => s.StudentNavigation)
+                .Include(s => s.Parents)
+                    .ThenInclude(p => p.ParentNavigation)
                 .ToListAsync();
 
             return students.Select(MapToStudentDto);
@@ -28,6 +30,8 @@ namespace EducenAPI.Services
         {
             var student = await _context.Students
                 .Include(s => s.StudentNavigation)
+                .Include(s => s.Parents)
+                    .ThenInclude(p => p.ParentNavigation)
                 .FirstOrDefaultAsync(s => s.UserId == id);
 
             return student != null ? MapToStudentDto(student) : null;
@@ -53,7 +57,9 @@ namespace EducenAPI.Services
                 EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                 AccountStatus = hasUser ? s.StudentNavigation.AccountStatus : "NO_ACCOUNT",
                 IsAccountSent = hasUser && s.StudentNavigation.IsAccountSent,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                ParentNames = s.Parents.Select(p => p.ParentNavigation?.FullName ?? p.ParentNavigation?.Username ?? "").ToList(),
+                ParentIds = s.Parents.Select(p => p.UserId).ToList()
             };
         }
 
@@ -132,23 +138,22 @@ namespace EducenAPI.Services
             };
 
             _context.Students.Add(student);
+            
+            // 5. Link Parents
+            if (dto.ParentIds != null && dto.ParentIds.Count > 0)
+            {
+                foreach (var parentId in dto.ParentIds)
+                {
+                    var parent = await _context.Parents.FindAsync(parentId);
+                    if (parent != null)
+                        student.Parents.Add(parent);
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            // 5. Return DTO với thông tin phù hợp
-            return new StudentDto
-            {
-                UserId = user.UserId,
-                Username = "NO_ACCOUNT",  // Indicator cho frontend
-                FullName = dto.FullName,
-                Email = student.Email,
-                PhoneNumber = dto.PhoneNumber,
-                Address = null,
-                Grade = student.Grade,
-                EnrollmentStatus = student.EnrollmentStatus ?? "Active",
-                AccountStatus = "NoAccount",
-                IsAccountSent = false,
-                CreatedAt = DateTime.Now
-            };
+            // 6. Return DTO với thông tin phù hợp
+            return MapToStudentDto(student);
         }
 
         private async Task<StudentDto> CreateStudentWithAccount(CreateStudentDto dto)
@@ -200,23 +205,22 @@ namespace EducenAPI.Services
             };
 
             _context.Students.Add(student);
+            
+            // 6. Link Parents
+            if (dto.ParentIds != null && dto.ParentIds.Count > 0)
+            {
+                foreach (var parentId in dto.ParentIds)
+                {
+                    var parent = await _context.Parents.FindAsync(parentId);
+                    if (parent != null)
+                        student.Parents.Add(parent);
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            // 6. Return DTO
-            return new StudentDto
-            {
-                UserId = user.UserId,
-                Username = user.Username,
-                FullName = user.FullName ?? "",
-                Email = student.Email,
-                PhoneNumber = user.PhoneNumber,
-                Address = user.Address,
-                Grade = student.Grade,
-                EnrollmentStatus = student.EnrollmentStatus ?? "Active",
-                AccountStatus = user.AccountStatus,
-                IsAccountSent = user.IsAccountSent,
-                CreatedAt = DateTime.Now
-            };
+            // 7. Return DTO
+            return MapToStudentDto(student);
         }
 
         private void ValidateBaseStudentData(CreateStudentDto dto)
@@ -306,7 +310,23 @@ namespace EducenAPI.Services
                 student.DateOfBirth = dto.DateOfBirth;
 
             if (dto.Gender != null)
+            {
                 student.Gender = dto.Gender;
+            }
+
+            // Update Parents
+            if (dto.ParentIds != null)
+            {
+                // Load existing parents
+                await _context.Entry(student).Collection(s => s.Parents).LoadAsync();
+                student.Parents.Clear();
+                foreach (var parentId in dto.ParentIds)
+                {
+                    var parent = await _context.Parents.FindAsync(parentId);
+                    if (parent != null)
+                        student.Parents.Add(parent);
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;
