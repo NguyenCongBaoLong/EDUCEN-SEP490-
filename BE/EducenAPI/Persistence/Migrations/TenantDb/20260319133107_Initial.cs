@@ -420,8 +420,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StartTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    EndTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ClassId = table.Column<int>(type: "int", nullable: true)
+                    EndTime = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -432,11 +431,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         principalTable: "ClassSessions",
                         principalColumn: "SessionId",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Assignments_Classes_ClassId",
-                        column: x => x.ClassId,
-                        principalTable: "Classes",
-                        principalColumn: "ClassId");
                     table.ForeignKey(
                         name: "FK_Assignments_Users_UserId",
                         column: x => x.UserId,
@@ -487,8 +481,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     UserId = table.Column<int>(type: "int", nullable: true),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClassId = table.Column<int>(type: "int", nullable: true)
+                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -499,11 +492,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         principalTable: "ClassSessions",
                         principalColumn: "SessionId",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_LessonMaterials_Classes_ClassId",
-                        column: x => x.ClassId,
-                        principalTable: "Classes",
-                        principalColumn: "ClassId");
                     table.ForeignKey(
                         name: "FK_LessonMaterials_Users_UserId",
                         column: x => x.UserId,
@@ -555,11 +543,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     { 4, "Parent" },
                     { 5, "Assistant" }
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Assignments_ClassId",
-                table: "Assignments",
-                column: "ClassId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Assignments_SessionId",
@@ -640,11 +623,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                 name: "IX_ClassStudent_StudentsUserId",
                 table: "ClassStudent",
                 column: "StudentsUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_LessonMaterials_ClassId",
-                table: "LessonMaterials",
-                column: "ClassId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_LessonMaterials_SessionId",

@@ -45,9 +45,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AsmId"));
 
-                    b.Property<int?>("ClassId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -70,8 +67,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasColumnType("int");
 
                     b.HasKey("AsmId");
-
-                    b.HasIndex("ClassId");
 
                     b.HasIndex("SessionId");
 
@@ -388,9 +383,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaterialId"));
 
-                    b.Property<int?>("ClassId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ContentType")
                         .HasColumnType("nvarchar(max)");
 
@@ -407,8 +399,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasColumnType("int");
 
                     b.HasKey("MaterialId");
-
-                    b.HasIndex("ClassId");
 
                     b.HasIndex("SessionId");
 
@@ -696,10 +686,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.Assignment", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Class", null)
-                        .WithMany("Assignments")
-                        .HasForeignKey("ClassId");
-
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("Assignments")
                         .HasForeignKey("SessionId")
@@ -838,10 +824,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.LessonMaterial", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Class", null)
-                        .WithMany("LessonMaterials")
-                        .HasForeignKey("ClassId");
-
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("LessonMaterials")
                         .HasForeignKey("SessionId")
@@ -967,10 +949,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.Class", b =>
                 {
-                    b.Navigation("Assignments");
-
-                    b.Navigation("LessonMaterials");
-
                     b.Navigation("Schedules");
 
                     b.Navigation("Sessions");
