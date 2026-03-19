@@ -57,7 +57,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SessionId")
+                    b.Property<int?>("SessionId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("StartTime")
@@ -397,7 +397,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SessionId")
+                    b.Property<int?>("SessionId")
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
@@ -703,8 +703,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("Assignments")
                         .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("EducenAPI.Models.User", "User")
                         .WithMany()
@@ -846,8 +845,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("LessonMaterials")
                         .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("EducenAPI.Models.User", "User")
                         .WithMany()

@@ -9,7 +9,7 @@ public partial class LessonMaterial
     [Key]
     public int MaterialId { get; set; }
 
-    public int SessionId { get; set; }
+    public int? SessionId { get; set; }
     public int? UserId { get; set; }
 
 
