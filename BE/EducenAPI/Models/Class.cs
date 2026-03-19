@@ -25,11 +25,7 @@ public partial class Class
 
     public DateTime? EndDate { get; set; }
 
-    public virtual ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
-
     public virtual Assistant? Assistant { get; set; }
-
-    public virtual ICollection<LessonMaterial> LessonMaterials { get; set; } = new List<LessonMaterial>();
 
     public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
 
