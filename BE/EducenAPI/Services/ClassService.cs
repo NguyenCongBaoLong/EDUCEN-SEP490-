@@ -360,6 +360,7 @@ namespace EducenAPI.Services
                     {
                         var classSession = new ClassSession
                         {
+                            ClassId = classId,
                             ScheduleId = schedule.ScheduleId,
                             SessionDate = sessionDate,
                             Status = "Scheduled"

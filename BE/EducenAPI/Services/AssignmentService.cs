@@ -60,7 +60,6 @@ namespace EducenAPI.Services
             var assignment = new Assignment
             {
                 SessionId = dto.SessionId,
-                ClassId = dto.ClassId,
                 Title = dto.Title,
                 Description = dto.Description,
                 FileUrl = fileUrl,
@@ -84,7 +83,6 @@ namespace EducenAPI.Services
                     var libraryAssignment = new Assignment
                     {
                         SessionId = null,
-                        ClassId = dto.ClassId,
                         Title = dto.Title,
                         Description = dto.Description,
                         FileUrl = fileUrl,
@@ -147,7 +145,6 @@ namespace EducenAPI.Services
             assignment.Title = dto.Title;
             assignment.Description = dto.Description;
             assignment.SessionId = dto.SessionId;
-            assignment.ClassId = dto.ClassId;
             assignment.StartTime = dto.StartTime;
             assignment.EndTime = dto.EndTime;
             assignment.FileUrl = fileUrl;
@@ -165,7 +162,6 @@ namespace EducenAPI.Services
                 {
                     AsmId = a.AsmId,
                     SessionId = a.SessionId,
-                    ClassId = a.ClassId,
                     Title = a.Title,
                     Description = a.Description,
                     StartTime = a.StartTime,
@@ -190,7 +186,6 @@ namespace EducenAPI.Services
                 {
                     AsmId = a.AsmId,
                     SessionId = a.SessionId,
-                    ClassId = a.ClassId,
                     Title = a.Title,
                     Description = a.Description,
                     StartTime = a.StartTime,
@@ -236,7 +231,6 @@ namespace EducenAPI.Services
             var assignment = new Assignment
             {
                 SessionId = sessionId,
-                ClassId = source.ClassId, 
                 Title = source.Title,
                 Description = source.Description,
                 FileUrl = source.FileUrl,

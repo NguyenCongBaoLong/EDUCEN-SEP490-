@@ -689,7 +689,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("Assignments")
                         .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("EducenAPI.Models.User", "User")
                         .WithMany()
@@ -809,7 +809,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.ClassSession", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Class", null)
+                    b.HasOne("EducenAPI.Models.Class", "Class")
                         .WithMany("Sessions")
                         .HasForeignKey("ClassId");
 
@@ -818,6 +818,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasForeignKey("ScheduleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Class");
 
                     b.Navigation("Schedule");
                 });

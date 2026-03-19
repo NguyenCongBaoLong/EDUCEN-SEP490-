@@ -61,7 +61,6 @@ namespace EducenAPI.Services
             var material = new LessonMaterial
             {
                 SessionId = dto.SessionId,
-                ClassId = dto.ClassId,
                 Title = dto.Title,
                 FileUrl = fileUrl,
                 ContentType = contentType
@@ -82,7 +81,6 @@ namespace EducenAPI.Services
                     var libraryMaterial = new LessonMaterial
                     {
                         SessionId = null,
-                        ClassId = dto.ClassId,
                         Title = dto.Title,
                         FileUrl = fileUrl,
                         ContentType = contentType
@@ -128,7 +126,6 @@ namespace EducenAPI.Services
 
             material.Title = dto.Title;
             material.SessionId = dto.SessionId;
-            material.ClassId = dto.ClassId;
 
             await _context.SaveChangesAsync();
             return material;
@@ -195,7 +192,6 @@ namespace EducenAPI.Services
                 {
                     MaterialId = x.MaterialId,
                     SessionId = x.SessionId,
-                    ClassId = x.ClassId,
                     Title = x.Title,
                     ContentType = x.ContentType,
                     FileUrl = !string.IsNullOrEmpty(x.FileUrl)
@@ -218,7 +214,6 @@ namespace EducenAPI.Services
                 {
                     MaterialId = x.MaterialId,
                     SessionId = x.SessionId,
-                    ClassId = x.ClassId,
                     Title = x.Title,
                     ContentType = x.ContentType,
                     FileUrl = !string.IsNullOrEmpty(x.FileUrl)

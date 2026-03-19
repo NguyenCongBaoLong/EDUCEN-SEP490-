@@ -4,7 +4,6 @@ namespace EducenAPI.DTOs.Assignments
     {
         public int AsmId { get; set; }
         public int? SessionId { get; set; }
-        public int? ClassId { get; set; }
         public string Title { get; set; } = null!;
         public string? Description { get; set; }
         public string? FileUrl { get; set; } // Đây sẽ là Link full

@@ -6,7 +6,6 @@ namespace EducenAPI.DTOs.LessionMaterials
     public class SaveMaterialDto
     {
         public int? SessionId { get; set; }
-        public int? ClassId { get; set; }
 
         [Required]
         public string Title { get; set; } = null!;

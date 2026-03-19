@@ -4,7 +4,6 @@ namespace EducenAPI.DTOs.LessionMaterials
     {
         public int MaterialId { get; set; }
         public int? SessionId { get; set; }
-        public int? ClassId { get; set; }
         public string? Title { get; set; }
         public string? FileUrl { get; set; } 
         public string? ContentType { get; set; } 
