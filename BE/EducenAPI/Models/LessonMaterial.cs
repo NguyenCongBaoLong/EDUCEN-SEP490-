@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -9,9 +9,9 @@ public partial class LessonMaterial
     [Key]
     public int MaterialId { get; set; }
 
-    public int? SessionId { get; set; }
+    public int SessionId { get; set; }
+    public int? UserId { get; set; }
 
-    public int? ClassId { get; set; }
 
     public string? Title { get; set; }
 
@@ -19,5 +19,7 @@ public partial class LessonMaterial
 
     public string? ContentType { get; set; }
 
-    public virtual ClassSession? Session { get; set; }
+    public ClassSession Session { get; set; } = null!;
+    public virtual User? User { get; set; }
+
 }

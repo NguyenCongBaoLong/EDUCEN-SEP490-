@@ -23,7 +23,13 @@ namespace EducenAPI.Services.TenantService
 
         public Tenant CreateTenant(CreateTenantRequest request)
         {
-
+            request.TenantId = request.TenantId?.Trim();
+            request.TenantName = request.TenantName?.Trim();
+            request.ContactPerson = request.ContactPerson?.Trim();
+            request.Email = request.Email?.Trim();
+            request.PhoneNumber = request.PhoneNumber?.Trim();
+            request.Address = request.Address?.Trim();
+            request.SubDomain = request.SubDomain?.Trim();
             string connectionString = _configuration.GetConnectionString("DefaultTenantConnection");
             SqlConnectionStringBuilder builder = new(connectionString);
             string mainDatabaseName = builder.InitialCatalog; // retrieve the database name
