@@ -9,7 +9,7 @@ public partial class Assignment
     [Key]
     public int AsmId { get; set; }
 
-    public int SessionId { get; set; }
+    public int? SessionId { get; set; }
     public int? UserId { get; set; }
 
     public string? Title { get; set; }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    [Migration("20260318182701_Initial")]
+    [Migration("20260319095647_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -60,7 +60,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SessionId")
+                    b.Property<int?>("SessionId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("StartTime")
@@ -400,7 +400,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SessionId")
+                    b.Property<int?>("SessionId")
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
@@ -706,8 +706,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("Assignments")
                         .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("EducenAPI.Models.User", "User")
                         .WithMany()
@@ -849,8 +848,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("LessonMaterials")
                         .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("EducenAPI.Models.User", "User")
                         .WithMany()
