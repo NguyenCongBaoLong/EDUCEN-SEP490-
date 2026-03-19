@@ -38,11 +38,12 @@ namespace EducenAPI.Services
         /// </summary>
         private static StudentDto MapToStudentDto(Student s)
         {
-            var hasUser = s.UserId.HasValue && s.StudentNavigation != null;
+            // Since we always create User first, check StudentNavigation instead of UserId
+            var hasUser = s.StudentNavigation != null;
 
             return new StudentDto
             {
-                UserId = s.UserId ?? 0,
+                UserId = hasUser ? s.UserId : 0,
                 Username = hasUser ? s.StudentNavigation.Username ?? "" : "NO_ACCOUNT",
                 FullName = hasUser ? s.StudentNavigation.FullName ?? "" : "",
                 Email = s.Email ?? "",
@@ -58,25 +59,97 @@ namespace EducenAPI.Services
 
         public async Task<StudentDto> CreateStudentAsync(CreateStudentDto dto)
         {
-            // 1. Validate base required fields
-            await ValidateBaseStudentData(dto);
-
-            // 2. Check duplicate email (luôn luôn check)
-            var existingStudent = await _context.Students
-                .AnyAsync(s => s.Email == dto.Email);
-            if (existingStudent)
-                throw new Exception("Email already exists");
-
-            // 3. Branch logic dựa trên username/password
-            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
+            try
             {
-                // MODE: Student không có account
-                return await CreateStudentProfileOnly(dto);
+                // 1. Validate base required fields
+                await ValidateBaseStudentData(dto);
+
+                // 2. Check duplicate email trong cả Users và Students
+                // Cho phép nếu User tồn tại nhưng chưa có Student record
+                var existingUserWithStudent = await _context.Users
+                    .Include(u => u.Student)
+                    .AnyAsync(u => u.Email == dto.Email && u.Student != null);
+                if (existingUserWithStudent)
+                    throw new Exception("Email already exists in Users (with Student)");
+
+                var existingStudent = await _context.Students
+                    .AnyAsync(s => s.Email == dto.Email);
+                if (existingStudent)
+                    throw new Exception("Email already exists in Students");
+
+                // 3. Check duplicate username (nếu có username)
+                if (!string.IsNullOrWhiteSpace(dto.Username))
+                {
+                    var existingUsername = await _context.Users
+                        .AnyAsync(u => u.Username == dto.Username);
+                    if (existingUsername)
+                        throw new Exception("Username already exists");
+                }
+
+                // 4. Lấy student role
+                var studentRole = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.RoleName == "Student");
+                
+                if (studentRole == null)
+                    throw new Exception("Student role not found");
+
+                // 5. Tạo User (username/password để null nếu không có input)
+                var user = new User
+                {
+                    Username = string.IsNullOrWhiteSpace(dto.Username) ? null : dto.Username,
+                    PasswordHash = string.IsNullOrWhiteSpace(dto.Password) ? null : BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                    RoleId = studentRole.RoleId,
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    PhoneNumber = dto.PhoneNumber,
+                    AccountStatus = "NoAccount",
+                    IsAccountSent = false
+                };
+
+                _context.Users.Add(user);
+
+                // Lưu User trước để lấy UserId
+                await _context.SaveChangesAsync();
+
+                // 6. Tạo Student với UserId
+                var newStudent = new Student
+                {
+                    UserId = user.UserId,
+                    Email = dto.Email,
+                    EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
+                    Grade = dto.Grade,
+                    DateOfBirth = dto.DateOfBirth,
+                    Gender = dto.Gender
+                };
+
+                _context.Students.Add(newStudent);
+                await _context.SaveChangesAsync();
+
+                // 7. Return DTO
+                return new StudentDto
+                {
+                    UserId = user.UserId,
+                    Username = dto.Username ?? "NO_ACCOUNT",
+                    FullName = dto.FullName ?? "",
+                    Email = dto.Email,
+                    PhoneNumber = dto.PhoneNumber,
+                    Address = null,
+                    Grade = dto.Grade,
+                    EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
+                    AccountStatus = "NoAccount",
+                    IsAccountSent = false,
+                    CreatedAt = DateTime.Now
+                };
             }
-            else
+            catch (Exception ex)
             {
-                // MODE: Student có account
-                return await CreateStudentWithAccount(dto);
+                // Log chi tiết lỗi để debug
+                var errorMessage = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorMessage += " | Inner: " + ex.InnerException.Message;
+                }
+                throw new Exception(errorMessage);
             }
         }
 
@@ -87,9 +160,9 @@ namespace EducenAPI.Services
                 throw new Exception("Email is required for student profile");
 
             // 2. Tạo chỉ Student record (FullName chỉ lưu trong DTO, không vào DB)
+            // UserId là nullable và là cả PK + FK, nên cần xử lý đặc biệt
             var student = new Student
             {
-                UserId = null,  // Explicit null
                 Email = dto.Email,
                 EnrollmentStatus = dto.EnrollmentStatus ?? "Active",
                 Grade = dto.Grade,
@@ -97,7 +170,9 @@ namespace EducenAPI.Services
                 Gender = dto.Gender
             };
 
-            _context.Students.Add(student);
+            // Sử dụng DbContext.Add thay vì DbSet.Add để EF hiểu rõ đây là entity mới
+            _context.Add(student);
+            
             await _context.SaveChangesAsync();
 
             // 3. Return DTO với thông tin phù hợp
@@ -233,11 +308,10 @@ namespace EducenAPI.Services
             // Update Student fields (FullName chỉ có trong User, không có trong Student table)
             if (!string.IsNullOrEmpty(dto.FullName))
             {
-                if (student.UserId.HasValue && student.StudentNavigation != null)
+                if (student.StudentNavigation != null)
                 {
                     student.StudentNavigation.FullName = dto.FullName;
                 }
-                // Nếu không có User, FullName vẫn được trả về từ DTO input nhưng không lưu vào DB
             }
 
             if (!string.IsNullOrEmpty(dto.Email))
@@ -248,7 +322,7 @@ namespace EducenAPI.Services
                 if (emailExists)
                     throw new Exception("Email already exists");
 
-                if (student.UserId.HasValue && student.StudentNavigation != null)
+                if (student.StudentNavigation != null)
                 {
                     student.StudentNavigation.Email = dto.Email;
                 }
@@ -257,7 +331,7 @@ namespace EducenAPI.Services
 
             if (dto.PhoneNumber != null)
             {
-                if (student.UserId.HasValue && student.StudentNavigation != null)
+                if (student.StudentNavigation != null)
                 {
                     student.StudentNavigation.PhoneNumber = dto.PhoneNumber;
                 }
@@ -327,7 +401,7 @@ namespace EducenAPI.Services
                 _context.Students.Remove(student);
                 
                 // 6. Xóa User nếu có liên kết
-                if (student.UserId.HasValue && student.StudentNavigation != null)
+                if (student.StudentNavigation != null)
                 {
                     _context.Users.Remove(student.StudentNavigation);
                 }
