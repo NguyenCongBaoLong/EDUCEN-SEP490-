@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/admin/[controller]")]
     [ApiController]
     public class TenantsController : ControllerBase
     {
