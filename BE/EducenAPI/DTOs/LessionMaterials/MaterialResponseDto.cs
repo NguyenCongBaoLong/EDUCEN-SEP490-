@@ -1,0 +1,11 @@
+﻿namespace EducenAPI.DTOs.LessionMaterials
+{
+    public class MaterialResponseDto
+    {
+        public int MaterialId { get; set; }
+        public int? SessionId { get; set; }
+        public string? Title { get; set; }
+        public string? FileUrl { get; set; } 
+        public string? ContentType { get; set; } 
+    }
+}
