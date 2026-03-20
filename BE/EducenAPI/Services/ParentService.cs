@@ -17,101 +17,92 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<ParentDto>> GetAllParentsAsync()
         {
-            return await _context.Parents
+            var parents = await _context.Parents
                 .Include(p => p.ParentNavigation)
-                .Select(p => new ParentDto
-                {
-                    ParentId = p.UserId,
-                    UserId = p.UserId,
-                    Username = p.ParentNavigation.Username ?? "",
-                    FullName = p.ParentNavigation.FullName ?? "",
-                    Email = p.ParentNavigation.Email ?? "",
-                    PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = null, // Parent model doesn't have Address field
-                    AccountStatus = p.ParentNavigation.AccountStatus,
-                    ChildrenCount = p.Students.Count,
-                    CreatedAt = DateTime.Now
-                })
                 .ToListAsync();
+
+            return parents.Select(p => new ParentDto
+            {
+                ParentId = p.UserId,
+                UserId = p.UserId,
+                Username = p.ParentNavigation?.Username ?? "",
+                FullName = p.ParentNavigation?.FullName ?? "",
+                Email = p.ParentNavigation?.Email ?? "",
+                PhoneNumber = p.ParentNavigation?.PhoneNumber,
+                Address = p.ParentNavigation?.Address,
+                AccountStatus = p.ParentNavigation?.AccountStatus ?? "Pending",
+                ChildrenCount = p.Students.Count,
+                CreatedAt = DateTime.Now
+            }).ToList();
         }
 
         public async Task<ParentDto?> GetParentByIdAsync(int id)
         {
-            return await _context.Parents
+            var parent = await _context.Parents
                 .Include(p => p.ParentNavigation)
-                .Where(p => p.UserId == id)
-                .Select(p => new ParentDto
-                {
-                    ParentId = p.UserId,
-                    UserId = p.UserId,
-                    Username = p.ParentNavigation.Username ?? "",
-                    FullName = p.ParentNavigation.FullName ?? "",
-                    Email = p.ParentNavigation.Email ?? "",
-                    PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = null, // Parent model doesn't have Address field
-                    AccountStatus = p.ParentNavigation.AccountStatus,
-                    ChildrenCount = p.Students.Count,
-                    CreatedAt = DateTime.Now
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(p => p.UserId == id);
+
+            if (parent == null)
+                return null;
+
+            var userNav = parent.ParentNavigation;
+            return new ParentDto
+            {
+                ParentId = parent.UserId,
+                UserId = parent.UserId,
+                Username = userNav != null ? userNav.Username : "",
+                FullName = userNav != null ? userNav.FullName : "",
+                Email = userNav != null ? userNav.Email : "",
+                PhoneNumber = userNav != null ? userNav.PhoneNumber : null,
+                Address = userNav != null ? userNav.Address : null,
+                AccountStatus = userNav != null ? userNav.AccountStatus : "Pending",
+                ChildrenCount = parent.Students.Count,
+                CreatedAt = DateTime.Now
+            };
         }
 
         public async Task<ParentDto> CreateParentAsync(CreateParentDto dto)
         {
-            // Skip user creation if username or password is null
-            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
-            {
-                // Create parent profile without user account
-                var parentProfile = new Parent
-                {
-                    UserId = 0 // Will be set when account is created
-                };
-
-                _context.Parents.Add(parentProfile);
-                await _context.SaveChangesAsync();
-
-                return new ParentDto
-                {
-                    ParentId = parentProfile.UserId,
-                    UserId = parentProfile.UserId,
-                    Username = "",
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
-                    Address = null, // Parent model doesn't have Address field
-                    AccountStatus = "Pending",
-                    ChildrenCount = 0,
-                    CreatedAt = DateTime.Now
-                };
-            }
-
-            var existingUser = await _context.Users
-                .AnyAsync(u => u.Username == dto.Username);
-
-            if (existingUser)
-                throw new Exception("Username already exists");
-
-            var existingEmail = await _context.Users
-                .AnyAsync(u => u.Email == dto.Email);
-
-            if (existingEmail)
-                throw new Exception("Email already exists");
-
             var parentRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Parent");
 
             if (parentRole == null)
                 throw new Exception("Parent role not found");
 
+            // Validate unique username if provided
+            if (!string.IsNullOrWhiteSpace(dto.Username))
+            {
+                var existingUser = await _context.Users
+                    .AnyAsync(u => u.Username == dto.Username);
+
+                if (existingUser)
+                    throw new Exception("Username already exists");
+            }
+
+            // Validate unique email if provided
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+                var existingEmail = await _context.Users
+                    .AnyAsync(u => u.Email == dto.Email);
+
+                if (existingEmail)
+                    throw new Exception("Email already exists");
+            }
+
             var user = new User
             {
                 Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                PasswordHash = !string.IsNullOrWhiteSpace(dto.Password) 
+                    ? BCrypt.Net.BCrypt.HashPassword(dto.Password) 
+                    : null,
                 RoleId = parentRole.RoleId,
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                AccountStatus = "Active"
+                Address = dto.Address,
+                AccountStatus = !string.IsNullOrWhiteSpace(dto.Username) && !string.IsNullOrWhiteSpace(dto.Password) 
+                    ? "Active" 
+                    : "Pending"
             };
 
             _context.Users.Add(user);
@@ -133,7 +124,7 @@ namespace EducenAPI.Services
                 FullName = user.FullName ?? "",
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber,
-                Address = null, // Parent model doesn't have Address field
+                Address = user.Address,
                 AccountStatus = user.AccountStatus,
                 ChildrenCount = 0,
                 CreatedAt = DateTime.Now
@@ -166,9 +157,10 @@ namespace EducenAPI.Services
 
                 if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                     existingParent.ParentNavigation.PhoneNumber = dto.PhoneNumber;
-            }
 
-            // Parent model doesn't have Address field to update
+                if (!string.IsNullOrWhiteSpace(dto.Address))
+                    existingParent.ParentNavigation.Address = dto.Address;
+            }
 
             await _context.SaveChangesAsync();
             return true;

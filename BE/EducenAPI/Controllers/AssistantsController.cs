@@ -19,6 +19,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Assistants
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetAssistants()
         {
             var assistants = await _assistantService.GetAllAssistantsAsync();
@@ -27,6 +28,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Assistants/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Assistant")]
         public async Task<IActionResult> GetAssistant(int id)
         {
             var assistant = await _assistantService.GetAssistantByIdAsync(id);
@@ -39,6 +41,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Assistants
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateAssistant(CreateAssistantDto dto)
         {
             try
@@ -54,6 +57,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Assistants/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateAssistant(int id, UpdateAssistantDto dto)
         {
             try
@@ -72,6 +76,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Assistants/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteAssistant(int id)
         {
             try
@@ -90,6 +95,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Assistants/5/classes
         [HttpGet("{id:int}/classes")]
+        [Authorize(Roles = "Admin,TenantAdmin,Assistant")]
         public async Task<IActionResult> GetAssistantClasses(int id)
         {
             var classes = await _assistantService.GetAssistantClassesAsync(id);
