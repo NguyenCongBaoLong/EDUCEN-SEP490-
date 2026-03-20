@@ -5,10 +5,6 @@ namespace EducenAPI.DTOs
     public class CreateTenantRequest
     {
         [Required]
-        [MaxLength(100)]
-        public string TenantId { get; set; } = string.Empty;
-
-        [Required]
         [MaxLength(200)]
         public string TenantName { get; set; } = string.Empty;
 

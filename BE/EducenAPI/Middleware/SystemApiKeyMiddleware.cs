@@ -16,8 +16,8 @@ namespace EducenAPI.Middleware
 
         public async Task InvokeAsync(HttpContext context, IConfiguration configuration)
         {
-            // Chỉ áp dụng cho System API
-            if (!context.Request.Path.StartsWithSegments("/api/tenants"))
+            // Chỉ áp dụng cho API admin
+            if (!context.Request.Path.StartsWithSegments("/api/admin"))
             {
                 await _next(context);
                 return;
