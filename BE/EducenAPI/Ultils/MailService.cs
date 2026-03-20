@@ -72,5 +72,36 @@ namespace EducenAPI.Ultils
 
             await smtp.SendMailAsync(mail);
         }
+
+        public async Task SendResetPasswordEmail(string toEmail, string resetCode)
+        {
+            var mail = new MailMessage();
+            mail.From = new MailAddress(_emailSettings.Email);
+            mail.To.Add(toEmail);
+            mail.Subject = "Mã xác thực đặt lại mật khẩu - Educen";
+
+            mail.Body = $@"
+            Xin chào,
+
+            Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản liên kết với email này.
+            
+            Vui lòng sử dụng mã xác thực gồm 6 chữ số bên dưới để hoàn tất quá trình đặt lại mật khẩu:
+            
+            {resetCode}
+            
+            Mã này có hiệu lực trong vòng 15 phút. Nếu bạn không yêu cầu thay đổi này, hãy bỏ qua email này.
+
+            Trân trọng,
+            Đội ngũ Educen.
+        ";
+
+            var smtp = new SmtpClient(_emailSettings.Host, _emailSettings.Port)
+            {
+                Credentials = new NetworkCredential(_emailSettings.Email, _emailSettings.Password),
+                EnableSsl = true
+            };
+
+            await smtp.SendMailAsync(mail);
+        }
     }
 }

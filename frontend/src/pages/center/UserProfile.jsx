@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Briefcase, MapPin, Calendar, FileText, Lock, Upload, Camera, AlertCircle, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import StudentSidebar from '../../components/StudentSidebar';
@@ -22,12 +23,25 @@ const UserProfile = () => {
     // Profile data from API
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [successMsg, setSuccessMsg] = useState('');
 
-    // Edit state
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editFullName, setEditFullName] = useState('');
+    // Edit states
+    const [isEditingAccount, setIsEditingAccount] = useState(false);
+    const [isEditingPersonal, setIsEditingPersonal] = useState(false);
+    const [isEditingRoleInfo, setIsEditingRoleInfo] = useState(false);
+
+    // Form data for editing
+    const [formData, setFormData] = useState({
+        username: '',
+        fullName: '',
+        email: '',
+        phoneNumber: '',
+        address: '',
+        specialization: '',
+        degree: '',
+        supportLevel: '',
+        dateOfBirth: '',
+        gender: ''
+    });
 
     // Password state
     const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -47,19 +61,37 @@ const UserProfile = () => {
         try {
             setLoading(true);
             const res = await api.get('/profile/me');
-            setProfile(res.data);
-            setEditFullName(res.data.fullName || '');
+            const data = res.data;
+            setProfile(data);
+            
+            // Map data to formData
+            setFormData({
+                username: data.username || '',
+                fullName: data.fullName || '',
+                email: data.email || '',
+                phoneNumber: data.phoneNumber || '',
+                address: data.address || '',
+                specialization: data.specialization || '',
+                degree: data.degree || '',
+                supportLevel: data.supportLevel || '',
+                dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split('T')[0] : '',
+                gender: data.gender || ''
+            });
         } catch (err) {
-            // API fail → dùng data từ JWT token (AuthContext) làm fallback
             if (user) {
-                const roleMap = { 'Admin': 1, 'Teacher': 2, 'Assistant': 3, 'Student': 4, 'Parent': 5 };
+                const roleMap = { 'Admin': 1, 'Teacher': 2, 'Assistant': 5, 'Student': 3, 'Parent': 4 };
                 setProfile({
                     userId: user.userId,
                     username: user.username,
                     fullName: user.fullName || user.username,
-                    roleId: roleMap[user.role] || 0
+                    roleId: roleMap[user.role] || 0,
+                    roleName: user.role
                 });
-                setEditFullName(user.fullName || user.username || '');
+                setFormData(prev => ({
+                    ...prev,
+                    username: user.username,
+                    fullName: user.fullName || user.username
+                }));
             }
             setError('Không thể kết nối server. Đang hiển thị dữ liệu từ phiên đăng nhập.');
         } finally {
@@ -67,13 +99,129 @@ const UserProfile = () => {
         }
     };
 
+    const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSaveProfile = async (section) => {
+        try {
+            // Xác định các trường cần kiểm tra theo section
+            let fieldsToUpdate = [];
+            if (section === 'account') fieldsToUpdate = ['username', 'fullName'];
+            if (section === 'personal') fieldsToUpdate = ['email', 'phoneNumber', 'address', 'dateOfBirth', 'gender'];
+            if (section === 'role') {
+                if (profile.roleName === 'Teacher' || profile.roleName === 'Assistant') fieldsToUpdate = ['specialization', 'degree', 'supportLevel'];
+                if (profile.roleName === 'Student') fieldsToUpdate = ['dateOfBirth', 'gender'];
+            }
+
+            // Chuẩn bị dữ liệu gửi đi: CHỈ gửi các trường thực sự có thay đổi (True Partial Update)
+            const updatePayload = {};
+            fieldsToUpdate.forEach(key => {
+                let oldValue = profile[key];
+                let newValue = formData[key];
+                
+                // Chuẩn hóa so sánh
+                let comparisonOldValue = oldValue;
+                if (key === 'dateOfBirth' && oldValue) comparisonOldValue = oldValue.split('T')[0];
+
+                if ((comparisonOldValue || '') !== (newValue || '')) {
+                    // Đặc biệt xử lý ngày tháng: Nếu rỗng thì gửi null
+                    if (key === 'dateOfBirth' && newValue === '') {
+                        updatePayload[key] = null;
+                    } else {
+                        updatePayload[key] = newValue;
+                    }
+                }
+            });
+
+            if (Object.keys(updatePayload).length === 0) {
+                toast.error('Vui lòng chỉnh sửa ít nhất một trường trước khi lưu.');
+                return;
+            }
+
+            const res = await api.put('/profile/update', updatePayload);
+            setProfile(prev => ({ ...prev, ...formData }));
+            
+            if (section === 'account') setIsEditingAccount(false);
+            if (section === 'personal') setIsEditingPersonal(false);
+            if (section === 'role') setIsEditingRoleInfo(false);
+
+            toast.success(res.data.message || 'Cập nhật hồ sơ thành công!');
+        } catch (err) {
+            let errorMsg = 'Lỗi khi cập nhật hồ sơ.';
+            
+            if (err.response?.data?.errors) {
+                const errorData = err.response.data.errors;
+                const messages = [];
+
+                // Hàm đệ quy để trích xuất tất cả chuỗi thông báo lỗi
+                const extractMessages = (obj) => {
+                    if (!obj) return;
+                    if (typeof obj === 'string') {
+                        messages.push(obj);
+                    } else if (Array.isArray(obj)) {
+                        obj.forEach(extractMessages);
+                    } else if (typeof obj === 'object') {
+                        if (obj.message && typeof obj.message === 'string') {
+                            messages.push(obj.message);
+                        } else if (obj.errorMessage && typeof obj.errorMessage === 'string') {
+                            messages.push(obj.errorMessage);
+                        } else {
+                            Object.values(obj).forEach(extractMessages);
+                        }
+                    }
+                };
+
+                extractMessages(errorData);
+                if (messages.length > 0) {
+                    errorMsg = messages.join(' | ');
+                }
+            } else if (err.response?.data?.message) {
+                errorMsg = err.response.data.message;
+            } else if (typeof err.response?.data === 'string') {
+                errorMsg = err.response.data;
+            }
+            
+            toast.error(errorMsg);
+        }
+    };
+
+    const handleCancelEdit = (section) => {
+        // Reset form data for the section
+        if (section === 'account') {
+            setFormData(prev => ({ ...prev, username: profile.username, fullName: profile.fullName }));
+            setIsEditingAccount(false);
+        }
+        if (section === 'personal') {
+            setFormData(prev => ({ 
+                ...prev, 
+                email: profile.email, 
+                phoneNumber: profile.phoneNumber, 
+                address: profile.address,
+                dateOfBirth: profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : '',
+                gender: profile.gender
+            }));
+            setIsEditingPersonal(false);
+        }
+        if (section === 'role') {
+            setFormData(prev => ({ 
+                ...prev, 
+                specialization: profile.specialization, 
+                degree: profile.degree, 
+                supportLevel: profile.supportLevel 
+            }));
+            setIsEditingRoleInfo(false);
+        }
+    };
+
     const getRoleLabel = (roleId) => {
-        const roles = { 1: 'Quản trị viên', 2: 'Giáo viên', 3: 'Trợ giảng', 4: 'Học sinh', 5: 'Phụ huynh' };
+        const roles = { 1: 'Quản trị viên', 2: 'Giáo viên', 3: 'Học sinh', 4: 'Phụ huynh', 5: 'Trợ giảng' };
         return roles[roleId] || 'Không xác định';
     };
 
     const getRoleBadgeClass = (roleId) => {
-        const classes = { 1: 'admin', 2: 'teacher', 3: 'assistant', 4: 'student', 5: 'parent' };
+        const classes = { 1: 'admin', 2: 'teacher', 3: 'student', 4: 'parent', 5: 'assistant' };
         return classes[roleId] || '';
     };
 
@@ -85,25 +233,6 @@ const UserProfile = () => {
             .join('')
             .toUpperCase()
             .slice(0, 2);
-    };
-
-    // Save fullName
-    const handleSaveFullName = async () => {
-        try {
-            setError('');
-            await api.put('/profile/update', { fullName: editFullName });
-            setProfile(prev => ({ ...prev, fullName: editFullName }));
-            setIsEditingName(false);
-            setSuccessMsg('Cập nhật họ tên thành công!');
-            setTimeout(() => setSuccessMsg(''), 3000);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Lỗi khi cập nhật.');
-        }
-    };
-
-    const handleCancelEdit = () => {
-        setEditFullName(profile?.fullName || '');
-        setIsEditingName(false);
     };
 
     // Change password
@@ -132,12 +261,12 @@ const UserProfile = () => {
                 oldPassword: passwordData.oldPassword,
                 newPassword: passwordData.newPassword
             });
-            setSuccessMsg('Đổi mật khẩu thành công!');
-            setTimeout(() => setSuccessMsg(''), 3000);
+            toast.success('Đổi mật khẩu thành công!');
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             setIsChangingPassword(false);
         } catch (err) {
             setPasswordError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+            toast.error(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
         }
     };
 
@@ -163,274 +292,260 @@ const UserProfile = () => {
                 <div className="profile-container">
                     {/* Header */}
                     <div className="profile-header">
-                        <h1>Hồ Sơ Cá Nhân</h1>
-                        <p>Quản lý thông tin cá nhân của bạn</p>
+                        <div className="header-content">
+                            <h1>Hồ Sơ Cá Nhân</h1>
+                            <p>Chào mừng quay trở lại, {displayName}</p>
+                        </div>
                     </div>
 
-                    {/* Success Message */}
-                    {successMsg && (
-                        <div className="profile-alert success">
-                            <CheckCircle size={18} />
-                            <span>{successMsg}</span>
-                        </div>
-                    )}
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="profile-alert error">
-                            <AlertCircle size={18} />
-                            <span>{error}</span>
-                        </div>
-                    )}
-
-                    {/* Avatar Section */}
-                    <div className="profile-section avatar-section">
-                        <div className="avatar-wrapper">
-                            <div className="profile-avatar">
-                                <div className="avatar-initials">
-                                    {getInitials(displayName)}
+                    <div className="profile-grid">
+                        <div className="profile-left-column">
+                            {/* Avatar Section */}
+                            <div className="profile-card avatar-card">
+                                <div className="avatar-preview">
+                                    <div className="avatar-circle">
+                                        <div className="avatar-initials">
+                                            {getInitials(displayName)}
+                                        </div>
+                                    </div>
+                                    <button className="avatar-edit-btn">
+                                        <Camera size={16} />
+                                    </button>
                                 </div>
-                            </div>
-                            <div className="avatar-info">
-                                <h2>{displayName}</h2>
-                                <p className="user-id">@{profile?.username}</p>
-                                <div className="user-badges">
+                                <div className="avatar-details">
+                                    <h2>{displayName}</h2>
                                     <span className={`role-badge ${getRoleBadgeClass(profile?.roleId)}`}>
-                                        {getRoleLabel(profile?.roleId)}
+                                        {profile?.roleName || getRoleLabel(profile?.roleId)}
                                     </span>
-                                    <span className="status-badge active">Hoạt động</span>
+                                    <p className="username-tag">@{profile?.username}</p>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Account Information (Read-only) */}
-                    <div className="profile-section">
-                        <div className="section-header">
-                            <h3>Thông Tin Tài Khoản</h3>
-                            <span className="read-only-badge">Chỉ xem</span>
-                        </div>
-                        <div className="info-grid read-only">
-                            <div className="info-item">
-                                <User size={18} />
-                                <div>
-                                    <label>Tên đăng nhập</label>
-                                    <p>{profile?.username}</p>
+                            {/* Relationship Info (Parents/Students) */}
+                            {(profile?.parentNames?.length > 0 || profile?.studentNames?.length > 0) && (
+                                <div className="profile-card">
+                                    <div className="card-header">
+                                        <h3>{profile?.roleName === 'Student' ? 'Phụ Huynh Liên Kết' : 'Con Cái'}</h3>
+                                    </div>
+                                    <div className="relationship-list">
+                                        {(profile?.roleName === 'Student' ? profile.parentNames : profile.studentNames).map((name, idx) => (
+                                            <div key={idx} className="relationship-item">
+                                                <User size={16} />
+                                                <span>{name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="info-item">
-                                <Briefcase size={18} />
-                                <div>
-                                    <label>Vai trò</label>
-                                    <p>{profile?.roleName || getRoleLabel(profile?.roleId)}</p>
-                                </div>
-                            </div>
-                            <div className="info-item">
-                                <User size={18} />
-                                <div>
-                                    <label>ID người dùng</label>
-                                    <p>{profile?.userId}</p>
-                                </div>
-                            </div>
-                            <div className="info-item">
-                                <User size={18} />
-                                <div>
-                                    <label>Trạng thái</label>
-                                    <p>{profile?.accountStatus === 'active' ? 'Hoạt động' : (profile?.accountStatus || 'Hoạt động')}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                            )}
 
-                    {/* Personal / Role-specific Info */}
-                    {(profile?.email || profile?.phoneNumber || profile?.address || profile?.specialization || profile?.degree || profile?.supportLevel) && (
-                        <div className="profile-section">
-                            <div className="section-header">
-                                <h3>Thông Tin Cá Nhân</h3>
-                                <span className="read-only-badge">Chỉ xem</span>
-                            </div>
-                            <div className="info-grid read-only">
-                                {profile?.email && (
-                                    <div className="info-item">
-                                        <Mail size={18} />
-                                        <div>
-                                            <label>Email</label>
-                                            <p>{profile.email}</p>
+                            {/* Security Section */}
+                            <div className="profile-card">
+                                <div className="card-header">
+                                    <h3>Bảo mật</h3>
+                                    {!isChangingPassword && (
+                                        <button className="text-btn" onClick={() => setIsChangingPassword(true)}>Thay đổi</button>
+                                    )}
+                                </div>
+                                {isChangingPassword ? (
+                                    <form className="password-form" onSubmit={handleChangePassword}>
+                                        {passwordError && <p className="error-text">{passwordError}</p>}
+                                        <div className="form-group">
+                                            <label>Mật khẩu cũ</label>
+                                            <input type="password" name="oldPassword" value={passwordData.oldPassword} onChange={handlePasswordChange} required />
                                         </div>
-                                    </div>
-                                )}
-                                {profile?.phoneNumber && (
-                                    <div className="info-item">
-                                        <Phone size={18} />
-                                        <div>
-                                            <label>Số điện thoại</label>
-                                            <p>{profile.phoneNumber}</p>
+                                        <div className="form-group">
+                                            <label>Mật khẩu mới</label>
+                                            <input type="password" name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} required />
                                         </div>
-                                    </div>
-                                )}
-                                {profile?.address && (
-                                    <div className="info-item full-width">
-                                        <MapPin size={18} />
-                                        <div>
-                                            <label>Địa chỉ</label>
-                                            <p>{profile.address}</p>
+                                        <div className="form-group">
+                                            <label>Xác nhận mật khẩu</label>
+                                            <input type="password" name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} required />
                                         </div>
-                                    </div>
-                                )}
-                                {profile?.specialization && (
-                                    <div className="info-item">
-                                        <Briefcase size={18} />
-                                        <div>
-                                            <label>Chuyên môn</label>
-                                            <p>{profile.specialization}</p>
+                                        <div className="form-actions">
+                                            <button type="button" className="btn-secondary" onClick={() => setIsChangingPassword(false)}>Hủy</button>
+                                            <button type="submit" className="btn-primary">Lưu</button>
                                         </div>
-                                    </div>
-                                )}
-                                {profile?.degree && (
-                                    <div className="info-item">
-                                        <FileText size={18} />
-                                        <div>
-                                            <label>Bằng cấp</label>
-                                            <p>{profile.degree}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                {profile?.supportLevel && (
-                                    <div className="info-item">
-                                        <Briefcase size={18} />
-                                        <div>
-                                            <label>Cấp hỗ trợ</label>
-                                            <p>{profile.supportLevel}</p>
-                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="security-item">
+                                        <Lock size={18} />
+                                        <span>Mật khẩu: ••••••••</span>
                                     </div>
                                 )}
                             </div>
-                            <p className="section-note">
-                                💡 Thông tin này do quản trị viên quản lý. Liên hệ admin để thay đổi.
-                            </p>
                         </div>
-                    )}
 
-                    {/* Full Name (Editable) */}
-                    <div className="profile-section">
-                        <div className="section-header">
-                            <h3>Họ và Tên</h3>
-                            {!isEditingName ? (
-                                <button className="btn-edit" onClick={() => setIsEditingName(true)}>
-                                    Chỉnh sửa
-                                </button>
-                            ) : (
-                                <div className="edit-actions">
-                                    <button className="btn-cancel" onClick={handleCancelEdit}>
-                                        Hủy
-                                    </button>
-                                    <button className="btn-save" onClick={handleSaveFullName}>
-                                        Lưu
-                                    </button>
+                        <div className="profile-right-column">
+                            {/* Account Information */}
+                            <div className="profile-card">
+                                <div className="card-header">
+                                    <h3>Thông Tin Tài Khoản</h3>
+                                    {!isEditingAccount ? (
+                                        <button className="text-btn" onClick={() => setIsEditingAccount(true)}>Chỉnh sửa</button>
+                                    ) : (
+                                        <div className="action-buttons">
+                                            <button className="btn-secondary" onClick={() => handleCancelEdit('account')}>Hủy</button>
+                                            <button className="btn-primary" onClick={() => handleSaveProfile('account')}>Lưu</button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="card-body">
+                                    <div className="info-row">
+                                        <div className="info-field">
+                                            <label>Tên đăng nhập</label>
+                                            {isEditingAccount ? (
+                                                <input name="username" value={formData.username} onChange={handleFormChange} />
+                                            ) : (
+                                                <p>{profile.username}</p>
+                                            )}
+                                        </div>
+                                        <div className="info-field">
+                                            <label>Họ và tên</label>
+                                            {isEditingAccount ? (
+                                                <input name="fullName" value={formData.fullName} onChange={handleFormChange} />
+                                            ) : (
+                                                <p>{profile.fullName}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Personal Information */}
+                            <div className="profile-card">
+                                <div className="card-header">
+                                    <h3>Thông Tin Cá Nhân</h3>
+                                    {!isEditingPersonal ? (
+                                        <button className="text-btn" onClick={() => setIsEditingPersonal(true)}>Chỉnh sửa</button>
+                                    ) : (
+                                        <div className="action-buttons">
+                                            <button className="btn-secondary" onClick={() => handleCancelEdit('personal')}>Hủy</button>
+                                            <button className="btn-primary" onClick={() => handleSaveProfile('personal')}>Lưu</button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="card-body">
+                                    <div className="info-row">
+                                        <div className="info-field">
+                                            <label><Mail size={14} /> Email</label>
+                                            {isEditingPersonal ? (
+                                                <input name="email" value={formData.email} onChange={handleFormChange} />
+                                            ) : (
+                                                <p>{profile.email || 'Chưa cập nhật'}</p>
+                                            )}
+                                        </div>
+                                        <div className="info-field">
+                                            <label><Phone size={14} /> Số điện thoại</label>
+                                            {isEditingPersonal ? (
+                                                <input name="phoneNumber" value={formData.phoneNumber} onChange={handleFormChange} />
+                                            ) : (
+                                                <p>{profile.phoneNumber || 'Chưa cập nhật'}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {profile.roleName === 'Student' && (
+                                        <div className="info-row">
+                                            <div className="info-field">
+                                                <label><Calendar size={14} /> Ngày sinh</label>
+                                                {isEditingPersonal ? (
+                                                    <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleFormChange} />
+                                                ) : (
+                                                    <p>{profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</p>
+                                                )}
+                                            </div>
+                                            <div className="info-field">
+                                                <label><User size={14} /> Giới tính</label>
+                                                {isEditingPersonal ? (
+                                                    <select name="gender" value={formData.gender} onChange={handleFormChange}>
+                                                        <option value="">Chọn giới tính</option>
+                                                        <option value="Nam">Nam</option>
+                                                        <option value="Nữ">Nữ</option>
+                                                        <option value="Khác">Khác</option>
+                                                    </select>
+                                                ) : (
+                                                    <p>{profile.gender || 'Chưa cập nhật'}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="info-field full-width">
+                                        <label><MapPin size={14} /> Địa chỉ</label>
+                                        {isEditingPersonal ? (
+                                            <textarea name="address" value={formData.address} onChange={handleFormChange} rows="2" />
+                                        ) : (
+                                            <p>{profile.address || 'Chưa cập nhật'}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Role-specific Information (Teacher / Assistant / Student Grade) */}
+                            {(profile.roleName === 'Teacher' || profile.roleName === 'Assistant' || profile.roleName === 'Student') && (
+                                <div className="profile-card">
+                                    <div className="card-header">
+                                        <h3>Thông Tin {profile.roleName === 'Student' ? 'Học Tập' : 'Công Việc'}</h3>
+                                        {profile.roleName !== 'Student' && (
+                                            !isEditingRoleInfo ? (
+                                                <button className="text-btn" onClick={() => setIsEditingRoleInfo(true)}>Chỉnh sửa</button>
+                                            ) : (
+                                                <div className="action-buttons">
+                                                    <button className="btn-secondary" onClick={() => handleCancelEdit('role')}>Hủy</button>
+                                                    <button className="btn-primary" onClick={() => handleSaveProfile('role')}>Lưu</button>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                    <div className="card-body">
+                                        {profile.roleName === 'Teacher' && (
+                                            <div className="info-row">
+                                                <div className="info-field">
+                                                    <label><Briefcase size={14} /> Chuyên môn</label>
+                                                    {isEditingRoleInfo ? (
+                                                        <input name="specialization" value={formData.specialization} onChange={handleFormChange} />
+                                                    ) : (
+                                                        <p>{profile.specialization || 'Chưa cập nhật'}</p>
+                                                    )}
+                                                </div>
+                                                <div className="info-field">
+                                                    <label><FileText size={14} /> Bằng cấp</label>
+                                                    {isEditingRoleInfo ? (
+                                                        <input name="degree" value={formData.degree} onChange={handleFormChange} />
+                                                    ) : (
+                                                        <p>{profile.degree || 'Chưa cập nhật'}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {profile.roleName === 'Assistant' && (
+                                            <div className="info-field">
+                                                <label><Briefcase size={14} /> Cấp hỗ trợ</label>
+                                                {isEditingRoleInfo ? (
+                                                    <input name="supportLevel" value={formData.supportLevel} onChange={handleFormChange} />
+                                                ) : (
+                                                    <p>{profile.supportLevel || 'Chưa cập nhật'}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                        {profile.roleName === 'Student' && (
+                                            <div className="info-row">
+                                                <div className="info-field">
+                                                    <label><Briefcase size={14} /> Khối lớp</label>
+                                                    <p>{profile.grade || 'Chưa cập nhật'}</p>
+                                                </div>
+                                                <div className="info-field">
+                                                    <label><CheckCircle size={14} /> Trạng thái</label>
+                                                    <p className="status-text">{profile.enrollmentStatus || 'Active'}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {(profile.roleName === 'Teacher' || profile.roleName === 'Assistant') && (
+                                            <p className="note-text">💡 Thông tin chuyên môn giúp tối ưu việc phân lớp.</p>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
-
-                        {!isEditingName ? (
-                            <div className="info-grid">
-                                <div className="info-item full-width">
-                                    <User size={18} />
-                                    <div>
-                                        <label>Họ và tên hiển thị</label>
-                                        <p>{profile?.fullName || 'Chưa cập nhật'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="edit-form">
-                                <div className="form-group">
-                                    <label>Họ và tên</label>
-                                    <input
-                                        type="text"
-                                        value={editFullName}
-                                        onChange={(e) => setEditFullName(e.target.value)}
-                                        placeholder="Nhập họ và tên của bạn"
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Change Password Section */}
-                    <div className="profile-section">
-                        <div className="section-header">
-                            <h3>Bảo mật</h3>
-                            {!isChangingPassword && (
-                                <button className="btn-edit" onClick={() => setIsChangingPassword(true)}>
-                                    Đổi mật khẩu
-                                </button>
-                            )}
-                        </div>
-
-                        {isChangingPassword ? (
-                            <form className="password-form" onSubmit={handleChangePassword}>
-                                {passwordError && (
-                                    <div className="profile-alert error" style={{ marginBottom: '1rem' }}>
-                                        <AlertCircle size={18} />
-                                        <span>{passwordError}</span>
-                                    </div>
-                                )}
-                                <div className="form-group">
-                                    <label>Mật khẩu hiện tại</label>
-                                    <input
-                                        type="password"
-                                        name="oldPassword"
-                                        value={passwordData.oldPassword}
-                                        onChange={handlePasswordChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Mật khẩu mới</label>
-                                    <input
-                                        type="password"
-                                        name="newPassword"
-                                        value={passwordData.newPassword}
-                                        onChange={handlePasswordChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Xác nhận mật khẩu mới</label>
-                                    <input
-                                        type="password"
-                                        name="confirmPassword"
-                                        value={passwordData.confirmPassword}
-                                        onChange={handlePasswordChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="password-actions">
-                                    <button
-                                        type="button"
-                                        className="btn-cancel"
-                                        onClick={() => {
-                                            setIsChangingPassword(false);
-                                            setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
-                                            setPasswordError('');
-                                        }}
-                                    >
-                                        Hủy
-                                    </button>
-                                    <button type="submit" className="btn-save">
-                                        Đổi mật khẩu
-                                    </button>
-                                </div>
-                            </form>
-                        ) : (
-                            <div className="info-item">
-                                <Lock size={18} />
-                                <div>
-                                    <label>Mật khẩu</label>
-                                    <p>••••••••</p>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </main>

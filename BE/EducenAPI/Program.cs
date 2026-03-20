@@ -39,6 +39,7 @@ builder.Services.AddControllers()
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddRouting();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<MailService>();
 
 // ── Swagger ───────────────────────────────────────────────────────────────

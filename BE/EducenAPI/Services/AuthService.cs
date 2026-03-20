@@ -3,6 +3,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using EducenAPI.Ultils;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -15,11 +16,15 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private readonly IConfiguration _config;
+        private readonly MailService _mailService;
+        private readonly IMemoryCache _cache;
 
-        public AuthService(EducenV2Context context, IConfiguration config)
+        public AuthService(EducenV2Context context, IConfiguration config, MailService mailService, IMemoryCache cache)
         {
             _context = context;
             _config = config;
+            _mailService = mailService;
+            _cache = cache;
         }
 
         public async Task Register(RegisterDto dto)
@@ -64,69 +69,80 @@ namespace EducenAPI.Services
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-            // Unified message to prevent email enumeration
-            // If email exists, token will be generated (but not revealed in response)
+            // Vẫn trả về thông báo thành công để bảo mật
             if (user == null)
             {
-                // Still return success to prevent email enumeration
-                // In production: Send email with reset link regardless
-                return "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi";
+                return "Nếu email tồn tại trong hệ thống, mã xác thực 6 số sẽ được gửi.";
             }
 
-            // Generate reset token (valid for 1 hour)
-            var resetToken = Guid.NewGuid().ToString("N");
+            // TẠO MÃ 6 SỐ
+            var resetCode = new Random().Next(100000, 999999).ToString();
             
-            // In production, you would:
-            // 1. Store this token in database with expiration
-            // 2. Send email with reset link containing the token
+            // Lưu vào Cache 15 phút (luôn dùng email viết thường để đồng bộ)
+            var cleanEmail = user.Email?.Trim().ToLower();
+            var cacheKey = $"ResetPassword_{cleanEmail}";
+            _cache.Set(cacheKey, resetCode, TimeSpan.FromMinutes(15));
             
-            // TODO: Store token in database with expiration (PasswordResetToken table)
-            // Example:
-            // var resetRecord = new PasswordResetToken {
-            //     UserId = user.UserId,
-            //     Token = resetToken,
-            //     ExpiresAt = DateTime.UtcNow.AddHours(1),
-            //     IsUsed = false
-            // };
-            // _context.PasswordResetTokens.Add(resetRecord);
-            // await _context.SaveChangesAsync();
-            
-            // TODO: Send email with reset link
-            // await _mailService.SendPasswordResetEmail(user.Email, resetToken);
+            // Gửi Email thật
+            try 
+            {
+                await _mailService.SendResetPasswordEmail(user.Email ?? "", resetCode);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi gửi mail: {ex.Message}");
+            }
 
-            // For development: return message without exposing token
-            return "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi";
+            return "Nếu email tồn tại trong hệ thống, mã xác thực 6 số sẽ được gửi.";
         }
 
         public async Task<bool> ConfirmResetPassword(ResetPasswordConfirmDto dto)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+            try
+            {
+                // Làm sạch dữ liệu đầu vào
+                var cleanEmail = dto.Email?.Trim().ToLower();
+                var cleanCode = dto.ResetToken?.Trim();
+                var cleanPassword = dto.NewPassword?.Trim();
 
-            if (user == null)
-                throw new Exception("Email not found");
+                // Lấy mã từ Cache (luôn dùng email đã viết thường để làm key)
+                var cacheKey = $"ResetPassword_{cleanEmail}";
+                if (!_cache.TryGetValue(cacheKey, out string storedCode))
+                {
+                    throw new Exception("Mã xác thực đã hết hạn hoặc không tồn tại. Vui lòng yêu cầu mã mới.");
+                }
 
-            // TODO: Validate the reset token from database
-            // Example:
-            // var resetToken = await _context.PasswordResetTokens
-            //     .Where(t => t.UserId == user.UserId && t.Token == dto.Token && !t.IsUsed && t.ExpiresAt > DateTime.UtcNow)
-            //     .FirstOrDefaultAsync();
-            // 
-            // if (resetToken == null)
-            //     throw new Exception("Invalid or expired reset token");
-            //
-            // // Mark token as used
-            // resetToken.IsUsed = true;
+                // Kiểm tra mã
+                if (storedCode != cleanCode)
+                {
+                    throw new Exception("Mã xác thực không chính xác.");
+                }
 
-            // Validate password meets requirements
-            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
-                throw new Exception("Password must be at least 6 characters");
-            
-            // Update password
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-            await _context.SaveChangesAsync();
+                // Tìm User (so sánh không phân biệt hoa thường)
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == cleanEmail);
 
-            return true;
+                if (user == null)
+                    throw new Exception($"Không tìm thấy người dùng có Email: {cleanEmail}");
+
+                // Validate password
+                if (string.IsNullOrWhiteSpace(cleanPassword) || cleanPassword.Length < 6)
+                    throw new Exception("Mật khẩu mới phải có ít nhất 6 ký tự.");
+
+                // Cập nhật mật khẩu mới
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(cleanPassword);
+                
+                await _context.SaveChangesAsync();
+
+                // Xóa mã khỏi Cache sau khi thành công
+                _cache.Remove(cacheKey);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
         }
 
         private string GenerateToken(User user)
