@@ -134,6 +134,7 @@ namespace EducenAPI.DTOs.Parents
         public string AccountStatus { get; set; } = string.Empty;
         public int ChildrenCount { get; set; }
         public List<string> StudentNames { get; set; } = new List<string>();
+        public List<string> StudentClassNames { get; set; } = new List<string>();
         public List<int> StudentIds { get; set; } = new List<int>();
         public DateTime CreatedAt { get; set; }
     }

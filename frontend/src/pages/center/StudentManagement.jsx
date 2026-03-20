@@ -42,10 +42,8 @@ const StudentManagement = () => {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            await Promise.all([
-                fetchStudents(),
-                fetchParents()
-            ]);
+            const parents = await fetchParents();
+            await fetchStudents(parents);
         } finally {
             setIsLoading(false);
         }
@@ -61,34 +59,43 @@ const StudentManagement = () => {
                 phone: p.phoneNumber || ''
             }));
             setParentList(data);
+            return data;
         } catch (error) {
             console.error("Fetch parents error:", error);
+            return [];
         }
     };
 
-    const fetchStudents = async () => {
+    const fetchStudents = async (parentsData = parentList) => {
         try {
             const res = await api.get('/Students');
-            const data = res.data.map((student) => ({
-                id: student.userId.toString(),
-                name: student.fullName,
-                avatar: null,
-                email: student.email,
-                grade: student.grade || '',
-                dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',
-                gender: student.gender || 'male',
-                linkedParentIds: student.parentIds?.map(id => id.toString()) || [],
-                parentName: student.parentNames?.join(', ') || '',
-                parentPhone: '', // Backend doesn't return list of phones in StudentDto yet
-                parentEmail: '',
-                address: student.address || '',
-                enrollmentDate: student.createdAt,
-                status: student.isAccountSent
-                    ? (student.accountStatus === 'Active' ? 'active' : 'inactive')
-                    : 'inactive',
-                accountSent: student.isAccountSent ?? false,
-                notes: ''
-            }));
+            const data = res.data.map((student) => {
+                const linkedParents = parentsData.filter(p => 
+                    student.parentIds?.map(id => id.toString()).includes(p.id)
+                );
+
+                return {
+                    id: student.userId.toString(),
+                    name: student.fullName,
+                    avatar: null,
+                    email: student.email,
+                    grade: student.grade || '',
+                    class: student.className || 'Chưa xếp lớp',
+                    dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',
+                    gender: student.gender || 'male',
+                    linkedParentIds: student.parentIds?.map(id => id.toString()) || [],
+                    parentName: linkedParents.map(p => p.name).join(', ') || student.parentNames?.join(', ') || '',
+                    parentPhone: linkedParents.map(p => p.phone).join(', '),
+                    parentEmail: linkedParents.map(p => p.email).join(', '),
+                    address: student.address || '',
+                    enrollmentDate: student.createdAt,
+                    status: student.isAccountSent
+                        ? (student.accountStatus === 'Active' ? 'active' : 'inactive')
+                        : 'inactive',
+                    accountSent: student.isAccountSent ?? false,
+                    notes: ''
+                };
+            });
             setStudentList(data);
         } catch (error) {
             console.error("Fetch students error:", error);
@@ -178,6 +185,7 @@ const StudentManagement = () => {
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,
                     gender: studentData.gender || null,
+                    address: studentData.address || null,
                     parentIds: studentData.linkedParentIds?.map(id => parseInt(id)) || []
                 };
                 if (studentData.phone) updatePayload.phoneNumber = studentData.phone;
@@ -196,6 +204,7 @@ const StudentManagement = () => {
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,
                     gender: studentData.gender || null,
+                    address: studentData.address || null,
                     parentIds: studentData.linkedParentIds?.map(id => parseInt(id)) || []
                 };
                 if (studentData.phone) payload.phoneNumber = studentData.phone;

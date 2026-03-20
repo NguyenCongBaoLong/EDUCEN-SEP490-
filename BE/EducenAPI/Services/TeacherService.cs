@@ -27,6 +27,7 @@ namespace EducenAPI.Services
                     FullName = t.TeacherNavigation.FullName ?? "",
                     Email = t.TeacherNavigation.Email ?? "",
                     PhoneNumber = t.TeacherNavigation.PhoneNumber,
+                    Address = t.TeacherNavigation.Address,
                     Specialization = t.Specialization ?? "",
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
@@ -50,6 +51,7 @@ namespace EducenAPI.Services
                     FullName = t.TeacherNavigation.FullName ?? "",
                     Email = t.TeacherNavigation.Email ?? "",
                     PhoneNumber = t.TeacherNavigation.PhoneNumber,
+                    Address = t.TeacherNavigation.Address,
                     Specialization = t.Specialization ?? "",
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
@@ -117,6 +119,7 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = "Active"
             };
 
@@ -174,6 +177,9 @@ namespace EducenAPI.Services
 
             if (dto.PhoneNumber != null)
                 teacher.TeacherNavigation.PhoneNumber = dto.PhoneNumber;
+
+            if (dto.Address != null)
+                teacher.TeacherNavigation.Address = dto.Address;
 
             if (!string.IsNullOrEmpty(dto.Specialization))
                 teacher.Specialization = dto.Specialization;

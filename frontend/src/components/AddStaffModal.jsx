@@ -11,14 +11,14 @@ import '../css/components/CreateClassModal.css';
  * - Staff manages: Address, Date of Birth, Notes, Avatar (personal info via User Profile page)
  * - Admin can view all info in StaffDetailModal (read-only)
  */
-const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff = [], subjects = [] }) => {
+const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         phone: '',
         role: 'teacher',
-        subject: '',
-        status: 'active'
+        status: 'active',
+        address: ''
     });
 
     const [errors, setErrors] = useState({});
@@ -30,12 +30,12 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                 email: editingStaff.email || '',
                 phone: editingStaff.phone || '',
                 role: editingStaff.role || 'teacher',
-                subject: editingStaff.subject || '',
-                status: editingStaff.status || 'active'
+                status: editingStaff.status || 'active',
+                address: editingStaff.address || ''
             });
         } else {
             setFormData({
-                name: '', email: '', phone: '', role: 'teacher', subject: '', status: 'active'
+                name: '', email: '', phone: '', role: 'teacher', status: 'active', address: ''
             });
         }
     }, [editingStaff, isOpen]);
@@ -165,48 +165,44 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                     </div>
 
                     <div className="form-row">
-                        <div className="form-group">
-                            <label>Vai trò *</label>
-                            <select
-                                name="role"
-                                value={formData.role}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="teacher">Giảng Viên</option>
-                                <option value="assistant">Trợ Giảng</option>
-                            </select>
-                        </div>
+                        {!editingStaff && (
+                            <div className="form-group">
+                                <label>Vai trò *</label>
+                                <select
+                                    name="role"
+                                    value={formData.role}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="teacher">Giảng Viên</option>
+                                    <option value="assistant">Trợ Giảng</option>
+                                </select>
+                            </div>
+                        )}
 
                         <div className="form-group">
-                            <label>Môn học *</label>
+                            <label>Trạng thái *</label>
                             <select
-                                name="subject"
-                                value={formData.subject}
+                                name="status"
+                                value={formData.status}
                                 onChange={handleChange}
                                 required
                             >
-                                <option value="">Chọn môn học</option>
-                                {subjects.map((sub) => (
-                                    <option key={sub.subjectId} value={sub.subjectName}>
-                                        {sub.subjectName}
-                                    </option>
-                                ))}
+                                <option value="active">Hoạt động</option>
+                                <option value="inactive">Không hoạt động</option>
                             </select>
                         </div>
                     </div>
 
                     <div className="form-group">
-                        <label>Trạng thái *</label>
-                        <select
-                            name="status"
-                            value={formData.status}
+                        <label>Địa chỉ</label>
+                        <input
+                            type="text"
+                            name="address"
+                            value={formData.address}
                             onChange={handleChange}
-                            required
-                        >
-                            <option value="active">Hoạt động</option>
-                            <option value="inactive">Không hoạt động</option>
-                        </select>
+                            placeholder="Địa chỉ thường trú"
+                        />
                     </div>
 
                     <div className="modal-actions">
@@ -228,8 +224,7 @@ AddStaffModal.propTypes = {
     onClose: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
     editingStaff: PropTypes.object,
-    existingStaff: PropTypes.array,
-    subjects: PropTypes.array
+    existingStaff: PropTypes.array
 };
 
 export default AddStaffModal;

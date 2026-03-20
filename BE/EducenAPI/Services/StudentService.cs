@@ -21,6 +21,7 @@ namespace EducenAPI.Services
                 .Include(s => s.StudentNavigation)
                 .Include(s => s.Parents)
                     .ThenInclude(p => p.ParentNavigation)
+                .Include(s => s.Classes)
                 .ToListAsync();
 
             return students.Select(MapToStudentDto);
@@ -32,6 +33,7 @@ namespace EducenAPI.Services
                 .Include(s => s.StudentNavigation)
                 .Include(s => s.Parents)
                     .ThenInclude(p => p.ParentNavigation)
+                .Include(s => s.Classes)
                 .FirstOrDefaultAsync(s => s.UserId == id);
 
             return student != null ? MapToStudentDto(student) : null;
@@ -54,9 +56,12 @@ namespace EducenAPI.Services
                 PhoneNumber = hasUser ? s.StudentNavigation.PhoneNumber : null,
                 Address = hasUser ? s.StudentNavigation.Address : null,
                 Grade = s.Grade,
+                DateOfBirth = s.DateOfBirth,
+                Gender = s.Gender,
                 EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                 AccountStatus = hasUser ? s.StudentNavigation.AccountStatus : "NO_ACCOUNT",
                 IsAccountSent = hasUser && s.StudentNavigation.IsAccountSent,
+                ClassName = s.Classes.FirstOrDefault()?.ClassName,
                 CreatedAt = DateTime.Now,
                 ParentNames = s.Parents.Select(p => p.ParentNavigation?.FullName ?? p.ParentNavigation?.Username ?? "").ToList(),
                 ParentIds = s.Parents.Select(p => p.UserId).ToList()
@@ -119,6 +124,7 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = "NoAccount",
                 IsAccountSent = false
             };
@@ -186,6 +192,7 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = "Inactive", // Inactive until admin sends account
                 IsAccountSent = false
             };
@@ -312,6 +319,14 @@ namespace EducenAPI.Services
             if (dto.Gender != null)
             {
                 student.Gender = dto.Gender;
+            }
+
+            if (dto.Address != null)
+            {
+                if (student.StudentNavigation != null)
+                {
+                    student.StudentNavigation.Address = dto.Address;
+                }
             }
 
             // Update Parents

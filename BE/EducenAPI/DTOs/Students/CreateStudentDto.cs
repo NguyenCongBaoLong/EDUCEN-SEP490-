@@ -66,6 +66,7 @@ namespace EducenAPI.DTOs.Students
         public string? Grade { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
+        public string? Address { get; set; }
         public List<int>? ParentIds { get; set; }
     }
 
@@ -91,6 +92,7 @@ namespace EducenAPI.DTOs.Students
         public string? Grade { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
+        public string? Address { get; set; }
         public List<int>? ParentIds { get; set; }
     }
 
@@ -103,8 +105,11 @@ namespace EducenAPI.DTOs.Students
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
         public string? Grade { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? Gender { get; set; }
         public string EnrollmentStatus { get; set; } = string.Empty;
         public string AccountStatus { get; set; } = string.Empty;
+        public string? ClassName { get; set; }
         public bool IsAccountSent { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<string> ParentNames { get; set; } = new List<string>();

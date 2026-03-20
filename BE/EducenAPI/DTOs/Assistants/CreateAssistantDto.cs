@@ -59,6 +59,7 @@ namespace EducenAPI.DTOs.Assistants
             get => _supportLevel;
             set => _supportLevel = value?.Trim();
         }
+        public string? Address { get; set; }
     }
 
     public class UpdateAssistantDto
@@ -79,6 +80,7 @@ namespace EducenAPI.DTOs.Assistants
         [StringLength(50, ErrorMessage = "SupportLevel cannot exceed 50 characters")]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SupportLevel cannot be only whitespace")]
         public string? SupportLevel { get; set; }
+        public string? Address { get; set; }
     }
 
     public class AssistantDto
@@ -89,6 +91,7 @@ namespace EducenAPI.DTOs.Assistants
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public string? Address { get; set; }
         public string? SupportLevel { get; set; }
         public string AccountStatus { get; set; } = string.Empty;
         public int AssignedClassesCount { get; set; }

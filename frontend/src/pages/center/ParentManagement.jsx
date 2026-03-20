@@ -37,11 +37,13 @@ const ParentManagement = () => {
                 name: p.fullName || p.username,
                 email: p.email,
                 phone: p.phoneNumber || '',
+                address: p.address || '',
                 gender: 'male',
                 status: p.accountStatus === 'Active' ? 'active' : 'inactive',
                 accountSent: p.accountStatus === 'Active',
                 linkedStudentIds: p.studentIds?.map(id => id.toString()) || [],
                 linkedStudentNames: p.studentNames || [],
+                studentClassNames: p.studentClassNames || [],
                 childrenCount: p.childrenCount || 0
             }));
 
@@ -80,6 +82,7 @@ const ParentManagement = () => {
                     fullName: data.name,
                     email: data.email,
                     phoneNumber: data.phone,
+                    address: data.address,
                     studentIds: data.linkedStudentIds?.map(id => parseInt(id))
                 };
 
@@ -91,6 +94,7 @@ const ParentManagement = () => {
                     fullName: data.name,
                     email: data.email,
                     phoneNumber: data.phone,
+                    address: data.address,
                     studentIds: data.linkedStudentIds?.map(id => parseInt(id))
                 };
 

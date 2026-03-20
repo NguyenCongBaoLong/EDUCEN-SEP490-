@@ -22,6 +22,8 @@ namespace EducenAPI.Services
         {
             return await _context.Parents
                 .Include(p => p.ParentNavigation)
+                .Include(p => p.Students)
+                    .ThenInclude(s => s.Classes)
                 .Select(p => new ParentDto
                 {
                     ParentId = p.UserId,
@@ -30,10 +32,11 @@ namespace EducenAPI.Services
                     FullName = p.ParentNavigation.FullName ?? "",
                     Email = p.ParentNavigation.Email ?? "",
                     PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = null,
+                    Address = p.ParentNavigation.Address,
                     AccountStatus = p.ParentNavigation.AccountStatus,
                     ChildrenCount = p.Students.Count,
-                    StudentNames = p.Students.Select(s => s.StudentNavigation.FullName ?? s.StudentNavigation.Username).ToList(),
+                    StudentNames = p.Students.Select(s => s.StudentNavigation != null ? (s.StudentNavigation.FullName ?? s.StudentNavigation.Username ?? "") : "").ToList(),
+                    StudentClassNames = p.Students.Select(s => s.Classes.FirstOrDefault() != null ? (s.Classes.FirstOrDefault()!.ClassName ?? "Chưa xếp lớp") : "Chưa xếp lớp").ToList(),
                     StudentIds = p.Students.Select(s => s.UserId).ToList(),
                     CreatedAt = DateTime.Now
                 })
@@ -44,6 +47,8 @@ namespace EducenAPI.Services
         {
             return await _context.Parents
                 .Include(p => p.ParentNavigation)
+                .Include(p => p.Students)
+                    .ThenInclude(s => s.Classes)
                 .Where(p => p.UserId == id)
                 .Select(p => new ParentDto
                 {
@@ -53,10 +58,11 @@ namespace EducenAPI.Services
                     FullName = p.ParentNavigation.FullName ?? "",
                     Email = p.ParentNavigation.Email ?? "",
                     PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = null,
+                    Address = p.ParentNavigation.Address,
                     AccountStatus = p.ParentNavigation.AccountStatus,
                     ChildrenCount = p.Students.Count,
-                    StudentNames = p.Students.Select(s => s.StudentNavigation.FullName ?? s.StudentNavigation.Username).ToList(),
+                    StudentNames = p.Students.Select(s => s.StudentNavigation != null ? (s.StudentNavigation.FullName ?? s.StudentNavigation.Username ?? "") : "").ToList(),
+                    StudentClassNames = p.Students.Select(s => s.Classes.FirstOrDefault() != null ? (s.Classes.FirstOrDefault()!.ClassName ?? "Chưa xếp lớp") : "Chưa xếp lớp").ToList(),
                     StudentIds = p.Students.Select(s => s.UserId).ToList(),
                     CreatedAt = DateTime.Now
                 })
@@ -65,8 +71,8 @@ namespace EducenAPI.Services
 
         public async Task<ParentDto> CreateParentAsync(CreateParentDto dto)
         {
-            string username = dto.Username;
-            string password = dto.Password;
+            string? username = dto.Username;
+            string? password = dto.Password;
             string accountStatus = "Active";
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
@@ -105,6 +111,7 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = accountStatus,
                 IsAccountSent = false
             };
@@ -134,14 +141,15 @@ namespace EducenAPI.Services
             {
                 ParentId = parent.UserId,
                 UserId = user.UserId,
-                Username = user.Username,
+                Username = user.Username ?? "",
                 FullName = user.FullName ?? "",
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber,
-                Address = null,
+                Address = user.Address,
                 AccountStatus = user.AccountStatus,
                 ChildrenCount = parent.Students.Count,
-                StudentNames = parent.Students.Select(s => s.StudentNavigation.FullName ?? s.StudentNavigation.Username).ToList(),
+                StudentNames = parent.Students.Select(s => s.StudentNavigation != null ? (s.StudentNavigation.FullName ?? s.StudentNavigation.Username ?? "") : "").ToList(),
+                StudentClassNames = parent.Students.Select(s => s.Classes.FirstOrDefault() != null ? (s.Classes.FirstOrDefault()!.ClassName ?? "Chưa xếp lớp") : "Chưa xếp lớp").ToList(),
                 StudentIds = parent.Students.Select(s => s.UserId).ToList(),
                 CreatedAt = DateTime.Now
             };
@@ -175,14 +183,11 @@ namespace EducenAPI.Services
                     existingParent.ParentNavigation.PhoneNumber = dto.PhoneNumber;
             }
 
-            // Parent model doesn't have Address field to update
             if (dto.Address != null)
             {
-                // Not supported in Parent model yet, skipping for now or handle via User
                 if (existingParent.ParentNavigation != null)
                 {
-                    // Update address in User if possible, but User doesn't have Address field either in current model?
-                    // Let's stick to fields that exist.
+                    existingParent.ParentNavigation.Address = dto.Address;
                 }
             }
 
