@@ -7,14 +7,17 @@ namespace EducenAPI.DTOs.Plans
         [Required]
         [MaxLength(100)]
         public string PlanName { get; set; }
+        [Required]
 
         [Range(0, double.MaxValue)]
         public decimal Price { get; set; }
+        [Required]
 
         [Range(1, int.MaxValue)]
         public int LimitUsers { get; set; }
 
         public string? Features { get; set; }
+        [Required]
 
         [Range(1, int.MaxValue)]
         public int StorageLimit { get; set; }
