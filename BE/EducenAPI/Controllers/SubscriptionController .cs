@@ -28,6 +28,8 @@ namespace EducenAPI.Controllers
             var result = await _subscriptionService.CancelSubscription(tenantId);
             if (!result) return NotFound(new { message = "Không tìm thấy gói dịch vụ đang hoạt động để hủy." });
             return Ok(new { message = "Đã hủy gói dịch vụ thành công." });
+        }
+
         [HttpPost("renew")]
         public async Task<IActionResult> RenewSubscription(RenewSubscriptionRequestDTO request)
         {

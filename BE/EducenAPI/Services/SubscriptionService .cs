@@ -107,6 +107,8 @@ namespace EducenAPI.Services
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
         public async Task<SubscriptionResponseDTO> RenewSubscription(RenewSubscriptionRequestDTO request)
         {
             var subscription = await _context.Subscriptions
