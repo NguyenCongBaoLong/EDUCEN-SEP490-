@@ -2,8 +2,8 @@
 {
     public static class SubmissionStatus
     {
-        public const string NotSubmitted = "ChuaNop";
-        public const string Submitted = "DaNop";
-        public const string LateSubmitted = "NopMuon";
+        public const string NotSubmitted = "Chưa nộp";
+        public const string Submitted = "Đã nộp";
+        public const string LateSubmitted = "Nộp muộn";
     }
 }
