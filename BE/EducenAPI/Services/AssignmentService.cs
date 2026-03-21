@@ -64,7 +64,10 @@ namespace EducenAPI.Services
                         && e.Title == dto.Title);
                 if (isUniqueTitle) throw new Exception("Title đang bị trùng vui lòng đặt lại");
             }
-
+            if (!string.IsNullOrEmpty(dto.FileUrl))
+            {
+                fileUrl = dto.FileUrl.Trim();
+            }
             var assignment = new Assignment
             {
                 SessionId = dto.SessionId,
