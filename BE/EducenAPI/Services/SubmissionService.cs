@@ -1,4 +1,5 @@
 ﻿using EducenAPI.DTOs.Submissions;
+using EducenAPI.Enums;
 using EducenAPI.Exceptions;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
@@ -45,13 +46,22 @@ namespace EducenAPI.Services
                 var uploadedFile = uploadedFiles.FirstOrDefault();
                 if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
             }
+            var now = DateTime.Now;
+
+            var status = SubmissionStatus.Submitted;
+
+            if (assignment.EndTime.HasValue && now > assignment.EndTime.Value)
+            {
+                status = SubmissionStatus.LateSubmitted;
+            }
+
             var submission = new Submission
             {
                 AsmId = request.AsmId,
                 StudentId = request.StudentId,
                 FileUrl = fileUrl,
-                SubmittedAt = DateTime.UtcNow,
-                Status = "Submitted",
+                SubmittedAt = now,
+                Status = status,
                 IsPublished = false
             };
 
@@ -86,9 +96,14 @@ namespace EducenAPI.Services
             }
 
 
-            
-            submission.SubmittedAt = DateTime.UtcNow;
-            submission.Status = "Resubmitted";
+            var now = DateTime.UtcNow;
+            submission.SubmittedAt = now;
+            submission.Status = SubmissionStatus.Submitted;
+
+            if (submission.Asm.EndTime.HasValue && now > submission.Asm.EndTime.Value)
+            {
+                submission.Status = SubmissionStatus.LateSubmitted;
+            }
 
             submission.Score = null;
             submission.TeacherComment = null;
