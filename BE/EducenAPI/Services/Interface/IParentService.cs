@@ -9,5 +9,6 @@ namespace EducenAPI.Services.Interface
         Task<ParentDto> CreateParentAsync(CreateParentDto dto);
         Task<bool> UpdateParentAsync(int id, UpdateParentDto dto);
         Task<bool> DeleteParentAsync(int id);
+        Task<bool> SendAccountAsync(int parentId);
     }
 }

@@ -23,54 +23,76 @@ namespace EducenAPI.Services.TenantService
 
         public Tenant CreateTenant(CreateTenantRequest request)
         {
-            request.TenantId = request.TenantId?.Trim();
             request.TenantName = request.TenantName?.Trim();
             request.ContactPerson = request.ContactPerson?.Trim();
             request.Email = request.Email?.Trim();
             request.PhoneNumber = request.PhoneNumber?.Trim();
             request.Address = request.Address?.Trim();
-            request.SubDomain = request.SubDomain?.Trim();
-            string connectionString = _configuration.GetConnectionString("DefaultTenantConnection");
-            SqlConnectionStringBuilder builder = new(connectionString);
-            string mainDatabaseName = builder.InitialCatalog; // retrieve the database name
-            string tenantDbName = mainDatabaseName + "-" + request.TenantId;
-            builder.InitialCatalog = tenantDbName; // set new database name
-            string modifiedConnectionString = builder.ConnectionString; // create new connection string
+            request.SubDomain = request.SubDomain?.Trim().ToLower();
 
+            // 1. Check SubDomain chứa space
+            if (request.SubDomain.Contains(" "))
+                throw new Exception("SubDomain cannot contain spaces");
+
+            // 2. Check ký tự hợp lệ
+            var regex = new System.Text.RegularExpressions.Regex("^[a-z0-9-]+$");
+            if (!regex.IsMatch(request.SubDomain))
+                throw new Exception("SubDomain can only contain lowercase letters, numbers, and '-'");
+
+            // 3. Check duplicate SubDomain
+            if (_adminDbContext.Tenants.Any(t => t.SubDomain == request.SubDomain))
+                throw new Exception("SubDomain already exists");
+
+            // 4. Check duplicate TenantName
+            if (_adminDbContext.Tenants.Any(t => t.TenantName == request.TenantName))
+                throw new Exception("Tenant name already exists");
+
+            // create tenant (TenantId auto GUID)
             Tenant tenant = new Tenant
             {
-                TenantId = request.TenantId,
                 TenantName = request.TenantName,
                 ContactPerson = request.ContactPerson,
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
                 Address = request.Address,
                 SubDomain = request.SubDomain,
-                ConnectionString = modifiedConnectionString,
-                IsActive = true,
-                Username = request.TenantId,   // mặc định = TenantId, admin có thể đổi sau
-                Password = "Admin@123"          // mật khẩu mặc định ban đầu
+                Username = "admin",
+                Password = "Admin@123",
+                IsActive = true
             };
 
+            string connectionString = _configuration.GetConnectionString("DefaultTenantConnection");
 
+            SqlConnectionStringBuilder builder = new(connectionString);
+
+            string mainDatabaseName = builder.InitialCatalog;
+
+            string tenantDbName = $"{mainDatabaseName}-{tenant.TenantId}";
+
+            builder.InitialCatalog = tenantDbName;
+
+            string modifiedConnectionString = builder.ConnectionString;
+
+            tenant.ConnectionString = modifiedConnectionString;
 
             try
             {
-                // create a new tenant database and bring current with any pending migrations from ApplicationDbContext
                 using IServiceScope scopeTenant = _serviceProvider.CreateScope();
+
                 EducenV2Context dbContext = scopeTenant.ServiceProvider.GetRequiredService<EducenV2Context>();
+
                 dbContext.Database.SetConnectionString(modifiedConnectionString);
+
                 if (dbContext.Database.GetPendingMigrations().Any())
                 {
                     Console.ForegroundColor = ConsoleColor.Blue;
-                    Console.WriteLine($"Applying ApplicationDB Migrations for New '{request.TenantId}' tenant.");
+                    Console.WriteLine($"Applying ApplicationDB Migrations for New '{tenant.TenantId}' tenant.");
                     Console.ResetColor();
-                    dbContext.Database.Migrate();
 
+                    dbContext.Database.Migrate();
                 }
 
-                // apply changes to base db context
-                _adminDbContext.Add(tenant); // save tenant info
+                _adminDbContext.Add(tenant);
                 _adminDbContext.SaveChanges();
             }
             catch (Exception ex)
@@ -141,9 +163,11 @@ namespace EducenAPI.Services.TenantService
                     PhoneNumber = tenant.PhoneNumber,
                     Address = tenant.Address,
 
+                    PlanId = subscription?.PlanId,
                     PlanName = subscription?.Plan?.PlanName,
                     IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                     ExpiredAt = subscription?.EndDate,
+                    PlanIsActive = subscription?.Plan?.IsActive ?? true,
 
                     LimitUsers = subscription?.Plan?.LimitUsers,
                     StorageLimit = subscription?.Plan?.StorageLimit,
@@ -186,9 +210,11 @@ namespace EducenAPI.Services.TenantService
                 PhoneNumber = tenant.PhoneNumber,
                 Address = tenant.Address,
 
+                PlanId = subscription?.PlanId,
                 PlanName = subscription?.Plan?.PlanName,
                 IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                 ExpiredAt = subscription?.EndDate,
+                PlanIsActive = subscription?.Plan?.IsActive ?? true,
 
                 LimitUsers = subscription?.Plan?.LimitUsers,
                 StorageLimit = subscription?.Plan?.StorageLimit,

@@ -16,7 +16,7 @@ const StudentManagement = () => {
     // View Mode: 'list' (Student Management) or 'requests' (Enrollment Requests)
     const [viewMode, setViewMode] = useState('list');
 
-    // Student Management States
+    const [isLoading, setIsLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
@@ -32,41 +32,70 @@ const StudentManagement = () => {
     const [requestStatusFilter, setRequestStatusFilter] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
 
-    // Mock data - Parents (Must be defined before students)
-    const MOCK_PARENTS = [
-        { id: 'PAR-001', name: 'Nguyễn Văn Bình', phone: '0901234567', email: 'parent1@gmail.com' },
-        { id: 'PAR-002', name: 'Trần Văn Cường', phone: '0912345678', email: 'parent2@gmail.com' },
-        { id: 'PAR-003', name: 'Lê Thị Fang', phone: '0923456789', email: 'parent3@gmail.com' },
-        { id: 'PAR-004', name: 'Phạm Văn Hùng', phone: '0934567890', email: 'parent4@gmail.com' },
-        { id: 'PAR-005', name: 'Vũ Văn Nam', phone: '0956789012', email: 'parent6@gmail.com' }
-    ];
-
     const [studentList, setStudentList] = useState([]);
+    const [parentList, setParentList] = useState([]);
 
     useEffect(() => {
-        fetchStudents();
+        fetchData();
     }, []);
 
-    const fetchStudents = async () => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const parents = await fetchParents();
+            await fetchStudents(parents);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchParents = async () => {
+        try {
+            const res = await api.get('/Parents');
+            const data = res.data.map(p => ({
+                id: p.userId.toString(),
+                name: p.fullName || p.username,
+                email: p.email,
+                phone: p.phoneNumber || ''
+            }));
+            setParentList(data);
+            return data;
+        } catch (error) {
+            console.error("Fetch parents error:", error);
+            return [];
+        }
+    };
+
+    const fetchStudents = async (parentsData = parentList) => {
         try {
             const res = await api.get('/Students');
-            const data = res.data.map((student) => ({
-                id: student.userId.toString(),
-                name: student.fullName,
-                avatar: null,
-                email: student.email,
-                grade: student.grade || '',
-                dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',
-                gender: student.gender || 'male',
-                linkedParentIds: [],
-                address: student.address || '',
-                enrollmentDate: student.createdAt,
-                status: student.isAccountSent
-                    ? (student.accountStatus === 'Active' ? 'active' : 'inactive')
-                    : 'inactive',
-                accountSent: student.isAccountSent ?? false,
-                notes: ''
-            }));
+            const data = res.data.map((student) => {
+                const linkedParents = parentsData.filter(p => 
+                    student.parentIds?.map(id => id.toString()).includes(p.id)
+                );
+
+                return {
+                    id: student.userId.toString(),
+                    name: student.fullName,
+                    avatar: null,
+                    email: student.email,
+                    grade: student.grade || '',
+                    class: student.className || 'Chưa xếp lớp',
+                    dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',
+                    gender: student.gender || 'male',
+                    linkedParentIds: student.parentIds?.map(id => id.toString()) || [],
+                    parentName: linkedParents.map(p => p.name).join(', ') || student.parentNames?.join(', ') || '',
+                    parentPhone: linkedParents.map(p => p.phone).join(', '),
+                    parentEmail: linkedParents.map(p => p.email).join(', '),
+                    address: student.address || '',
+                    enrollmentDate: student.createdAt,
+                    status: student.isAccountSent
+                        ? (student.accountStatus === 'Active' ? 'active' : 'inactive')
+                        : 'inactive',
+                    accountSent: student.isAccountSent ?? false,
+                    notes: ''
+                };
+            });
             setStudentList(data);
         } catch (error) {
             console.error("Fetch students error:", error);
@@ -125,7 +154,7 @@ const StudentManagement = () => {
     const pendingCount = requestsList.filter(r => r.status === 'pending').length;
 
     // Filter students
-    // We pass MOCK_PARENTS as parentListData to the StudentTable to display actual parent info
+    // We pass parentList as parentListData to the StudentTable to display actual parent info
     const filteredStudents = studentList
         .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()) || student.id.toLowerCase().includes(searchQuery.toLowerCase()))
         .filter(student => gradeFilter ? student.grade.toString() === gradeFilter : true)
@@ -156,6 +185,8 @@ const StudentManagement = () => {
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,
                     gender: studentData.gender || null,
+                    address: studentData.address || null,
+                    parentIds: studentData.linkedParentIds?.map(id => parseInt(id)) || []
                 };
                 if (studentData.phone) updatePayload.phoneNumber = studentData.phone;
 
@@ -173,6 +204,8 @@ const StudentManagement = () => {
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,
                     gender: studentData.gender || null,
+                    address: studentData.address || null,
+                    parentIds: studentData.linkedParentIds?.map(id => parseInt(id)) || []
                 };
                 if (studentData.phone) payload.phoneNumber = studentData.phone;
 
@@ -368,7 +401,7 @@ const StudentManagement = () => {
                 {viewMode === 'list' ? (
                     <StudentTable
                         studentData={filteredStudents}
-                        parentListData={MOCK_PARENTS}
+                        parentListData={parentList}
                         searchQuery={searchQuery}
                         setSearchQuery={setSearchQuery}
                         gradeFilter={gradeFilter}
@@ -406,7 +439,7 @@ const StudentManagement = () => {
                 onSubmit={handleSubmitStudent}
                 editingStudent={editingStudent}
                 existingStudents={studentList}
-                parentList={MOCK_PARENTS}
+                parentList={parentList}
             />
 
             {/* Student Detail Modal */}

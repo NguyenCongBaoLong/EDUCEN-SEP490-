@@ -68,6 +68,7 @@ namespace EducenAPI.DTOs.Teachers
             get => _degree;
             set => _degree = value?.Trim();
         }
+        public string? Address { get; set; }
     }
 
     public class UpdateTeacherDto
@@ -91,6 +92,7 @@ namespace EducenAPI.DTOs.Teachers
 
         [StringLength(100, ErrorMessage = "Degree cannot exceed 100 characters")]
         public string? Degree { get; set; }
+        public string? Address { get; set; }
     }
 
     public class TeacherDto
@@ -101,6 +103,7 @@ namespace EducenAPI.DTOs.Teachers
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string? PhoneNumber { get; set; }
+        public string? Address { get; set; }
         public string Specialization { get; set; } = string.Empty;
         public string? Degree { get; set; }
         public string AccountStatus { get; set; } = string.Empty;

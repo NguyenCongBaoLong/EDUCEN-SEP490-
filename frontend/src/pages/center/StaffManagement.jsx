@@ -13,12 +13,10 @@ const StaffManagement = () => {
     const [editingStaff, setEditingStaff] = useState(null);
     const [viewingStaff, setViewingStaff] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [subjectFilter, setSubjectFilter] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
     const [staffList, setStaffList] = useState([]);
-    const [subjects, setSubjects] = useState([]);
 
     useEffect(() => {
         fetchStaff();
@@ -26,13 +24,10 @@ const StaffManagement = () => {
 
     const fetchStaff = async () => {
         try {
-            const [teachersRes, assistantsRes, subjectsRes] = await Promise.all([
+            const [teachersRes, assistantsRes] = await Promise.all([
                 api.get('/Teachers'),
-                api.get('/Assistants'),
-                api.get('/tenantadmin/Subjects')
+                api.get('/Assistants')
             ]);
-
-            setSubjects(subjectsRes.data);
 
             const teachers = teachersRes.data.map(t => ({
                 id: t.teacherId.toString(),
@@ -43,8 +38,8 @@ const StaffManagement = () => {
                 subject: t.specialization || 'Chưa cập nhật',
                 email: t.email,
                 phone: t.phoneNumber || '',
-                dateOfBirth: '',
-                address: '',
+                dateOfBirth: '', 
+                address: t.address || '',
                 notes: t.degree || '',
                 status: t.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive'
             }));
@@ -59,7 +54,7 @@ const StaffManagement = () => {
                 email: a.email,
                 phone: a.phoneNumber || '',
                 dateOfBirth: '',
-                address: '',
+                address: a.address || '',
                 notes: '',
                 status: a.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive'
             }));
@@ -117,13 +112,15 @@ const StaffManagement = () => {
                 password: `Staff123!`,
                 fullName: staffData.name,
                 email: staffData.email,
+                address: staffData.address,
             };
             if (staffData.phone) payload.phoneNumber = staffData.phone;
 
             if (isTeacher) {
-                payload.specialization = staffData.subject || 'General';
+                payload.specialization = 'General';
+                payload.degree = staffData.degree || '';
             } else {
-                payload.supportLevel = staffData.subject || 'Basic';
+                payload.supportLevel = 'Basic';
             }
 
             if (editingStaff) {
@@ -132,12 +129,14 @@ const StaffManagement = () => {
                 const updatePayload = {
                     fullName: staffData.name,
                     email: staffData.email,
+                    address: staffData.address,
                 };
                 if (staffData.phone) updatePayload.phoneNumber = staffData.phone;
                 if (isTeacher) {
-                    updatePayload.specialization = staffData.subject || 'General';
+                    updatePayload.specialization = editingStaff?.subject || 'General';
+                    updatePayload.degree = staffData.degree || '';
                 } else {
-                    updatePayload.supportLevel = staffData.subject || 'Basic';
+                    updatePayload.supportLevel = editingStaff?.subject || 'Basic';
                 }
 
                 await api.put(editEndpoint, updatePayload);
@@ -159,13 +158,11 @@ const StaffManagement = () => {
     const filteredStaff = staffList.filter(staff => {
         const matchesSearch =
             staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            staff.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            staff.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSubject = !subjectFilter || staff.subject === subjectFilter;
+            staff.email.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesRole = !roleFilter || staff.role === roleFilter;
         const matchesStatus = !statusFilter || staff.status === statusFilter;
 
-        return matchesSearch && matchesSubject && matchesRole && matchesStatus;
+        return matchesSearch && matchesRole && matchesStatus;
     });
 
     return (
@@ -194,16 +191,9 @@ const StaffManagement = () => {
                     staffData={filteredStaff}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
-                    subjectFilter={subjectFilter}
-                    setSubjectFilter={setSubjectFilter}
-                    roleFilter={roleFilter}
-                    setRoleFilter={setRoleFilter}
-                    statusFilter={statusFilter}
-                    setStatusFilter={setStatusFilter}
                     onView={handleViewStaff}
                     onEdit={handleEditStaff}
                     onToggleLock={handleToggleLockStaff}
-                    subjects={subjects}
                 />
             </main>
 
@@ -217,7 +207,6 @@ const StaffManagement = () => {
                 onSubmit={handleSubmitStaff}
                 editingStaff={editingStaff}
                 existingStaff={staffList}
-                subjects={subjects}
             />
 
             {/* Staff Detail Modal */}

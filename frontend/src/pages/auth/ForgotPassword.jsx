@@ -1,25 +1,28 @@
 import { useState } from 'react';
-import { ArrowLeft, BookOpen, AlertCircle, CheckCircle, Mail } from 'lucide-react';
+import { ArrowLeft, BookOpen, AlertCircle, CheckCircle, Mail, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import api from '../../services/api';
 import '../../css/pages/auth/ForgotPassword.css';
-
+ 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
-
-    const handleSubmit = (e) => {
+    const [isLoading, setIsLoading] = useState(false);
+ 
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
-        if (!email) {
-            setError('Vui lòng nhập địa chỉ email.');
-            return;
+        setIsLoading(true);
+ 
+        try {
+            await api.post('/auth/reset-password', { email });
+            setSubmitted(true);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu.');
+        } finally {
+            setIsLoading(false);
         }
-
-        // Simulate API call
-        console.log('Reset link sent to:', email);
-        setSubmitted(true);
     };
 
     return (
@@ -68,8 +71,8 @@ const ForgotPassword = () => {
                                 </div>
                             )}
 
-                            <button type="submit" className="fp-submit">
-                                Gửi liên kết đặt lại
+                            <button type="submit" className="fp-submit" disabled={isLoading}>
+                                {isLoading ? <><Loader2 size={18} className="spin-icon" /> Đang gửi...</> : 'Gửi mã xác thực'}
                             </button>
                         </form>
                     </>
@@ -80,10 +83,10 @@ const ForgotPassword = () => {
                         </div>
                         <h3 style={{ color: 'white', marginBottom: '0.5rem', fontWeight: '700' }}>Kiểm tra email</h3>
                         <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
-                            Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến <strong>{email}</strong>
+                            Nếu email tồn tại, chúng tôi đã gửi mã xác thực đến <strong>{email}</strong>. (Lưu ý: Do đang phát triển, vui lòng check console log ở Backend để lấy mã).
                         </p>
 
-                        <Link to="/reset-password" style={{
+                        <Link to="/reset-password" state={{ email }} style={{
                             textDecoration: 'none',
                             background: 'white',
                             color: '#4c1d95',

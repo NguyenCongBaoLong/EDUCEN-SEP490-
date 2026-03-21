@@ -1,17 +1,25 @@
 import { useState } from 'react';
-import { ArrowLeft, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, AlertCircle, Eye, EyeOff, Lock, Key, Mail, Loader2 } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
 import '../../css/pages/auth/ResetPassword.css';
 
 const ResetPassword = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    
     const [formData, setFormData] = useState({
+        email: location.state?.email || '',
+        resetToken: '',
         password: '',
         confirmPassword: ''
     });
+    
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -21,7 +29,7 @@ const ResetPassword = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
@@ -30,15 +38,27 @@ const ResetPassword = () => {
             return;
         }
 
-        if (formData.password.length < 8) {
-            setError('Mật khẩu phải có ít nhất 8 ký tự.');
+        if (formData.password.length < 6) {
+            setError('Mật khẩu mới phải có ít nhất 6 ký tự.');
             return;
         }
 
-        // Simulate API call
-        console.log('Password reset successful');
-        alert('Mật khẩu đã được đặt lại thành công!');
-        navigate('/login');
+        setIsLoading(true);
+        try {
+            await api.post('/auth/reset-password/confirm', {
+                email: formData.email,
+                resetToken: formData.resetToken,
+                newPassword: formData.password
+            });
+            toast.success('Mật khẩu đã được đặt lại thành công!');
+            navigate('/login');
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Mã xác thực không hợp lệ hoặc đã hết hạn.';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -67,19 +87,49 @@ const ResetPassword = () => {
                 <form onSubmit={handleSubmit} className="rp-form">
                     <div className="rp-input-wrap">
                         <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder="Địa chỉ Email"
+                            className="rp-input"
+                            required
+                            disabled={!!location.state?.email || isLoading}
+                        />
+                        <Mail size={18} className="rp-input-icon" />
+                    </div>
+
+                    <div className="rp-input-wrap">
+                        <input
+                            type="text"
+                            name="resetToken"
+                            value={formData.resetToken}
+                            onChange={handleChange}
+                            placeholder="Mã xác thực (6 chữ số)"
+                            className="rp-input"
+                            required
+                            disabled={isLoading}
+                        />
+                        <Key size={18} className="rp-input-icon" />
+                    </div>
+
+                    <div className="rp-input-wrap">
+                        <input
                             type={showPassword ? "text" : "password"}
                             id="password"
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            placeholder="Mật khẩu mới (8+ ký tự)"
+                            placeholder="Mật khẩu mới (6+ ký tự)"
                             className="rp-input"
                             required
+                            disabled={isLoading}
                         />
                         <button
                             type="button"
                             className="rp-eye-btn"
                             onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
                         >
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -96,11 +146,13 @@ const ResetPassword = () => {
                             placeholder="Xác nhận mật khẩu"
                             className="rp-input"
                             required
+                            disabled={isLoading}
                         />
                         <button
                             type="button"
                             className="rp-eye-btn"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            disabled={isLoading}
                         >
                             {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -114,8 +166,8 @@ const ResetPassword = () => {
                         </div>
                     )}
 
-                    <button type="submit" className="rp-submit">
-                        Cập nhật mật khẩu
+                    <button type="submit" className="rp-submit" disabled={isLoading}>
+                        {isLoading ? <><Loader2 size={18} className="spin-icon" /> Đang cập nhật...</> : 'Cập nhật mật khẩu'}
                     </button>
                 </form>
 

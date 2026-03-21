@@ -111,7 +111,7 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                                     <span className="info-label">Địa chỉ</span>
                                     <span className="info-value">
                                         <MapPin size={16} className="info-icon" />
-                                        {student.address}
+                                        {student.address || 'Chưa cập nhật'}
                                     </span>
                                 </div>
                             </div>
@@ -133,14 +133,14 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                                         <span className="info-label">Số điện thoại</span>
                                         <span className="info-value">
                                             <Phone size={16} className="info-icon" />
-                                            {student.parentPhone}
+                                            {student.parentPhone || 'Chưa cập nhật'}
                                         </span>
                                     </div>
                                     <div className="info-item" style={{ gridColumn: '1 / -1' }}>
                                         <span className="info-label">Email liên hệ</span>
                                         <span className="info-value">
                                             <Mail size={16} className="info-icon" />
-                                            {student.parentEmail}
+                                            {student.parentEmail || 'Chưa cập nhật'}
                                         </span>
                                     </div>
                                 </div>

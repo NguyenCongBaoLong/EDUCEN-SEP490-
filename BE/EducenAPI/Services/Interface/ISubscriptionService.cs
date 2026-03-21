@@ -6,5 +6,9 @@ namespace EducenAPI.Services.Interface
     {
         Task<SubscriptionResponseDTO> RegisterSubscription(RegisterSubscriptionRequestDTO request);
         Task<bool> CancelSubscription(string tenantId);
+
+        Task<SubscriptionResponseDTO> RenewSubscription(RenewSubscriptionRequestDTO request);
+
+        Task<SubscriptionResponseDTO> ChangePlan(ChangePlanRequestDTO request);
     }
 }

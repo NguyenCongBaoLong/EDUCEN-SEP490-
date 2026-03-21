@@ -1,21 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Users, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import ParentTable from '../../components/ParentTable';
 import AddParentModal from '../../components/AddParentModal';
 import ParentDetailModal from '../../components/ParentDetailModal';
+import api from '../../services/api';
 import '../../css/pages/center/ParentManagement.css';
-
-// Mock student list — in production this would come from API
-const MOCK_STUDENTS = [
-    { id: 'STU-001', name: 'Nguyễn Văn An', grade: 6 },
-    { id: 'STU-002', name: 'Trần Thị Bình', grade: 7 },
-    { id: 'STU-003', name: 'Lê Minh Đức', grade: 8 },
-    { id: 'STU-004', name: 'Phạm Thị Giang', grade: 9 },
-    { id: 'STU-005', name: 'Hoàng Văn Khoa', grade: 10 },
-    { id: 'STU-006', name: 'Vũ Thị Mai', grade: 11 },
-];
 
 const ParentManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,73 +14,59 @@ const ParentManagement = () => {
     const [editingParent, setEditingParent] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedParentIds, setSelectedParentIds] = useState([]);
+    const [parentList, setParentList] = useState([]);
+    const [studentList, setStudentList] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const [parentList, setParentList] = useState([
-        {
-            id: 'PAR-001',
-            name: 'Nguyễn Văn Bình',
-            email: 'parent1@gmail.com',
-            phone: '0901234567',
-            gender: 'male',
-            address: '123 Lê Lợi, Quận 1, TP.HCM',
-            linkedStudentIds: ['STU-001'],
-            linkedStudentNames: ['Nguyễn Văn An'],
-            status: 'active',
-            accountSent: true,
-        },
-        {
-            id: 'PAR-002',
-            name: 'Trần Văn Cường',
-            email: 'parent2@gmail.com',
-            phone: '0912345678',
-            gender: 'male',
-            address: '456 Nguyễn Huệ, Quận 3, TP.HCM',
-            linkedStudentIds: ['STU-002'],
-            status: 'inactive',
-            accountSent: false,
-        },
-        {
-            id: 'PAR-003',
-            name: 'Lê Thị Fang',
-            email: 'parent3@gmail.com',
-            phone: '0923456789',
-            gender: 'female',
-            address: '789 Trần Hưng Đạo, Quận 5, TP.HCM',
-            linkedStudentIds: ['STU-003', 'STU-005'],
-            linkedStudentNames: ['Lê Minh Đức', 'Hoàng Văn Khoa'],
-            status: 'inactive',
-            accountSent: false,
-        },
-        {
-            id: 'PAR-004',
-            name: 'Phạm Văn Hùng',
-            email: 'parent4@gmail.com',
-            phone: '0934567890',
-            gender: 'male',
-            address: '321 Hai Bà Trưng, Quận 1, TP.HCM',
-            linkedStudentIds: ['STU-004'],
-            linkedStudentNames: ['Phạm Thị Giang'],
-            status: 'active',
-            accountSent: true,
-        },
-        {
-            id: 'PAR-005',
-            name: 'Vũ Văn Nam',
-            email: 'parent6@gmail.com',
-            phone: '0956789012',
-            gender: 'male',
-            address: '987 Nguyễn Thị Minh Khai, Quận 3, TP.HCM',
-            linkedStudentIds: ['STU-006'],
-            linkedStudentNames: ['Vũ Thị Mai'],
-            status: 'active',
-            accountSent: true,
-        },
-    ]);
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        setIsLoading(true);
+        try {
+            const [parentsRes, studentsRes] = await Promise.all([
+                api.get('/Parents'),
+                api.get('/Students')
+            ]);
+            
+            // Map Parent Data
+            const parents = parentsRes.data.map(p => ({
+                id: p.userId.toString(),
+                username: p.username,
+                name: p.fullName || p.username,
+                email: p.email,
+                phone: p.phoneNumber || '',
+                address: p.address || '',
+                gender: 'male',
+                status: p.accountStatus === 'Active' ? 'active' : 'inactive',
+                accountSent: p.accountStatus === 'Active',
+                linkedStudentIds: p.studentIds?.map(id => id.toString()) || [],
+                linkedStudentNames: p.studentNames || [],
+                studentClassNames: p.studentClassNames || [],
+                childrenCount: p.childrenCount || 0
+            }));
+
+            // Map Student Data for linking
+            const students = studentsRes.data.map(s => ({
+                id: s.userId.toString(),
+                name: s.fullName
+            }));
+
+            setParentList(parents);
+            setStudentList(students);
+        } catch (error) {
+            console.error("Fetch data error:", error);
+            toast.error("Không thể tải dữ liệu phụ huynh");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredParents = parentList.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.phone.includes(searchQuery)
+        (p.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (p.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (p.phone || '').includes(searchQuery)
     );
 
     /* ─── Handlers ─── */
@@ -97,48 +74,98 @@ const ParentManagement = () => {
     const handleEdit = (parent) => { setEditingParent(parent); setIsModalOpen(true); };
     const handleView = (parent) => { setViewingParent(parent); };
 
-    const handleSubmit = (data) => {
-        // Resolve linked student names from IDs
-        const linkedStudentNames = (data.linkedStudentIds || [])
-            .map(id => MOCK_STUDENTS.find(s => s.id === id)?.name)
-            .filter(Boolean);
+    const handleSubmit = async (data) => {
+        try {
+            if (data.id) {
+                // Edit existing
+                const updatePayload = {
+                    fullName: data.name,
+                    email: data.email,
+                    phoneNumber: data.phone,
+                    address: data.address,
+                    studentIds: data.linkedStudentIds?.map(id => parseInt(id))
+                };
 
-        if (data.id) {
-            setParentList(prev => prev.map(p =>
-                p.id === data.id ? { ...p, ...data, linkedStudentNames } : p
-            ));
-        } else {
-            const newParent = {
-                ...data,
-                id: `PAR-${String(parentList.length + 1).padStart(3, '0')}`,
-                linkedStudentNames,
-                status: 'inactive',
-                accountSent: false
-            };
-            setParentList(prev => [...prev, newParent]);
+                await api.put(`/Parents/${data.id}`, updatePayload);
+                toast.success('Cập nhật phụ huynh thành công!');
+            } else {
+                // Add new
+                const payload = {
+                    fullName: data.name,
+                    email: data.email,
+                    phoneNumber: data.phone,
+                    address: data.address,
+                    studentIds: data.linkedStudentIds?.map(id => parseInt(id))
+                };
+
+                await api.post('/Parents', payload);
+                toast.success('Thêm phụ huynh thành công!');
+            }
+            fetchData();
+            setIsModalOpen(false);
+            setEditingParent(null);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
-    const handleToggleStatus = (id) => {
-        setParentList(prev => prev.map(p =>
-            p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
-        ));
+    const handleToggleStatus = async (id) => {
+        const parent = parentList.find(p => p.id === id);
+        if (!parent) return;
+
+        try {
+            const endpoint = parent.status === 'active'
+                ? `/admin/users/${id}/lock`
+                : `/admin/users/${id}/unlock`;
+
+            await api.put(endpoint);
+            
+            setParentList(prev => prev.map(p =>
+                p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
+            ));
+            toast.success("Đổi trạng thái thành công!");
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Lỗi khi đổi trạng thái');
+        }
     };
 
-    const handleSendAccount = (id) => {
-        setParentList(prev => prev.map(p =>
-            p.id === id ? { ...p, accountSent: true, status: 'active' } : p
-        ));
-        toast.success("Đã gửi tài khoản cho phụ huynh!");
+    const handleSendAccount = async (id) => {
+        const loadingToast = toast.loading("Đang gửi thông tin tài khoản...");
+        try {
+            await api.post(`/Parents/send-account/${id}`);
+            
+            setParentList(prev => prev.map(p =>
+                p.id === id ? { ...p, accountSent: true, status: 'active' } : p
+            ));
+            toast.dismiss(loadingToast);
+            toast.success("Đã gửi tài khoản phụ huynh thành công!");
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error(error.response?.data?.message || 'Lỗi khi gửi tài khoản');
+        }
     };
 
-    const handleBulkSendAccount = () => {
+    const handleBulkSendAccount = async () => {
         if (selectedParentIds.length === 0) return;
-        setParentList(prev => prev.map(p =>
-            selectedParentIds.includes(p.id) ? { ...p, accountSent: true, status: 'active' } : p
-        ));
-        toast.success(`Đã gửi tài khoản cho ${selectedParentIds.length} phụ huynh!`);
-        setSelectedParentIds([]);
+        
+        const confirmBulk = window.confirm(`Bạn có chắc muốn gửi tài khoản cho ${selectedParentIds.length} phụ huynh đã chọn?`);
+        if (!confirmBulk) return;
+
+        const loadingToast = toast.loading(`Đang gửi ${selectedParentIds.length} tài khoản...`);
+        try {
+            await Promise.all(selectedParentIds.map(id => 
+                api.post(`/Parents/send-account/${id}`)
+            ));
+            
+            fetchData();
+            setSelectedParentIds([]);
+            toast.dismiss(loadingToast);
+            toast.success(`Đã gửi thành công ${selectedParentIds.length} tài khoản!`);
+        } catch (error) {
+            toast.dismiss(loadingToast);
+            toast.error("Một số tài khoản có thể chưa gửi được. Vui lòng kiểm tra lại.");
+            fetchData();
+        }
     };
 
     const totalParents = parentList.length;
@@ -218,7 +245,7 @@ const ParentManagement = () => {
                 onClose={() => { setIsModalOpen(false); setEditingParent(null); }}
                 onSubmit={handleSubmit}
                 editingParent={editingParent}
-                studentList={MOCK_STUDENTS}
+                studentList={studentList}
             />
 
             {/* Parent Detail Modal */}

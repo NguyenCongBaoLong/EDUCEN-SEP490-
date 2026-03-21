@@ -151,7 +151,7 @@ namespace EducenAPI.Services
             // Validate and create schedules
             if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
             {
-                await ValidateScheduleSlots(dto.ScheduleSlots);
+                ValidateScheduleSlots(dto.ScheduleSlots);
             }
 
             var newClass = new Class
@@ -257,7 +257,7 @@ namespace EducenAPI.Services
             }
         }
 
-        private async Task ValidateScheduleSlots(List<CreateScheduleSlotDto> scheduleSlots)
+        private void ValidateScheduleSlots(List<CreateScheduleSlotDto> scheduleSlots)
         {
             foreach (var slot in scheduleSlots)
             {
