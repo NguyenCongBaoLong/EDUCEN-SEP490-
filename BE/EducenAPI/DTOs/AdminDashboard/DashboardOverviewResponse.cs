@@ -1,4 +1,7 @@
-﻿namespace EducenAPI.DTOs.AdminDashboard
+using System;
+using System.Collections.Generic;
+
+namespace EducenAPI.DTOs.AdminDashboard
 {
     public class DashboardOverviewResponse
     {
@@ -48,9 +51,8 @@
     public class ExpiringSubscriptionResponse
     {
         public string TenantName { get; set; }
-
+        public string SubDomain { get; set; }
         public string PlanName { get; set; }
-
         public DateTime ExpiredAt { get; set; }
     }
 }

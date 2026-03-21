@@ -1,4 +1,4 @@
-﻿using EducenAPI.Services.Interface;
+using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
@@ -15,33 +15,33 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("overview")]
-        public IActionResult Overview()
+        public async Task<IActionResult> Overview()
         {
-            return Ok(_dashboardService.GetOverview());
+            return Ok(await _dashboardService.GetOverviewAsync());
         }
 
         [HttpGet("revenue")]
-        public IActionResult Revenue()
+        public async Task<IActionResult> Revenue()
         {
-            return Ok(_dashboardService.GetRevenue());
+            return Ok(await _dashboardService.GetRevenueAsync());
         }
 
         [HttpGet("tenants-by-plan")]
-        public IActionResult TenantsByPlan()
+        public async Task<IActionResult> TenantsByPlan()
         {
-            return Ok(_dashboardService.GetTenantsByPlan());
+            return Ok(await _dashboardService.GetTenantsByPlanAsync());
         }
 
         [HttpGet("top-centers")]
-        public IActionResult TopCenters()
+        public async Task<IActionResult> TopCenters()
         {
-            return Ok(_dashboardService.GetTopCenters());
+            return Ok(await _dashboardService.GetTopCentersAsync());
         }
 
         [HttpGet("expiring-subscriptions")]
-        public IActionResult ExpiringSubscriptions()
+        public async Task<IActionResult> ExpiringSubscriptions()
         {
-            return Ok(_dashboardService.GetExpiringSubscriptions());
+            return Ok(await _dashboardService.GetExpiringSubscriptionsAsync());
         }
     }
 }

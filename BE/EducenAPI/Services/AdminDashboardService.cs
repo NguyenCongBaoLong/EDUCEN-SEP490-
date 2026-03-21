@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.AdminDashboard;
+using EducenAPI.DTOs.AdminDashboard;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -18,42 +18,85 @@ namespace EducenAPI.Services
             _serviceProvider = serviceProvider;
         }
 
+        private string PrepareConnectionString(string connectionString)
+        {
+            if (string.IsNullOrEmpty(connectionString)) return connectionString;
+
+            // Tự động sửa server nếu là SQLEXPRESS nhưng môi trường hiện tại đang dùng Default Instance (localhost)
+            if (connectionString.Contains("localhost\\SQLEXPRESS", StringComparison.OrdinalIgnoreCase))
+            {
+                // Thay thế localhost\SQLEXPRESS bằng localhost để khớp với AdminConnection
+                connectionString = connectionString.Replace("localhost\\SQLEXPRESS", "localhost", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!connectionString.Contains("Connect Timeout", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString += (connectionString.EndsWith(";") ? "" : ";") + "Connect Timeout=5;";
+            }
+            return connectionString;
+        }
+
         // ================================
         // 1. OVERVIEW DASHBOARD
         // ================================
-        public DashboardOverviewResponse GetOverview()
+        public async Task<DashboardOverviewResponse> GetOverviewAsync()
         {
-            var tenants = _adminDbContext.Tenants.ToList();
+            var tenants = await _adminDbContext.Tenants.ToListAsync();
 
             int totalUsers = 0;
             int totalStudents = 0;
             int totalClasses = 0;
             double totalStorage = 0;
 
-            foreach (var tenant in tenants)
+            var tasks = tenants.Select(async tenant =>
             {
-                using var scope = _serviceProvider.CreateScope();
+                if (string.IsNullOrEmpty(tenant.ConnectionString)) return;
 
-                var db = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+                try
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+                    db.Database.SetConnectionString(PrepareConnectionString(tenant.ConnectionString));
 
-                db.Database.SetConnectionString(tenant.ConnectionString);
+                    var uCount = await db.Users.CountAsync();
+                    var sCount = await db.Students.CountAsync();
+                    var cCount = await db.Classes.CountAsync();
 
-                totalUsers += db.Users.Count();
-                totalStudents += db.Students.Count();
-                totalClasses += db.Classes.Count();
+                    Interlocked.Add(ref totalUsers, uCount);
+                    Interlocked.Add(ref totalStudents, sCount);
+                    Interlocked.Add(ref totalClasses, cCount);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DASHBOARD_ERROR] Tenant {tenant.TenantId} ({tenant.TenantName}): {ex.Message}");
+                    if (ex.InnerException != null) Console.WriteLine($"  Inner: {ex.InnerException.Message}");
+                }
+            });
+
+            await Task.WhenAll(tasks);
+
+            var now = DateTime.UtcNow;
+            var existingTenantIds = tenants.Select(t => t.TenantId).ToHashSet();
+            var allSubscriptions = await _adminDbContext.Subscriptions.ToListAsync();
+            var relevantSubs = allSubscriptions.Where(s => existingTenantIds.Contains(s.TenantId)).ToList();
+
+            int activeCount = 0;
+            foreach (var group in relevantSubs.GroupBy(s => s.TenantId))
+            {
+                var latest = group.OrderByDescending(s => s.EndDate).First();
+                if (latest.EndDate > now && latest.Status == "Active")
+                {
+                    activeCount++;
+                }
             }
 
-            var activeTenants = _adminDbContext.Subscriptions
-                .Count(s => s.EndDate > DateTime.UtcNow);
-
-            var expiredTenants = _adminDbContext.Subscriptions
-                .Count(s => s.EndDate <= DateTime.UtcNow);
+            int expiredCount = tenants.Count - activeCount;
 
             return new DashboardOverviewResponse
             {
                 TotalTenants = tenants.Count,
-                ActiveTenants = activeTenants,
-                ExpiredTenants = expiredTenants,
+                ActiveTenants = activeCount,
+                ExpiredTenants = expiredCount,
                 TotalUsers = totalUsers,
                 TotalStudents = totalStudents,
                 TotalClasses = totalClasses,
@@ -64,9 +107,9 @@ namespace EducenAPI.Services
         // ================================
         // 2. REVENUE REPORT
         // ================================
-        public RevenueReportResponse GetRevenue()
+        public async Task<RevenueReportResponse> GetRevenueAsync()
         {
-            var payments = _adminDbContext.PaymentRecords.ToList();
+            var payments = await _adminDbContext.PaymentRecords.ToListAsync();
 
             var totalRevenue = payments.Sum(p => p.Amount);
 
@@ -96,15 +139,23 @@ namespace EducenAPI.Services
         // ================================
         // 3. TENANTS BY PLAN
         // ================================
-        public List<TenantsByPlanResponse> GetTenantsByPlan()
+        public async Task<List<TenantsByPlanResponse>> GetTenantsByPlanAsync()
         {
-            return _adminDbContext.Subscriptions
+            var tenants = await _adminDbContext.Tenants.Select(t => t.TenantId).ToListAsync();
+            var existingTenantIds = tenants.ToHashSet();
+
+            // Lấy các subscription đang Active và thuộc về tenant thực tế
+            var activeSubscriptions = await _adminDbContext.Subscriptions
                 .Include(s => s.Plan)
+                .Where(s => s.Status == "Active" && s.EndDate > DateTime.UtcNow && existingTenantIds.Contains(s.TenantId))
+                .ToListAsync();
+
+            return activeSubscriptions
                 .GroupBy(s => s.Plan.PlanName)
                 .Select(g => new TenantsByPlanResponse
                 {
                     PlanName = g.Key,
-                    TotalTenants = g.Count()
+                    TotalTenants = g.Select(s => s.TenantId).Distinct().Count()
                 })
                 .ToList();
         }
@@ -112,27 +163,47 @@ namespace EducenAPI.Services
         // ================================
         // 4. TOP CENTERS
         // ================================
-        public List<TopCenterResponse> GetTopCenters()
+        public async Task<List<TopCenterResponse>> GetTopCentersAsync()
         {
-            var tenants = _adminDbContext.Tenants.ToList();
+            var tenants = await _adminDbContext.Tenants.ToListAsync();
 
-            var result = new List<TopCenterResponse>();
+            var result = new System.Collections.Concurrent.ConcurrentBag<TopCenterResponse>();
 
-            foreach (var tenant in tenants)
+            var tasks = tenants.Select(async tenant =>
             {
-                using var scope = _serviceProvider.CreateScope();
+                if (string.IsNullOrEmpty(tenant.ConnectionString)) return;
 
-                var db = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
-
-                db.Database.SetConnectionString(tenant.ConnectionString);
-
-                result.Add(new TopCenterResponse
+                try
                 {
-                    TenantName = tenant.TenantName,
-                    TotalStudents = db.Students.Count(),
-                    TotalClasses = db.Classes.Count()
-                });
-            }
+                    using var scope = _serviceProvider.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+                    db.Database.SetConnectionString(PrepareConnectionString(tenant.ConnectionString));
+
+                    var sCount = await db.Students.CountAsync();
+                    var cCount = await db.Classes.CountAsync();
+
+                    result.Add(new TopCenterResponse
+                    {
+                        TenantName = tenant.TenantName,
+                        TotalStudents = sCount,
+                        TotalClasses = cCount
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DASHBOARD_ERROR_TOP] Tenant {tenant.TenantId} ({tenant.TenantName}): {ex.Message}");
+                    if (ex.InnerException != null) Console.WriteLine($"  Inner: {ex.InnerException.Message}");
+                    
+                    result.Add(new TopCenterResponse
+                    {
+                        TenantName = tenant.TenantName,
+                        TotalStudents = 0,
+                        TotalClasses = 0
+                    });
+                }
+            });
+
+            await Task.WhenAll(tasks);
 
             return result
                 .OrderByDescending(x => x.TotalStudents)
@@ -143,18 +214,34 @@ namespace EducenAPI.Services
         // ================================
         // 5. EXPIRING SUBSCRIPTIONS
         // ================================
-        public List<ExpiringSubscriptionResponse> GetExpiringSubscriptions()
+        public async Task<List<ExpiringSubscriptionResponse>> GetExpiringSubscriptionsAsync()
         {
-            return _adminDbContext.Subscriptions
+            var now = DateTime.UtcNow;
+            var sevenDaysFromNow = now.AddDays(7);
+
+            // 1. Lấy tất cả subscriptions ĐANG KÍCH HOẠT, group theo Tenant để tìm cái mới nhất
+            var allSubscriptions = await _adminDbContext.Subscriptions
                 .Include(s => s.Plan)
                 .Include(s => s.Tenant)
-                .Where(s => s.EndDate <= DateTime.UtcNow.AddDays(7))
+                .Where(s => s.Status == "Active")
+                .ToListAsync();
+
+            var latestSubsPerTenant = allSubscriptions
+                .GroupBy(s => s.TenantId)
+                .Select(g => g.OrderByDescending(s => s.EndDate).First())
+                .ToList();
+
+            // 2. Chỉ hiển thị nếu cái MỚI NHẤT đó sắp hết hạn (trong vòng 7 ngày) hoặc đã hết hạn (nhưng vẫn còn Status Active)
+            return latestSubsPerTenant
+                .Where(s => s.EndDate <= sevenDaysFromNow)
                 .Select(s => new ExpiringSubscriptionResponse
                 {
                     TenantName = s.Tenant.TenantName,
+                    SubDomain = s.Tenant.SubDomain,
                     PlanName = s.Plan.PlanName,
                     ExpiredAt = s.EndDate
                 })
+                .OrderBy(s => s.ExpiredAt)
                 .ToList();
         }
     }

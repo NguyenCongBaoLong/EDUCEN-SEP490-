@@ -119,7 +119,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync();
 
             if (subscription == null)
-                throw new Exception("Active subscription not found");
+                throw new Exception("Không tìm thấy gói dịch vụ đang hoạt động để gia hạn.");
+
+            if (!subscription.Plan.IsActive)
+                throw new Exception($"Gói '{subscription.Plan.PlanName}' đã ngừng cung cấp. Vui lòng sử dụng chức năng 'Đổi gói' để chọn gói dịch vụ khác.");
 
             if (subscription.EndDate > DateTime.UtcNow)
             {

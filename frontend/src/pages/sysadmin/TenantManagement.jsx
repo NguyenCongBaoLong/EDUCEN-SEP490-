@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Building2, Plus, Search, Edit2, Eye, Lock, Unlock, Package,
-    X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter
+    X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter, TrendingUp
 } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import adminApi from '../../services/adminApi';
@@ -30,7 +30,9 @@ const TenantManagement = () => {
     const [viewTarget, setViewTarget] = useState(null);
     const [subscribeTarget, setSubscribeTarget] = useState(null);
     const [selectedPlanId, setSelectedPlanId] = useState('');
+    const [renewMonths, setRenewMonths] = useState(1);
     const [registrationApprovalTarget, setRegistrationApprovalTarget] = useState(null);
+    const [lockTarget, setLockTarget] = useState(null);
 
     const [form, setForm] = useState(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
@@ -41,7 +43,7 @@ const TenantManagement = () => {
 
     const fetchTenants = () => {
         setLoading(true);
-        adminApi.get('/Tenants')
+        adminApi.get('/admin/Tenants')
             .then(res => setTenants(res.data))
             .catch(() => showToast('Không thể tải danh sách trung tâm.', 'error'))
             .finally(() => setLoading(false));
@@ -125,7 +127,7 @@ const TenantManagement = () => {
         setSaving(true);
         try {
             if (editTarget) {
-                await adminApi.put(`/Tenants/${editTarget.tenantId}`, {
+                await adminApi.put(`/admin/Tenants/${editTarget.tenantId}`, {
                     tenantName: form.tenantName,
                     subDomain: form.subDomain,
                     contactPerson: form.contactPerson || null,
@@ -136,7 +138,7 @@ const TenantManagement = () => {
                 });
                 showToast('Cập nhật trung tâm thành công!');
             } else {
-                await adminApi.post('/Tenants', form);
+                await adminApi.post('/admin/Tenants', form);
                 showToast('Tạo trung tâm thành công! DB mới đã được khởi tạo.');
                 if (registrationApprovalTarget) {
                     await handleUpdateRegistrationStatus(registrationApprovalTarget.registrationId, 'Approved');
@@ -153,20 +155,29 @@ const TenantManagement = () => {
         }
     };
 
-    const handleToggle = async (tenant) => {
+    const handleToggle = (tenant) => {
+        setLockTarget(tenant);
+    };
+
+    const executeToggleActive = async () => {
+        if (!lockTarget) return;
+        setSaving(true);
         try {
-            await adminApi.put(`/Tenants/${tenant.tenantId}`, {
-                tenantName: tenant.tenantName,
-                subDomain: tenant.subDomain,
-                isActive: !tenant.isActive,   // toggle
+            await adminApi.put(`/admin/Tenants/${lockTarget.tenantId}`, {
+                tenantName: lockTarget.tenantName,
+                subDomain: lockTarget.subDomain,
+                isActive: !lockTarget.isActive,   // toggle
             });
-            showToast(tenant.isActive
-                ? 'Đã ngưng hoạt động trung tâm. Domain sẽ không truy cập được.'
-                : 'Đã kích hoạt lại trung tâm.'
+            showToast(lockTarget.isActive
+                ? `Đã ngưng hoạt động trung tâm ${lockTarget.tenantName}.`
+                : `Đã kích hoạt lại trung tâm ${lockTarget.tenantName}.`
             );
+            setLockTarget(null);
             fetchTenants();
         } catch {
             showToast('Không thể thay đổi trạng thái.', 'error');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -176,7 +187,8 @@ const TenantManagement = () => {
 
     const openSubscribe = (tenant) => {
         setSubscribeTarget(tenant);
-        setSelectedPlanId('');
+        setSelectedPlanId(tenant.planId || '');
+        setRenewMonths(1);
     };
 
     const handleSubscribeSubmit = async (e) => {
@@ -185,18 +197,30 @@ const TenantManagement = () => {
             showToast('Vui lòng chọn gói dịch vụ', 'error');
             return;
         }
+
+        const isRenewal = selectedPlanId === subscribeTarget.planId;
         setSaving(true);
         try {
-            await adminApi.post('/Tenants/subscribe', {
-                tenantId: subscribeTarget.tenantId,
-                planId: selectedPlanId
-            });
-            showToast(`Đã cấp gói đăng ký cho trung tâm ${subscribeTarget.tenantName}`);
+            if (isRenewal) {
+                // Gia hạn gói cũ
+                await adminApi.post('/admin/tenants/renew', {
+                    tenantId: subscribeTarget.tenantId,
+                    months: parseInt(renewMonths)
+                });
+                showToast(`Đã gia hạn gói ${subscribeTarget.planName} thêm ${renewMonths} tháng.`);
+            } else {
+                // Đổi gói mới / Cấp gói lần đầu
+                await adminApi.post('/admin/tenants/subscribe', {
+                    tenantId: subscribeTarget.tenantId,
+                    planId: selectedPlanId
+                });
+                showToast(`Đã cập nhật gói dịch vụ thành công cho ${subscribeTarget.tenantName}`);
+            }
             setSubscribeTarget(null);
             fetchTenants();
         } catch (err) {
-            const msg = err.response?.data?.message || err.response?.data || 'Không thể cấp gói dịch vụ.';
-            showToast(typeof msg === 'string' ? msg : 'Lỗi.', 'error');
+            const msg = err.response?.data?.message || err.response?.data || 'Có lỗi xảy ra.';
+            showToast(typeof msg === 'string' ? msg : 'Có lỗi xảy ra.', 'error');
         } finally {
             setSaving(false);
         }
@@ -207,7 +231,7 @@ const TenantManagement = () => {
         
         setSaving(true);
         try {
-            await adminApi.post(`/Tenants/${subscribeTarget.tenantId}/cancel`);
+            await adminApi.post(`/admin/tenants/${subscribeTarget.tenantId}/cancel`);
             showToast(`Đã hủy gói dịch vụ của ${subscribeTarget.tenantName}`);
             setSubscribeTarget(null);
             setConfirmCancelOpen(false);
@@ -360,7 +384,10 @@ const TenantManagement = () => {
                                         <td>
                                             {t.planName ? (
                                                 <div className="sa-subscription-info">
-                                                    <span className="sa-plan-name">{t.planName}</span>
+                                                    <span className="sa-plan-name" style={{ color: t.planIsActive ? 'inherit' : '#ef4444', fontWeight: t.planIsActive ? 'inherit' : 600 }}>
+                                                        {t.planName}
+                                                        {!t.planIsActive && <span style={{ fontSize: '0.7rem', display: 'block', color: '#ef4444' }}>(Gói đã bị xóa)</span>}
+                                                    </span>
                                                     {t.expiredAt && (
                                                         <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 2 }}>
                                                             Hết hạn: {new Date(t.expiredAt).toLocaleDateString('vi-VN')}
@@ -387,7 +414,7 @@ const TenantManagement = () => {
                                                 </button>
                                                 <button
                                                     className="sa-action-btn subscribe"
-                                                    title="Cấp / Đổi Gói Dịch Vụ"
+                                                    title="Quản Lý Gói Dịch Vụ"
                                                     onClick={() => openSubscribe(t)}
                                                 >
                                                     <Package size={18} />
@@ -787,27 +814,26 @@ const TenantManagement = () => {
                                                 Chưa có Gói Dịch Vụ nào trên hệ thống. Vui lòng tạo gói trước.
                                             </div>
                                         ) : plans.map(p => {
-                                            const isCurrentPlan = subscribeTarget.planName === p.planName;
+                                            const isCurrentPlan = subscribeTarget.planId === p.planId;
+                                            const isSelected = selectedPlanId === p.planId;
                                             return (
                                                 <label 
                                                     key={p.planId} 
                                                     style={{ 
                                                         display: 'flex', alignItems: 'flex-start', gap: '1rem', 
                                                         padding: '1rem', 
-                                                        border: `1px solid ${selectedPlanId === p.planId ? '#3b82f6' : '#e2e8f0'}`, 
+                                                        border: `1px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}`, 
                                                         borderRadius: '8px', 
-                                                        cursor: isCurrentPlan ? 'default' : 'pointer',
-                                                        background: isCurrentPlan ? '#f8fafc' : (selectedPlanId === p.planId ? '#eff6ff' : '#fff'),
-                                                        opacity: isCurrentPlan ? 0.7 : 1
+                                                        cursor: isSelected && isCurrentPlan ? 'default' : 'pointer',
+                                                        background: isSelected ? '#eff6ff' : '#fff',
                                                     }}
                                                 >
                                                     <input 
                                                         type="radio" 
                                                         name="planSelection" 
                                                         value={p.planId} 
-                                                        checked={selectedPlanId === p.planId || isCurrentPlan}
-                                                        onChange={(e) => !isCurrentPlan && setSelectedPlanId(e.target.value)}
-                                                        disabled={isCurrentPlan}
+                                                        checked={isSelected}
+                                                        onChange={(e) => setSelectedPlanId(e.target.value)}
                                                         style={{ marginTop: '4px' }}
                                                     />
                                                     <div style={{ flex: 1 }}>
@@ -815,6 +841,9 @@ const TenantManagement = () => {
                                                             <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '1.05rem' }}>{p.planName}</div>
                                                             {isCurrentPlan && (
                                                                 <span style={{ fontSize: '0.7rem', background: '#10b981', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>ĐANG SỬ DỤNG</span>
+                                                            )}
+                                                            {!p.isActive && (
+                                                                <span style={{ fontSize: '0.7rem', background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>ĐÃ NGỪNG CẤP</span>
                                                             )}
                                                         </div>
                                                         <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px', lineHeight: '1.4' }}>
@@ -828,6 +857,70 @@ const TenantManagement = () => {
                                         })}
                                     </div>
                                 </div>
+
+                                {selectedPlanId && selectedPlanId === subscribeTarget.planId && (
+                                    <div className="sa-form-group" style={{ 
+                                        marginTop: '1.5rem', padding: '1.25rem', background: '#f0fdf4', 
+                                        borderRadius: '12px', border: '1px solid #dcfce7' 
+                                    }}>
+                                        <label style={{ fontWeight: 600, color: '#166534', marginBottom: '0.5rem', display: 'block' }}>
+                                            Số tháng gia hạn thêm *
+                                        </label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{ 
+                                                display: 'flex', alignItems: 'center', background: '#fff', 
+                                                border: '1px solid #bbf7d0', borderRadius: '10px', padding: '2px',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                            }}>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setRenewMonths(m => Math.max(1, parseInt(m || 0) - 1))}
+                                                    style={{ 
+                                                        width: '36px', height: '36px', display: 'flex', alignItems: 'center', 
+                                                        justifyContent: 'center', border: 'none', background: 'transparent',
+                                                        color: '#059669', cursor: 'pointer', borderRadius: '8px',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
+                                                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <span style={{ fontSize: '1.5rem', fontWeight: 300, lineHeight: 1 }}>−</span>
+                                                </button>
+                                                
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="120"
+                                                    value={renewMonths}
+                                                    onChange={e => setRenewMonths(e.target.value)}
+                                                    style={{ 
+                                                        width: '60px', border: 'none', textAlign: 'center', 
+                                                        fontSize: '1.15rem', fontWeight: 700, color: '#065f46',
+                                                        background: 'transparent', outline: 'none', appearance: 'textfield',
+                                                        WebkitAppearance: 'none', MozAppearance: 'textfield'
+                                                    }}
+                                                    required
+                                                />
+                                                
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setRenewMonths(m => Math.min(120, parseInt(m || 0) + 1))}
+                                                    style={{ 
+                                                        width: '36px', height: '36px', display: 'flex', alignItems: 'center', 
+                                                        justifyContent: 'center', border: 'none', background: 'transparent',
+                                                        color: '#059669', cursor: 'pointer', borderRadius: '8px',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onMouseOver={e => e.currentTarget.style.background = '#f0fdf4'}
+                                                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    <Plus size={18} />
+                                                </button>
+                                            </div>
+                                            <span style={{ fontWeight: 600, color: '#065f46', fontSize: '1.1rem' }}>Tháng</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="sa-modal-footer" style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         {subscribeTarget.planName && (
@@ -847,7 +940,12 @@ const TenantManagement = () => {
                                             Đóng
                                         </button>
                                         <button type="submit" className="sa-btn-primary" disabled={saving || plans.length === 0}>
-                                            {saving ? <><Loader2 size={16} className="spin" /> Đang lưu...</> : 'Xác Nhận Cấp Gói'}
+                                            {saving ? (
+                                                <><Loader2 size={16} className="spin" /> Đang lưu...</>
+                                            ) : (
+                                                selectedPlanId === subscribeTarget.planId ? 'Xác Nhận Gia Hạn' : 
+                                                (subscribeTarget.planId ? 'Đổi Gói Dịch Vụ' : 'Kích Hoạt Gói')
+                                            )}
                                         </button>
                                     </div>
                                 </div>
@@ -892,6 +990,57 @@ const TenantManagement = () => {
                                         disabled={saving}
                                     >
                                         {saving ? <Loader2 size={16} className="spin" /> : 'Xác Nhận Hủy'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Lock/Unlock Confirmation Modal */}
+                {lockTarget && (
+                    <>
+                        <div className="sa-modal-overlay" style={{ zIndex: 1100 }} onClick={() => !saving && setLockTarget(null)} />
+                        <div className="sa-modal" style={{ zIndex: 1101, maxWidth: '450px', textAlign: 'center' }}>
+                            <div style={{ padding: '2.5rem 2rem' }}>
+                                <div style={{ 
+                                    width: 70, height: 70, borderRadius: '50%', 
+                                    background: lockTarget.isActive ? '#fff7ed' : '#f0fdf4', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                    margin: '0 auto 1.5rem', color: lockTarget.isActive ? '#f97316' : '#10b981'
+                                }}>
+                                    {lockTarget.isActive ? <Lock size={36} /> : <Unlock size={36} />}
+                                </div>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem' }}>
+                                    {lockTarget.isActive ? 'Khóa Trung Tâm?' : 'Mở Khóa Trung Tâm?'}
+                                </h2>
+                                <p style={{ color: '#64748b', lineHeight: 1.6, fontSize: '1rem', marginBottom: '2rem' }}>
+                                    {lockTarget.isActive ? (
+                                        <>Bạn có chắc muốn tạm dừng hoạt động của <strong>{lockTarget.tenantName}</strong>? <br/>Mọi người dùng thuộc trung tâm này sẽ <b>không thể đăng nhập</b> vào hệ thống.</>
+                                    ) : (
+                                        <>Kích hoạt lại <strong>{lockTarget.tenantName}</strong>. <br/>Hệ thống và người dùng có thể truy cập lại bình thường.</>
+                                    )}
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button 
+                                        className="sa-btn-cancel" 
+                                        style={{ flex: 1, padding: '0.75rem' }} 
+                                        onClick={() => setLockTarget(null)}
+                                        disabled={saving}
+                                    >
+                                        Hủy Bỏ
+                                    </button>
+                                    <button 
+                                        className="sa-btn-primary" 
+                                        style={{ 
+                                            flex: 1, padding: '0.75rem',
+                                            background: lockTarget.isActive ? '#f97316' : '#10b981', 
+                                            borderColor: lockTarget.isActive ? '#f97316' : '#10b981' 
+                                        }}
+                                        onClick={executeToggleActive}
+                                        disabled={saving}
+                                    >
+                                        {saving ? <Loader2 size={18} className="spin" /> : (lockTarget.isActive ? 'Xác Nhận Khóa' : 'Mở Khóa Ngay')}
                                     </button>
                                 </div>
                             </div>

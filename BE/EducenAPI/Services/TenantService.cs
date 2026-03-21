@@ -163,9 +163,11 @@ namespace EducenAPI.Services.TenantService
                     PhoneNumber = tenant.PhoneNumber,
                     Address = tenant.Address,
 
+                    PlanId = subscription?.PlanId,
                     PlanName = subscription?.Plan?.PlanName,
                     IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                     ExpiredAt = subscription?.EndDate,
+                    PlanIsActive = subscription?.Plan?.IsActive ?? true,
 
                     LimitUsers = subscription?.Plan?.LimitUsers,
                     StorageLimit = subscription?.Plan?.StorageLimit,
@@ -208,9 +210,11 @@ namespace EducenAPI.Services.TenantService
                 PhoneNumber = tenant.PhoneNumber,
                 Address = tenant.Address,
 
+                PlanId = subscription?.PlanId,
                 PlanName = subscription?.Plan?.PlanName,
                 IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                 ExpiredAt = subscription?.EndDate,
+                PlanIsActive = subscription?.Plan?.IsActive ?? true,
 
                 LimitUsers = subscription?.Plan?.LimitUsers,
                 StorageLimit = subscription?.Plan?.StorageLimit,

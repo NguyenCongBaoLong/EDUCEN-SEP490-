@@ -1,17 +1,17 @@
-﻿using EducenAPI.DTOs.AdminDashboard;
+using EducenAPI.DTOs.AdminDashboard;
 
 namespace EducenAPI.Services.Interface
 {
     public interface IAdminDashboardService
     {
-        DashboardOverviewResponse GetOverview();
+        Task<DashboardOverviewResponse> GetOverviewAsync();
 
-        RevenueReportResponse GetRevenue();
+        Task<RevenueReportResponse> GetRevenueAsync();
 
-        List<TenantsByPlanResponse> GetTenantsByPlan();
+        Task<List<TenantsByPlanResponse>> GetTenantsByPlanAsync();
 
-        List<TopCenterResponse> GetTopCenters();
+        Task<List<TopCenterResponse>> GetTopCentersAsync();
 
-        List<ExpiringSubscriptionResponse> GetExpiringSubscriptions();
+        Task<List<ExpiringSubscriptionResponse>> GetExpiringSubscriptionsAsync();
     }
 }
