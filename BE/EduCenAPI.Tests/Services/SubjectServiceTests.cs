@@ -2,15 +2,14 @@
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.Services;
 using EducenAPI.Models;
-using EducenAPI.DTOs;
+using EducenAPI.DTOs.Subjects;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using EducenAPI.Persistence.Contexts;
 using EduCenAPI.Tests.Fakes;
-using EducenAPI.DTOs.Subjects;
+using System.Linq;
 
-public class SubjectServiceTests
+public class SubjectService_CreateSubject_Tests
 {
     private EducenV2Context GetDbContext()
     {
@@ -23,232 +22,112 @@ public class SubjectServiceTests
         return new EducenV2Context(options, tenantService);
     }
 
-    // ===============================
-    // GetAllSubjectsAsync
-    // ===============================
-
-    [Fact]
-    public async Task GetAllSubjectsAsync_Should_Return_All_Subjects()
+    // ================================
+    // 1. SubjectName null/empty/whitespace
+    // ================================
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateSubject_ShouldThrow_WhenNameIsEmpty(string name)
     {
-        // Arrange
-        var context = GetDbContext();
-        context.Subjects.Add(new Subject { SubjectName = "Math" });
-        context.Subjects.Add(new Subject { SubjectName = "Physics" });
-        await context.SaveChangesAsync();
-
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.GetAllSubjectsAsync();
-
-        // Assert
-        Assert.Equal(2, result.Count());
-    }
-
-    // ===============================
-    // GetSubjectByIdAsync
-    // ===============================
-
-    [Fact]
-    public async Task GetSubjectByIdAsync_Should_Return_Subject_When_Exists()
-    {
-        // Arrange
-        var context = GetDbContext();
-
-        var subject = new Subject { SubjectName = "Math" };
-        context.Subjects.Add(subject);
-        await context.SaveChangesAsync();
-
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.GetSubjectByIdAsync(subject.SubjectId);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Math", result!.SubjectName);
-    }
-
-    [Fact]
-    public async Task GetSubjectByIdAsync_Should_Return_Null_When_Not_Found()
-    {
-        // Arrange
-        var context = GetDbContext();
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.GetSubjectByIdAsync(999);
-
-        // Assert
-        Assert.Null(result);
-    }
-
-    // ===============================
-    // CreateSubjectAsync
-    // ===============================
-
-    [Fact]
-    public async Task CreateSubjectAsync_Should_Create_Subject()
-    {
-        // Arrange
         var context = GetDbContext();
         var service = new SubjectService(context);
 
         var request = new CreateSubjectRequest
         {
-            SubjectName = "Chemistry",
-            Description = "Basic chemistry"
+            SubjectName = name
         };
 
-        // Act
+        var ex = await Assert.ThrowsAsync<Exception>(
+            () => service.CreateSubjectAsync(request));
+
+        Assert.Equal("Subject name cannot be empty.", ex.Message);
+    }
+
+    // ================================
+    // 2. Create success
+    // ================================
+    [Fact]
+    public async Task CreateSubject_ShouldCreate_WhenValid()
+    {
+        var context = GetDbContext();
+        var service = new SubjectService(context);
+
+        var request = new CreateSubjectRequest
+        {
+            SubjectName = "Math",
+            Description = "Basic math"
+        };
+
         var result = await service.CreateSubjectAsync(request);
 
-        // Assert
         Assert.NotNull(result);
-        Assert.Equal("Chemistry", result.SubjectName);
+        Assert.Equal("Math", result.SubjectName);
+        Assert.Equal("Basic math", result.Description);
         Assert.Equal(1, context.Subjects.Count());
     }
 
-    // ===============================
-    // UpdateSubjectAsync
-    // ===============================
-
+    // ================================
+    // 3. Trim SubjectName
+    // ================================
     [Fact]
-    public async Task UpdateSubjectAsync_Should_Update_Subject_When_Exists()
+    public async Task CreateSubject_ShouldTrimName()
     {
-        // Arrange
         var context = GetDbContext();
+        var service = new SubjectService(context);
 
-        var subject = new Subject
+        var request = new CreateSubjectRequest
         {
-            SubjectName = "Old Name"
+            SubjectName = "  Math  "
         };
 
-        context.Subjects.Add(subject);
+        var result = await service.CreateSubjectAsync(request);
+
+        Assert.Equal("Math", result.SubjectName);
+    }
+
+    // ================================
+    // 4. Duplicate name (exact match)
+    // ================================
+    [Fact]
+    public async Task CreateSubject_ShouldThrow_WhenDuplicateName()
+    {
+        var context = GetDbContext();
+
+        context.Subjects.Add(new Subject { SubjectName = "Math" });
         await context.SaveChangesAsync();
 
         var service = new SubjectService(context);
 
-        var request = new UpdateSubjectRequest
+        var request = new CreateSubjectRequest
         {
-            SubjectName = "New Name",
-            Description = "Updated description"
+            SubjectName = "Math"
         };
 
-        // Act
-        var result = await service.UpdateSubjectAsync(subject.SubjectId, request);
+        var ex = await Assert.ThrowsAsync<Exception>(
+            () => service.CreateSubjectAsync(request));
 
-        // Assert
-        Assert.True(result);
-
-        var updated = await context.Subjects.FindAsync(subject.SubjectId);
-        Assert.Equal("New Name", updated!.SubjectName);
+        Assert.Equal("Subject name already exists.", ex.Message);
     }
 
+    // ================================
+    // 5. Trim Description
+    // ================================
     [Fact]
-    public async Task UpdateSubjectAsync_Should_Return_False_When_Subject_Not_Found()
+    public async Task CreateSubject_ShouldTrimDescription()
     {
-        // Arrange
         var context = GetDbContext();
         var service = new SubjectService(context);
 
-        var request = new UpdateSubjectRequest
+        var request = new CreateSubjectRequest
         {
-            SubjectName = "Test"
+            SubjectName = "Physics",
+            Description = "  Science subject  "
         };
 
-        // Act
-        var result = await service.UpdateSubjectAsync(999, request);
+        var result = await service.CreateSubjectAsync(request);
 
-        // Assert
-        Assert.False(result);
-    }
-
-    // ===============================
-    // DeleteSubjectAsync
-    // ===============================
-
-    [Fact]
-    public async Task DeleteSubjectAsync_Should_Delete_Subject_When_Exists()
-    {
-        // Arrange
-        var context = GetDbContext();
-
-        var subject = new Subject { SubjectName = "To Delete" };
-        context.Subjects.Add(subject);
-        await context.SaveChangesAsync();
-
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.DeleteSubjectAsync(subject.SubjectId);
-
-        // Assert
-        Assert.True(result);
-        Assert.Empty(context.Subjects);
-    }
-
-    [Fact]
-    public async Task DeleteSubjectAsync_Should_Return_False_When_Subject_Not_Found()
-    {
-        // Arrange
-        var context = GetDbContext();
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.DeleteSubjectAsync(999);
-
-        // Assert
-        Assert.False(result);
-    }
-
-    // ===============================
-    // IsSubjectUsedInClassesAsync
-    // ===============================
-
-    [Fact]
-    public async Task IsSubjectUsedInClassesAsync_Should_Return_True_When_Subject_Is_Used()
-    {
-        // Arrange
-        var context = GetDbContext();
-
-        var subject = new Subject { SubjectName = "Math" };
-        context.Subjects.Add(subject);
-        await context.SaveChangesAsync();
-
-        context.Classes.Add(new Class
-        {
-            SubjectId = subject.SubjectId,
-            TeacherId = 1
-        });
-
-        await context.SaveChangesAsync();
-
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.IsSubjectUsedInClassesAsync(subject.SubjectId);
-
-        // Assert
-        Assert.True(result);
-    }
-
-    [Fact]
-    public async Task IsSubjectUsedInClassesAsync_Should_Return_False_When_Not_Used()
-    {
-        // Arrange
-        var context = GetDbContext();
-
-        var subject = new Subject { SubjectName = "Math" };
-        context.Subjects.Add(subject);
-        await context.SaveChangesAsync();
-
-        var service = new SubjectService(context);
-
-        // Act
-        var result = await service.IsSubjectUsedInClassesAsync(subject.SubjectId);
-
-        // Assert
-        Assert.False(result);
+        Assert.Equal("Science subject", result.Description);
     }
 }
