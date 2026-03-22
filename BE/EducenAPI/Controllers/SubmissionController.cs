@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Submissions;
+using EducenAPI.DTOs.Submissions;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +17,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateSubmission([FromBody] CreateSubmissionRequest request)
+        public async Task<IActionResult> CreateSubmission([FromForm] CreateSubmissionRequest request)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{subId}")]
-        public async Task<IActionResult> UpdateSubmission(int subId, [FromBody] UpdateSubmissionRequest request)
+        public async Task<IActionResult> UpdateSubmission(int subId, [FromForm] UpdateSubmissionRequest request)
         {
             try
             {
@@ -64,6 +64,20 @@ namespace EducenAPI.Controllers
             try
             {
                 var result = await _submissionService.PublishGradeAsync(subId, request.IsPublished);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("{subId}/reset")]
+        public async Task<IActionResult> ResetSubmission(int subId)
+        {
+            try
+            {
+                var result = await _submissionService.ResetSubmissionAsync(subId);
                 return Ok(result);
             }
             catch (Exception ex)

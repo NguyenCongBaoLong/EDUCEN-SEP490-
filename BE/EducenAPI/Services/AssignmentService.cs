@@ -300,5 +300,69 @@ namespace EducenAPI.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<AssignmentGradingDto> GetAssignmentGradingAsync(int assignmentId, string baseUrl)
+        {
+            var assignment = await _context.Assignments
+                .Include(a => a.Session)
+                    .ThenInclude(s => s.Class)
+                        .ThenInclude(c => c.Students)
+                            .ThenInclude(st => st.StudentNavigation)
+                .Include(a => a.Submissions)
+                .FirstOrDefaultAsync(a => a.AsmId == assignmentId);
+
+            if (assignment == null)
+                throw new Exception("Assignment not found");
+
+            var result = new AssignmentGradingDto
+            {
+                Assignment = new AssignmentResponseDto
+                {
+                    AsmId = assignment.AsmId,
+                    SessionId = assignment.SessionId,
+                    Title = assignment.Title ?? "",
+                    Description = assignment.Description,
+                    StartTime = assignment.StartTime,
+                    EndTime = assignment.EndTime,
+                    FileUrl = !string.IsNullOrEmpty(assignment.FileUrl)
+                        ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                        : null,
+                    FileSize = GetFileSizeFromUrl(assignment.FileUrl),
+                    OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl)
+                },
+                Students = new List<StudentSubmissionDto>()
+            };
+
+            // Lấy danh sách học sinh từ Class nếu có gán session và class
+            var studentsInClass = assignment.Session?.Class?.Students ?? new List<Student>();
+
+            foreach (var student in studentsInClass)
+            {
+                var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.UserId);
+                
+                result.Students.Add(new StudentSubmissionDto
+                {
+                    StudentId = student.UserId,
+                    FullName = student.StudentNavigation?.FullName ?? "Unknown Student",
+                    Submission = submission == null ? null : new EducenAPI.DTOs.Submissions.SubmissionResponseDto
+                    {
+                        SubId = submission.SubId,
+                        AsmId = submission.AsmId,
+                        StudentId = submission.StudentId,
+                        FileUrl = !string.IsNullOrEmpty(submission.FileUrl)
+                            ? $"{baseUrl}/{submission.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                            : null,
+                        SubmittedAt = submission.SubmittedAt,
+                        Status = submission.Status,
+                        Score = submission.Score,
+                        TeacherComment = submission.TeacherComment,
+                        GradedAt = submission.GradedAt,
+                        IsPublished = submission.IsPublished
+                    }
+                });
+            }
+
+            return result;
+        }
     }
 }

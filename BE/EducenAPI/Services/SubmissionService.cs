@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Submissions;
+using EducenAPI.DTOs.Submissions;
 using EducenAPI.Enums;
 using EducenAPI.Exceptions;
 using EducenAPI.Models;
@@ -18,7 +18,7 @@ namespace EducenAPI.Services
             _fileService = fileService;
         }
 
-        public async Task<Submission> CreateSubmissionAsync(CreateSubmissionRequest request)
+        public async Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request)
         {
             string fileUrl = string.Empty;
             var assignment = await _context.Assignments.FindAsync(request.AsmId);
@@ -68,10 +68,10 @@ namespace EducenAPI.Services
             _context.Submissions.Add(submission);
             await _context.SaveChangesAsync();
 
-            return submission;
+            return MapToResponseDto(submission);
         }
 
-        public async Task<Submission> UpdateSubmissionAsync(int subId, UpdateSubmissionRequest request)
+        public async Task<SubmissionResponseDto> UpdateSubmissionAsync(int subId, UpdateSubmissionRequest request)
         {
             string fileUrl = string.Empty;
             var submission = await _context.Submissions
@@ -80,6 +80,10 @@ namespace EducenAPI.Services
 
             if (submission == null)
                 throw new Exception("Submission not found");
+
+            if (submission.Score != null || submission.Status == "Graded" || submission.Status == "Published" || submission.IsPublished)
+                throw new Exception("Cannot update submission because it has already been graded or published.");
+
             if (!string.IsNullOrEmpty(request.FileUrl))
             {
                 fileUrl = request.FileUrl;
@@ -96,7 +100,7 @@ namespace EducenAPI.Services
             }
 
 
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             submission.SubmittedAt = now;
             submission.Status = SubmissionStatus.Submitted;
 
@@ -111,10 +115,10 @@ namespace EducenAPI.Services
             submission.IsPublished = false;
 
             await _context.SaveChangesAsync();
-            return submission;
+            return MapToResponseDto(submission);
         }
 
-        public async Task<Submission> GradeSubmissionAsync(int subId, GradeSubmissionRequest request)
+        public async Task<SubmissionResponseDto> GradeSubmissionAsync(int subId, GradeSubmissionRequest request)
         {
             var submission = await _context.Submissions
                 .FirstOrDefaultAsync(x => x.SubId == subId);
@@ -127,14 +131,14 @@ namespace EducenAPI.Services
 
             submission.Score = request.Score;
             submission.TeacherComment = request.TeacherComment;
-            submission.GradedAt = DateTime.UtcNow;
+            submission.GradedAt = DateTime.Now;
             submission.Status = "Graded";
 
             await _context.SaveChangesAsync();
-            return submission;
+            return MapToResponseDto(submission);
         }
 
-        public async Task<Submission> PublishGradeAsync(int subId, bool isPublished)
+        public async Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished)
         {
             var submission = await _context.Submissions
                 .FirstOrDefaultAsync(x => x.SubId == subId);
@@ -149,15 +153,60 @@ namespace EducenAPI.Services
             submission.Status = isPublished ? "Published" : "Unpublished";
 
             await _context.SaveChangesAsync();
-            return submission;
+            return MapToResponseDto(submission);
         }
 
-        public async Task<Submission?> GetByIdAsync(int subId)
+        public async Task<SubmissionResponseDto> ResetSubmissionAsync(int subId)
         {
-            return await _context.Submissions
+            var submission = await _context.Submissions
+                .Include(x => x.Asm)
+                .FirstOrDefaultAsync(x => x.SubId == subId);
+
+            if (submission == null)
+                throw new Exception("Submission not found");
+
+            submission.Score = null;
+            submission.TeacherComment = null;
+            submission.GradedAt = null;
+            submission.IsPublished = false;
+            
+            // Recalculate status
+            var now = DateTime.Now;
+            submission.Status = SubmissionStatus.Submitted;
+            if (submission.Asm.EndTime.HasValue && submission.SubmittedAt > submission.Asm.EndTime.Value)
+            {
+                submission.Status = SubmissionStatus.LateSubmitted;
+            }
+
+            await _context.SaveChangesAsync();
+            return MapToResponseDto(submission);
+        }
+
+        public async Task<SubmissionResponseDto?> GetByIdAsync(int subId)
+        {
+            var submission = await _context.Submissions
                 .Include(x => x.Student)
                 .Include(x => x.Asm)
                 .FirstOrDefaultAsync(x => x.SubId == subId);
+            
+            return submission != null ? MapToResponseDto(submission) : null;
+        }
+
+        private SubmissionResponseDto MapToResponseDto(Submission submission)
+        {
+            return new SubmissionResponseDto
+            {
+                SubId = submission.SubId,
+                AsmId = submission.AsmId,
+                StudentId = submission.StudentId,
+                FileUrl = submission.FileUrl,
+                SubmittedAt = submission.SubmittedAt,
+                Status = submission.Status,
+                Score = submission.Score,
+                TeacherComment = submission.TeacherComment,
+                GradedAt = submission.GradedAt,
+                IsPublished = submission.IsPublished
+            };
         }
     }
 }
