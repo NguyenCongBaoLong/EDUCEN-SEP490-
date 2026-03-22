@@ -13,7 +13,6 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         dateOfBirth: '',
         gender: 'male',
         address: '',
-        enrollmentDate: new Date().toISOString().split('T')[0],
         status: 'active',
         notes: '',
         // Parent linking
@@ -33,7 +32,6 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                     ...editingStudent,
                     avatar: editingStudent.avatar || null,
                     dateOfBirth: editingStudent.dateOfBirth || '',
-                    enrollmentDate: editingStudent.enrollmentDate || new Date().toISOString().split('T')[0],
                     status: editingStudent.status || 'active',
                     accountSent: editingStudent.accountSent || false,
                     linkedParentIds: editingStudent.linkedParentIds || []
@@ -49,7 +47,6 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                     dateOfBirth: '',
                     gender: 'male',
                     address: '',
-                    enrollmentDate: new Date().toISOString().split('T')[0],
                     status: 'active',
                     notes: '',
                     linkedParentIds: [],
@@ -253,15 +250,6 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                                 ))}
                             </select>
                             {errors.grade && <span className="error-message">{errors.grade}</span>}
-                        </div>
-                        <div className="form-group">
-                            <label>Ngày nhập học</label>
-                            <input
-                                type="date"
-                                name="enrollmentDate"
-                                value={formData.enrollmentDate}
-                                onChange={handleChange}
-                            />
                         </div>
                     </div>
 

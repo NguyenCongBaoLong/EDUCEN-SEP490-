@@ -11,6 +11,7 @@ using System.Text;
 using EducenAPI.Models;
 using Microsoft.OpenApi.Models;
 using EducenAPI.Ultils;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -133,6 +134,10 @@ builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
 
     options.UseSqlServer(connectionString);
 });
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB
+});
 
 // ── Auth Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpContextAccessor();
@@ -155,6 +160,7 @@ builder.Services.AddScoped<IParentService, ParentService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<ITenantRegistrationService, TenantRegistrationService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {

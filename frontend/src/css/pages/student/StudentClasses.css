@@ -333,6 +333,31 @@
     font-size: 0.9375rem;
 }
 
+/* Loading State */
+.sc-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: #64748b;
+    gap: 16px;
+}
+
+.sc-loading p {
+    font-size: 0.9375rem;
+    font-weight: 500;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .sc-stats-row {

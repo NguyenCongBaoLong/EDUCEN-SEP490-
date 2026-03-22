@@ -1322,3 +1322,64 @@
 .scd-session-item-badge { display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #f1f5f9; color: #475569; margin-left: auto; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ─── Loading & Error ─── */
+.scd-loading-container, .scd-error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 16px;
+    color: #64748b;
+}
+
+.scd-btn-retry {
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ─── Status: Graded ─── */
+.scd-status-chip.graded {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.scd-item-card.scd-asm-item-card.graded {
+    border-left: 3px solid #f59e0b;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.scd-upload-zone.has-file {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+/* Grading message in modal */
+.scd-grading-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.scd-grading-msg svg {
+    color: #94a3b8;
+}

@@ -9,6 +9,7 @@ namespace EducenAPI.DTOs.Assignments
         public string? FileUrl { get; set; } // Đây sẽ là Link full
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
+        public DateTime? DueDate { get; set; }
         public long? FileSize { get; set; }
         public string? OriginalFileName { get; set; }
     }

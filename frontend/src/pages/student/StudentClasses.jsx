@@ -1,63 +1,10 @@
-import { useState } from 'react';
-import { Search, GraduationCap, BookOpen, Clock, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, GraduationCap, BookOpen, Clock, Users, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import StudentSidebar from '../../components/StudentSidebar';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
 import '../../css/pages/student/StudentClasses.css';
-
-// Mock data: lớp học mà học sinh này đang đăng ký
-const MY_ENROLLED_CLASSES = [
-    {
-        id: 201,
-        code: 'TOÁN-G10-ADV',
-        name: 'Đại Số Nâng Cao',
-        subject: 'Toán học',
-        gradeLevel: 'THPT',
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM' },
-        assistant: { name: 'Cô Lê Hoa', initials: 'LH' },
-        schedule: 'Thứ Hai & Thứ Tư',
-        scheduleTime: '16:30 - 18:00',
-        currentStudents: 12,
-        maxStudents: 15,
-        classesCompleted: 8,
-        totalClasses: 24,
-        status: 'active',
-        color: '#3b82f6',
-    },
-    {
-        id: 202,
-        code: 'ANH-G10-INT',
-        name: 'Tiếng Anh Giao Tiếp Nâng Cao',
-        subject: 'Tiếng Anh',
-        gradeLevel: 'THPT',
-        mainTeacher: { name: 'Cô Trần Lan', initials: 'TL' },
-        assistant: null,
-        schedule: 'Thứ Ba & Thứ Năm',
-        scheduleTime: '17:00 - 18:30',
-        currentStudents: 10,
-        maxStudents: 12,
-        classesCompleted: 6,
-        totalClasses: 20,
-        status: 'active',
-        color: '#10b981',
-    },
-    {
-        id: 203,
-        code: 'LÝ-G10-CB',
-        name: 'Vật Lý Cơ Bản Lớp 10',
-        subject: 'Vật lý',
-        gradeLevel: 'THPT',
-        mainTeacher: { name: 'Thầy Lê Hoàng', initials: 'LH' },
-        assistant: null,
-        schedule: 'Thứ Sáu',
-        scheduleTime: '15:00 - 16:30',
-        currentStudents: 9,
-        maxStudents: 15,
-        classesCompleted: 16,
-        totalClasses: 16,
-        status: 'inactive',
-        color: '#f59e0b',
-    },
-];
 
 const SUBJECT_COLORS = {
     'Toán học': '#3b82f6',
@@ -71,16 +18,36 @@ const StudentClasses = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [myEnrolledClasses, setMyEnrolledClasses] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredClasses = MY_ENROLLED_CLASSES.filter(cls => {
+    useEffect(() => {
+        fetchMyClasses();
+    }, []);
+
+    const fetchMyClasses = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/Classes/student/my-classes');
+            setMyEnrolledClasses(response.data);
+        } catch (error) {
+            console.error('Error fetching classes:', error);
+            toast.error('Không thể tải danh sách lớp học');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredClasses = myEnrolledClasses.filter(cls => {
         const matchesSearch =
-            cls.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            cls.subject.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = !statusFilter || cls.status === statusFilter;
+            cls.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            cls.subjectName.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = !statusFilter || 
+            (statusFilter === 'active' ? cls.status === 'Active' : cls.status !== 'Active');
         return matchesSearch && matchesStatus;
     });
 
-    const activeCount = MY_ENROLLED_CLASSES.filter(c => c.status === 'active').length;
+    const activeCount = myEnrolledClasses.filter(c => c.status === 'Active').length;
 
     return (
         <div className="sc-page">
@@ -102,7 +69,7 @@ const StudentClasses = () => {
                     <div className="sc-stat-card">
                         <div className="sc-stat-icon blue"><GraduationCap size={20} /></div>
                         <div>
-                            <div className="sc-stat-num">{MY_ENROLLED_CLASSES.length}</div>
+                            <div className="sc-stat-num">{myEnrolledClasses.length}</div>
                             <div className="sc-stat-label">Tổng lớp</div>
                         </div>
                     </div>
@@ -117,7 +84,7 @@ const StudentClasses = () => {
                         <div className="sc-stat-icon purple"><Clock size={20} /></div>
                         <div>
                             <div className="sc-stat-num">
-                                {MY_ENROLLED_CLASSES.reduce((s, c) => s + c.classesCompleted, 0)}
+                                {myEnrolledClasses.reduce((s, c) => s + c.completedSessions, 0)}
                             </div>
                             <div className="sc-stat-label">Buổi đã học</div>
                         </div>
@@ -126,7 +93,7 @@ const StudentClasses = () => {
                         <div className="sc-stat-icon amber"><Users size={20} /></div>
                         <div>
                             <div className="sc-stat-num">
-                                {MY_ENROLLED_CLASSES.reduce((s, c) => s + c.totalClasses, 0)}
+                                {myEnrolledClasses.reduce((s, c) => s + c.totalSessions, 0)}
                             </div>
                             <div className="sc-stat-label">Tổng buổi học</div>
                         </div>
@@ -158,7 +125,12 @@ const StudentClasses = () => {
                 {/* Classes Grid */}
                 <div className="sc-section">
                     <h2 className="sc-section-title">Danh sách lớp học</h2>
-                    {filteredClasses.length === 0 ? (
+                    {loading ? (
+                        <div className="sc-loading">
+                            <Loader2 className="animate-spin" size={48} />
+                            <p>Đang tải danh sách lớp học...</p>
+                        </div>
+                    ) : filteredClasses.length === 0 ? (
                         <div className="sc-empty">
                             <GraduationCap size={48} />
                             <p>Không tìm thấy lớp học phù hợp.</p>
@@ -166,47 +138,49 @@ const StudentClasses = () => {
                     ) : (
                         <div className="sc-grid">
                             {filteredClasses.map((cls) => {
-                                const progress = Math.round((cls.classesCompleted / cls.totalClasses) * 100);
-                                const accentColor = SUBJECT_COLORS[cls.subject] || cls.color;
+                                const progress = cls.totalSessions > 0 
+                                    ? Math.round((cls.completedSessions / cls.totalSessions) * 100) 
+                                    : 0;
+                                const accentColor = SUBJECT_COLORS[cls.subjectName] || cls.color;
                                 return (
                                     <div
-                                        key={cls.id}
+                                        key={cls.classId}
                                         className="sc-card"
-                                        onClick={() => navigate(`/student/classes/${cls.id}`)}
+                                        onClick={() => navigate(`/student/classes/${cls.classId}`)}
                                         style={{ '--accent': accentColor }}
                                     >
                                         <div className="sc-card-top">
                                             <div className="sc-card-accent" style={{ background: accentColor }} />
                                             <div className="sc-card-header-row">
                                                 <div className="sc-card-subject-badge" style={{ background: accentColor + '18', color: accentColor }}>
-                                                    {cls.subject}
+                                                    {cls.subjectName}
                                                 </div>
-                                                <span className={`sc-card-status ${cls.status}`}>
-                                                    {cls.status === 'active' ? 'Đang học' : 'Đã kết thúc'}
+                                                <span className={`sc-card-status ${cls.status === 'Active' ? 'active' : 'inactive'}`}>
+                                                    {cls.status === 'Active' ? 'Đang học' : 'Đã kết thúc'}
                                                 </span>
                                             </div>
-                                            <h3 className="sc-card-name">{cls.name}</h3>
-                                            <p className="sc-card-code">{cls.code} • {cls.gradeLevel}</p>
+                                            <h3 className="sc-card-name">{cls.className}</h3>
+                                            <p className="sc-card-code">{cls.gradeLevel}</p>
                                         </div>
 
                                         <div className="sc-card-body">
                                             <div className="sc-card-info-row">
                                                 <Clock size={14} />
-                                                <span>{cls.schedule} • {cls.scheduleTime}</span>
+                                                <span>{cls.scheduleDays} • {cls.scheduleTime}</span>
                                             </div>
                                             <div className="sc-card-teachers">
                                                 <div className="sc-teacher-chip">
                                                     <div className="sc-teacher-avatar" style={{ background: accentColor }}>
-                                                        {cls.mainTeacher.initials}
+                                                        {cls.teacherInitials}
                                                     </div>
-                                                    <span>{cls.mainTeacher.name}</span>
+                                                    <span>{cls.teacherName}</span>
                                                 </div>
-                                                {cls.assistant && (
+                                                {cls.assistantName && (
                                                     <div className="sc-teacher-chip">
                                                         <div className="sc-teacher-avatar assistant">
-                                                            {cls.assistant.initials}
+                                                            {cls.assistantInitials}
                                                         </div>
-                                                        <span>{cls.assistant.name}</span>
+                                                        <span>{cls.assistantName}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -216,7 +190,7 @@ const StudentClasses = () => {
                                             <div className="sc-progress-label">
                                                 <span>Tiến độ</span>
                                                 <span style={{ color: accentColor, fontWeight: 600 }}>
-                                                    {cls.classesCompleted}/{cls.totalClasses} buổi • {progress}%
+                                                    {cls.completedSessions}/{cls.totalSessions} buổi • {progress}%
                                                 </span>
                                             </div>
                                             <div className="sc-progress-track">
