@@ -75,10 +75,10 @@ namespace EducenAPI.Services
                 // 1. Validate base required fields
                 ValidateBaseStudentData(dto);
 
-                // 2. Check duplicate email (luôn luôn check)
-                var existingStudent = await _context.Students
-                    .AnyAsync(s => s.Email == dto.Email);
-                if (existingStudent)
+                // 2. Check duplicate email (check toàn bộ bảng Users)
+                var existingUserEmail = await _context.Users
+                    .AnyAsync(u => u.Email == dto.Email);
+                if (existingUserEmail)
                     throw new Exception("Email already exists");
 
                 // 3. Branch logic dựa trên username/password
@@ -118,7 +118,7 @@ namespace EducenAPI.Services
             // 3. Tạo User với null username/password (không có account)
             var user = new User
             {
-                Username = null,  // Không có username
+                Username = dto.Username,  // Giữ lại username nếu có (từ import hoặc form)
                 PasswordHash = null,  // Không có password
                 RoleId = studentRole.RoleId,
                 FullName = dto.FullName,
@@ -286,8 +286,8 @@ namespace EducenAPI.Services
 
             if (!string.IsNullOrEmpty(dto.Email))
             {
-                var emailExists = await _context.Students
-                    .AnyAsync(s => s.Email == dto.Email && s.UserId != id);
+                var emailExists = await _context.Users
+                    .AnyAsync(u => u.Email == dto.Email && u.UserId != id);
 
                 if (emailExists)
                     throw new Exception("Email already exists");

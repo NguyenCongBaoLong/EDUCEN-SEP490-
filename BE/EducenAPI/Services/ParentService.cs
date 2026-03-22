@@ -177,7 +177,15 @@ namespace EducenAPI.Services
                     existingParent.ParentNavigation.FullName = dto.FullName;
 
                 if (!string.IsNullOrWhiteSpace(dto.Email))
+                {
+                    var emailExists = await _context.Users
+                        .AnyAsync(u => u.Email == dto.Email && u.UserId != id);
+
+                    if (emailExists)
+                        throw new Exception("Email already exists");
+
                     existingParent.ParentNavigation.Email = dto.Email;
+                }
 
                 if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                     existingParent.ParentNavigation.PhoneNumber = dto.PhoneNumber;

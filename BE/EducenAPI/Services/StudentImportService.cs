@@ -6,6 +6,7 @@ using EducenAPI.Ultils;
 using ExcelDataReader;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using EducenAPI.Models;
 
 namespace EducenAPI.Services;
 
@@ -30,6 +31,7 @@ public class StudentImportService : IStudentImportService
         public int Total { get; set; }
         public int Success { get; set; }
         public int Failed { get; set; }
+        public int Skipped { get; set; }
         public List<string> Errors { get; set; } = new();
     }
 
@@ -146,22 +148,11 @@ public class StudentImportService : IStudentImportService
                         }
                     }
 
-                    // ✅ SỬA: Cho phép import khi username null (tạo profile không có account)
-                    // Validation: FullName và Email là bắt buộc, Username là optional
-                    if (string.IsNullOrWhiteSpace(fullName) ||
-                        string.IsNullOrWhiteSpace(email))
+                    // Validation: FullName và Email là bắt buộc
+                    if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
                     {
                         importResults.Failed++;
                         importResults.Errors.Add($"Row {row + 1}: Missing required data (Full Name, Email)");
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Cho phép có cả PhoneNumber VÀ Email (để tiện liên lạc)
-                    // Validation: Phải có ít nhất 1 trong PhoneNumber hoặc Email
-                    if (string.IsNullOrWhiteSpace(phoneNumber) && string.IsNullOrWhiteSpace(email))
-                    {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Either Phone Number or Email is required.");
                         continue;
                     }
 
@@ -177,8 +168,7 @@ public class StudentImportService : IStudentImportService
                         fileUsernames.Add(username);
 
                         // Kiểm tra username đã tồn tại trong hệ thống
-                        var existingUser = await _context.Users
-                            .FirstOrDefaultAsync(u => u.Username == username);
+                        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
                         if (existingUser != null)
                         {
                             importResults.Failed++;
@@ -187,26 +177,27 @@ public class StudentImportService : IStudentImportService
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(email))
-                        fileEmails.Add(email);
-
-                    // ✅ SỬA: Kiểm tra student đã tồn tại chưa để quyết định:
-                    // - Nếu Student đã tồn tại (theo email) → thêm vào class (không tạo mới)
-                    // - Nếu Student chưa tồn tại → tạo mới student (với hoặc không có account)
-                    var existingStudent = await _context.Students
-                        .FirstOrDefaultAsync(s => s.Email == email);
+                    // Kiểm tra email toàn hệ thống
+                    var existingUserByEmail = await _context.Users
+                        .Include(u => u.Student)
+                        .FirstOrDefaultAsync(u => u.Email == email);
                     
-                    bool isExistingStudent = existingStudent != null;
+                    bool isExistingStudent = existingUserByEmail?.Student != null;
 
-                    // Nếu là student mới
+                    if (existingUserByEmail != null && !isExistingStudent)
+                    {
+                        importResults.Failed++;
+                        importResults.Errors.Add($"Row {row + 1}: Email '{email}' is already used by another account (Teacher/Parent/Admin)");
+                        continue;
+                    }
+
+                    int studentId;
                     if (!isExistingStudent)
                     {
-                        // Email chưa tồn tại → tạo mới student
-                        // Nếu có username → tạo account, không thì chỉ tạo profile
                         var createStudentDto = new CreateStudentDto
                         {
                             Username = string.IsNullOrWhiteSpace(username) ? null : username,
-                            Password = string.IsNullOrWhiteSpace(username) ? null : PasswordGenerator.GenerateSecurePassword(),
+                            Password = null, // Không tạo password khi import
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
@@ -216,51 +207,36 @@ public class StudentImportService : IStudentImportService
                             Gender = gender
                         };
 
-                        await _studentService.CreateStudentAsync(createStudentDto);
+                        var createdStudent = await _studentService.CreateStudentAsync(createStudentDto);
+                        studentId = createdStudent.UserId ?? 0;
                         importResults.Success++;
                     }
                     else
                     {
-                        // ✅ Student đã tồn tại → thêm vào class (nếu có classId)
-                        if (classId.HasValue)
-                        {
-                            var classExists = await _context.Classes.FindAsync(classId.Value);
-                            if (classExists == null)
-                            {
-                                importResults.Failed++;
-                                importResults.Errors.Add($"Row {row + 1}: Class with ID {classId} not found");
-                                continue;
-                            }
+                        studentId = existingUserByEmail!.Student!.UserId;
+                        importResults.Skipped++;
+                    }
 
-                            // Thêm student vào class
-                            var importResult = await _classService.ImportStudentToClassAsync(classId.Value, new CreateStudentDto
-                            {
-                                Username = "",  // Empty for existing students
-                                FullName = fullName,
-                                Email = email,
-                                PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
-                                Password = "",  // Empty for existing students
-                                EnrollmentStatus = "Active",
-                                Grade = grade,
-                                DateOfBirth = parsedDateOfBirth,
-                                Gender = gender
-                            });
+                    // Thêm vào class nếu có classId
+                    if (classId.HasValue && studentId > 0)
+                    {
+                        var targetClass = await _context.Classes
+                            .Include(c => c.Students)
+                            .FirstOrDefaultAsync(c => c.ClassId == classId.Value);
 
-                            if (importResult.Success)
-                            {
-                                importResults.Success++;
-                            }
-                            else
-                            {
-                                importResults.Failed++;
-                                importResults.Errors.Add($"Row {row + 1}: {importResult.ErrorMessage}");
-                            }
-                        }
-                        else
+                        if (targetClass != null)
                         {
-                            // Không có classId → chỉ thông báo student đã tồn tại
-                            importResults.Success++;
-                            importResults.Errors.Add($"Row {row + 1}: Student with email '{email}' already exists in system. Student was NOT added to class (no classId provided)");
+                            if (targetClass.Students == null) targetClass.Students = new List<Student>();
+
+                            if (!targetClass.Students.Any(s => s.UserId == studentId))
+                            {
+                                var student = await _context.Students.FindAsync(studentId);
+                                if (student != null)
+                                {
+                                    targetClass.Students.Add(student);
+                                    await _context.SaveChangesAsync();
+                                }
+                            }
                         }
                     }
                 }
@@ -271,7 +247,7 @@ public class StudentImportService : IStudentImportService
                 }
             }
 
-            // Commit transaction if all successful, otherwise rollback will happen
+            // Commit transaction
             if (importResults.Failed > 0 && importResults.Success == 0)
             {
                 await transaction.RollbackAsync();
@@ -290,8 +266,12 @@ public class StudentImportService : IStudentImportService
         return new
         {
             message = "Import completed",
-            importResults,
-            defaultPasswordNote = "Secure passwords have been generated only for students with username. Students without username are created as profile only (no account).",
+            importResults.Total,
+            importResults.Success,
+            importResults.Failed,
+            importResults.Skipped,
+            importResults.Errors,
+            defaultPasswordNote = "Secure passwords generated only for students with username.",
             templateInfo = new
             {
                 templateName = ImportTemplate.TEMPLATE_NAME,
@@ -300,4 +280,3 @@ public class StudentImportService : IStudentImportService
         };
     }
 }
-
