@@ -55,4 +55,17 @@ namespace EducenAPI.DTOs.AdminDashboard
         public string PlanName { get; set; }
         public DateTime ExpiredAt { get; set; }
     }
+
+    public class AdminDashboardResponse
+    {
+        public DashboardOverviewResponse Overview { get; set; }
+
+        public RevenueReportResponse Revenue { get; set; }
+
+        public List<TopCenterResponse> TopCenters { get; set; }
+
+        public List<TenantsByPlanResponse> TenantsByPlan { get; set; }
+
+        public List<ExpiringSubscriptionResponse> ExpiringSubscriptions { get; set; }
+    }
 }
