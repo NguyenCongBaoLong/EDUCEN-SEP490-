@@ -69,5 +69,20 @@ namespace EducenAPI.Controllers
             if (!success) return NotFound();
             return NoContent();
         }
+
+        [HttpGet("{id:int}/grading")]
+        public async Task<IActionResult> GetAssignmentGrading(int id)
+        {
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _assignmentService.GetAssignmentGradingAsync(id, baseUrl);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

@@ -393,6 +393,50 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // GET: api/Classes/student/5/detail
+        [HttpGet("student/{id:int}/detail")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetStudentClassDetail(int id)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+
+                int studentId = int.Parse(userIdClaim.Value);
+                string baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+
+                var detail = await _classService.GetStudentClassDetailAsync(studentId, id, baseUrl);
+                if (detail == null) return NotFound(new { message = "Class not found" });
+
+                return Ok(detail);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/Classes/student/my-classes
+        [HttpGet("student/my-classes")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetMyClasses()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+
+                int studentId = int.Parse(userIdClaim.Value);
+                var classes = await _classService.GetStudentClassesAsync(studentId);
+                return Ok(classes);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
 

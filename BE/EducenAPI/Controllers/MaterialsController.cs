@@ -30,6 +30,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("upload")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
         public async Task<IActionResult> UploadMaterial([FromForm] UploadMaterialDto dto)
         {
             var result = await _lessonMaterialService.UploadMaterials(dto);

@@ -194,12 +194,9 @@ const StudentManagement = () => {
                 toast.success('Cập nhật học sinh thành công!');
             } else {
                 // Add new
-                const username = studentData.username || `stu_${Date.now()}`;
                 const payload = {
-                    username: username,
-                    password: `${username}123`,
                     fullName: studentData.name,
-                    email: studentData.email || `${username}@temp.com`,
+                    email: studentData.email || `${studentData.name.replace(/\s/g, '').toLowerCase()}${Date.now()}@temp.com`,
                     enrollmentStatus: studentData.status,
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,

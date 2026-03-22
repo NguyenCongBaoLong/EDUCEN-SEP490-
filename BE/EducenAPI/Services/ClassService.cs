@@ -1,5 +1,8 @@
 using EducenAPI.DTOs.Classes;
 using EducenAPI.DTOs.Students;
+using EducenAPI.DTOs.Assignments;
+using EducenAPI.DTOs.LessionMaterials;
+using EducenAPI.DTOs.Submissions;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -715,6 +718,139 @@ namespace EducenAPI.Services
                 Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
                 Title = $"Buổi {sessions.IndexOf(s) + 1}: Ngày {s.SessionDate:dd/MM/yyyy}"
             }).ToList();
+        }
+
+        public async Task<StudentClassDetailDto?> GetStudentClassDetailAsync(int studentId, int classId, string baseUrl)
+        {
+            var classInfo = await GetClassByIdAsync(classId);
+            if (classInfo == null) return null;
+
+            var sessions = await _context.ClassSessions
+                .Include(s => s.Schedule)
+                .Include(s => s.LessonMaterials)
+                .Include(s => s.Assignments)
+                    .ThenInclude(a => a.Submissions.Where(sub => sub.StudentId == studentId))
+                .Where(s => s.ClassId == classId)
+                .OrderBy(s => s.SessionDate)
+                .ToListAsync();
+
+            var dayLabels = new[] { "Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy" };
+
+            var result = new StudentClassDetailDto
+            {
+                ClassInfo = classInfo,
+                Sessions = sessions.Select((s, index) => new StudentSessionDto
+                {
+                    SessionId = s.SessionId,
+                    ScheduleId = s.ScheduleId,
+                    SessionDate = s.SessionDate,
+                    Status = s.Status,
+                    DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
+                    Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
+                    Title = $"Buổi {index + 1}: Ngày {s.SessionDate:dd/MM/yyyy}",
+                    Materials = s.LessonMaterials.Select(m => new MaterialResponseDto
+                    {
+                        MaterialId = m.MaterialId,
+                        Title = m.Title,
+                        FileUrl = !string.IsNullOrEmpty(m.FileUrl) 
+                            ? $"{baseUrl}/{m.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}" 
+                            : null,
+                        ContentType = m.ContentType
+                    }).ToList(),
+                    Assignments = s.Assignments.Select(a => new StudentAssignmentDto
+                    {
+                        AsmId = a.AsmId,
+                        Title = a.Title,
+                        Description = a.Description,
+                        DueDate = a.EndTime,
+                        FileUrl = !string.IsNullOrEmpty(a.FileUrl)
+                            ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                            : null,
+                        CurrentSubmission = a.Submissions.Select(sub => new SubmissionResponseDto
+                        {
+                            SubId = sub.SubId,
+                            AsmId = sub.AsmId,
+                            StudentId = sub.StudentId,
+                            FileUrl = !string.IsNullOrEmpty(sub.FileUrl)
+                                ? $"{baseUrl}/{sub.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                                : null,
+                            SubmittedAt = sub.SubmittedAt,
+                            Status = sub.Status,
+                            Score = sub.Score,
+                            TeacherComment = sub.TeacherComment,
+                            GradedAt = sub.GradedAt,
+                            IsPublished = sub.IsPublished
+                        }).FirstOrDefault()
+                    }).ToList()
+                }).ToList()
+            };
+
+            return result;
+        }
+
+        public async Task<IEnumerable<StudentClassListItemDto>> GetStudentClassesAsync(int studentId)
+        {
+            var classes = await _context.Classes
+                .Include(c => c.Students)
+                .Include(c => c.Subject)
+                .Include(c => c.Grade)
+                .Include(c => c.Teacher).ThenInclude(t => t.TeacherNavigation)
+                .Include(c => c.Assistant).ThenInclude(a => a.AssistantNavigation)
+                .Include(c => c.Schedules)
+                .Include(c => c.Sessions)
+                .Where(c => c.Students.Any(s => s.UserId == studentId))
+                .ToListAsync();
+
+            return classes.Select(c =>
+            {
+                var scheduleDays = string.Join(" & ", c.Schedules.Select(s => {
+                     var days = new[] { "CN", "T2", "T3", "T4", "T5", "T6", "T7" };
+                     return (int)s.DayOfWeek < days.Length ? days[(int)s.DayOfWeek] : "N/A";
+                }));
+                
+                var scheduleTime = c.Schedules.FirstOrDefault() != null 
+                    ? $"{c.Schedules.First().StartTime:HH:mm} - {c.Schedules.First().EndTime:HH:mm}" 
+                    : "N/A";
+
+                return new StudentClassListItemDto
+                {
+                    ClassId = c.ClassId,
+                    ClassName = c.ClassName ?? "N/A",
+                    SubjectName = c.Subject?.SubjectName ?? "N/A",
+                    GradeLevel = c.Grade?.GradeName ?? "N/A",
+                    Status = c.Status ?? "Active",
+                    TeacherName = c.Teacher?.TeacherNavigation?.FullName ?? "Chưa có GV",
+                    AssistantName = c.Assistant?.AssistantNavigation?.FullName,
+                    TeacherInitials = GetInitials(c.Teacher?.TeacherNavigation?.FullName),
+                    AssistantInitials = GetInitials(c.Assistant?.AssistantNavigation?.FullName),
+                    ScheduleDays = scheduleDays,
+                    ScheduleTime = scheduleTime,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
+                    Color = GetSubjectColor(c.Subject?.SubjectName)
+                };
+            }).ToList();
+        }
+
+        private string GetInitials(string? fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return "??";
+            var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return "??";
+            if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+            return (parts[0][0].ToString() + parts[parts.Length - 1][0].ToString()).ToUpper();
+        }
+
+        private string GetSubjectColor(string? subjectName)
+        {
+            if (string.IsNullOrEmpty(subjectName)) return "#64748b";
+            var lower = subjectName.ToLower();
+            if (lower.Contains("toán")) return "#3b82f6";
+            if (lower.Contains("tiếng anh") || lower.Contains("ngoại ngữ")) return "#10b981";
+            if (lower.Contains("vật lý")) return "#f59e0b";
+            if (lower.Contains("hóa học")) return "#8b5cf6";
+            if (lower.Contains("sinh học")) return "#ec4899";
+            return "#3b82f6";
         }
     }
 }

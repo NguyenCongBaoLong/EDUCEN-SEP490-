@@ -9,7 +9,6 @@ namespace EducenAPI.DTOs.Students
         // Required headers (case-insensitive)
         public static readonly List<string> REQUIRED_HEADERS = new List<string>
         {
-            "username",
             "fullname",
             "email",
             "phonenumber",
