@@ -19,6 +19,9 @@ namespace EducenAPI.Services
         {
             var students = await _context.Students
                 .Include(s => s.StudentNavigation)
+                .Include(s => s.Parents)
+                    .ThenInclude(p => p.ParentNavigation)
+                .Include(s => s.Classes)
                 .ToListAsync();
 
             return students.Select(MapToStudentDto);
@@ -28,6 +31,9 @@ namespace EducenAPI.Services
         {
             var student = await _context.Students
                 .Include(s => s.StudentNavigation)
+                .Include(s => s.Parents)
+                    .ThenInclude(p => p.ParentNavigation)
+                .Include(s => s.Classes)
                 .FirstOrDefaultAsync(s => s.UserId == id);
 
             return student != null ? MapToStudentDto(student) : null;
@@ -50,10 +56,15 @@ namespace EducenAPI.Services
                 PhoneNumber = hasUser ? s.StudentNavigation.PhoneNumber : null,
                 Address = hasUser ? s.StudentNavigation.Address : null,
                 Grade = s.Grade,
+                DateOfBirth = s.DateOfBirth,
+                Gender = s.Gender,
                 EnrollmentStatus = s.EnrollmentStatus ?? "Active",
                 AccountStatus = hasUser ? s.StudentNavigation.AccountStatus : "NO_ACCOUNT",
                 IsAccountSent = hasUser && s.StudentNavigation.IsAccountSent,
-                CreatedAt = DateTime.Now
+                ClassName = s.Classes.FirstOrDefault()?.ClassName,
+                CreatedAt = DateTime.Now,
+                ParentNames = s.Parents.Select(p => p.ParentNavigation?.FullName ?? p.ParentNavigation?.Username ?? "").ToList(),
+                ParentIds = s.Parents.Select(p => p.UserId).ToList()
             };
         }
 
@@ -64,10 +75,10 @@ namespace EducenAPI.Services
                 // 1. Validate base required fields
                 ValidateBaseStudentData(dto);
 
-                // 2. Check duplicate email (luôn luôn check)
-                var existingStudent = await _context.Students
-                    .AnyAsync(s => s.Email == dto.Email);
-                if (existingStudent)
+                // 2. Check duplicate email (check toàn bộ bảng Users)
+                var existingUserEmail = await _context.Users
+                    .AnyAsync(u => u.Email == dto.Email);
+                if (existingUserEmail)
                     throw new Exception("Email already exists");
 
                 // 3. Branch logic dựa trên username/password
@@ -107,12 +118,13 @@ namespace EducenAPI.Services
             // 3. Tạo User với null username/password (không có account)
             var user = new User
             {
-                Username = null,  // Không có username
+                Username = dto.Username,  // Giữ lại username nếu có (từ import hoặc form)
                 PasswordHash = null,  // Không có password
                 RoleId = studentRole.RoleId,
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = "NoAccount",
                 IsAccountSent = false
             };
@@ -132,23 +144,22 @@ namespace EducenAPI.Services
             };
 
             _context.Students.Add(student);
+            
+            // 5. Link Parents
+            if (dto.ParentIds != null && dto.ParentIds.Count > 0)
+            {
+                foreach (var parentId in dto.ParentIds)
+                {
+                    var parent = await _context.Parents.FindAsync(parentId);
+                    if (parent != null)
+                        student.Parents.Add(parent);
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            // 5. Return DTO với thông tin phù hợp
-            return new StudentDto
-            {
-                UserId = user.UserId,
-                Username = "NO_ACCOUNT",  // Indicator cho frontend
-                FullName = dto.FullName,
-                Email = student.Email,
-                PhoneNumber = dto.PhoneNumber,
-                Address = null,
-                Grade = student.Grade,
-                EnrollmentStatus = student.EnrollmentStatus ?? "Active",
-                AccountStatus = "NoAccount",
-                IsAccountSent = false,
-                CreatedAt = DateTime.Now
-            };
+            // 6. Return DTO với thông tin phù hợp
+            return MapToStudentDto(student);
         }
 
         private async Task<StudentDto> CreateStudentWithAccount(CreateStudentDto dto)
@@ -181,6 +192,7 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = "Inactive", // Inactive until admin sends account
                 IsAccountSent = false
             };
@@ -200,23 +212,22 @@ namespace EducenAPI.Services
             };
 
             _context.Students.Add(student);
+            
+            // 6. Link Parents
+            if (dto.ParentIds != null && dto.ParentIds.Count > 0)
+            {
+                foreach (var parentId in dto.ParentIds)
+                {
+                    var parent = await _context.Parents.FindAsync(parentId);
+                    if (parent != null)
+                        student.Parents.Add(parent);
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            // 6. Return DTO
-            return new StudentDto
-            {
-                UserId = user.UserId,
-                Username = user.Username,
-                FullName = user.FullName ?? "",
-                Email = student.Email,
-                PhoneNumber = user.PhoneNumber,
-                Address = user.Address,
-                Grade = student.Grade,
-                EnrollmentStatus = student.EnrollmentStatus ?? "Active",
-                AccountStatus = user.AccountStatus,
-                IsAccountSent = user.IsAccountSent,
-                CreatedAt = DateTime.Now
-            };
+            // 7. Return DTO
+            return MapToStudentDto(student);
         }
 
         private void ValidateBaseStudentData(CreateStudentDto dto)
@@ -275,8 +286,8 @@ namespace EducenAPI.Services
 
             if (!string.IsNullOrEmpty(dto.Email))
             {
-                var emailExists = await _context.Students
-                    .AnyAsync(s => s.Email == dto.Email && s.UserId != id);
+                var emailExists = await _context.Users
+                    .AnyAsync(u => u.Email == dto.Email && u.UserId != id);
 
                 if (emailExists)
                     throw new Exception("Email already exists");
@@ -306,7 +317,31 @@ namespace EducenAPI.Services
                 student.DateOfBirth = dto.DateOfBirth;
 
             if (dto.Gender != null)
+            {
                 student.Gender = dto.Gender;
+            }
+
+            if (dto.Address != null)
+            {
+                if (student.StudentNavigation != null)
+                {
+                    student.StudentNavigation.Address = dto.Address;
+                }
+            }
+
+            // Update Parents
+            if (dto.ParentIds != null)
+            {
+                // Load existing parents
+                await _context.Entry(student).Collection(s => s.Parents).LoadAsync();
+                student.Parents.Clear();
+                foreach (var parentId in dto.ParentIds)
+                {
+                    var parent = await _context.Parents.FindAsync(parentId);
+                    if (parent != null)
+                        student.Parents.Add(parent);
+                }
+            }
 
             await _context.SaveChangesAsync();
             return true;

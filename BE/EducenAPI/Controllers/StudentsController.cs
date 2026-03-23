@@ -168,6 +168,12 @@ namespace EducenAPI.Controllers
             if (user.Student == null || string.IsNullOrEmpty(user.Student.Email))
                 return BadRequest("Student chưa có email");
 
+            // Nếu chưa có username thì tạo mới (ví dụ: stu_ + id)
+            if (string.IsNullOrEmpty(user.Username))
+            {
+                user.Username = $"stu_{user.UserId}";
+            }
+
             // tạo password mới
             string newPassword = PasswordGenerator.GenerateSecurePassword();
 
@@ -178,7 +184,7 @@ namespace EducenAPI.Controllers
             await _context.SaveChangesAsync();
 
             // gửi mail
-            await _mailService.SendStudentAccount(user.Student.Email, user.Username, newPassword);
+            await _mailService.SendStudentAccount(user.Student.Email, user.Username!, newPassword);
 
             return Ok("Đã gửi tài khoản thành công");
         }

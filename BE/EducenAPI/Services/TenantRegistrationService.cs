@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.TenantRegistrations;
+using EducenAPI.DTOs.TenantRegistrations;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -19,12 +19,14 @@ namespace EducenAPI.Services
         {
             var registration = new TenantRegistration
             {
+                RegistrationId = Guid.NewGuid().ToString(),
                 CenterName = request.CenterName.Trim(),
                 ContactPerson = request.ContactPerson?.Trim(),
                 Email = request.Email?.Trim(),
                 PhoneNumber = request.PhoneNumber?.Trim(),
                 Message = request.Message?.Trim(),
-                Status = "Pending"
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.TenantRegistrations.Add(registration);

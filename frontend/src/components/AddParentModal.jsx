@@ -37,8 +37,6 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
 
     const validateName = (val) => {
         if (!val || val.trim().length < 3) return 'Tên phải có ít nhất 3 ký tự';
-        const re = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/;
-        if (!re.test(val)) return 'Tên chỉ chứa chữ cái và khoảng trắng';
         return '';
     };
     const validateEmail = (val) => {
@@ -78,14 +76,13 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
         const data = editingParent ? { ...formData, id: editingParent.id } : formData;
         onSubmit(data);
-        onClose();
     };
 
     if (!isOpen) return null;
 
     const filteredStudents = studentList.filter(s =>
-        s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-        s.id?.toLowerCase().includes(studentSearch.toLowerCase())
+        (s.name || '').toLowerCase().includes(studentSearch.toLowerCase()) ||
+        (s.id?.toString() || '').toLowerCase().includes(studentSearch.toLowerCase())
     );
 
     const title = editingParent ? 'Chỉnh Sửa Thông Tin Phụ Huynh' : 'Thêm Phụ Huynh Mới';

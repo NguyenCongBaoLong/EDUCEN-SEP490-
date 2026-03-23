@@ -27,6 +27,7 @@ namespace EducenAPI.Services
                     FullName = a.AssistantNavigation.FullName ?? "",
                     Email = a.AssistantNavigation.Email ?? "",
                     PhoneNumber = a.AssistantNavigation.PhoneNumber,
+                    Address = a.AssistantNavigation.Address,
                     SupportLevel = a.SupportLevel,
                     AccountStatus = a.AssistantNavigation.AccountStatus,
                     AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
@@ -48,6 +49,7 @@ namespace EducenAPI.Services
                     FullName = a.AssistantNavigation.FullName ?? "",
                     Email = a.AssistantNavigation.Email ?? "",
                     PhoneNumber = a.AssistantNavigation.PhoneNumber,
+                    Address = a.AssistantNavigation.Address,
                     SupportLevel = a.SupportLevel,
                     AccountStatus = a.AssistantNavigation.AccountStatus,
                     AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
@@ -112,6 +114,7 @@ namespace EducenAPI.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
+                Address = dto.Address,
                 AccountStatus = "Active"
             };
 
@@ -167,6 +170,9 @@ namespace EducenAPI.Services
 
             if (dto.PhoneNumber != null)
                 assistant.AssistantNavigation.PhoneNumber = dto.PhoneNumber;
+
+            if (dto.Address != null)
+                assistant.AssistantNavigation.Address = dto.Address;
 
             if (dto.SupportLevel != null)
                 assistant.SupportLevel = dto.SupportLevel;

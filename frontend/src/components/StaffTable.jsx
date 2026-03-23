@@ -8,16 +8,13 @@ const StaffTable = ({
     staffData,
     searchQuery,
     setSearchQuery,
-    subjectFilter,
-    setSubjectFilter,
     roleFilter,
     setRoleFilter,
     statusFilter,
     setStatusFilter,
     onView,
     onEdit,
-    onToggleLock,
-    subjects = []
+    onToggleLock
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, staff: null });
@@ -65,25 +62,13 @@ const StaffTable = ({
                         <Search size={20} />
                         <input
                             type="text"
-                            placeholder="Tìm theo tên, email, hoặc chuyên môn"
+                            placeholder="Tìm theo tên hoặc email"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
                     <div className="filter-controls">
-                        <select
-                            className="filter-select"
-                            value={subjectFilter}
-                            onChange={(e) => setSubjectFilter(e.target.value)}
-                        >
-                            <option value="">Môn học</option>
-                            {subjects.map((sub) => (
-                                <option key={sub.subjectId} value={sub.subjectName}>
-                                    {sub.subjectName}
-                                </option>
-                            ))}
-                        </select>
 
                         <select
                             className="filter-select"
@@ -114,7 +99,6 @@ const StaffTable = ({
                             <tr>
                                 <th>TÊN</th>
                                 <th>VAI TRÒ</th>
-                                <th>MÔN HỌC</th>
                                 <th>LIÊN HỆ</th>
                                 <th>TRẠNG THÁI</th>
                                 <th>HÀNH ĐỘNG</th>
@@ -141,12 +125,9 @@ const StaffTable = ({
                                         </div>
                                     </td>
                                     <td>
-                                        <span className={`role - badge ${staff.role} `}>
+                                        <span className={`role-badge ${staff.role}`}>
                                             {staff.role === 'teacher' ? 'Giáo Viên' : 'Trợ Giảng'}
                                         </span>
-                                    </td>
-                                    <td>
-                                        <span className="staff-specialty">{staff.subject}</span>
                                     </td>
                                     <td>
                                         <div className="staff-contact">
@@ -274,16 +255,13 @@ StaffTable.propTypes = {
     staffData: PropTypes.array.isRequired,
     searchQuery: PropTypes.string.isRequired,
     setSearchQuery: PropTypes.func.isRequired,
-    subjectFilter: PropTypes.string.isRequired,
-    setSubjectFilter: PropTypes.func.isRequired,
     roleFilter: PropTypes.string.isRequired,
     setRoleFilter: PropTypes.func.isRequired,
     statusFilter: PropTypes.string.isRequired,
     setStatusFilter: PropTypes.func.isRequired,
     onView: PropTypes.func.isRequired,
     onEdit: PropTypes.func.isRequired,
-    onToggleLock: PropTypes.func.isRequired,
-    subjects: PropTypes.array
+    onToggleLock: PropTypes.func.isRequired
 };
 
 export default StaffTable;

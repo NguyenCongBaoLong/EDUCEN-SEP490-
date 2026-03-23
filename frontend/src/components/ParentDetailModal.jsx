@@ -1,4 +1,4 @@
-import { X, User, Phone, Mail, MapPin, Calendar, Clock, BookOpen, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { X, User, Phone, Mail, MapPin, ShieldCheck, GraduationCap, Briefcase, BookOpen } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/ParentDetailModal.css';
 
@@ -12,117 +12,105 @@ const ParentDetailModal = ({ isOpen, onClose, parent }) => {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="detail-modal-content" onClick={e => e.stopPropagation()}>
-                {/* Header Section */}
-                <div className="detail-header-section">
-                    <button className="btn-close-detail" onClick={onClose}>
-                        <X size={20} />
+            <div className="parent-detail-modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Hồ Sơ Phụ Huynh</h2>
+                    <button className="close-btn" onClick={onClose}>
+                        <X size={24} />
                     </button>
+                </div>
 
-                    <div className="detail-profile-main">
-                        <div className="detail-avatar large">
-                            {getInitials(parent.name)}
+                <div className="modal-body">
+                    {/* Left Column: Profile Card */}
+                    <div className="detail-left-col">
+                        <div className="detail-avatar-large" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)' }}>
+                            <span className="detail-initials-large" style={{ color: 'white' }}>
+                                {getInitials(parent.name)}
+                            </span>
                         </div>
-                        <div className="detail-title-info">
-                            <h2>{parent.name}</h2>
-                            <div className="detail-badges">
-                                <span className="id-badge">ID: {parent.id}</span>
-                                <span className={`status-badge ${parent.status === 'active' ? 'active' : 'inactive'}`}>
-                                    {parent.status === 'active' ? 'Hoạt động' : 'Tạm khóa'}
-                                </span>
+                        <h3 className="parent-name-large">{parent.name}</h3>
+                        <span className="parent-id-large">ID: {parent.id}</span>
+
+                        <div className="parent-badges">
+                            <span className="role-badge-large">
+                                <Briefcase size={16} style={{ marginRight: 6 }} />
+                                Phụ Huynh
+                            </span>
+                            <span className={`status-badge-large ${parent.status === 'active' ? 'active' : 'inactive'}`}>
+                                {parent.status === 'active' ? 'Hoạt động' : 'Tạm khóa'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Details */}
+                    <div className="detail-right-col">
+                        {/* Personal Info */}
+                        <div className="detail-section">
+                            <div className="section-title">
+                                <User size={20} />
+                                Thông Tin Cá Nhân
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Email</span>
+                                    <span className="info-value">
+                                        <Mail size={16} className="info-icon" />
+                                        {parent.email || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Số điện thoại</span>
+                                    <span className="info-value">
+                                        <Phone size={16} className="info-icon" />
+                                        {parent.phone || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                                <div className="info-item" style={{ gridColumn: '1 / -1' }}>
+                                    <span className="info-label">Địa chỉ</span>
+                                    <span className="info-value">
+                                        <MapPin size={16} className="info-icon" />
+                                        {parent.address || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        {/* Linked Students */}
+                        <div className="detail-section">
+                            <div className="section-title">
+                                <BookOpen size={20} />
+                                Học sinh liên kết
+                            </div>
+                            <div className="student-list-container">
+                                {parent.linkedStudentNames && parent.linkedStudentNames.length > 0 ? (
+                                    parent.linkedStudentNames.map((studentName, idx) => (
+                                        <div key={idx} className="student-small-card">
+                                            <div className="student-small-avatar">
+                                                {getInitials(studentName)}
+                                            </div>
+                                            <div className="student-small-name">
+                                                {studentName}
+                                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>
+                                                    ID: {parent.linkedStudentIds?.[idx] || 'N/A'} • {parent.studentClassNames?.[idx] || 'N/A'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                                        Chưa có học sinh liên kết
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Body Content */}
-                <div className="detail-body-scroll">
-                    <div className="detail-grid-layout">
-
-                        {/* Left Column: Contact & Info */}
-                        <div className="detail-info-column">
-                            <div className="info-card">
-                                <h3 className="card-title">
-                                    <User size={16} /> Thông tin liên hệ
-                                </h3>
-                                <div className="info-list">
-                                    <div className="info-row">
-                                        <div className="info-label"><Phone size={14} /> Điện thoại</div>
-                                        <div className="info-value">{parent.phone || <span className="empty-val">Chưa cập nhật</span>}</div>
-                                    </div>
-                                    <div className="info-row">
-                                        <div className="info-label"><Mail size={14} /> Email</div>
-                                        <div className="info-value">{parent.email || <span className="empty-val">Chưa cập nhật</span>}</div>
-                                    </div>
-                                    <div className="info-row">
-                                        <div className="info-label"><MapPin size={14} /> Địa chỉ</div>
-                                        <div className="info-value">{parent.address || <span className="empty-val">Chưa cập nhật</span>}</div>
-                                    </div>
-                                    <div className="info-row">
-                                        <div className="info-label"><User size={14} /> Giới tính</div>
-                                        <div className="info-value">
-                                            {parent.gender === 'male' ? 'Nam' : parent.gender === 'female' ? 'Nữ' : <span className="empty-val">Chưa cập nhật</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="info-card">
-                                <h3 className="card-title">
-                                    <ShieldCheck size={16} /> Trạng thái tài khoản
-                                </h3>
-                                <div className="info-list">
-                                    <div className="info-row">
-                                        <div className="info-label">Trạng thái gửi</div>
-                                        <div className="info-value">
-                                            {parent.accountSent ? (
-                                                <span className="text-green-600 font-medium flex-align" style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#047857' }}>
-                                                    <ShieldCheck size={14} /> Đã gửi qua Email
-                                                </span>
-                                            ) : (
-                                                <span className="text-orange-600 font-medium flex-align" style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#c2410c' }}>
-                                                    <ShieldAlert size={14} /> Chưa gửi
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Right Column: Linked Students */}
-                        <div className="detail-info-column">
-                            <div className="info-card h-full">
-                                <h3 className="card-title">
-                                    <BookOpen size={16} /> Học sinh liên kết
-                                </h3>
-
-                                <div className="detail-student-list">
-                                    {parent.linkedStudentNames && parent.linkedStudentNames.length > 0 ? (
-                                        parent.linkedStudentNames.map((studentName, idx) => (
-                                            <div key={idx} className="linked-student-card">
-                                                <div className="linked-student-avatar">
-                                                    {getInitials(studentName)}
-                                                </div>
-                                                <div className="linked-student-info">
-                                                    <div className="linked-student-name">{studentName}</div>
-                                                    <div className="linked-student-meta">
-                                                        <span><Clock size={12} /> ID: {parent.linkedStudentIds?.[idx] || 'N/A'}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="empty-state-box">
-                                            <BookOpen size={24} className="text-gray-300 mb-2" />
-                                            <p>Chưa có học sinh liên kết</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
+                <div className="modal-footer">
+                    <button className="btn-secondary" onClick={onClose}>
+                        Đóng
+                    </button>
                 </div>
             </div>
         </div>

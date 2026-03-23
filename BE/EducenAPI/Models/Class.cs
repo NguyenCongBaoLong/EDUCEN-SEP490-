@@ -12,7 +12,8 @@ public partial class Class
     public int? AssistantId { get; set; }
 
     public int SubjectId { get; set; }
-
+    public int? GradeId { get; set; }
+    public int? RoomId { get; set; }
     public string? ClassName { get; set; }
 
     public string? SyllabusContent { get; set; }
@@ -24,11 +25,7 @@ public partial class Class
 
     public DateTime? EndDate { get; set; }
 
-    public virtual ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
-
     public virtual Assistant? Assistant { get; set; }
-
-    public virtual ICollection<LessonMaterial> LessonMaterials { get; set; } = new List<LessonMaterial>();
 
     public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
 
@@ -38,5 +35,7 @@ public partial class Class
 
     public virtual ICollection<Student> Students { get; set; } = new List<Student>();
     public ICollection<ClassSession> Sessions { get; set; }
+    public virtual Grade? Grade { get; set; }
+    public virtual Room? Room { get; set; }
 
 }

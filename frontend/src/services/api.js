@@ -15,6 +15,13 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Tự động gửi tenantId nếu có trong localStorage (quan trọng cho multi-tenancy trên localhost)
+    const tenantId = localStorage.getItem('tenantId');
+    if (tenantId) {
+        config.headers['tenant'] = tenantId;
+    }
+
     return config;
 });
 

@@ -92,5 +92,22 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("send-account/{id:int}")]
+        public async Task<IActionResult> SendAccount(int id)
+        {
+            try
+            {
+                var success = await _parentService.SendAccountAsync(id);
+                if (!success)
+                    return NotFound(new { message = "Parent not found" });
+
+                return Ok(new { message = "Account sent successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

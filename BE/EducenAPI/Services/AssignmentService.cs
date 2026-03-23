@@ -57,10 +57,20 @@ namespace EducenAPI.Services
                 if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
             }
 
+            if(!string.IsNullOrEmpty(dto.Title))
+            {
+                var isUniqueTitle = await _context.Assignments.AnyAsync(e => dto.SessionId != null
+                        && dto.SessionId == e.SessionId 
+                        && e.Title == dto.Title);
+                if (isUniqueTitle) throw new Exception("Title đang bị trùng vui lòng đặt lại");
+            }
+            if (!string.IsNullOrEmpty(dto.FileUrl))
+            {
+                fileUrl = dto.FileUrl.Trim();
+            }
             var assignment = new Assignment
             {
                 SessionId = dto.SessionId,
-                ClassId = dto.ClassId,
                 Title = dto.Title,
                 Description = dto.Description,
                 FileUrl = fileUrl,
@@ -84,7 +94,6 @@ namespace EducenAPI.Services
                     var libraryAssignment = new Assignment
                     {
                         SessionId = null,
-                        ClassId = dto.ClassId,
                         Title = dto.Title,
                         Description = dto.Description,
                         FileUrl = fileUrl,
@@ -147,7 +156,6 @@ namespace EducenAPI.Services
             assignment.Title = dto.Title;
             assignment.Description = dto.Description;
             assignment.SessionId = dto.SessionId;
-            assignment.ClassId = dto.ClassId;
             assignment.StartTime = dto.StartTime;
             assignment.EndTime = dto.EndTime;
             assignment.FileUrl = fileUrl;
@@ -165,7 +173,6 @@ namespace EducenAPI.Services
                 {
                     AsmId = a.AsmId,
                     SessionId = a.SessionId,
-                    ClassId = a.ClassId,
                     Title = a.Title,
                     Description = a.Description,
                     StartTime = a.StartTime,
@@ -190,7 +197,6 @@ namespace EducenAPI.Services
                 {
                     AsmId = a.AsmId,
                     SessionId = a.SessionId,
-                    ClassId = a.ClassId,
                     Title = a.Title,
                     Description = a.Description,
                     StartTime = a.StartTime,
@@ -236,7 +242,6 @@ namespace EducenAPI.Services
             var assignment = new Assignment
             {
                 SessionId = sessionId,
-                ClassId = source.ClassId, 
                 Title = source.Title,
                 Description = source.Description,
                 FileUrl = source.FileUrl,
@@ -294,6 +299,70 @@ namespace EducenAPI.Services
             _context.Assignments.Remove(assignment);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<AssignmentGradingDto> GetAssignmentGradingAsync(int assignmentId, string baseUrl)
+        {
+            var assignment = await _context.Assignments
+                .Include(a => a.Session)
+                    .ThenInclude(s => s.Class)
+                        .ThenInclude(c => c.Students)
+                            .ThenInclude(st => st.StudentNavigation)
+                .Include(a => a.Submissions)
+                .FirstOrDefaultAsync(a => a.AsmId == assignmentId);
+
+            if (assignment == null)
+                throw new Exception("Assignment not found");
+
+            var result = new AssignmentGradingDto
+            {
+                Assignment = new AssignmentResponseDto
+                {
+                    AsmId = assignment.AsmId,
+                    SessionId = assignment.SessionId,
+                    Title = assignment.Title ?? "",
+                    Description = assignment.Description,
+                    StartTime = assignment.StartTime,
+                    EndTime = assignment.EndTime,
+                    FileUrl = !string.IsNullOrEmpty(assignment.FileUrl)
+                        ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                        : null,
+                    FileSize = GetFileSizeFromUrl(assignment.FileUrl),
+                    OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl)
+                },
+                Students = new List<StudentSubmissionDto>()
+            };
+
+            // Lấy danh sách học sinh từ Class nếu có gán session và class
+            var studentsInClass = assignment.Session?.Class?.Students ?? new List<Student>();
+
+            foreach (var student in studentsInClass)
+            {
+                var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.UserId);
+                
+                result.Students.Add(new StudentSubmissionDto
+                {
+                    StudentId = student.UserId,
+                    FullName = student.StudentNavigation?.FullName ?? "Unknown Student",
+                    Submission = submission == null ? null : new EducenAPI.DTOs.Submissions.SubmissionResponseDto
+                    {
+                        SubId = submission.SubId,
+                        AsmId = submission.AsmId,
+                        StudentId = submission.StudentId,
+                        FileUrl = !string.IsNullOrEmpty(submission.FileUrl)
+                            ? $"{baseUrl}/{submission.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                            : null,
+                        SubmittedAt = submission.SubmittedAt,
+                        Status = submission.Status,
+                        Score = submission.Score,
+                        TeacherComment = submission.TeacherComment,
+                        GradedAt = submission.GradedAt,
+                        IsPublished = submission.IsPublished
+                    }
+                });
+            }
+
+            return result;
         }
     }
 }

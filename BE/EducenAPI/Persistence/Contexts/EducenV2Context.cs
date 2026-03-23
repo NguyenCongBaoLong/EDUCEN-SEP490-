@@ -41,6 +41,8 @@ public partial class EducenV2Context : DbContext
     public virtual DbSet<CenterImage> CenterImages { get; set; } = null!;
     public virtual DbSet<CenterHeroImage> CenterHeroImages { get; set; } = null!;
     public virtual DbSet<CenterHighlight> CenterHighlights { get; set; } = null!;
+    public DbSet<Grade> Grades { get; set; }
+    public DbSet<Room> Rooms { get; set; }
     public DbSet<ClassSession> ClassSessions { get; set; }
 
     // ================================
@@ -75,8 +77,12 @@ public partial class EducenV2Context : DbContext
             {
                 var parameter = Expression.Parameter(entityType.ClrType, "e");
                 var property = Expression.Property(parameter, "TenantId");
-                var tenantId = Expression.Constant(CurrentTenantId);
-                var body = Expression.Equal(property, tenantId);
+                var tenantProperty = Expression.Property(
+                Expression.Constant(this),
+                nameof(CurrentTenantId)
+                );
+
+                var body = Expression.Equal(property, tenantProperty);
 
                 var lambda = Expression.Lambda(body, parameter);
 
@@ -213,9 +219,6 @@ public partial class EducenV2Context : DbContext
         .HasForeignKey(cs => cs.ScheduleId)
         .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Assignment>()
-            .Property(a => a.ClassId)
-            .IsRequired(false);
 
         modelBuilder.Entity<Assignment>()
             .HasOne(a => a.Session)
@@ -225,15 +228,34 @@ public partial class EducenV2Context : DbContext
             .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<LessonMaterial>()
-            .Property(m => m.ClassId)
-            .IsRequired(false);
+        .HasOne(m => m.Session)
+        .WithMany(s => s.LessonMaterials)
+        .HasForeignKey(m => m.SessionId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Class>()
+        .HasOne(c => c.Grade)
+        .WithMany(g => g.Classes)
+        .HasForeignKey(c => c.GradeId)
+        .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Class>()
+        .HasOne(c => c.Room)
+        .WithMany(r => r.Classes)
+        .HasForeignKey(c => c.RoomId)
+        .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Assignment>()
+        .HasOne(a => a.User)
+        .WithMany()
+        .HasForeignKey(a => a.UserId)
+        .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<LessonMaterial>()
-            .HasOne(m => m.Session)
-            .WithMany(s => s.LessonMaterials)
-            .HasForeignKey(m => m.SessionId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.SetNull);
+        .HasOne(m => m.User)
+        .WithMany()
+        .HasForeignKey(m => m.UserId)
+        .OnDelete(DeleteBehavior.SetNull);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)
