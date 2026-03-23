@@ -48,7 +48,10 @@ namespace EducenAPI.Services
                 TeacherName = s.Class?.Teacher?.TeacherNavigation?.FullName,
                 Notes = null,
                 Status = "Active",
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                // Room information
+                RoomId = s.Class?.RoomId,
+                RoomName = s.Class?.Room?.RoomName
             };
         }
 
@@ -75,6 +78,8 @@ namespace EducenAPI.Services
                         .ThenInclude(t => t!.TeacherNavigation)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Room)
                 .ToListAsync();
 
             return schedules.Select(MapToScheduleDto);
@@ -277,6 +282,114 @@ namespace EducenAPI.Services
             _context.Schedules.Remove(schedule);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        /// <summary>
+        /// Get schedule for a specific teacher
+        /// </summary>
+        public async Task<IEnumerable<TeacherScheduleDto>> GetTeacherScheduleAsync(int userId)
+        {
+            // First, find the Teacher by UserId
+            var teacher = await _context.Teachers
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+            
+            if (teacher == null)
+                return Enumerable.Empty<TeacherScheduleDto>();
+
+            var schedules = await _context.Schedules
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Subject)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Room)
+                .Where(s => s.Class.TeacherId == teacher.UserId && s.Class.Status == "Active")
+                .ToListAsync();
+
+            return schedules.Select(s => new TeacherScheduleDto
+            {
+                ScheduleId = s.ScheduleId,
+                ClassId = s.ClassId,
+                ClassName = s.Class?.ClassName ?? "",
+                SubjectId = s.Class?.SubjectId ?? 0,
+                SubjectName = s.Class?.Subject?.SubjectName ?? "",
+                DayOfWeek = s.DayOfWeek,
+                DayName = GetDayName(s.DayOfWeek),
+                StartTime = s.StartTime.ToTimeSpan(),
+                EndTime = s.EndTime.ToTimeSpan(),
+                RoomId = s.Class?.RoomId,
+                RoomName = s.Class?.Room?.RoomName,
+                StartDate = s.Class?.StartDate,
+                EndDate = s.Class?.EndDate,
+                Status = s.Class?.Status ?? "",
+                Description = s.Class?.Description
+            });
+        }
+
+        /// <summary>
+        /// Get schedule for a specific student
+        /// </summary>
+        public async Task<IEnumerable<StudentScheduleDto>> GetStudentScheduleAsync(int userId)
+        {
+            // First, find the Student by UserId
+            var student = await _context.Students
+                .Include(s => s.Classes)
+                    .ThenInclude(c => c.Schedules)
+                .Include(s => s.Classes)
+                    .ThenInclude(c => c.Subject)
+                .Include(s => s.Classes)
+                    .ThenInclude(c => c.Teacher)
+                        .ThenInclude(t => t.TeacherNavigation)
+                .Include(s => s.Classes)
+                    .ThenInclude(c => c.Room)
+                .FirstOrDefaultAsync(s => s.UserId == userId);
+
+            if (student == null)
+                return Enumerable.Empty<StudentScheduleDto>();
+
+            var schedules = new List<StudentScheduleDto>();
+            
+            foreach (var classEntity in student.Classes.Where(c => c.Status == "Active"))
+            {
+                foreach (var schedule in classEntity.Schedules)
+                {
+                    schedules.Add(new StudentScheduleDto
+                    {
+                        ScheduleId = schedule.ScheduleId,
+                        ClassId = classEntity.ClassId,
+                        ClassName = classEntity.ClassName ?? "",
+                        SubjectId = classEntity.SubjectId,
+                        SubjectName = classEntity.Subject?.SubjectName ?? "",
+                        TeacherId = classEntity.TeacherId,
+                        TeacherName = classEntity.Teacher?.TeacherNavigation?.FullName,
+                        DayOfWeek = schedule.DayOfWeek,
+                        DayName = GetDayName(schedule.DayOfWeek),
+                        StartTime = schedule.StartTime.ToTimeSpan(),
+                        EndTime = schedule.EndTime.ToTimeSpan(),
+                        RoomId = classEntity.RoomId,
+                        RoomName = classEntity.Room?.RoomName,
+                        StartDate = classEntity.StartDate,
+                        EndDate = classEntity.EndDate,
+                        Status = classEntity.Status ?? "",
+                        Description = classEntity.Description
+                    });
+                }
+            }
+
+            return schedules.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime);
+        }
+
+        private static string GetDayName(int dayOfWeek)
+        {
+            return dayOfWeek switch
+            {
+                0 => "Sunday",
+                1 => "Monday",
+                2 => "Tuesday",
+                3 => "Wednesday",
+                4 => "Thursday",
+                5 => "Friday",
+                6 => "Saturday",
+                _ => ""
+            };
         }
     }
 }

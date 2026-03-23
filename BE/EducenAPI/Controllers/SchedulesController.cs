@@ -35,6 +35,51 @@ namespace EducenAPI.Controllers
             return Ok(schedules);
         }
 
+        // GET: api/Schedules/teacher/me - Get current teacher's schedule
+        [HttpGet("teacher/me")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetMyTeacherSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            // Get teacher by userId
+            var teacher = await _scheduleService.GetTeacherScheduleAsync(userId);
+            return Ok(teacher);
+        }
+
+        // GET: api/Schedules/teacher/{teacherId} - Get specific teacher's schedule
+        [HttpGet("teacher/{teacherId:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> GetTeacherSchedule(int teacherId)
+        {
+            var schedules = await _scheduleService.GetTeacherScheduleAsync(teacherId);
+            return Ok(schedules);
+        }
+
+        // GET: api/Schedules/student/me - Get current student's schedule
+        [HttpGet("student/me")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetMyStudentSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            var schedules = await _scheduleService.GetStudentScheduleAsync(userId);
+            return Ok(schedules);
+        }
+
+        // GET: api/Schedules/student/{studentId} - Get specific student's schedule
+        [HttpGet("student/{studentId:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
+        public async Task<IActionResult> GetStudentSchedule(int studentId)
+        {
+            var schedules = await _scheduleService.GetStudentScheduleAsync(studentId);
+            return Ok(schedules);
+        }
+
         // GET: api/Schedules/5
         [HttpGet("{id:int}")]
         [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
