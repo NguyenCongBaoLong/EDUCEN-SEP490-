@@ -306,14 +306,25 @@ namespace EducenAPI.Controllers
                             continue;
                         }
 
-                        // Check if student exists before importing to class
+                        // Check if user exists (student must have User account)
+                        var existingUser = await _context.Users
+                            .FirstOrDefaultAsync(u => u.Email == email);
+                        
+                        if (existingUser == null)
+                        {
+                            importResults.Failed++;
+                            importResults.Errors.Add($"Row {row + 1}: User with email '{email}' does not exist. Please create Student with User account first.");
+                            continue;
+                        }
+
+                        // Get student by UserId
                         var existingStudent = await _context.Students
-                            .FirstOrDefaultAsync(s => s.Email == email);
+                            .FirstOrDefaultAsync(s => s.UserId == existingUser.UserId);
                         
                         if (existingStudent == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Student with email '{email}' does not exist. Please create Student First.");
+                            importResults.Errors.Add($"Row {row + 1}: User with email '{email}' is not a Student. Please create Student first.");
                             continue;
                         }
 

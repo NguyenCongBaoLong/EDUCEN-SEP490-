@@ -674,7 +674,7 @@ namespace EducenAPI.Services
                 .Select(s => new
                 {
                     s.UserId,
-                    s.Email,
+                    UserEmail = s.StudentNavigation != null ? s.StudentNavigation.Email : null,
                     s.Grade,
                     s.EnrollmentStatus,
                     UserUsername = s.StudentNavigation != null ? s.StudentNavigation.Username : null,
@@ -689,7 +689,7 @@ namespace EducenAPI.Services
                 UserId = s.UserId,
                 Username = s.UserUsername ?? "",
                 FullName = s.UserFullName ?? "",
-                Email = s.Email ?? "",
+                Email = s.UserEmail ?? "",
                 PhoneNumber = s.UserPhone,
                 Grade = s.Grade,
                 EnrollmentStatus = s.EnrollmentStatus ?? "",

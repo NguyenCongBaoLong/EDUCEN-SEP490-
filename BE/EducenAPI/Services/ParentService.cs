@@ -42,19 +42,7 @@ namespace EducenAPI.Services
                 })
                 .ToListAsync();
 
-            return parents.Select(p => new ParentDto
-            {
-                ParentId = p.UserId,
-                UserId = p.UserId,
-                Username = p.ParentNavigation?.Username ?? "",
-                FullName = p.ParentNavigation?.FullName ?? "",
-                Email = p.ParentNavigation?.Email ?? "",
-                PhoneNumber = p.ParentNavigation?.PhoneNumber,
-                Address = p.ParentNavigation?.Address,
-                AccountStatus = p.ParentNavigation?.AccountStatus ?? "Pending",
-                ChildrenCount = p.Students.Count,
-                CreatedAt = DateTime.Now
-            }).ToList();
+            return parents;
         }
 
         public async Task<ParentDto?> GetParentByIdAsync(int id)
@@ -81,6 +69,8 @@ namespace EducenAPI.Services
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
+
+            return parent;
         }
 
         public async Task<ParentDto> CreateParentAsync(CreateParentDto dto)
@@ -116,26 +106,6 @@ namespace EducenAPI.Services
 
             if (parentRole == null)
                 throw new Exception("Parent role not found");
-
-            // Validate unique username if provided
-            if (!string.IsNullOrWhiteSpace(dto.Username))
-            {
-                var existingUser = await _context.Users
-                    .AnyAsync(u => u.Username == dto.Username);
-
-                if (existingUser)
-                    throw new Exception("Username already exists");
-            }
-
-            // Validate unique email if provided
-            if (!string.IsNullOrWhiteSpace(dto.Email))
-            {
-                var existingEmail = await _context.Users
-                    .AnyAsync(u => u.Email == dto.Email);
-
-                if (existingEmail)
-                    throw new Exception("Email already exists");
-            }
 
             var user = new User
             {
@@ -224,32 +194,35 @@ namespace EducenAPI.Services
                 if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                     existingParent.ParentNavigation.PhoneNumber = dto.PhoneNumber;
 
-            if (dto.Address != null)
-            {
-                if (existingParent.ParentNavigation != null)
+                if (dto.Address != null)
                 {
-                    existingParent.ParentNavigation.Address = dto.Address;
+                    if (existingParent.ParentNavigation != null)
+                    {
+                        existingParent.ParentNavigation.Address = dto.Address;
+                    }
                 }
+
+                // Update Linked Students
+                if (dto.StudentIds != null)
+                {
+                    // Load existing links
+                    await _context.Entry(existingParent).Collection(p => p.Students).LoadAsync();
+
+                    existingParent.Students.Clear();
+                    var students = await _context.Students
+                        .Where(s => dto.StudentIds.Contains(s.UserId))
+                        .ToListAsync();
+                    foreach (var student in students)
+                    {
+                        existingParent.Students.Add(student);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
             }
 
-            // Update Linked Students
-            if (dto.StudentIds != null)
-            {
-                // Load existing links
-                await _context.Entry(existingParent).Collection(p => p.Students).LoadAsync();
-                
-                existingParent.Students.Clear();
-                var students = await _context.Students
-                    .Where(s => dto.StudentIds.Contains(s.UserId))
-                    .ToListAsync();
-                foreach (var student in students)
-                {
-                    existingParent.Students.Add(student);
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            return true;
+            return false;
         }
 
         public async Task<bool> DeleteParentAsync(int id)

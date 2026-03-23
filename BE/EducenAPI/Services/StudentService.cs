@@ -52,7 +52,7 @@ namespace EducenAPI.Services
                 UserId = hasUser ? s.UserId : 0,
                 Username = hasUser ? s.StudentNavigation.Username ?? "" : "NO_ACCOUNT",
                 FullName = hasUser ? s.StudentNavigation.FullName ?? "" : "",
-                Email = s.Email ?? "",
+                Email = hasUser ? (s.StudentNavigation.Email ?? "") : "",
                 PhoneNumber = hasUser ? s.StudentNavigation.PhoneNumber : null,
                 Address = hasUser ? s.StudentNavigation.Address : null,
                 Grade = s.Grade,
@@ -296,7 +296,7 @@ namespace EducenAPI.Services
                 {
                     student.StudentNavigation.Email = dto.Email;
                 }
-                student.Email = dto.Email;
+                // Remove: student.Email = dto.Email;
             }
 
             if (dto.PhoneNumber != null)
