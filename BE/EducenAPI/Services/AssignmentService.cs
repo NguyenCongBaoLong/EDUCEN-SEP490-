@@ -11,17 +11,18 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private readonly IFileUploadService _fileService;
-
-        public AssignmentService(EducenV2Context context, IFileUploadService fileService)
+        private readonly IUserContextService _userContextService;
+        public AssignmentService(EducenV2Context context, IFileUploadService fileService, IUserContextService userContextService)
         {
             _context = context;
             _fileService = fileService;
+            _userContextService = userContextService;
         }
 
         public async Task<Assignment> CreateAssignmentAsync(CreateAssignmentDto dto)
         {
             string? fileUrl = null;
-
+            var userId = _userContextService.GetUserId();
             if (dto.File != null)
             {
                 string originalFileName = dto.File.FileName;
@@ -75,7 +76,8 @@ namespace EducenAPI.Services
                 Description = dto.Description,
                 FileUrl = fileUrl,
                 StartTime = dto.StartTime,
-                EndTime = dto.EndTime
+                EndTime = dto.EndTime,
+                UserId = userId,                
             };
 
             _context.Assignments.Add(assignment);
@@ -98,7 +100,8 @@ namespace EducenAPI.Services
                         Description = dto.Description,
                         FileUrl = fileUrl,
                         StartTime = dto.StartTime,
-                        EndTime = dto.EndTime
+                        EndTime = dto.EndTime,
+                        UserId = userId,
                     };
                     _context.Assignments.Add(libraryAssignment);
                 }
@@ -363,6 +366,30 @@ namespace EducenAPI.Services
             }
 
             return result;
+        }
+
+        public async Task<List<Assignment>> GetAssignedAssignments(string? type)
+        {
+            var userId = _userContextService.GetUserId();
+            var assignments = _context.Assignments
+                .Where(e => e.SessionId != null && e.UserId != null && e.UserId == userId);
+            if(string.IsNullOrEmpty(type))
+            {
+                var now = DateTime.Now;
+                if(type == "open")
+                {
+                    assignments = assignments.Where(e => e.StartTime <= now && e.EndTime >= now);
+                }
+                else if(type == "expired")
+                {
+                    assignments = assignments.Where(e => e.EndTime < now);
+                }
+                else if(type == "draft")
+                {
+                    assignments = assignments.Where(e => e.SessionId == 0);
+                }
+            }
+            return await assignments.ToListAsync();
         }
     }
 }

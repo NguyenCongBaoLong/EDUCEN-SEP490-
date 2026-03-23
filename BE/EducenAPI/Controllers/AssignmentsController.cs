@@ -84,5 +84,19 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpGet("Assigned")]
+        public async Task<IActionResult> GetAssignedAssignments(string type)
+        {
+            try
+            {
+                var assignments = await _assignmentService.GetAssignedAssignments(type);
+                return Ok(assignments);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

@@ -12,5 +12,6 @@ namespace EducenAPI.Services.Interface
         Task<Assignment> ImportAssignmentAsync(int assignmentId, int sessionId, DateTime? endTime = null);
         Task<bool> DeleteAssignmentAsync(int id);
         Task<AssignmentGradingDto> GetAssignmentGradingAsync(int assignmentId, string baseUrl);
+        Task<List<Assignment>> GetAssignedAssignments(string? type);
     }
 }
