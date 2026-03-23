@@ -331,7 +331,7 @@ namespace EducenAPI.Controllers
                         // Add existing student to class
                         var result = await _classService.ImportStudentToClassAsync(id, new CreateStudentDto
                         {
-                            Username = "", // Empty for existing students
+                            Username = existingUser.Username, // Use actual username from existing user
                             FullName = fullName,
                             Email = email,
                             PhoneNumber = phoneNumber,
