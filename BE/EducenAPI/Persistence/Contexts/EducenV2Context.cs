@@ -218,6 +218,12 @@ public partial class EducenV2Context : DbContext
         .WithMany(s => s.Sessions)
         .HasForeignKey(cs => cs.ScheduleId)
         .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Schedule>()
+        .HasOne(s => s.Room)
+        .WithMany(r => r.Schedules)
+        .HasForeignKey(s => s.RoomId)
+        .OnDelete(DeleteBehavior.SetNull);
 
 
         modelBuilder.Entity<Assignment>()

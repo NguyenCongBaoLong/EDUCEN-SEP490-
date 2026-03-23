@@ -12,6 +12,7 @@ namespace EducenAPI.Services
         private readonly AdminDbContext _adminDbContext;
         private readonly IServiceProvider _serviceProvider;
         private readonly IMemoryCache _cache;
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10);
 
         public AdminDashboardService(
             AdminDbContext adminDbContext,
@@ -55,21 +56,30 @@ namespace EducenAPI.Services
                     var db = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
 
                     db.Database.SetConnectionString(tenant.ConnectionString);
+                    db.Database.SetCommandTimeout(3); // 3 seconds timeout for metrics
 
-                    var userCount = await db.Users.CountAsync();
-                    var studentCount = await db.Students.CountAsync();
-                    var classCount = await db.Classes.CountAsync();
-
-                    Interlocked.Add(ref totalUsers, userCount);
-                    Interlocked.Add(ref totalStudents, studentCount);
-                    Interlocked.Add(ref totalClasses, classCount);
-
-                    topCentersBag.Add(new TopCenterResponse
+                    await _semaphore.WaitAsync();
+                    try
                     {
-                        TenantName = tenant.TenantName,
-                        TotalStudents = studentCount,
-                        TotalClasses = classCount
-                    });
+                        var userCount = await db.Users.CountAsync();
+                        var studentCount = await db.Students.CountAsync();
+                        var classCount = await db.Classes.CountAsync();
+
+                        Interlocked.Add(ref totalUsers, userCount);
+                        Interlocked.Add(ref totalStudents, studentCount);
+                        Interlocked.Add(ref totalClasses, classCount);
+
+                        topCentersBag.Add(new TopCenterResponse
+                        {
+                            TenantName = tenant.TenantName,
+                            TotalStudents = studentCount,
+                            TotalClasses = classCount
+                        });
+                    }
+                    finally
+                    {
+                        _semaphore.Release();
+                    }
                 }
                 catch
                 {
@@ -172,7 +182,7 @@ namespace EducenAPI.Services
                 ExpiringSubscriptions = expiring
             };
 
-            _cache.Set("admin_dashboard", result, TimeSpan.FromSeconds(30));
+            _cache.Set("admin_dashboard", result, TimeSpan.FromMinutes(2));
 
             return result;
         }

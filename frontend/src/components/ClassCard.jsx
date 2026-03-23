@@ -31,9 +31,16 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
     return (
         <div className={`class-card ${isDeleting ? 'deleting' : ''}`} onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             <div className="class-card-header">
-                <span className={`class-subject-badge ${getSubjectColor(classData.subject)}`}>
-                    {classData.subject}
-                </span>
+                <div className="class-badges">
+                    <span className={`class-subject-badge ${getSubjectColor(classData.subject)}`}>
+                        {classData.subject}
+                    </span>
+                    {classData.gradeName && (
+                        <span className="class-grade-badge">
+                            {classData.gradeName}
+                        </span>
+                    )}
+                </div>
                 {!readOnly && (
                     <div className="class-card-actions">
                         <button

@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260323150015_AddRoomStatus")]
+    partial class AddRoomStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -499,17 +502,12 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<int?>("RoomId")
-                        .HasColumnType("int");
-
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
 
                     b.HasKey("ScheduleId");
 
                     b.HasIndex("ClassId");
-
-                    b.HasIndex("RoomId");
 
                     b.ToTable("Schedules");
                 });
@@ -868,14 +866,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EducenAPI.Models.Room", "Room")
-                        .WithMany("Schedules")
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Class");
-
-                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Student", b =>
@@ -993,8 +984,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
             modelBuilder.Entity("EducenAPI.Models.Room", b =>
                 {
                     b.Navigation("Classes");
-
-                    b.Navigation("Schedules");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Schedule", b =>

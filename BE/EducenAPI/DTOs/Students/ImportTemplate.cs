@@ -76,7 +76,7 @@ namespace EducenAPI.DTOs.Students
             public bool IsValid { get; }
             public string ErrorMessage { get; }
 
-            private ValidationResult(bool isValid, string errorMessage = null)
+            private ValidationResult(bool isValid, string? errorMessage = null)
             {
                 IsValid = isValid;
                 ErrorMessage = errorMessage;

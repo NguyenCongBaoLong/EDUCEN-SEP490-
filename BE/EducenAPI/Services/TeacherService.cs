@@ -3,6 +3,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using EducenAPI.DTOs.Classes;
 
 namespace EducenAPI.Services
 {
@@ -32,7 +33,16 @@ namespace EducenAPI.Services
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
                     ClassesCount = _context.Classes.Count(c => c.TeacherId == t.UserId),
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    Schedule = t.Classes
+                        .Where(c => c.Status.ToLower() == "active")
+                        .SelectMany(c => c.Schedules)
+                        .Select(s => new CreateScheduleSlotDto
+                        {
+                            DayOfWeek = s.DayOfWeek,
+                            StartTime = s.StartTime.ToString("HH:mm"),
+                            EndTime = s.EndTime.ToString("HH:mm")
+                        }).ToList()
                 })
                 .ToListAsync();
         }
@@ -56,7 +66,16 @@ namespace EducenAPI.Services
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
                     ClassesCount = t.Classes.Count,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    Schedule = t.Classes
+                        .Where(c => c.Status.ToLower() == "active")
+                        .SelectMany(c => c.Schedules)
+                        .Select(s => new CreateScheduleSlotDto
+                        {
+                            DayOfWeek = s.DayOfWeek,
+                            StartTime = s.StartTime.ToString("HH:mm"),
+                            EndTime = s.EndTime.ToString("HH:mm")
+                        }).ToList()
                 })
                 .FirstOrDefaultAsync();
         }

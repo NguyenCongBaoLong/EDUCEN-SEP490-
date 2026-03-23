@@ -49,9 +49,9 @@ namespace EducenAPI.Services
                 Notes = null,
                 Status = "Active",
                 CreatedAt = DateTime.Now,
-                // Room information
-                RoomId = s.Class?.RoomId,
-                RoomName = s.Class?.Room?.RoomName
+                // Room information: Prefer specific slot room, fallback to class default room
+                RoomId = s.RoomId ?? s.Class?.RoomId,
+                RoomName = s.Room?.RoomName ?? s.Class?.Room?.RoomName
             };
         }
 
@@ -73,6 +73,7 @@ namespace EducenAPI.Services
         public async Task<IEnumerable<ScheduleDto>> GetAllSchedulesAsync()
         {
             var schedules = await _context.Schedules
+                .Include(s => s.Room)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Teacher)
                         .ThenInclude(t => t!.TeacherNavigation)
@@ -88,8 +89,11 @@ namespace EducenAPI.Services
         public async Task<IEnumerable<ScheduleDto>> GetSchedulesByClassIdAsync(int classId)
         {
             var schedules = await _context.Schedules
+                .Include(s => s.Room)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Room)
                 .Where(s => s.ClassId == classId)
                 .ToListAsync();
 
@@ -99,8 +103,11 @@ namespace EducenAPI.Services
         public async Task<ScheduleDto?> GetScheduleByIdAsync(int id)
         {
             var schedule = await _context.Schedules
+                .Include(s => s.Room)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Room)
                 .FirstOrDefaultAsync(s => s.ScheduleId == id);
 
             return schedule != null ? MapToScheduleDto(schedule) : null;
@@ -167,6 +174,31 @@ namespace EducenAPI.Services
                         if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
                         {
                             throw new Exception($"Teacher is already assigned to class '{otherClass.ClassName}' at this time");
+                        }
+                    }
+                }
+            }
+
+            // Check for room conflict with other classes
+            if (classExists.RoomId.HasValue)
+            {
+                var roomClasses = await _context.Classes
+                    .Include(c => c.Schedules)
+                    .Where(c => c.RoomId == classExists.RoomId 
+                        && c.ClassId != dto.ClassId 
+                        && c.Status == "Active")
+                    .ToListAsync();
+
+                var newStart = TimeOnly.FromTimeSpan(dto.StartTime);
+                var newEnd = TimeOnly.FromTimeSpan(dto.EndTime);
+
+                foreach (var otherClass in roomClasses)
+                {
+                    foreach (var existingSlot in otherClass.Schedules.Where(s => s.DayOfWeek == (int)dto.ScheduleDate.DayOfWeek))
+                    {
+                        if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
+                        {
+                            throw new Exception($"Room is already occupied by class '{otherClass.ClassName}' at this time");
                         }
                     }
                 }
@@ -297,6 +329,7 @@ namespace EducenAPI.Services
                 return Enumerable.Empty<TeacherScheduleDto>();
 
             var schedules = await _context.Schedules
+                .Include(s => s.Room)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
                 .Include(s => s.Class)
@@ -315,8 +348,8 @@ namespace EducenAPI.Services
                 DayName = GetDayName(s.DayOfWeek),
                 StartTime = s.StartTime.ToTimeSpan(),
                 EndTime = s.EndTime.ToTimeSpan(),
-                RoomId = s.Class?.RoomId,
-                RoomName = s.Class?.Room?.RoomName,
+                RoomId = s.RoomId ?? s.Class?.RoomId,
+                RoomName = s.Room?.RoomName ?? s.Class?.Room?.RoomName,
                 StartDate = s.Class?.StartDate,
                 EndDate = s.Class?.EndDate,
                 Status = s.Class?.Status ?? "",
@@ -331,8 +364,9 @@ namespace EducenAPI.Services
         {
             // First, find the Student by UserId
             var student = await _context.Students
-                .Include(s => s.Classes)
+                 .Include(s => s.Classes)
                     .ThenInclude(c => c.Schedules)
+                        .ThenInclude(sch => sch.Room)
                 .Include(s => s.Classes)
                     .ThenInclude(c => c.Subject)
                 .Include(s => s.Classes)
@@ -364,8 +398,8 @@ namespace EducenAPI.Services
                         DayName = GetDayName(schedule.DayOfWeek),
                         StartTime = schedule.StartTime.ToTimeSpan(),
                         EndTime = schedule.EndTime.ToTimeSpan(),
-                        RoomId = classEntity.RoomId,
-                        RoomName = classEntity.Room?.RoomName,
+                        RoomId = schedule.RoomId ?? classEntity.RoomId,
+                        RoomName = schedule.Room?.RoomName ?? classEntity.Room?.RoomName,
                         StartDate = classEntity.StartDate,
                         EndDate = classEntity.EndDate,
                         Status = classEntity.Status ?? "",

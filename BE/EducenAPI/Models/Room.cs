@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models
 {
@@ -11,6 +12,9 @@ namespace EducenAPI.Models
         [MaxLength(100)]
         public string RoomName { get; set; }
 
+        public bool Status { get; set; } = true;
+
         public virtual ICollection<Class> Classes { get; set; } = new List<Class>();
+        public virtual ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
     }
 }

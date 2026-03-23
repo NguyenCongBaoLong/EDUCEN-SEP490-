@@ -25,18 +25,14 @@ const SystemAdminDashboard = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [ov, rev, plan, top, exp] = await Promise.all([
-                    adminApi.get('/admin/dashboard/overview'),
-                    adminApi.get('/admin/dashboard/revenue'),
-                    adminApi.get('/admin/dashboard/tenants-by-plan'),
-                    adminApi.get('/admin/dashboard/top-centers'),
-                    adminApi.get('/admin/dashboard/expiring-subscriptions')
-                ]);
-                setOverview(ov.data);
-                setRevenue(rev.data);
-                setTenantsByPlan(plan.data);
-                setTopCenters(top.data);
-                setExpiringSubs(exp.data);
+                const response = await adminApi.get('/admin/dashboard');
+                const { overview, revenue, tenantsByPlan, topCenters, expiringSubscriptions } = response.data;
+                
+                setOverview(overview);
+                setRevenue(revenue);
+                setTenantsByPlan(tenantsByPlan || []);
+                setTopCenters(topCenters || []);
+                setExpiringSubs(expiringSubscriptions || []);
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
