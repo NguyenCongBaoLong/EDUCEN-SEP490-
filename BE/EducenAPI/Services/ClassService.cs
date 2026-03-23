@@ -194,11 +194,11 @@ namespace EducenAPI.Services
             return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
         }
 
-        private async Task ValidateTeacherAvailability(int teacherId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        private async Task ValidateTeacherAvailability(int teacherId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate, int? excludeClassId = null)
         {
             var teacherClasses = await _context.Classes
                 .Include(c => c.Schedules)
-                .Where(c => c.TeacherId == teacherId && c.Status == "Active")
+                .Where(c => c.TeacherId == teacherId && c.Status == "Active" && (excludeClassId == null || c.ClassId != excludeClassId))
                 .ToListAsync();
 
             foreach (var existingClass in teacherClasses)
@@ -227,11 +227,11 @@ namespace EducenAPI.Services
             }
         }
 
-        private async Task ValidateAssistantAvailability(int assistantId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        private async Task ValidateAssistantAvailability(int assistantId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate, int? excludeClassId = null)
         {
             var assistantClasses = await _context.Classes
                 .Include(c => c.Schedules)
-                .Where(c => c.AssistantId == assistantId && c.Status == "Active")
+                .Where(c => c.AssistantId == assistantId && c.Status == "Active" && (excludeClassId == null || c.ClassId != excludeClassId))
                 .ToListAsync();
 
             foreach (var existingClass in assistantClasses)
@@ -441,7 +441,7 @@ namespace EducenAPI.Services
                             EndTime = s.EndTime.ToString("HH:mm")
                         }).ToList();
                         
-                        await ValidateTeacherAvailability(dto.TeacherId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                        await ValidateTeacherAvailability(dto.TeacherId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
                     }
                     existingClass.TeacherId = dto.TeacherId;
                 }
@@ -466,7 +466,7 @@ namespace EducenAPI.Services
                             EndTime = s.EndTime.ToString("HH:mm")
                         }).ToList();
                         
-                        await ValidateAssistantAvailability(dto.AssistantId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                        await ValidateAssistantAvailability(dto.AssistantId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
                     }
                     existingClass.AssistantId = dto.AssistantId;
                 }
