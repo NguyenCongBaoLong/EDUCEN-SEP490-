@@ -103,6 +103,37 @@ const StudentManagement = () => {
         }
     };
 
+    // Enrollment Requests từ API - TEMP DISABLED FOR DB SETUP
+    // const [requestsList, setRequestsList] = useState([]);
+
+    // const fetchEnrollmentRequests = async () => {
+    //     try {
+    //         const res = await api.get('/enrollment-requests');
+    //         const data = res.data.map(r => ({
+    //             id: r.requestId.toString(),
+    //             studentName: `${r.firstName} ${r.lastName}`.trim(),
+    //             firstName: r.firstName,
+    //             lastName: r.lastName,
+    //             email: r.email,
+    //             phone: r.phone,
+    //             address: r.address || '',
+    //             desiredGrade: r.preferredCourse || '',
+    //             requestDate: r.requestDate ? new Date(r.requestDate).toISOString().split('T')[0] : '',
+    //             status: r.status?.toLowerCase() || 'pending',
+    //             reviewedAt: r.reviewedAt ? new Date(r.reviewedAt).toISOString().split('T')[0] : null,
+    //             rejectionReason: r.rejectionReason,
+    //             createdStudentId: r.createdStudentId
+    //         }));
+    //         setRequestsList(data);
+    //     } catch (error) {
+    //         console.error("Fetch enrollment requests error:", error);
+    //     }
+    // };
+
+    // useEffect(() => {
+    //     fetchEnrollmentRequests();
+    // }, []);
+
     // Mock data - Enrollment Requests
     const [requestsList, setRequestsList] = useState([
         {
@@ -289,6 +320,31 @@ const StudentManagement = () => {
         setViewingRequest(request);
     };
 
+    // const handleApproveClick = async (requestData) => {
+    //     try {
+    //         // Gọi API approve
+    //         const res = await api.put(`/enrollment-requests/${requestData.id}/approve`);
+            
+    //         if (res.status === 200) {
+    //             // Update local state
+    //             setRequestsList(requestsList.map(r =>
+    //                 r.id === requestData.id
+    //                     ? { ...r, status: 'approved', reviewedAt: new Date().toISOString().split('T')[0] }
+    //                     : r
+    //             ));
+                
+    //             // Refresh student list to get the newly created student
+    //             fetchStudents();
+                
+    //             toast.success('Đã duyệt yêu cầu và tạo tài khoản học sinh!');
+    //         }
+    //     } catch (error) {
+    //         console.error('Approve error:', error);
+    //         toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+    //     }
+    // };
+
+    // Mock approve - TEMP DISABLED FOR DB SETUP
     const handleApproveClick = (requestData) => {
         // Direct approval without class assignment modal and no confirmation dialog (Instant Action)
 
@@ -325,6 +381,27 @@ const StudentManagement = () => {
         setRejectingRequest(request);
     };
 
+    // const handleConfirmReject = async (requestId, reason) => {
+    //     try {
+    //         // Gọi API reject
+    //         const res = await api.put(`/enrollment-requests/${requestId}/reject`, { reason });
+            
+    //         if (res.status === 200) {
+    //             setRequestsList(requestsList.map(r =>
+    //                 r.id === requestId
+    //                     ? { ...r, status: 'rejected', rejectionReason: reason }
+    //                     : r
+    //             ));
+    //             toast.success('Đã từ chối yêu cầu');
+    //         }
+    //     } catch (error) {
+    //         console.error('Reject error:', error);
+    //         toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+    //     }
+    //     setRejectingRequest(null);
+    // };
+
+    // Mock reject - TEMP DISABLED FOR DB SETUP
     const handleConfirmReject = (requestId, reason) => {
         setRequestsList(requestsList.map(r =>
             r.id === requestId

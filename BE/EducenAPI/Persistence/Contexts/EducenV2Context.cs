@@ -44,6 +44,7 @@ public partial class EducenV2Context : DbContext
     public DbSet<Grade> Grades { get; set; }
     public DbSet<Room> Rooms { get; set; }
     public DbSet<ClassSession> ClassSessions { get; set; }
+    // public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
 
     // ================================
     // MODEL CONFIGURATION

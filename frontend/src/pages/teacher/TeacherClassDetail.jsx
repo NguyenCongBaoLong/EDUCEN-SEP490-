@@ -1178,7 +1178,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onSave={handleSave}
                         session={selectedSession}
                         students={students}
-                        existingRecords={attendanceData[selectedSession.scheduleId]}
+                        existingRecords={attendanceData[selectedSession.sessionId]}
+                        sessionId={selectedSession.sessionId}
                     />
                 )
             }

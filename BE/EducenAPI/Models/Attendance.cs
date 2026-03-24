@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models;
 
@@ -11,7 +12,11 @@ public partial class Attendance
 
     public int StudentId { get; set; }
 
-    public string? Status { get; set; }
+    /// <summary>
+    /// Status: 'present', 'absent', 'notYet' (default)
+    /// </summary>
+    [MaxLength(20)]
+    public string Status { get; set; } = "notYet";
 
     public DateTime? RecordedAt { get; set; }
 

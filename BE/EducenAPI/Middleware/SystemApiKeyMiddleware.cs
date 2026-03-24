@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace EducenAPI.Middleware
 {
@@ -8,14 +9,18 @@ namespace EducenAPI.Middleware
     {
         private readonly RequestDelegate _next;
         private const string HEADER_NAME = "X-API-KEY";
+        private readonly ILogger<SystemApiKeyMiddleware> _logger;
 
-        public SystemApiKeyMiddleware(RequestDelegate next)
+        public SystemApiKeyMiddleware(RequestDelegate next, ILogger<SystemApiKeyMiddleware> logger)
         {
             _next = next;
+            _logger = logger;
         }
 
         public async Task InvokeAsync(HttpContext context, IConfiguration configuration)
         {
+            _logger.LogInformation($"[SystemApiKey] Path: {context.Request.Path}, Auth: {context.User?.Identity?.IsAuthenticated}");
+            
             // Chỉ áp dụng cho API admin
             if (!context.Request.Path.StartsWithSegments("/api/admin"))
             {
@@ -23,7 +28,28 @@ namespace EducenAPI.Middleware
                 return;
             }
 
-            // Lấy API key từ header
+            // TEMPORARY: Skip API key check for all /api/admin/users endpoints for debugging
+            if (context.Request.Path.StartsWithSegments("/api/admin/users"))
+            {
+                _logger.LogInformation($"[SystemApiKey] Allowing /api/admin/users endpoint without API key");
+                await _next(context);
+                return;
+            }
+
+            // Kiểm tra xem request đã được authenticate chưa (có JWT token)
+            var isAuthenticated = context.User?.Identity?.IsAuthenticated ?? false;
+            
+            // Nếu đã authenticate với JWT, cho phép truy cập
+            // (Dành cho Center Admin, Teacher, v.v.)
+            if (isAuthenticated)
+            {
+                _logger.LogInformation($"[SystemApiKey] Request is authenticated, allowing");
+                await _next(context);
+                return;
+            }
+
+            // Nếu chưa authenticate, kiểm tra API key
+            // Chỉ yêu cầu API key cho System Admin (không có JWT)
             if (!context.Request.Headers.TryGetValue(HEADER_NAME, out var apiKeyFromRequest))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;

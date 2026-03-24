@@ -115,7 +115,41 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     }, [user, refreshSchedules]);
 
 
-    /* Enrollment form */
+    /* Enrollment form - TEMP DISABLED FOR DB SETUP */
+    // const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
+    // const [isSubmitting, setIsSubmitting] = useState(false);
+    // const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+    // const handleSubmit = async e => {
+    //     e.preventDefault();
+    //     setIsSubmitting(true);
+        
+    //     try {
+    //         // Gọi API public (không cần auth)
+    //         const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5106/api'}/enrollment-requests`, {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json',
+    //             },
+    //             body: JSON.stringify(form)
+    //         });
+            
+    //         const data = await response.json();
+            
+    //         if (response.ok) {
+    //             alert('Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
+    //             setForm({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
+    //         } else {
+    //             alert(data.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    //         }
+    //     } catch (error) {
+    //         console.error('Enrollment error:', error);
+    //         alert('Có lỗi xảy ra. Vui lòng thử lại.');
+    //     } finally {
+    //         setIsSubmitting(false);
+    //     }
+    // };
+
+    // Mock enrollment form (hiện tại dùng tạm)
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
     const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
     const handleSubmit = e => {
@@ -520,6 +554,9 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                             ))}
                                         </select>
                                     </div>
+                                    {/* <button type="submit" className="center-btn-submit" disabled={isSubmitting}>
+                                        {isSubmitting ? 'Đang gửi...' : 'Gửi đăng ký'}
+                                    </button> */}
                                     <button type="submit" className="center-btn-submit">Gửi đăng ký</button>
                                 </form>
                             )}
