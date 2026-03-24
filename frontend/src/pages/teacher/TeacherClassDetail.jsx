@@ -113,7 +113,8 @@ const groupUnique = (list) => {
     return list.reduce((acc, curr) => {
         const isDup = acc.some(item => 
             item.title === curr.title && 
-            (item.fileUrl === curr.fileUrl || item.fileName === curr.fileName)
+            curr.fileUrl && // Chỉ gộp nếu bài tập đó thật sự có file trùng nhau
+            item.fileUrl === curr.fileUrl
         );
         if (!isDup) acc.push(curr);
         return acc;
