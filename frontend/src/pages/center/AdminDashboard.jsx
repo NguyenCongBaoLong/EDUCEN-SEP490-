@@ -10,26 +10,11 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
+import api from '../../services/api';
 import '../../css/pages/center/AdminDashboard.css';
 
 /* ─── Mock Data ─────────────────────────────────────── */
-const enrollmentData = [
-    { month: 'T8', students: 42 },
-    { month: 'T9', students: 67 },
-    { month: 'T10', students: 58 },
-    { month: 'T11', students: 74 },
-    { month: 'T12', students: 55 },
-    { month: 'T1', students: 80 },
-    { month: 'T2', students: 91 },
-];
 
-const subjectData = [
-    { name: 'Toán học', value: 35, color: '#3b82f6' },
-    { name: 'Tiếng Anh', value: 28, color: '#8b5cf6' },
-    { name: 'Vật lý', value: 18, color: '#f59e0b' },
-    { name: 'Hóa học', value: 12, color: '#10b981' },
-    { name: 'Khác', value: 7, color: '#6b7280' },
-];
 
 const initialNotifications = [
     {
@@ -61,11 +46,6 @@ const initialNotifications = [
     },
 ];
 
-const upcomingClasses = [
-    { id: 1, name: 'Toán nâng cao 10', subject: 'Toán học', startDate: '25/02/2025', students: 0, maxStudents: 20 },
-    { id: 2, name: 'IELTS 6.5+', subject: 'Tiếng Anh', startDate: '01/03/2025', students: 5, maxStudents: 15 },
-    { id: 3, name: 'Lý cơ bản 11', subject: 'Vật lý', startDate: '05/03/2025', students: 3, maxStudents: 20 },
-];
 
 const initialInboxMessages = [
     {
@@ -118,12 +98,7 @@ const initialInboxMessages = [
     },
 ];
 
-const kpiData = [
-    { label: 'Tổng học sinh', value: '312', icon: Users, color: 'blue', change: '+12 tháng này' },
-    { label: 'Lớp đang học', value: '18', icon: BookOpen, color: 'purple', change: '3 sắp khai giảng' },
-    { label: 'Nhân viên', value: '24', icon: UserCheck, color: 'green', change: '20 đang active' },
-    { label: 'Đăng ký mới', value: '91', icon: TrendingUp, color: 'orange', change: 'Tháng 2/2025' },
-];
+
 
 /* ─── Helpers ────────────────────────────────────────── */
 function formatDateTime(iso) {
@@ -145,6 +120,21 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 /* ─── Main Component ─────────────────────────────────── */
 const AdminDashboard = () => {
+    const [dashboardData, setDashboardData] = useState({
+    overview: {
+        totalStudents: 0,
+        newStudentsThisMonth: 0,
+        totalClasses: 0,
+        upcomingClasses: 0,
+        totalStaff: 0,
+        activeStaff: 0
+    },
+    studentRegistrationChart: [],
+    studentsBySubject: [],
+});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
     const [notifications, setNotifications] = useState(initialNotifications);
     const [form, setForm] = useState({ title: '', content: '', target: 'all' });
     const [sending, setSending] = useState(false);
@@ -157,6 +147,21 @@ const AdminDashboard = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
 
     useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get('/CenterDashboard');
+        // Cập nhật toàn bộ object vào state
+        if (res.data) {
+            setDashboardData(res.data);
+        }
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
@@ -185,7 +190,29 @@ const AdminDashboard = () => {
     const formattedDate = currentTime.toLocaleDateString('vi-VN', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
+    const { overview, studentRegistrationChart, studentsBySubject } = dashboardData;
+    // Mapping dữ liệu cho KPI Cards (Dùng camelCase theo JSON trả về từ C#)
+    const kpiData = [
+        { label: 'Tổng học sinh', value: overview.totalStudents, icon: Users, color: 'blue', change: `+${overview.newStudentsThisMonth} tháng này` },
+        { label: 'Lớp đang học', value: overview.totalClasses, icon: BookOpen, color: 'purple', change: 'Hoạt động' },
+        { label: 'Sắp khai giảng', value: overview.upcomingClasses, icon: Bell, color: 'green', change: 'Đang tuyển sinh' },
+        { label: 'Nhân viên', value: overview.totalStaff, icon: UserCheck, color: 'orange', change: `${overview.activeStaff} đang làm việc` },
+    ];
 
+    // Mapping dữ liệu cho Biểu đồ đường (Dữ liệu từ StudentRegistrationDto)
+    const enrollmentData = studentRegistrationChart.map(item => ({
+        month: `Tháng ${item.month}`,
+        students: item.students
+    }));
+
+    // Mapping dữ liệu cho Biểu đồ tròn (Dữ liệu từ SubjectDistributionDto)
+    const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+    const subjectData = studentsBySubject.map((item, index) => ({
+        name: item.subject,
+        value: item.percentage,
+        count: item.totalStudents,
+        color: COLORS[index % COLORS.length]
+    }));
     return (
         <div className="admin-dashboard">
             <Sidebar />
@@ -415,58 +442,6 @@ const AdminDashboard = () => {
                 </div>
 
 
-
-
-                {/* ── Upcoming Classes Table ── */}
-                <div className="upcoming-card">
-                    <div className="upcoming-header">
-                        <h2 className="upcoming-title">
-                            <Bell size={18} />
-                            Lớp Sắp Khai Giảng
-                        </h2>
-                        <button className="upcoming-view-all">
-                            Xem tất cả <ChevronRight size={15} />
-                        </button>
-                    </div>
-                    <table className="upcoming-table">
-                        <thead>
-                            <tr>
-                                <th>Tên lớp</th>
-                                <th>Môn học</th>
-                                <th>Ngày khai giảng</th>
-                                <th>Đã đăng ký</th>
-                                <th>Trạng thái</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {upcomingClasses.map((cls) => (
-                                <tr key={cls.id}>
-                                    <td className="upcoming-class-name">{cls.name}</td>
-                                    <td>
-                                        <span className="upcoming-subject-tag">{cls.subject}</span>
-                                    </td>
-                                    <td className="upcoming-date">{cls.startDate}</td>
-                                    <td>
-                                        <div className="upcoming-enrollment">
-                                            <div className="enrollment-bar-wrap">
-                                                <div
-                                                    className="enrollment-bar-fill"
-                                                    style={{ width: `${(cls.students / cls.maxStudents) * 100}%` }}
-                                                />
-                                            </div>
-                                            <span>{cls.students}/{cls.maxStudents}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`upcoming-status-badge ${cls.students === 0 ? 'not-started' : 'enrolling'}`}>
-                                            {cls.students === 0 ? 'Chưa có đăng ký' : 'Đang tuyển sinh'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
 
             </main>
 
