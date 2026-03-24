@@ -3,28 +3,17 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
-import AttendanceModal from '../../components/AttendanceModal';
+
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
 import '../../css/pages/teacher/TeacherSchedule.css';
 import { useSchedule } from '../../context/ScheduleContext';
 
-// Mock data học sinh (để truyền vào AttendanceModal)
-const MOCK_STUDENTS = [
-    { id: 'ST-001', name: 'Nguyễn Văn An', avatar: 'NA' },
-    { id: 'ST-002', name: 'Trần Thị Bích', avatar: 'TB' },
-    { id: 'ST-003', name: 'Lê Minh Cường', avatar: 'LC' },
-    { id: 'ST-004', name: 'Phạm Thị Dung', avatar: 'PD' },
-    { id: 'ST-005', name: 'Hoàng Văn Em', avatar: 'HE' },
-];
 
 const TeacherSchedule = ({ isTA = false }) => {
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState('week');
 
-    // State cho Modal điểm danh nhanh
-    const [attendanceOpen, setAttendanceOpen] = useState(false);
-    const [selectedSession, setSelectedSession] = useState(null);
 
     // State cho Modal yêu cầu thay đổi
     const [requestOpen, setRequestOpen] = useState(false);
@@ -36,7 +25,7 @@ const TeacherSchedule = ({ isTA = false }) => {
     // Lấy thông tin giáo viên từ localStorage
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const teacherName = user.fullName || "Giáo viên";
-    
+
     // Nếu fetch từ /Schedules/teacher/me thì đã được lọc từ BE rồi
     const filteredClasses = scheduledClasses;
 
@@ -127,23 +116,6 @@ const TeacherSchedule = ({ isTA = false }) => {
         }
     };
 
-    const handleQuickAttendance = (e, classItem, date) => {
-        e.stopPropagation();
-        const sessionData = {
-            scheduleId: classItem.id,
-            date: date.toLocaleDateString('vi-VN'),
-            dayLabel: weekDays[getDayIndexForClass(classItem.day)],
-            time: `${classItem.startTime} - ${classItem.endTime}`
-        };
-        setSelectedSession(sessionData);
-        setAttendanceOpen(true);
-    };
-
-    const handleSaveAttendance = (session, payload) => {
-        console.log("Quick Attendance Saved:", session, payload);
-        setAttendanceOpen(false);
-        setSelectedSession(null);
-    };
 
     const getClassStyle = (classItem, index, totalInSlot) => {
         const startHour = parseInt(classItem.startTime.split(':')[0]);
@@ -282,15 +254,6 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                         >
                                                             <div className="ts-class-code">
                                                                 {classItem.code}
-                                                                {date.toDateString() === new Date().toDateString() && (
-                                                                    <button
-                                                                        className="ts-btn-quick-att"
-                                                                        onClick={(e) => handleQuickAttendance(e, classItem, date)}
-                                                                        title="Điểm danh nhanh"
-                                                                    >
-                                                                        <CheckCircle size={14} />
-                                                                    </button>
-                                                                )}
                                                             </div>
                                                             <div className="ts-class-name">{classItem.name}</div>
                                                             <div className="ts-class-time" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
@@ -298,12 +261,12 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                                     <Clock size={10} />
                                                                     {classItem.startTime} - {classItem.endTime}
                                                                 </span>
-                                                                <span style={{ 
-                                                                    display: 'flex', 
-                                                                    alignItems: 'center', 
-                                                                    gap: '4px', 
-                                                                    background: 'rgba(255, 255, 255, 0.25)', 
-                                                                    padding: '2px 6px', 
+                                                                <span style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    background: 'rgba(255, 255, 255, 0.25)',
+                                                                    padding: '2px 6px',
                                                                     borderRadius: '4px',
                                                                     fontWeight: 700,
                                                                     fontSize: '0.65rem'
@@ -355,15 +318,6 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                     >
                                                         <div className="ts-class-code">
                                                             {classItem.code}
-                                                            {date.toDateString() === new Date().toDateString() && (
-                                                                <button
-                                                                    className="ts-btn-quick-att"
-                                                                    onClick={(e) => handleQuickAttendance(e, classItem, date)}
-                                                                    title="Điểm danh nhanh"
-                                                                >
-                                                                    <CheckCircle size={14} />
-                                                                </button>
-                                                            )}
                                                         </div>
                                                         <div className="ts-class-name">{classItem.name}</div>
                                                         <div className="ts-class-time">
@@ -427,16 +381,6 @@ const TeacherSchedule = ({ isTA = false }) => {
                 </div>
             </main>
 
-            {/* Attendance Modal Quich View */}
-            {attendanceOpen && selectedSession && (
-                <AttendanceModal
-                    isOpen={attendanceOpen}
-                    onClose={() => { setAttendanceOpen(false); setSelectedSession(null); }}
-                    onSave={handleSaveAttendance}
-                    session={selectedSession}
-                    students={MOCK_STUDENTS}
-                />
-            )}
 
             {/* Request Change Modal */}
             {requestOpen && (

@@ -710,6 +710,39 @@
     font-size: 1.1rem;
 }
 
+.btn-publish-all {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: #059669;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2);
+}
+
+.btn-publish-all:hover:not(:disabled) {
+    background: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 10px -1px rgba(5, 150, 105, 0.3);
+}
+
+.btn-publish-all:disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-publish-all.disabled {
+    opacity: 0.6;
+}
+
 .error-text {
     color: #ef4444;
     font-size: 0.75rem;

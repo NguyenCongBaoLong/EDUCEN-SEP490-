@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, CheckCircle, XCircle, Calendar, Users, Zap } from 'lucide-react';
 import PropTypes from 'prop-types';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 import '../css/components/AttendanceModal.css';
 
@@ -82,7 +83,7 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
             if (sessionId) {
                 await api.post(`/attendance/session/${sessionId}/bulk`, payload);
                 onSave && await onSave(session, payload);
-                alert('Lưu điểm danh thành công!');
+                toast.success('Lưu điểm danh thành công!');
                 onClose();
             } else {
                 await onSave(session, payload);
@@ -90,7 +91,7 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
             }
         } catch (error) {
             console.error('Save attendance error:', error);
-            alert(error.response?.data?.message || 'Lỗi khi lưu điểm danh');
+            toast.error(error.response?.data?.message || 'Lỗi khi lưu điểm danh');
         } finally {
             setSaving(false);
         }
@@ -174,7 +175,6 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
                                         <div className="atm-avatar">{st.avatar}</div>
                                         <div>
                                             <div className="atm-student-name">{st.name}</div>
-                                            <div className="atm-student-id">ID: #{st.id}</div>
                                         </div>
                                     </div>
 

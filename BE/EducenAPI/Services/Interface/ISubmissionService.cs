@@ -11,5 +11,6 @@ namespace EducenAPI.Services.Interface
         Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished, string baseUrl);
         Task<SubmissionResponseDto> ResetSubmissionAsync(int subId, string baseUrl);
         Task<SubmissionResponseDto?> GetByIdAsync(int subId, string baseUrl);
+        Task<bool> PublishAllGradesAsync(int assignmentId, bool isPublished);
     }
 }

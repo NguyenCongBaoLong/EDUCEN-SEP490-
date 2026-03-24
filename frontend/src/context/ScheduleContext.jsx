@@ -39,6 +39,8 @@ export const ScheduleProvider = ({ children }) => {
                     const user = JSON.parse(userStr);
                     if (user.role === 'Teacher') {
                         endpoint = '/Schedules/teacher/me';
+                    } else if (user.role === 'Assistant') {
+                        endpoint = '/Schedules/assistant/me';
                     } else if (user.role === 'Student') {
                         endpoint = '/Schedules/student/me';
                     }

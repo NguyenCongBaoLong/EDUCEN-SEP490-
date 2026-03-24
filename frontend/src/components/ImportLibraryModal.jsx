@@ -8,6 +8,10 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, exi
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedItems, setSelectedItems] = useState([]);
     const [isImporting, setIsImporting] = useState(false);
+    
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
 
     const isAlreadyInSession = (item) => {
         // Kiểm tra dựa trên Tên file gốc và Dung lượng (Chính xác hơn tiêu đề)
@@ -22,6 +26,18 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, exi
         const query = searchQuery.toLowerCase();
         return item.title?.toLowerCase().includes(query) || item.name?.toLowerCase().includes(query);
     });
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+
+    // Reset page when searching
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+        setCurrentPage(1);
+    };
 
     const getMaterialIcon = (fileType) => {
         switch (fileType) {
@@ -80,21 +96,22 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, exi
                                 className="cam-input"
                                 placeholder="Tìm kiếm theo tên..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={handleSearchChange}
                                 style={{ paddingLeft: '40px' }}
                             />
                         </div>
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', background: '#f8fafc' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
                         {filteredItems.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '2rem 0', color: '#64748b' }}>
                                 <AlertCircle size={32} style={{ opacity: 0.5, margin: '0 auto 8px' }} />
                                 <p>Không tìm thấy mục nào.</p>
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {filteredItems.map(item => {
+                            <>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                                {currentItems.map(item => {
                                     const isSelected = selectedItems.some(i => i.id === item.id);
                                     const alreadyAdded = isAlreadyInSession(item);
                                     return (
@@ -138,8 +155,8 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, exi
                                                             {item.title}
                                                             {alreadyAdded ? <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>(Đã thêm)</span> : getAssignmentStatusBadge(item.status)}
                                                         </div>
-                                                        <div style={{ fontSize: '0.8125rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            <Clock size={12} /> Hạn: {new Date(item.dueDate).toLocaleDateString('vi-VN')}
+                                                         <div style={{ fontSize: '0.8125rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            {item.originalFileName || item.fileName || 'Không có file đính kèm'}
                                                         </div>
                                                     </div>
                                                 </>
@@ -148,6 +165,32 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, exi
                                     );
                                 })}
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '12px 0', borderTop: '1px solid #e2e8f0', marginTop: '8px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: currentPage === 1 ? '#f1f5f9' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                                    >
+                                        ‹
+                                    </button>
+                                    <span style={{ fontSize: '0.875rem', color: '#475569', fontWeight: 500 }}>
+                                        Trang {currentPage} / {totalPages}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: currentPage === totalPages ? '#f1f5f9' : 'white', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                                    >
+                                        ›
+                                    </button>
+                                </div>
+                            )}
+                            </>
                         )}
                     </div>
                 </div>

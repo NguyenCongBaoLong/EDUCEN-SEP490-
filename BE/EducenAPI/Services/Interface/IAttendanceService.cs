@@ -14,6 +14,7 @@ namespace EducenAPI.Services.Interface
         Task<IEnumerable<Attendance>> BulkSaveAttendanceAsync(int sessionId, List<AttendanceRecord> records, int updatedByUserId);
         Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId);
         Task<AttendanceReportDto> GetClassAttendanceReportAsync(int classId);
+        Task<IEnumerable<AttendanceSessionSummaryDto>> GetClassAttendanceSessionSummaryAsync(int classId);
     }
 
     public class AttendanceRecord
@@ -40,5 +41,12 @@ namespace EducenAPI.Services.Interface
         public int AbsentCount { get; set; }
         public int NotYetCount { get; set; }
         public double AttendanceRate { get; set; }
+    }
+
+    public class AttendanceSessionSummaryDto
+    {
+        public int SessionId { get; set; }
+        public int PresentCount { get; set; }
+        public int AbsentCount { get; set; }
     }
 }

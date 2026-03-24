@@ -28,7 +28,7 @@ namespace EducenAPI.Services
             {
                 string originalFileName = dto.File.FileName;
 
-                // Check duplicate by OriginalFileName only (size check broken in Docker)
+                // Check duplicate by OriginalFileName
                 if (dto.SessionId.HasValue)
                 {
                     var existingNames = await _context.LessonMaterials
@@ -39,16 +39,15 @@ namespace EducenAPI.Services
                     if (isDuplicate)
                         throw new BadRequestException("File này đã tồn tại trong buổi học này.");
                 }
-                else if (dto.SaveToLibrary)
-                {
-                    var existingNames = await _context.LessonMaterials
-                        .Where(m => m.SessionId == null && !string.IsNullOrEmpty(m.FileUrl))
-                        .Select(m => m.FileUrl)
-                        .ToListAsync();
-                    bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
-                    if (isDuplicate)
-                        throw new BadRequestException("File này đã tồn tại trong thư viện.");
-                }
+                
+                // Always check library for duplicate OriginalFileName
+                var existingLibraryNames = await _context.LessonMaterials
+                    .Where(m => m.SessionId == null && !string.IsNullOrEmpty(m.FileUrl))
+                    .Select(m => m.FileUrl)
+                    .ToListAsync();
+                bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
+                if (isLibDuplicate)
+                    throw new BadRequestException("File tài liệu này đã tồn tại trong thư viện. Vui lòng chọn từ thư viện.");
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);

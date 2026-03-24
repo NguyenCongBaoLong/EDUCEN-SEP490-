@@ -184,6 +184,25 @@ namespace EducenAPI.Services
             return submission != null ? MapToResponseDto(submission, baseUrl) : null;
         }
 
+        public async Task<bool> PublishAllGradesAsync(int assignmentId, bool isPublished)
+        {
+            var submissions = await _context.Submissions
+                .Where(x => x.AsmId == assignmentId && x.Score != null)
+                .ToListAsync();
+
+            if (!submissions.Any())
+                return false;
+
+            foreach (var sub in submissions)
+            {
+                sub.IsPublished = isPublished;
+                sub.Status = isPublished ? "Published" : "Graded";
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         private SubmissionResponseDto MapToResponseDto(Submission submission, string baseUrl)
         {
             return new SubmissionResponseDto

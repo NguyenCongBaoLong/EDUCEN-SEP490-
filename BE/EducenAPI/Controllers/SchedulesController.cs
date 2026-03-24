@@ -58,6 +58,19 @@ namespace EducenAPI.Controllers
             return Ok(schedules);
         }
 
+        // GET: api/Schedules/assistant/me - Get current assistant's schedule
+        [HttpGet("assistant/me")]
+        [Authorize(Roles = "Assistant")]
+        public async Task<IActionResult> GetMyAssistantSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            var schedules = await _scheduleService.GetAssistantScheduleAsync(userId);
+            return Ok(schedules);
+        }
+
         // GET: api/Schedules/student/me - Get current student's schedule
         [HttpGet("student/me")]
         [Authorize(Roles = "Student")]

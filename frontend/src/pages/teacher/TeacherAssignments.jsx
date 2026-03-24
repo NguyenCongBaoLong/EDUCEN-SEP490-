@@ -181,10 +181,19 @@ const TeacherAssignments = ({ isTA = false }) => {
         });
 
     // Pagination Logic
-    const totalPages = Math.ceil(filteredMaterials.length / materialsPerPage);
-    const indexOfLastItem = currentPage * materialsPerPage;
-    const indexOfFirstItem = indexOfLastItem - materialsPerPage;
-    const currentMaterials = filteredMaterials.slice(indexOfFirstItem, indexOfLastItem);
+    const totalMaterialsPages = Math.ceil(filteredMaterials.length / materialsPerPage);
+    const currentMaterials = filteredMaterials.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
+
+    const totalTemplatesPages = Math.ceil(filteredTemplates.length / materialsPerPage);
+    const currentTemplates = filteredTemplates.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
+
+    const totalAssignmentsPages = Math.ceil(filteredAssignments.length / materialsPerPage);
+    const currentAssignments = filteredAssignments.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
+
+    // Reset page when switching tabs or filtering
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchQuery, classFilter, statusFilter, levelFilter]);
 
     /* --- TEMPLATE HANDLERS --- */
     // Note: Reusing Assignment UI for templating for simplicity currently
@@ -423,7 +432,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                     {filteredMaterials.length > materialsPerPage && (
                                         <div className="pagination" style={{ marginTop: '24px' }}>
                                             <span className="pagination-info">
-                                                Hiển thị {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredMaterials.length)} trên tổng số {filteredMaterials.length} tài liệu
+                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredMaterials.length)}-{Math.min(currentPage * materialsPerPage, filteredMaterials.length)} trên tổng số {filteredMaterials.length} tài liệu
                                             </span>
                                             <div className="pagination-controls">
                                                 <button
@@ -434,12 +443,12 @@ const TeacherAssignments = ({ isTA = false }) => {
                                                     ‹
                                                 </button>
                                                 <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
-                                                    Trang {currentPage} / {totalPages}
+                                                    Trang {currentPage} / {totalMaterialsPages}
                                                 </span>
                                                 <button
                                                     className="pagination-btn"
-                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                                    disabled={currentPage === totalPages}
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalMaterialsPages))}
+                                                    disabled={currentPage === totalMaterialsPages}
                                                 >
                                                     ›
                                                 </button>
@@ -459,7 +468,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 </div>
                             ) : (
                                 <div className="ta-vertical-list">
-                                    {filteredTemplates.map(template => (
+                                    {currentTemplates.map(template => (
                                         <div 
                                             key={template.asmId} 
                                             className="ta-assignment-row" 
@@ -491,6 +500,34 @@ const TeacherAssignments = ({ isTA = false }) => {
                                             </div>
                                         </div>
                                     ))}
+
+                                    {/* Pagination UI for Templates */}
+                                    {filteredTemplates.length > materialsPerPage && (
+                                        <div className="pagination" style={{ marginTop: '24px' }}>
+                                            <span className="pagination-info">
+                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredTemplates.length)}-{Math.min(currentPage * materialsPerPage, filteredTemplates.length)} trên tổng số {filteredTemplates.length} bộ đề
+                                            </span>
+                                            <div className="pagination-controls">
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                >
+                                                    ‹
+                                                </button>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
+                                                    Trang {currentPage} / {totalTemplatesPages}
+                                                </span>
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalTemplatesPages))}
+                                                    disabled={currentPage === totalTemplatesPages}
+                                                >
+                                                    ›
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -504,7 +541,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 </div>
                             ) : (
                                 <div className="ta-vertical-list">
-                                    {filteredAssignments.map(assignment => {
+                                    {currentAssignments.map(assignment => {
                                         const { icon, className } = getFileStyles(assignment.type);
                                         return (
                                             <div 
@@ -553,16 +590,46 @@ const TeacherAssignments = ({ isTA = false }) => {
                                                             </button>
                                                         </>
                                                     )}
-                                                    <button
-                                                        className="btn-grade"
-                                                        onClick={() => navigate(`${isTA ? '/ta' : '/teacher'}/assignments/${assignment.asmId}/grade`)}
-                                                    >
-                                                        Chấm bài
-                                                    </button>
+                                                    {!isTA && (
+                                                        <button
+                                                            className="btn-grade"
+                                                            onClick={() => navigate(`${isTA ? '/ta' : '/teacher'}/assignments/${assignment.asmId}/grade`)}
+                                                        >
+                                                            Chấm bài
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
                                     })}
+
+                                    {/* Pagination UI for Assignments */}
+                                    {filteredAssignments.length > materialsPerPage && (
+                                        <div className="pagination" style={{ marginTop: '24px' }}>
+                                            <span className="pagination-info">
+                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredAssignments.length)}-{Math.min(currentPage * materialsPerPage, filteredAssignments.length)} trên tổng số {filteredAssignments.length} bài tập đã giao
+                                            </span>
+                                            <div className="pagination-controls">
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                >
+                                                    ‹
+                                                </button>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
+                                                    Trang {currentPage} / {totalAssignmentsPages}
+                                                </span>
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalAssignmentsPages))}
+                                                    disabled={currentPage === totalAssignmentsPages}
+                                                >
+                                                    ›
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

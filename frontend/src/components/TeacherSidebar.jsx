@@ -18,7 +18,7 @@ const TeacherSidebar = ({ isTA = false }) => {
         { path: isTA ? '/ta/schedules' : '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
         { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Thư viện' },
         { path: isTA ? '/ta/performance' : '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
-    ];
+    ].filter(item => !(isTA && item.label === 'Thư viện'));
 
     return (
         <aside className="sidebar">

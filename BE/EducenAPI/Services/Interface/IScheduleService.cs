@@ -13,6 +13,7 @@ namespace EducenAPI.Services.Interface
         
         // Personal schedule methods
         Task<IEnumerable<TeacherScheduleDto>> GetTeacherScheduleAsync(int userId);
+        Task<IEnumerable<TeacherScheduleDto>> GetAssistantScheduleAsync(int userId);
         Task<IEnumerable<StudentScheduleDto>> GetStudentScheduleAsync(int userId);
     }
 }

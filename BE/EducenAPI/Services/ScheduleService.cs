@@ -359,6 +359,48 @@ namespace EducenAPI.Services
         }
 
         /// <summary>
+        /// Get schedule for a specific assistant
+        /// </summary>
+        public async Task<IEnumerable<TeacherScheduleDto>> GetAssistantScheduleAsync(int userId)
+        {
+            // First, find the Assistant by UserId
+            var assistant = await _context.Assistants
+                .FirstOrDefaultAsync(a => a.UserId == userId);
+            
+            if (assistant == null)
+                return Enumerable.Empty<TeacherScheduleDto>();
+    
+            var schedules = await _context.Schedules
+                .Include(s => s.Room)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Subject)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c.Room)
+                .Where(s => s.Class.AssistantId == assistant.UserId && s.Class.Status == "Active")
+                .ToListAsync();
+    
+            return schedules.Select(s => new TeacherScheduleDto
+            {
+                ScheduleId = s.ScheduleId,
+                ClassId = s.ClassId,
+                ClassName = s.Class?.ClassName ?? "",
+                SubjectId = s.Class?.SubjectId ?? 0,
+                SubjectName = s.Class?.Subject?.SubjectName ?? "",
+                TeacherName = s.Class?.Teacher?.TeacherNavigation?.FullName,
+                DayOfWeek = s.DayOfWeek,
+                DayName = GetDayName(s.DayOfWeek),
+                StartTime = s.StartTime.ToTimeSpan(),
+                EndTime = s.EndTime.ToTimeSpan(),
+                RoomId = s.RoomId ?? s.Class?.RoomId,
+                RoomName = s.Room?.RoomName ?? s.Class?.Room?.RoomName,
+                StartDate = s.Class?.StartDate,
+                EndDate = s.Class?.EndDate,
+                Status = s.Class?.Status ?? "",
+                Description = s.Class?.Description
+            });
+        }
+
+        /// <summary>
         /// Get schedule for a specific student
         /// </summary>
         public async Task<IEnumerable<StudentScheduleDto>> GetStudentScheduleAsync(int userId)

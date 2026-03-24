@@ -27,7 +27,7 @@ namespace EducenAPI.Services
             {
                 string originalFileName = dto.File.FileName;
 
-                // Check duplicate by OriginalFileName only
+                // Check duplicate by OriginalFileName
                 if (dto.SessionId.HasValue)
                 {
                     // Check within the specific session
@@ -40,17 +40,14 @@ namespace EducenAPI.Services
                         throw new BadRequestException("File bài tập này đã tồn tại trong buổi học này.");
                 }
                 
-                // Check within the library if explicitly saving to library OR if it's created directly as a template (SessionId is null)
-                if (dto.SaveToLibrary || !dto.SessionId.HasValue)
-                {
-                    var existingNames = await _context.Assignments
-                        .Where(a => a.SessionId == null && !string.IsNullOrEmpty(a.FileUrl))
-                        .Select(a => a.FileUrl)
-                        .ToListAsync();
-                    bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
-                    if (isDuplicate)
-                        throw new BadRequestException("File bài tập này đã tồn tại trong thư viện.");
-                }
+                // Always check library for duplicate OriginalFileName
+                var existingLibraryNames = await _context.Assignments
+                    .Where(a => a.SessionId == null && !string.IsNullOrEmpty(a.FileUrl))
+                    .Select(a => a.FileUrl)
+                    .ToListAsync();
+                bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
+                if (isLibDuplicate)
+                    throw new BadRequestException("File bài tập này đã tồn tại trong thư viện. Vui lòng chọn từ thư viện.");
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
@@ -75,7 +72,7 @@ namespace EducenAPI.Services
                 Title = dto.Title,
                 Description = dto.Description,
                 FileUrl = fileUrl,
-                StartTime = dto.StartTime,
+                StartTime = dto.StartTime ?? DateTime.Now,
                 EndTime = dto.EndTime,
                 UserId = userId,
                 GradeId = dto.GradeId,

@@ -91,6 +91,23 @@ namespace EducenAPI.Controllers
             }
         }
 
+        [HttpPut("assignment/{assignmentId}/publish-all")]
+        public async Task<IActionResult> PublishAllGrades(int assignmentId, [FromBody] PublishGradeRequest request)
+        {
+            try
+            {
+                var result = await _submissionService.PublishAllGradesAsync(assignmentId, request.IsPublished);
+                if (!result)
+                    return NotFound(new { message = "No graded submissions found for this assignment." });
+
+                return Ok(new { message = request.IsPublished ? "All grades published successfully." : "All grades unpublished successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("{subId}")]
         public async Task<IActionResult> GetSubmissionById(int subId)
         {

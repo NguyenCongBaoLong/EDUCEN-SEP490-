@@ -74,8 +74,6 @@ function App() {
               <Route path="/ta/classes" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClasses isTA={true} /></PrivateRoute>} />
               <Route path="/ta/classes/:classId" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClassDetail isTA={true} /></PrivateRoute>} />
               <Route path="/ta/schedules" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherSchedule isTA={true} /></PrivateRoute>} />
-              <Route path="/ta/assignments" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherAssignments isTA={true} /></PrivateRoute>} />
-              <Route path="/ta/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Assistant']}><AssignmentGrading isTA={true} /></PrivateRoute>} />
               <Route path="/ta/performance" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherPerformanceReport isTA={true} /></PrivateRoute>} />
 
               {/* ── Student Routes (chỉ Student) ── */}

@@ -26,6 +26,7 @@ const AssignmentGrading = ({ isTA = false }) => {
     const [feedbackInput, setFeedbackInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isPublishingAll, setIsPublishingAll] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showResetModal, setShowResetModal] = useState(false);
     const [gradeError, setGradeError] = useState('');
@@ -141,25 +142,26 @@ const AssignmentGrading = ({ isTA = false }) => {
         }
     };
 
-    const handlePublishGrade = async (isPublish) => {
-        if (!selectedStudent?.submission || selectedStudent.submission.score == null) {
-            toast.error('Cần chấm điểm trước khi công bố');
+    const handlePublishAll = async (isPublish) => {
+        const gradedCount = students.filter(s => s.submission && s.submission.score != null).length;
+        if (gradedCount === 0) {
+            toast.error('Không có bài nào đã chấm để công bố');
             return;
         }
 
         try {
-            setIsPublishing(true);
-            await api.put(`/Submissions/${selectedStudent.submission.subId}/publish`, {
+            setIsPublishingAll(true);
+            await api.put(`/Submissions/assignment/${assignmentId}/publish-all`, {
                 isPublished: isPublish
             });
 
-            toast.success(isPublish ? 'Đã công bố điểm cho học sinh' : 'Đã hủy công bố điểm');
+            toast.success(isPublish ? 'Đã công bố tất cả điểm' : 'Đã hủy công bố tất cả điểm');
             await fetchGradingData();
         } catch (error) {
-            console.error('Error publishing grade:', error);
-            toast.error('Có lỗi xảy ra khi thay đổi trạng thái công bố');
+            console.error('Error publishing all grades:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi công bố hàng loạt');
         } finally {
-            setIsPublishing(false);
+            setIsPublishingAll(false);
         }
     };
 
@@ -285,6 +287,20 @@ const AssignmentGrading = ({ isTA = false }) => {
                                 <span className="stat-value highlight">{stats.graded}/{stats.submitted}</span>
                             </div>
                         </div>
+
+                        <button 
+                            className={`btn-publish-all ${stats.graded === 0 ? 'disabled' : ''}`}
+                            onClick={() => handlePublishAll(true)}
+                            disabled={isPublishingAll || stats.graded === 0}
+                        >
+                            {isPublishingAll ? (
+                                <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Send size={18} /> Công bố tất cả
+                                </>
+                            )}
+                        </button>
                     </div>
                 </header>
 

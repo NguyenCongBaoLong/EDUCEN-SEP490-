@@ -227,6 +227,28 @@ namespace EducenAPI.Services
             };
         }
 
+        public async Task<IEnumerable<AttendanceSessionSummaryDto>> GetClassAttendanceSessionSummaryAsync(int classId)
+        {
+            var sessions = await _context.ClassSessions
+                .Where(s => s.ClassId == classId)
+                .ToListAsync();
+
+            var sessionIds = sessions.Select(s => s.SessionId).ToList();
+
+            var attendances = await _context.Attendances
+                .Where(a => sessionIds.Contains(a.SessionId))
+                .ToListAsync();
+
+            var summary = sessions.Select(s => new AttendanceSessionSummaryDto
+            {
+                SessionId = s.SessionId,
+                PresentCount = attendances.Count(a => a.SessionId == s.SessionId && a.Status == "present"),
+                AbsentCount = attendances.Count(a => a.SessionId == s.SessionId && a.Status == "absent")
+            }).ToList();
+
+            return summary;
+        }
+
         private void ValidateSessionForAttendance(ClassSession session)
         {
             // Sử dụng giờ Việt Nam (UTC+7)

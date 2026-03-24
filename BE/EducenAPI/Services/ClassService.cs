@@ -828,7 +828,10 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId)
         {
-            // Dùng projection rõ ràng để tránh SELECT cột FullName chưa có trong DB
+            var today = DateTime.UtcNow.AddHours(7).Date;
+            var pastSessionsCount = await _context.ClassSessions
+                .CountAsync(s => s.ClassId == classId && s.SessionDate <= today);
+
             var students = await _context.Classes
                 .Where(c => c.ClassId == classId)
                 .SelectMany(c => c.Students)
@@ -842,6 +845,13 @@ namespace EducenAPI.Services
                     UserFullName = s.StudentNavigation != null ? s.StudentNavigation.FullName : null,
                     UserPhone = s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null,
                     UserStatus = s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : null,
+                    // Calculate Average Score
+                    AverageScore = _context.Submissions
+                        .Where(sub => sub.StudentId == s.UserId && sub.Asm.Session.ClassId == classId && sub.Score.HasValue)
+                        .Average(sub => (double?)sub.Score) ?? 0,
+                    // Calculate Attendance Rate
+                    PresentCount = _context.Attendances
+                        .Count(a => a.StudentId == s.UserId && a.Session.ClassId == classId && a.Status == "present")
                 })
                 .ToListAsync();
 
@@ -852,7 +862,10 @@ namespace EducenAPI.Services
                 FullName = s.UserFullName ?? "",
                 Email = s.UserEmail ?? "",
                 PhoneNumber = s.UserPhone,
-                Grade = s.Grade,
+                Grade = s.AverageScore > 0 ? s.AverageScore.ToString("F1") : "—",
+                AttendanceRate = pastSessionsCount > 0 
+                    ? (int)Math.Round((double)s.PresentCount / pastSessionsCount * 100) 
+                    : 0,
                 EnrollmentStatus = s.EnrollmentStatus ?? "",
                 AccountStatus = s.UserStatus ?? "",
                 CreatedAt = DateTime.Now
@@ -893,6 +906,7 @@ namespace EducenAPI.Services
                 .Include(s => s.LessonMaterials)
                 .Include(s => s.Assignments)
                     .ThenInclude(a => a.Submissions.Where(sub => sub.StudentId == studentId))
+                .Include(s => s.Attendances.Where(att => att.StudentId == studentId))
                 .Where(s => s.ClassId == classId)
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
@@ -902,12 +916,21 @@ namespace EducenAPI.Services
             var result = new StudentClassDetailDto
             {
                 ClassInfo = classInfo,
-                Sessions = sessions.Select((s, index) => new StudentSessionDto
-                {
-                    SessionId = s.SessionId,
-                    ScheduleId = s.ScheduleId,
-                    SessionDate = s.SessionDate,
-                    Status = s.Status,
+                Sessions = sessions.Select((s, index) => {
+                    var studentAttendance = s.Attendances.FirstOrDefault();
+                    var effectiveStatus = s.Status;
+                    if (studentAttendance != null)
+                    {
+                        if (studentAttendance.Status == "present") effectiveStatus = "Attended";
+                        else if (studentAttendance.Status == "absent") effectiveStatus = "Absent";
+                    }
+
+                    return new StudentSessionDto
+                    {
+                        SessionId = s.SessionId,
+                        ScheduleId = s.ScheduleId,
+                        SessionDate = s.SessionDate,
+                        Status = effectiveStatus,
                     DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
                     Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
                     Title = $"Buổi {index + 1}: Ngày {s.SessionDate:dd/MM/yyyy}",
@@ -945,6 +968,7 @@ namespace EducenAPI.Services
                             IsPublished = sub.IsPublished
                         }).FirstOrDefault()
                     }).ToList()
+                    };
                 }).ToList()
             };
 

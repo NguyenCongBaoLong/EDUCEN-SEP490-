@@ -104,6 +104,21 @@ namespace EducenAPI.Controllers
             }
         }
 
+        // GET: api/attendance/class/{classId}/sessions-summary
+        [HttpGet("class/{classId:int}/sessions-summary")]
+        public async Task<IActionResult> GetClassAttendanceSessionSummary(int classId)
+        {
+            try
+            {
+                var summary = await _service.GetClassAttendanceSessionSummaryAsync(classId);
+                return Ok(summary);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // POST: api/attendance/session/{sessionId}/bulk
         [HttpPost("session/{sessionId:int}/bulk")]
         public async Task<IActionResult> BulkSaveAttendance(int sessionId, [FromBody] List<AttendanceRecordDto> records)

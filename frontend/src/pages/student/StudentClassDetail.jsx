@@ -391,8 +391,12 @@ const StudentClassDetail = () => {
                                                             <td style={{ textAlign: 'center' }}>
                                                                 {s.status === 'Attended' && <span className="scd-att-badge present"><CheckCircle size={13} /> Có mặt</span>}
                                                                 {s.status === 'Absent' && <span className="scd-att-badge absent"><AlertCircle size={13} /> Vắng</span>}
-                                                                {(s.status === 'Scheduled' || s.status === 'Ongoing') && <span className="scd-att-badge upcoming"><ClockIcon size={13} /> Chưa học</span>}
-                                                                {s.status === 'Completed' && !s.attended && <span className="scd-att-badge absent"><AlertCircle size={13} /> Vắng</span>}
+                                                                {(s.status === 'Scheduled' || s.status === 'Ongoing') && new Date(s.sessionDate) > new Date() && (
+                                                                    <span className="scd-att-badge upcoming"><ClockIcon size={13} /> Chưa học</span>
+                                                                )}
+                                                                {((s.status === 'Scheduled' || s.status === 'Ongoing') && new Date(s.sessionDate) <= new Date()) || (s.status === 'Completed' && !s.status) ? (
+                                                                    <span className="scd-att-badge missing"><AlertCircle size={13} /> Chưa điểm danh</span>
+                                                                ) : null}
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -492,6 +496,9 @@ const StudentClassDetail = () => {
                                                 {session.status === 'Attended' && <span className="scd-att-badge present"><CheckCircle size={13} /> Có mặt</span>}
                                                 {session.status === 'Absent' && <span className="scd-att-badge absent"><AlertCircle size={13} /> Vắng</span>}
                                                 {isFuture && <span className="scd-att-badge upcoming"><ClockIcon size={13} /> Chưa học</span>}
+                                                {!isFuture && session.status !== 'Attended' && session.status !== 'Absent' && (
+                                                    <span className="scd-att-badge missing"><AlertCircle size={13} /> Chưa điểm danh</span>
+                                                )}
                                                 {hasContent && (
                                                     <span className="scd-session-item-badge">
                                                         {mats.length > 0 && <><FileText size={12} style={{ marginRight: 4 }} /> {mats.length}</>}

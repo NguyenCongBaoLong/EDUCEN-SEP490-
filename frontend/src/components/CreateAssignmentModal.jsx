@@ -11,7 +11,8 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
         gradeId: '',
         description: '',
         status: 'active',
-        file: null
+        file: null,
+        saveToLibrary: true
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,9 +108,16 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
             if (formData.dueDate) {
                 data.append('EndTime', new Date(formData.dueDate).toISOString());
             }
+            // Always set StartTime to now for new assignments
+            if (!initialData) {
+                data.append('StartTime', new Date().toISOString());
+            } else if (initialData.startTime) {
+                data.append('StartTime', new Date(initialData.startTime).toISOString());
+            }
             if (formData.file && !formData.file.isExisting) {
                 data.append('File', formData.file);
             }
+            data.append('SaveToLibrary', formData.saveToLibrary);
 
             // Instead of call api here, pass data to parent
             await onSave(data);
@@ -274,6 +282,21 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                             )}
                         </div>
                     </div>
+
+                    {/* Lưu vào thư viện option */}
+                    {!initialData && (
+                        <div className="cam-form-group" style={{ marginTop: '0.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={formData.saveToLibrary}
+                                    onChange={(e) => setFormData({ ...formData, saveToLibrary: e.target.checked })}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                                <span style={{ fontWeight: 500 }}>Lưu vào Thư viện bài tập chung</span> (giúp tái sử dụng cho các lớp khác)
+                            </label>
+                        </div>
+                    )}
 
                     <div className="cam-modal-footer">
                         <button type="button" className="btn-cancel" onClick={onClose}>Hủy</button>
