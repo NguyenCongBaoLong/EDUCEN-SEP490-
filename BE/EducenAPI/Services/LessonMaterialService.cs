@@ -12,16 +12,18 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private readonly IFileUploadService _fileService;
-        public LessonMaterialService(EducenV2Context context, IFileUploadService fileService)
+        private readonly IUserContextService _userServiceContext;
+        public LessonMaterialService(EducenV2Context context, IFileUploadService fileService, IUserContextService userServiceContext)
         {
             _context = context;
             _fileService = fileService;
+            _userServiceContext = userServiceContext;
         }
         public async Task<LessonMaterial> SaveMaterials(SaveMaterialDto dto)
         {
             string? fileUrl = null;
             string? contentType = null;
-
+            var userId = _userServiceContext.GetUserId();
             if (dto.File != null)
             {
                 string originalFileName = dto.File.FileName;
@@ -68,7 +70,8 @@ namespace EducenAPI.Services
                 SessionId = dto.SessionId,
                 Title = dto.Title,
                 FileUrl = fileUrl,
-                ContentType = contentType
+                ContentType = contentType,
+                UserId = userId
             };
             _context.LessonMaterials.Add(material);
 
@@ -88,7 +91,8 @@ namespace EducenAPI.Services
                         SessionId = null,
                         Title = dto.Title,
                         FileUrl = fileUrl,
-                        ContentType = contentType
+                        ContentType = contentType,
+                        UserId = userId
                     };
                     _context.LessonMaterials.Add(libraryMaterial);
                 }
@@ -203,7 +207,7 @@ namespace EducenAPI.Services
                         ? $"{baseUrl}/{x.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                         : null,
                     FileSize = GetFileSizeFromUrl(x.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(x.FileUrl)
+                    OriginalFileName = GetOriginalFileNameFromUrl(x.FileUrl)                 
                 })
                 .ToList();
 

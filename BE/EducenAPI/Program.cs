@@ -163,6 +163,7 @@ builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IGradeService, GradeService>();
+builder.Services.AddScoped<IUserContextService, UserContextService>();
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
