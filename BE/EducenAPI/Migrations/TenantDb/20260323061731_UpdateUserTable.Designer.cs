@@ -4,16 +4,19 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace EducenAPI.Persistence.Migrations.TenantDb
+namespace EducenAPI.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260323061731_UpdateUserTable")]
+    partial class UpdateUserTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

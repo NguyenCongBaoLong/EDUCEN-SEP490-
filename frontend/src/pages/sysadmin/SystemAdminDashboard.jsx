@@ -8,11 +8,13 @@ import '../../css/pages/sysadmin/SystemAdminDashboard.css';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const SystemAdminDashboard = () => {
-    const [overview, setOverview] = useState(null);
-    const [revenue, setRevenue] = useState(null);
-    const [tenantsByPlan, setTenantsByPlan] = useState([]);
-    const [topCenters, setTopCenters] = useState([]);
-    const [expiringSubs, setExpiringSubs] = useState([]);
+    const [dashboardData, setDashboardData] = useState({
+    overview: null,
+    revenue: null,
+    tenantsByPlan: [],
+    topCenters: [],
+    expiringSubscriptions: [] 
+});
     const [loading, setLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -25,18 +27,11 @@ const SystemAdminDashboard = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [ov, rev, plan, top, exp] = await Promise.all([
-                    adminApi.get('/admin/dashboard/overview'),
-                    adminApi.get('/admin/dashboard/revenue'),
-                    adminApi.get('/admin/dashboard/tenants-by-plan'),
-                    adminApi.get('/admin/dashboard/top-centers'),
-                    adminApi.get('/admin/dashboard/expiring-subscriptions')
-                ]);
-                setOverview(ov.data);
-                setRevenue(rev.data);
-                setTenantsByPlan(plan.data);
-                setTopCenters(top.data);
-                setExpiringSubs(exp.data);
+                const res = await adminApi.get('/admin/dashboard');
+        // Cập nhật toàn bộ object vào state
+        if (res.data) {
+            setDashboardData(res.data);
+        }
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
@@ -45,6 +40,14 @@ const SystemAdminDashboard = () => {
         };
         fetchData();
     }, []);
+
+    const { 
+        overview, 
+        revenue, 
+        tenantsByPlan, 
+        topCenters, 
+        expiringSubscriptions: expiringSubs 
+    } = dashboardData;
 
     const kpis = [
         { label: 'Tổng Trung Tâm', value: loading ? '...' : overview?.totalTenants || 0, icon: Building2, color: 'blue', sub: 'Đang quản lý' },

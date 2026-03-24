@@ -23,6 +23,8 @@ public partial class User
 
     public string? Address { get; set; }
     public bool IsAccountSent { get; set; } = false;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     public virtual Assistant? Assistant { get; set; }
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
