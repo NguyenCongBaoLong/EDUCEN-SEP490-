@@ -278,11 +278,10 @@ const StudentManagement = () => {
         if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
     };
 
-    const handleImportStudents = () => {
-        // Called by ImportStudentModal when at least 1 student was imported successfully
+    const handleImportStudents = (importResults) => {
+        // Just refresh the student list - do NOT close modal here
+        // User will manually close the modal after seeing results
         fetchStudents();
-        toast.success('Import học sinh thành công! Danh sách đã được cập nhật.');
-        setIsImportModalOpen(false);
     };
 
     // Enrollment Request Handlers

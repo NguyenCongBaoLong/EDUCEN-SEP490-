@@ -2,6 +2,7 @@ using EducenAPI.DTOs.Students;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
@@ -79,7 +80,7 @@ namespace EducenAPI.Services
                 var existingUserEmail = await _context.Users
                     .AnyAsync(u => u.Email == dto.Email);
                 if (existingUserEmail)
-                    throw new Exception("Email already exists");
+                    throw new Exception(ValidationMessages.DuplicateEmail);
 
                 // 3. Branch logic dựa trên username/password
                 if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
@@ -107,7 +108,7 @@ namespace EducenAPI.Services
         {
             // 1. Validate chỉ cần profile info
             if (string.IsNullOrWhiteSpace(dto.Email))
-                throw new Exception("Email is required for student profile");
+                throw new Exception(ValidationMessages.RequiredEmail);
 
             // 2. Lấy student role
             var studentRole = await _context.Roles
@@ -166,16 +167,16 @@ namespace EducenAPI.Services
         {
             // 1. Validate account info
             if (string.IsNullOrWhiteSpace(dto.Username))
-                throw new Exception("Username is required for account creation");
+                throw new Exception(ValidationMessages.RequiredUsername);
             
             if (string.IsNullOrWhiteSpace(dto.Password))
-                throw new Exception("Password is required for account creation");
+                throw new Exception(ValidationMessages.RequiredPassword);
 
             // 2. Check duplicate username
             var existingUser = await _context.Users
                 .AnyAsync(u => u.Username == dto.Username);
             if (existingUser)
-                throw new Exception("Username already exists");
+                throw new Exception(ValidationMessages.DuplicateUsername);
 
             // 3. Get student role
             var studentRole = await _context.Roles
@@ -233,18 +234,22 @@ namespace EducenAPI.Services
         private void ValidateBaseStudentData(CreateStudentDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.FullName))
-                throw new Exception("FullName is required");
+                throw new Exception(ValidationMessages.RequiredFullName);
             
             if (string.IsNullOrWhiteSpace(dto.Email))
-                throw new Exception("Email is required");
+                throw new Exception(ValidationMessages.RequiredEmail);
             
             // Validate email format
             if (!IsValidEmail(dto.Email))
-                throw new Exception("Invalid email format");
+                throw new Exception(ValidationMessages.InvalidEmailFormat);
             
             // Validate phone format if provided
             if (!string.IsNullOrWhiteSpace(dto.PhoneNumber) && !IsValidPhone(dto.PhoneNumber))
-                throw new Exception("Invalid phone number format");
+                throw new Exception(ValidationMessages.InvalidPhoneFormat);
+            
+            // Validate DateOfBirth - cannot be in the future
+            if (dto.DateOfBirth.HasValue && dto.DateOfBirth.Value.Date > DateTime.Now.Date)
+                throw new Exception(ValidationMessages.DateOfBirthInFuture);
         }
 
         private bool IsValidEmail(string email)
@@ -290,7 +295,7 @@ namespace EducenAPI.Services
                     .AnyAsync(u => u.Email == dto.Email && u.UserId != id);
 
                 if (emailExists)
-                    throw new Exception("Email already exists");
+                    throw new Exception(ValidationMessages.DuplicateEmail);
 
                 if (student.StudentNavigation != null)
                 {
@@ -314,7 +319,13 @@ namespace EducenAPI.Services
                 student.Grade = dto.Grade;
 
             if (dto.DateOfBirth.HasValue)
+            {
+                // Validate: DOB cannot be in the future
+                if (dto.DateOfBirth.Value.Date > DateTime.Now.Date)
+                    throw new Exception(ValidationMessages.DateOfBirthInFuture);
+                
                 student.DateOfBirth = dto.DateOfBirth;
+            }
 
             if (dto.Gender != null)
             {

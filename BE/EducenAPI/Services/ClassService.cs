@@ -167,6 +167,7 @@ namespace EducenAPI.Services
                     if (roomId.HasValue)
                     {
                         await ValidateRoomAvailability(roomId.Value, slot.DayOfWeek, slot.StartTime, slot.EndTime, dto.StartDate, dto.EndDate);
+                        await ValidateRoomStatus(roomId.Value);
                     }
                 }
             }
@@ -174,6 +175,7 @@ namespace EducenAPI.Services
             {
                 var room = await _context.Rooms.FindAsync(dto.RoomId.Value);
                 if (room == null) throw new Exception("Room not found");
+                if (!room.Status) throw new Exception($"Phòng '{room.RoomName}' đang bảo trì, không thể sử dụng");
             }
 
             // Validate date range
@@ -307,6 +309,14 @@ namespace EducenAPI.Services
             var startTime = TimeOnly.Parse(startTimeStr);
             var endTime = TimeOnly.Parse(endTimeStr);
 
+            // Get day name for error message
+            var dayNames = new[] { "Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7" };
+            var dayName = dayNames[dayOfWeek];
+
+            // Get room name for error message
+            var room = await _context.Rooms.FindAsync(roomId);
+            var roomName = room?.RoomName ?? $"Room {roomId}";
+
             // Check against ALL schedules in this room for active classes
             var conflictingSchedules = await _context.Schedules
                 .Include(s => s.Class)
@@ -316,19 +326,57 @@ namespace EducenAPI.Services
 
             foreach (var existingSlot in conflictingSchedules)
             {
+                var existingClass = existingSlot.Class;
+                var existingStartDate = existingClass.StartDate;
+                var existingEndDate = existingClass.EndDate;
+
                 // Check date overlap
-                if (startDate.HasValue && endDate.HasValue && existingSlot.Class.StartDate.HasValue && existingSlot.Class.EndDate.HasValue)
+                bool dateOverlaps;
+                if (startDate.HasValue && endDate.HasValue && existingStartDate.HasValue && existingEndDate.HasValue)
                 {
-                    if (startDate > existingSlot.Class.EndDate || endDate < existingSlot.Class.StartDate)
-                        continue;
+                    // Both have dates - check overlap
+                    dateOverlaps = !(startDate > existingEndDate || endDate < existingStartDate);
+                }
+                else
+                {
+                    // One or both have null dates - always consider as overlap for strict validation
+                    dateOverlaps = true;
                 }
 
-                // Check time overlap
-                if (startTime < existingSlot.EndTime && endTime > existingSlot.StartTime)
+                // Check time overlap if dates overlap
+                if (dateOverlaps && startTime < existingSlot.EndTime && endTime > existingSlot.StartTime)
                 {
-                    throw new Exception($"Room is already occupied by class '{existingSlot.Class.ClassName}' at this time (Day {dayOfWeek}: {existingSlot.StartTime}-{existingSlot.EndTime})");
+                    // Build detailed error message
+                    var existingDayName = dayNames[existingSlot.DayOfWeek];
+                    var dateRange = "";
+                    
+                    if (existingStartDate.HasValue && existingEndDate.HasValue)
+                    {
+                        dateRange = $" từ ngày {existingStartDate:dd/MM/yyyy} đến ngày {existingEndDate:dd/MM/yyyy}";
+                    }
+                    else if (!existingStartDate.HasValue && !existingEndDate.HasValue)
+                    {
+                        dateRange = " (không xác định)";
+                    }
+                    else if (existingStartDate.HasValue)
+                    {
+                        dateRange = $" từ ngày {existingStartDate:dd/MM/yyyy}";
+                    }
+                    else
+                    {
+                        dateRange = $" đến ngày {existingEndDate:dd/MM/yyyy}";
+                    }
+
+                    throw new Exception($"Phòng '{roomName}' đã được đặt bởi lớp '{existingClass.ClassName}' vào {existingDayName}, {existingSlot.StartTime}-{existingSlot.EndTime}{dateRange}");
                 }
             }
+        }
+
+        private async Task ValidateRoomStatus(int roomId)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room == null) throw new Exception("Room not found");
+            if (!room.Status) throw new Exception($"Phòng '{room.RoomName}' đang bảo trì, không thể sử dụng");
         }
 
         private void ValidateScheduleSlots(List<CreateScheduleSlotDto> scheduleSlots)
@@ -565,6 +613,7 @@ namespace EducenAPI.Services
                         if (targetRoomId.HasValue)
                         {
                             await ValidateRoomAvailability(targetRoomId.Value, slot.DayOfWeek, slot.StartTime, slot.EndTime, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
+                            await ValidateRoomStatus(targetRoomId.Value);
                         }
                     }
                     
@@ -574,6 +623,12 @@ namespace EducenAPI.Services
                 else if (dto.RoomId == null && dto.ScheduleSlots == null)
                 {
                     existingClass.RoomId = null;
+                }
+
+                // Validate Room status when only RoomId is provided without schedule slots
+                if (dto.RoomId.HasValue && dto.ScheduleSlots == null)
+                {
+                    await ValidateRoomStatus(dto.RoomId.Value);
                 }
 
                 if (dto.GradeId.HasValue)
