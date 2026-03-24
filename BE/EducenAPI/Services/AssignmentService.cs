@@ -117,6 +117,7 @@ namespace EducenAPI.Services
             {
                 AsmId = assignment.AsmId,
                 SessionId = assignment.SessionId,
+                ClassId = assignment.Session?.ClassId,
                 GradeId = assignment.GradeId,
                 Title = assignment.Title ?? "",
                 Description = assignment.Description,
@@ -246,8 +247,6 @@ namespace EducenAPI.Services
                 .ToListAsync();
 
             var assignments = rawAssignments
-                .GroupBy(x => new { x.Title, x.FileUrl })
-                .Select(g => g.First())
                 .Select(x => MapToResponseDto(x, baseUrl))
                 .ToList();
 

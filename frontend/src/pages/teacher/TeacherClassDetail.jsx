@@ -109,6 +109,17 @@ const LIBRARY_MATERIALS = [
     { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.' },
 ];
 
+const groupUnique = (list) => {
+    return list.reduce((acc, curr) => {
+        const isDup = acc.some(item => 
+            item.title === curr.title && 
+            (item.fileUrl === curr.fileUrl || item.fileName === curr.fileName)
+        );
+        if (!isDup) acc.push(curr);
+        return acc;
+    }, []);
+};
+
 // Centralized mapping functions to ensure consistency
 const mapMaterial = (m) => ({
     id: m.materialId || m.MaterialId,
@@ -279,10 +290,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     ]);
                     
                     const allMaterials = libMatRes.data || [];
-                    setLibraryMaterials(allMaterials.map(mapMaterial));
+                    setLibraryMaterials(groupUnique(allMaterials.map(mapMaterial)));
 
                     const allAssignments = libAsmRes.data || [];
-                    setLibraryAssignments(allAssignments.map(mapAssignment));
+                    setLibraryAssignments(groupUnique(allAssignments.map(mapAssignment)));
 
                     // Fetch grades for modals
                     const gradesRes = await api.get('/Grades');

@@ -56,7 +56,18 @@ const TeacherAssignments = ({ isTA = false }) => {
                 return url.split('.').pop().toLowerCase();
             };
 
-            setMaterials((matsRes.data || []).map(m => ({
+            const groupUnique = (list) => {
+                return list.reduce((acc, curr) => {
+                    const isDup = acc.some(item => 
+                        item.title === curr.title && 
+                        (item.fileUrl === curr.fileUrl || item.fileName === curr.fileName)
+                    );
+                    if (!isDup) acc.push(curr);
+                    return acc;
+                }, []);
+            };
+
+            setMaterials(groupUnique((matsRes.data || []).map(m => ({
                 ...m,
                 id: m.materialId || m.MaterialId,
                 materialId: m.materialId || m.MaterialId,
@@ -65,7 +76,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 type: getFileType(m.fileUrl || m.FileUrl),
                 fileSize: m.fileSize,
                 originalFileName: m.originalFileName
-            })));
+            }))));
 
             const allAsms = asmsRes.data || [];
             
@@ -86,7 +97,7 @@ const TeacherAssignments = ({ isTA = false }) => {
 
             setClasses(classesRes.data || []);
             setGrades(gradesRes.data || []);
-            setTemplates(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
+            setTemplates(groupUnique(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
                 ...a,
                 id: a.asmId || a.AsmId,
                 asmId: a.asmId || a.AsmId,
@@ -97,7 +108,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 type: getFileType(a.fileUrl || a.FileUrl),
                 fileSize: a.fileSize,
                 originalFileName: a.originalFileName
-            })));
+            }))));
 
         } catch (error) {
             console.error("Error fetching library data:", error);

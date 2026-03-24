@@ -263,13 +263,9 @@ namespace EducenAPI.Services
                 .Where(x => x.SessionId == null && x.UserId == userId) 
                 .ToListAsync();
 
-            var materials = rawMaterials
-                .GroupBy(x => new { x.Title, x.FileUrl })
-                .Select(g => g.First())
+            return rawMaterials
                 .Select(x => MapToResponseDto(x, baseUrl))
                 .ToList();
-
-            return materials;
         }
 
         public async Task<LessonMaterial> ImportMaterialAsync(int materialId, int sessionId)
