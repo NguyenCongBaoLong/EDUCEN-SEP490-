@@ -111,7 +111,11 @@ public partial class EducenV2Context : DbContext
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.TenantId = CurrentTenantId;
+                // CHỈ GHI ĐÈ TỰ ĐỘNG NẾU TENANT ID ĐANG BỊ RỖNG HOẶC NULL
+                if (string.IsNullOrEmpty(entry.Entity.TenantId))
+                {
+                    entry.Entity.TenantId = CurrentTenantId;
+                }
             }
         }
     }

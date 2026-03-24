@@ -1,6 +1,10 @@
 .vs/
 **/.vs/
-bin/
-obj/
-wwwroot/uploads/*
-!wwwroot/uploads/.gitkeep
+*.user
+*.csproj.user
+**/*.csproj.user
+**/bin/
+**/obj/
+**/wwwroot/uploads/
+**/appsettings.json
+**/appsettings.Development.json
