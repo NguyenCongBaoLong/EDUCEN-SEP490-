@@ -112,6 +112,8 @@ const ClassesManagement = () => {
                 status: c.status?.toLowerCase() || 'active',
                 startDate: c.startDate ? c.startDate.split('T')[0] : '',
                 endDate: c.endDate ? c.endDate.split('T')[0] : '',
+                totalSessions: c.totalSessions || 0,
+                completedSessions: c.completedSessions || 0,
                 gradeId: c.gradeId || c.GradeId,
                 gradeName: c.gradeName || c.GradeName,
                 roomId: c.roomId || c.RoomId,

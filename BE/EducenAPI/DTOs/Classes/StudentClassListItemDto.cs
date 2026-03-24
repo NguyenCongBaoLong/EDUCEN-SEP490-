@@ -18,5 +18,7 @@ namespace EducenAPI.DTOs.Classes
         public int TotalSessions { get; set; }
         public int CompletedSessions { get; set; }
         public string Color { get; set; } = "#3b82f6";
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
     }
 }

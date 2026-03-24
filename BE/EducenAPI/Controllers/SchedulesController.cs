@@ -1,7 +1,9 @@
 using EducenAPI.DTOs.Schedules;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
 {
@@ -11,10 +13,12 @@ namespace EducenAPI.Controllers
     public class SchedulesController : ControllerBase
     {
         private readonly IScheduleService _scheduleService;
+        private readonly EducenV2Context _context;
 
-        public SchedulesController(IScheduleService scheduleService)
+        public SchedulesController(IScheduleService scheduleService, EducenV2Context context)
         {
             _scheduleService = scheduleService;
+            _context = context;
         }
 
         // GET: api/Schedules (public - no auth required for center home page)
@@ -163,6 +167,26 @@ namespace EducenAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        // GET: api/Schedules/parent/child/{childId} - Get schedule for a specific child (Parent role)
+        [HttpGet("parent/child/{childId:int}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetChildSchedule(int childId)
+        {
+            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out int parentId)) return Unauthorized();
+
+            // Ownership check via DB
+            var isLinked = await _context.Parents
+                .Where(p => p.UserId == parentId)
+                .SelectMany(p => p.Students)
+                .AnyAsync(s => s.UserId == childId);
+
+            if (!isLinked) return Forbid();
+
+            var schedules = await _scheduleService.GetStudentScheduleAsync(childId);
+            return Ok(schedules);
         }
     }
 }

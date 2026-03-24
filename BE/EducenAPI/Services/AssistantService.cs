@@ -252,6 +252,7 @@ namespace EducenAPI.Services
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Sessions)
                 .Include(c => c.Schedules)
                 .Where(c => c.AssistantId == id)
                 .Select(c => new
@@ -262,6 +263,8 @@ namespace EducenAPI.Services
                     c.Status,
                     c.StartDate,
                     c.EndDate,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : "",
                     AssistantName = assistant.AssistantNavigation.FullName ?? "",

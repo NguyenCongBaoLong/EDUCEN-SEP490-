@@ -293,11 +293,22 @@ const StudentClassDetail = () => {
                     <div className="scd-header-accent" style={{ background: accent }} />
                     <div className="scd-title-block">
                         <div className="scd-title-row">
-                            <h1>{classInfo.className}</h1>
-                            <span className={`scd-status-badge ${classInfo.status.toLowerCase()}`}>
-                                {classInfo.status === 'Active' ? 'Đang học' : 'Đã kết thúc'}
-                            </span>
-                        </div>
+                        <h1>{classInfo.className}</h1>
+                        {(() => {
+                            const hasStarted = classInfo.startDate ? new Date(classInfo.startDate) <= new Date() : false;
+                            const statusKey = classInfo.status === 'Active' 
+                                ? (completedSessions === 0 && !hasStarted ? 'notstarted' : 'active') 
+                                : 'inactive';
+                            const statusLabel = classInfo.status === 'Active' 
+                                ? (completedSessions === 0 && !hasStarted ? 'Chưa học' : 'Đang học') 
+                                : 'Đã kết thúc';
+                            return (
+                                <span className={`scd-status-badge ${statusKey}`}>
+                                    {statusLabel}
+                                </span>
+                            );
+                        })()}
+                    </div>
                         <p className="scd-title-meta">
                             Môn: {classInfo.subjectName} &nbsp;•&nbsp; {classInfo.teacherName ? `GV: ${classInfo.teacherName}` : 'Chưa có GV'}
                         </p>

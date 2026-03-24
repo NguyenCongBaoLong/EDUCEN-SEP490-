@@ -467,6 +467,63 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // GET: api/Classes/parent/child/{childId}/classes
+        [HttpGet("parent/child/{childId:int}/classes")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetChildClasses(int childId)
+        {
+            try
+            {
+                var parentIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (parentIdClaim == null) return Unauthorized();
+                int parentId = int.Parse(parentIdClaim.Value);
+
+                // Verify this child belongs to the parent
+                var isLinked = await _context.Parents
+                    .Where(p => p.UserId == parentId)
+                    .SelectMany(p => p.Students)
+                    .AnyAsync(s => s.UserId == childId);
+
+                if (!isLinked) return Forbid();
+
+                var classes = await _classService.GetStudentClassesAsync(childId);
+                return Ok(classes);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/Classes/parent/child/{childId}/class/{classId}/detail
+        [HttpGet("parent/child/{childId:int}/class/{classId:int}/detail")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetChildClassDetail(int childId, int classId)
+        {
+            try
+            {
+                var parentIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (parentIdClaim == null) return Unauthorized();
+                int parentId = int.Parse(parentIdClaim.Value);
+
+                var isLinked = await _context.Parents
+                    .Where(p => p.UserId == parentId)
+                    .SelectMany(p => p.Students)
+                    .AnyAsync(s => s.UserId == childId);
+
+                if (!isLinked) return Forbid();
+
+                string baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
+                var detail = await _classService.GetStudentClassDetailAsync(childId, classId, baseUrl);
+                if (detail == null) return NotFound(new { message = "Class not found" });
+
+                return Ok(detail);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
-

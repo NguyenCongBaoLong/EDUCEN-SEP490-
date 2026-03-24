@@ -124,6 +124,8 @@ namespace EducenAPI.DTOs.Classes
         public DateTime? EndDate { get; set; }
         public string? Status { get; set; }
         public int StudentCount { get; set; }
+        public int TotalSessions { get; set; }
+        public int CompletedSessions { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
     }

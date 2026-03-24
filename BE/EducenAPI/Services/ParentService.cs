@@ -281,5 +281,25 @@ namespace EducenAPI.Services
 
             return true;
         }
+        public async Task<IEnumerable<ChildInfoDto>> GetMyChildrenAsync(int parentUserId)
+        {
+            var parent = await _context.Parents
+                .Include(p => p.Students)
+                    .ThenInclude(s => s.StudentNavigation)
+                .Where(p => p.UserId == parentUserId)
+                .FirstOrDefaultAsync();
+
+            if (parent == null) return Enumerable.Empty<ChildInfoDto>();
+
+            return parent.Students.Select(s => new ChildInfoDto
+            {
+                StudentId = s.UserId,
+                FullName = s.StudentNavigation?.FullName ?? s.StudentNavigation?.Username ?? "",
+                Username = s.StudentNavigation?.Username,
+                Grade = s.Grade,
+                Gender = s.Gender,
+                EnrollmentStatus = s.EnrollmentStatus
+            }).ToList();
+        }
     }
 }

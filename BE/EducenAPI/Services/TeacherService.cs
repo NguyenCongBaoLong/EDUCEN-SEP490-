@@ -253,10 +253,6 @@ namespace EducenAPI.Services
                 return new { message = "Teacher not found" };
 
             var classes = await _context.Classes
-                .Include(c => c.Subject)
-                .Include(c => c.Assistant)
-                    .ThenInclude(a => a!.AssistantNavigation)
-                .Include(c => c.Schedules)
                 .Where(c => c.TeacherId == id)
                 .Select(c => new
                 {
@@ -270,6 +266,8 @@ namespace EducenAPI.Services
                     TeacherName = teacher.TeacherNavigation.FullName ?? "",
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : "",
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     ScheduleSlots = c.Schedules.Select(s => new
                     {
                         s.DayOfWeek,

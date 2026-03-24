@@ -51,6 +51,9 @@ const TeacherClasses = ({ isTA = false }) => {
                         maxStudents: null,
                         schedule: scheduleStr,
                         status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
+                        startDate: c.startDate,
+                        totalSessions: c.totalSessions || 0,
+                        completedSessions: c.completedSessions || 0
                     };
                 });
                 setClasses(normalized);

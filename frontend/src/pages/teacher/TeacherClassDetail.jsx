@@ -641,9 +641,20 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     <div className="cd-title-block">
                         <div className="cd-title-row">
                             <h1>{classData.name}</h1>
-                            <span className={`cd-status-badge ${classData.status}`}>
-                                {classData.status === 'active' ? 'Đang hoạt động' : 'Tạm dừng'}
-                            </span>
+                            {(() => {
+                                const hasStarted = classData.startDate ? new Date(classData.startDate) <= new Date() : false;
+                                const statusKey = classData.status === 'active' 
+                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'notstarted' : 'active') 
+                                    : 'inactive';
+                                const statusLabel = classData.status === 'active' 
+                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'Chưa học' : 'Đang hoạt động') 
+                                    : 'Tạm dừng';
+                                return (
+                                    <span className={`cd-status-badge ${statusKey}`}>
+                                        {statusLabel}
+                                    </span>
+                                );
+                            })()}
                         </div>
                         <p className="cd-title-meta">
                             Môn: {classData.subject} &nbsp;•&nbsp; Mã lớp: {classData.code} &nbsp;•&nbsp; {classData.gradeLevel}

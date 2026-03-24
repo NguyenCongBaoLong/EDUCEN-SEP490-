@@ -41,6 +41,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Students)
                 .Include(c => c.Schedules)
                     .ThenInclude(s => s.Room)
+                .Include(c => c.Sessions)
                 .Select(c => new ClassDto
                 {
                     ClassId = c.ClassId,
@@ -61,6 +62,8 @@ namespace EducenAPI.Services
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
@@ -86,6 +89,8 @@ namespace EducenAPI.Services
                     .ThenInclude(a => a!.AssistantNavigation)
                 .Include(c => c.Room)
                 .Include(c => c.Grade)
+                .Include(c => c.Students)
+                .Include(c => c.Sessions)
                 .Include(c => c.Schedules)
                     .ThenInclude(s => s.Room)
                 .Include(c => c.Students)
@@ -110,6 +115,8 @@ namespace EducenAPI.Services
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
@@ -1016,7 +1023,9 @@ namespace EducenAPI.Services
                     ScheduleTime = scheduleTime,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
-                    Color = GetSubjectColor(c.Subject?.SubjectName)
+                    Color = GetSubjectColor(c.Subject?.SubjectName),
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate
                 };
             }).ToList();
         }
@@ -1057,6 +1066,8 @@ namespace EducenAPI.Services
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
