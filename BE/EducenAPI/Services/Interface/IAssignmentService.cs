@@ -5,8 +5,8 @@ namespace EducenAPI.Services.Interface
 {
     public interface IAssignmentService
     {
-        Task<Assignment> CreateAssignmentAsync(CreateAssignmentDto dto);
-        Task<Assignment> UpdateAssignmentAsync(int id, CreateAssignmentDto dto);
+        Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl);
+        Task<AssignmentResponseDto> UpdateAssignmentAsync(int id, CreateAssignmentDto dto, string baseUrl);
         Task<List<AssignmentResponseDto>> GetAssignmentsBySessionAsync(int sessionId, string baseUrl);
         Task<List<AssignmentResponseDto>> GetAllAssignmentsAsync(string baseUrl);
         Task<Assignment> ImportAssignmentAsync(int assignmentId, int sessionId, DateTime? endTime = null);

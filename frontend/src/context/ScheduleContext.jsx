@@ -31,7 +31,23 @@ export const ScheduleProvider = ({ children }) => {
 
         setLoading(true);
         try {
-            const res = await api.get('/Schedules');
+            const userStr = localStorage.getItem('user');
+            let endpoint = '/Schedules';
+
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    if (user.role === 'Teacher') {
+                        endpoint = '/Schedules/teacher/me';
+                    } else if (user.role === 'Student') {
+                        endpoint = '/Schedules/student/me';
+                    }
+                } catch (e) {
+                    console.error('Error parsing user for schedule fetch:', e);
+                }
+            }
+
+            const res = await api.get(endpoint);
             // Map backend ScheduleDto to frontend format
             const mapped = res.data.map(s => {
                 const colors = ['#3b82f6', '#dc2626', '#f59e0b', '#8b5cf6', '#10b981', '#06b6d4', '#ec4899'];

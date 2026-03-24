@@ -11,5 +11,6 @@ namespace EducenAPI.DTOs.Classes
         public string DayLabel { get; set; } = string.Empty;
         public string Time { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
+        public string? RoomName { get; set; }
     }
 }

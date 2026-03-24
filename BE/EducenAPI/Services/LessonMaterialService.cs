@@ -19,7 +19,7 @@ namespace EducenAPI.Services
             _fileService = fileService;
             _userServiceContext = userServiceContext;
         }
-        public async Task<LessonMaterial> SaveMaterials(SaveMaterialDto dto)
+        public async Task<MaterialResponseDto> SaveMaterials(SaveMaterialDto dto, string baseUrl)
         {
             string? fileUrl = null;
             string? contentType = null;
@@ -71,37 +71,55 @@ namespace EducenAPI.Services
                 Title = dto.Title,
                 FileUrl = fileUrl,
                 ContentType = contentType,
-                UserId = userId
+                UserId = userId,
+                GradeId = dto.GradeId
             };
             _context.LessonMaterials.Add(material);
 
             if (dto.SaveToLibrary && dto.SessionId.HasValue)
+            // Save to library if the same original filename doesn't already exist
+            if (dto.SaveToLibrary && dto.SessionId.HasValue)
             {
-                // Save to library if the same original filename doesn't already exist
-                var libNames = await _context.LessonMaterials
-                    .Where(m => m.SessionId == null && !string.IsNullOrEmpty(m.FileUrl))
-                    .Select(m => m.FileUrl)
-                    .ToListAsync();
-                string newName = dto.File?.FileName ?? dto.Title ?? "";
-                bool existsInLib = libNames.Any(url => GetOriginalFileNameFromUrl(url) == newName);
+                var existsInLib = await _context.LessonMaterials
+                    .AnyAsync(m => m.SessionId == null && m.UserId == userId 
+                              && m.Title == material.Title && m.FileUrl == material.FileUrl);
+                
                 if (!existsInLib)
                 {
                     var libraryMaterial = new LessonMaterial
                     {
                         SessionId = null,
-                        Title = dto.Title,
-                        FileUrl = fileUrl,
-                        ContentType = contentType,
-                        UserId = userId
+                        Title = material.Title,
+                        FileUrl = material.FileUrl,
+                        ContentType = material.ContentType,
+                        UserId = userId,
+                        GradeId = material.GradeId
                     };
                     _context.LessonMaterials.Add(libraryMaterial);
                 }
             }
             await _context.SaveChangesAsync();
-            return material;
+            return MapToResponseDto(material, baseUrl);
         }
 
-        public async Task<LessonMaterial> UpdateMaterialAsync(int id, SaveMaterialDto dto)
+        private MaterialResponseDto MapToResponseDto(LessonMaterial material, string baseUrl)
+        {
+            return new MaterialResponseDto
+            {
+                MaterialId = material.MaterialId,
+                SessionId = material.SessionId,
+                GradeId = material.GradeId,
+                Title = material.Title,
+                ContentType = material.ContentType,
+                FileUrl = !string.IsNullOrEmpty(material.FileUrl)
+                    ? $"{baseUrl}/{material.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                    : null,
+                FileSize = GetFileSizeFromUrl(material.FileUrl),
+                OriginalFileName = GetOriginalFileNameFromUrl(material.FileUrl)
+            };
+        }
+
+        public async Task<MaterialResponseDto> UpdateMaterialAsync(int id, SaveMaterialDto dto, string baseUrl)
         {
             var material = await _context.LessonMaterials.FindAsync(id);
             if (material == null)
@@ -135,9 +153,33 @@ namespace EducenAPI.Services
 
             material.Title = dto.Title;
             material.SessionId = dto.SessionId;
+            material.GradeId = dto.GradeId;
+
+            // Save to library if requested and not already exists
+            if (dto.SaveToLibrary)
+            {
+                var userId = _userServiceContext.GetUserId();
+                var existsInLib = await _context.LessonMaterials
+                    .AnyAsync(m => m.SessionId == null && m.UserId == userId 
+                              && m.Title == material.Title && m.FileUrl == material.FileUrl);
+                
+                if (!existsInLib)
+                {
+                    var libraryMaterial = new LessonMaterial
+                    {
+                        SessionId = null,
+                        Title = material.Title,
+                        FileUrl = material.FileUrl,
+                        ContentType = material.ContentType,
+                        UserId = userId,
+                        GradeId = material.GradeId
+                    };
+                    _context.LessonMaterials.Add(libraryMaterial);
+                }
+            }
 
             await _context.SaveChangesAsync();
-            return material;
+            return MapToResponseDto(material, baseUrl);
         }
 
         public async Task<LessonMaterial> UploadMaterials(UploadMaterialDto dto)
@@ -201,6 +243,7 @@ namespace EducenAPI.Services
                 {
                     MaterialId = x.MaterialId,
                     SessionId = x.SessionId,
+                    GradeId = x.GradeId,
                     Title = x.Title,
                     ContentType = x.ContentType,
                     FileUrl = !string.IsNullOrEmpty(x.FileUrl)
@@ -215,22 +258,15 @@ namespace EducenAPI.Services
         }
         public async Task<List<MaterialResponseDto>> GetAllMaterialsAsync(string baseUrl)
         {
+            var userId = _userServiceContext.GetUserId();
             var rawMaterials = await _context.LessonMaterials
-                .Where(x => x.SessionId == null) 
+                .Where(x => x.SessionId == null && x.UserId == userId) 
                 .ToListAsync();
 
-            var materials = rawMaterials.Select(x => new MaterialResponseDto
-                {
-                    MaterialId = x.MaterialId,
-                    SessionId = x.SessionId,
-                    Title = x.Title,
-                    ContentType = x.ContentType,
-                    FileUrl = !string.IsNullOrEmpty(x.FileUrl)
-                        ? $"{baseUrl}/{x.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                        : null,
-                    FileSize = GetFileSizeFromUrl(x.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(x.FileUrl)
-                })
+            var materials = rawMaterials
+                .GroupBy(x => new { x.Title, x.FileUrl })
+                .Select(g => g.First())
+                .Select(x => MapToResponseDto(x, baseUrl))
                 .ToList();
 
             return materials;
@@ -241,6 +277,7 @@ namespace EducenAPI.Services
             var source = await _context.LessonMaterials.FindAsync(materialId);
             if (source == null) throw new Exception("Source material not found");
 
+            var userId = _userServiceContext.GetUserId();
             string sourceOriginalName = GetOriginalFileNameFromUrl(source.FileUrl);
 
             // Check duplicate by filename only (no DB size column needed)
@@ -268,7 +305,9 @@ namespace EducenAPI.Services
                 SessionId = sessionId,
                 Title = source.Title,
                 FileUrl = source.FileUrl,
-                ContentType = source.ContentType
+                ContentType = source.ContentType,
+                UserId = userId,
+                GradeId = source.GradeId
             };
 
             _context.LessonMaterials.Add(material);

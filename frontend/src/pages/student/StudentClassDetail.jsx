@@ -86,12 +86,12 @@ const SubmitModal = ({ assignment, onClose, onSubmit, isSubmitting }) => {
                                 <>
                                     <Upload size={24} />
                                     <span>Nhấp để chọn file hoặc kéo thả vào đây</span>
-                                    <span className="scd-upload-hint">PDF, DOC, DOCX, JPG, PNG (tối đa 10MB)</span>
+                                    <span className="scd-upload-hint">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (tối đa 10MB)</span>
                                 </>
                             )}
                         </div>
                         <input ref={fileRef} type="file" hidden onChange={handleFileChange}
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
                     </div>
                 </div>
                 <div className="scd-modal-footer">
@@ -655,7 +655,7 @@ const StudentClassDetail = () => {
                                         Giáo viên đang trong quá trình chấm bài, bạn không thể nộp lại lúc này.
                                     </div>
                                 )}
-                                {status !== 'overdue' && status !== 'graded' && (
+                                {status !== 'graded' && (
                                     <button
                                         className="scd-btn-submit"
                                         style={{ background: accent }}
@@ -664,7 +664,8 @@ const StudentClassDetail = () => {
                                             setSubmitTarget({ asm, sessionId: selectedAssignment.sessionId }); 
                                         }}
                                     >
-                                        <Upload size={16} /> {status === 'submitted' ? 'Nộp lại bài' : 'Nộp bài ngay'}
+                                        <Upload size={16} /> 
+                                        {status === 'overdue' ? 'Nộp bài trễ' : (status === 'submitted' ? 'Nộp lại bài' : 'Nộp bài ngay')}
                                     </button>
                                 )}
                             </div>

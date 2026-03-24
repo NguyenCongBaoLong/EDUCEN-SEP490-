@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.FileUpload;
+using EducenAPI.DTOs.FileUpload;
 using EducenAPI.Services.Interface;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -33,23 +33,22 @@ namespace EducenAPI.Services
                     }
 
                     var id = Guid.NewGuid();
-
                     var fileName = $"{id}_{Path.GetFileName(file.FileName)}";
                     var filePath = Path.Combine(directoryPath, fileName);
+                    
                     using (var stream = new FileStream(filePath, FileMode.Create))
                     {
                         await file.CopyToAsync(stream);
                     }
-                    var dbPath = Path.Combine("files", date, fileName).Replace("\\", "/");
 
-                    if (string.IsNullOrEmpty(filePath)) throw new Exception("Failed to upload file");
-
+                    var dbPath = $"uploads/files/{date}/{fileName}";
+                    
                     var dto = new FileUploadDto
                     {
                         ContentType = file.ContentType,
                         Extension = extension,
                         FileName = fileName,
-                        FilePath = filePath,
+                        FilePath = dbPath,
                         FileSize = file.Length / 1024,                        
                     };
 

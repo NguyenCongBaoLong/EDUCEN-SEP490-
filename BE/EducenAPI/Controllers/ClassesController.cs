@@ -429,7 +429,6 @@ namespace EducenAPI.Controllers
             }
         }
 
-        // GET: api/Classes/student/my-classes
         [HttpGet("student/my-classes")]
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> GetMyClasses()
@@ -441,6 +440,26 @@ namespace EducenAPI.Controllers
 
                 int studentId = int.Parse(userIdClaim.Value);
                 var classes = await _classService.GetStudentClassesAsync(studentId);
+                return Ok(classes);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/Classes/teacher/my-classes
+        [HttpGet("teacher/my-classes")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetMyTeacherClasses()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+
+                int teacherId = int.Parse(userIdClaim.Value);
+                var classes = await _classService.GetClassesByTeacherIdAsync(teacherId);
                 return Ok(classes);
             }
             catch (Exception ex)

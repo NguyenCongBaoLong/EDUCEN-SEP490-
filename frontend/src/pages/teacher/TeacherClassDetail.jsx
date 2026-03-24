@@ -9,7 +9,7 @@ import {
     CheckCircle, UserCheck, CalendarClock,
     MessageSquare, Pencil, Lock, Edit2,
     FileText, Download, Plus, PlayCircle, MoreVertical, Trash2,
-    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen
+    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen, MapPin
 } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import AttendanceModal from '../../components/AttendanceModal';
@@ -157,6 +157,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [loading, setLoading] = useState(true);
     const [libraryMaterials, setLibraryMaterials] = useState([]);
     const [libraryAssignments, setLibraryAssignments] = useState([]);
+    const [grades, setGrades] = useState([]);
 
     // classData dùng trong UI — gộp từ API + defaults
     const [classData, setClassData] = useState({
@@ -243,6 +244,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     activities: [],
                     classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
                     totalClasses: mappedSessions.length,
+                    roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'Chưa gán phòng'),
                 });
 
                 setStudents(mappedStudents);
@@ -281,9 +283,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
                     const allAssignments = libAsmRes.data || [];
                     setLibraryAssignments(allAssignments.map(mapAssignment));
+
+                    // Fetch grades for modals
+                    const gradesRes = await api.get('/Grades');
+                    setGrades(gradesRes.data || []);
                 } catch {
                     setLibraryMaterials([]);
                     setLibraryAssignments([]);
+                    setGrades([]);
                 }
             } catch (err) {
                 console.error('Failed to fetch class detail:', err);
@@ -677,7 +684,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
                         <div className="cd-info-card-value">{classData.schedule}</div>
-                        <div className="cd-info-card-sub">{classData.scheduleTime}</div>
+                        <div className="cd-info-card-sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span>{classData.scheduleTime}</span>
+                            <span style={{ color: '#4f46e5', fontWeight: 600 }}>{classData.roomName}</span>
+                        </div>
                     </div>
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
@@ -1206,6 +1216,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onClose={() => setUploadModalOpen(false)}
                         onUpload={handleUploadMaterial}
                         sessionId={uploadTargetSession}
+                        grades={grades}
                     />
                 )
             }
@@ -1218,6 +1229,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onClose={() => { setEditMaterial(null); setEditTargetSession(null); }}
                         onUpdate={handleUpdateMaterial}
                         materialData={editMaterial}
+                        grades={grades}
                     />
                 )
             }
@@ -1282,6 +1294,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     initialData={editAssignment}
                     classes={[{ classId: classData.id, className: classData.name }]}
                     currentClassId={classData.id}
+                    grades={grades}
                 />
             )}
 

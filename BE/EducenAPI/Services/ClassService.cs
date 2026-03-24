@@ -863,6 +863,7 @@ namespace EducenAPI.Services
         {
             var sessions = await _context.ClassSessions
                 .Include(s => s.Schedule)
+                    .ThenInclude(sc => sc!.Room)
                 .Where(s => s.ClassId == classId || (s.Schedule != null && s.Schedule.ClassId == classId))
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
@@ -888,6 +889,7 @@ namespace EducenAPI.Services
 
             var sessions = await _context.ClassSessions
                 .Include(s => s.Schedule)
+                    .ThenInclude(sc => sc!.Room)
                 .Include(s => s.LessonMaterials)
                 .Include(s => s.Assignments)
                     .ThenInclude(a => a.Submissions.Where(sub => sub.StudentId == studentId))
@@ -993,6 +995,55 @@ namespace EducenAPI.Services
                     Color = GetSubjectColor(c.Subject?.SubjectName)
                 };
             }).ToList();
+        }
+
+        public async Task<IEnumerable<ClassDto>> GetClassesByTeacherIdAsync(int teacherId)
+        {
+            await UpdateExpiredClassesAsync();
+
+            return await _context.Classes
+                .Include(c => c.Subject)
+                .Include(c => c.Teacher)
+                    .ThenInclude(t => t!.TeacherNavigation)
+                .Include(c => c.Assistant)
+                    .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Room)
+                .Include(c => c.Grade)
+                .Include(c => c.Students)
+                .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Room)
+                .Where(c => c.TeacherId == teacherId)
+                .Select(c => new ClassDto
+                {
+                    ClassId = c.ClassId,
+                    ClassName = c.ClassName ?? "",
+                    Description = c.Description,
+                    SyllabusContent = c.SyllabusContent,
+                    SubjectId = c.SubjectId,
+                    SubjectName = c.Subject.SubjectName,
+                    TeacherId = c.TeacherId,
+                    TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
+                    AssistantId = c.AssistantId,
+                    AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
+                    RoomId = c.RoomId,
+                    RoomName = c.Room != null ? c.Room.RoomName : null,
+                    GradeId = c.GradeId,
+                    GradeName = c.Grade != null ? c.Grade.GradeName : null,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
+                    Status = c.Status,
+                    StudentCount = c.Students.Count,
+                    CreatedAt = DateTime.Now,
+                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId,
+                        RoomName = s.Room != null ? s.Room.RoomName : null
+                    }).ToList()
+                })
+                .ToListAsync();
         }
 
         private string GetInitials(string? fullName)

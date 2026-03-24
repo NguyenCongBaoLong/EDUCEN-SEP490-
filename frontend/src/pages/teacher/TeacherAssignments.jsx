@@ -26,14 +26,16 @@ const TeacherAssignments = ({ isTA = false }) => {
     const [assignments, setAssignments] = useState([]);
     const [materials, setMaterials] = useState([]);
     const [classes, setClasses] = useState([]);
+    const [grades, setGrades] = useState([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [matsRes, asmsRes, classesRes] = await Promise.all([
+            const [matsRes, asmsRes, classesRes, gradesRes] = await Promise.all([
                 api.get('/Materials'),
                 api.get('/Assignments'),
-                api.get('/Classes')
+                api.get('/Classes/teacher/my-classes'),
+                api.get('/Grades')
             ]);
             
             const classesMap = (classesRes.data || []).reduce((acc, cls) => {
@@ -83,6 +85,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             })));
 
             setClasses(classesRes.data || []);
+            setGrades(gradesRes.data || []);
             setTemplates(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
                 ...a,
                 id: a.asmId || a.AsmId,
@@ -143,22 +146,25 @@ const TeacherAssignments = ({ isTA = false }) => {
     };
 
     /* --- FILTERS --- */
-    const filteredTemplates = templates.filter(t =>
-        t.title?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredTemplates = templates.filter(t => {
+        const matchesSearch = t.title?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesLevel = !levelFilter || t.gradeId?.toString() === levelFilter || t.GradeId?.toString() === levelFilter;
+        return matchesSearch && matchesLevel;
+    });
 
     const filteredAssignments = assignments.filter(assignment => {
         const matchesSearch = assignment.title?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesClass = !classFilter || assignment.classId?.toString() === classFilter;
         const matchesStatus = !statusFilter || (assignment.endTime && new Date(assignment.endTime) < new Date() ? 'closed' : 'active') === statusFilter;
-        return matchesSearch && matchesClass && matchesStatus;
+        const matchesLevel = !levelFilter || assignment.gradeId?.toString() === levelFilter || assignment.GradeId?.toString() === levelFilter;
+        return matchesSearch && matchesClass && matchesStatus && matchesLevel;
     });
 
     const filteredMaterials = materials
         .filter(m => {
             const matchesSearch = m.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));
-            const matchesLevel = !levelFilter || m.targetLevel === levelFilter;
+            const matchesLevel = !levelFilter || m.gradeId?.toString() === levelFilter || m.GradeId?.toString() === levelFilter;
             return matchesSearch && matchesLevel;
         });
 
@@ -312,7 +318,14 @@ const TeacherAssignments = ({ isTA = false }) => {
                             />
                         </div>
 
-                        {activeTab === 'assignments' ? (
+                        <select className="filter-select" value={levelFilter} onChange={e => setLevelFilter(e.target.value)}>
+                            <option value="">Tất cả khối lớp</option>
+                            {grades.map(g => (
+                                <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                            ))}
+                        </select>
+
+                        {activeTab === 'assignments' && (
                             <>
                                 <select className="filter-select" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
                                     <option value="">Tất cả các lớp</option>
@@ -322,20 +335,8 @@ const TeacherAssignments = ({ isTA = false }) => {
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="active">Đang mở</option>
                                     <option value="closed">Đã đóng</option>
-                                    <option value="draft">Bản nháp</option>
                                 </select>
                             </>
-                        ) : (
-                            <select className="filter-select" value={levelFilter} onChange={e => setLevelFilter(e.target.value)}>
-                                <option value="">Tất cả khối lớp</option>
-                                <option value="Lớp 6">Lớp 6</option>
-                                <option value="Lớp 7">Lớp 7</option>
-                                <option value="Lớp 8">Lớp 8</option>
-                                <option value="Lớp 9">Lớp 9</option>
-                                <option value="Lớp 10">Lớp 10</option>
-                                <option value="Lớp 11">Lớp 11</option>
-                                <option value="Lớp 12">Lớp 12</option>
-                            </select>
                         )}
                     </div>
 
@@ -562,7 +563,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 <CreateAssignmentModal
                     isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)}
                     onSave={handleSaveAssignment} initialData={editingAssignment} classes={classes}
-                    isTemplate={activeTab === 'templates'}
+                    isTemplate={activeTab === 'templates'} grades={grades}
                 />
             )}
 
@@ -594,7 +595,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             {isUploadMaterialOpen && (
                 <UploadMaterialModal
                     isOpen={isUploadMaterialOpen} onClose={() => setIsUploadMaterialOpen(false)}
-                    onUpload={handleUploadMaterial}
+                    onUpload={handleUploadMaterial} grades={grades}
                 />
             )}
 
@@ -618,6 +619,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                     onClose={() => setEditMaterialData(null)}
                     onUpdate={fetchData}
                     materialData={editMaterialData}
+                    grades={grades}
                 />
             )}
         </div>

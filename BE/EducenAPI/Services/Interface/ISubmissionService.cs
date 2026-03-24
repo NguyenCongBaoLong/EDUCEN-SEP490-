@@ -5,11 +5,11 @@ namespace EducenAPI.Services.Interface
 {
     public interface ISubmissionService
     {
-        Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request);
-        Task<SubmissionResponseDto> UpdateSubmissionAsync(int subId, UpdateSubmissionRequest request);
-        Task<SubmissionResponseDto> GradeSubmissionAsync(int subId, GradeSubmissionRequest request);
-        Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished);
-        Task<SubmissionResponseDto> ResetSubmissionAsync(int subId);
-        Task<SubmissionResponseDto?> GetByIdAsync(int subId);
+        Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request, string baseUrl);
+        Task<SubmissionResponseDto> UpdateSubmissionAsync(int subId, UpdateSubmissionRequest request, string baseUrl);
+        Task<SubmissionResponseDto> GradeSubmissionAsync(int subId, GradeSubmissionRequest request, string baseUrl);
+        Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished, string baseUrl);
+        Task<SubmissionResponseDto> ResetSubmissionAsync(int subId, string baseUrl);
+        Task<SubmissionResponseDto?> GetByIdAsync(int subId, string baseUrl);
     }
 }

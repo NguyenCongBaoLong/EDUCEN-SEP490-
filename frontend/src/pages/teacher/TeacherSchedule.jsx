@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import AttendanceModal from '../../components/AttendanceModal';
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
@@ -32,10 +33,12 @@ const TeacherSchedule = ({ isTA = false }) => {
     // Sử dụng shared schedule context
     const { scheduledClasses } = useSchedule();
 
-    // Lọc lịch dạy của giáo viên hiện tại (Trong thực tế sẽ lấy từ Auth context / API)
-    // Ở đây mock là lấy các lớp của "Thầy Minh"
-    const teacherName = "Thầy Nguyễn Minh";
-    const filteredClasses = scheduledClasses.filter(c => c.teacher === teacherName || !c.teacher);
+    // Lấy thông tin giáo viên từ localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const teacherName = user.fullName || "Giáo viên";
+    
+    // Nếu fetch từ /Schedules/teacher/me thì đã được lọc từ BE rồi
+    const filteredClasses = scheduledClasses;
 
     // Get week dates (Monday to Sunday)
     const getWeekDates = () => {
@@ -117,9 +120,11 @@ const TeacherSchedule = ({ isTA = false }) => {
     ];
 
     const handleCardClick = (classItem) => {
-        // Chuyển hướng đến chi tiết lớp (giả sử ID lớp nằm trong code hoặc có id riêng)
-        // Trong mockup TeacherClasses, id là 101, 102. Ở đây ta mock tạm id 101.
-        navigate(isTA ? `/ta/classes/101` : `/teacher/classes/101`);
+        if (classItem.classId) {
+            navigate(isTA ? `/ta/classes/${classItem.classId}` : `/teacher/classes/${classItem.classId}`);
+        } else {
+            toast.error("Không tìm thấy thông tin lớp học");
+        }
     };
 
     const handleQuickAttendance = (e, classItem, date) => {
@@ -288,9 +293,24 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                                 )}
                                                             </div>
                                                             <div className="ts-class-name">{classItem.name}</div>
-                                                            <div className="ts-class-time">
-                                                                <Clock size={10} />
-                                                                {classItem.startTime} - {classItem.endTime}
+                                                            <div className="ts-class-time" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <Clock size={10} />
+                                                                    {classItem.startTime} - {classItem.endTime}
+                                                                </span>
+                                                                <span style={{ 
+                                                                    display: 'flex', 
+                                                                    alignItems: 'center', 
+                                                                    gap: '4px', 
+                                                                    background: 'rgba(255, 255, 255, 0.25)', 
+                                                                    padding: '2px 6px', 
+                                                                    borderRadius: '4px',
+                                                                    fontWeight: 700,
+                                                                    fontSize: '0.65rem'
+                                                                }}>
+                                                                    <MapPin size={10} />
+                                                                    {classItem.roomName || 'N/A'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     ))

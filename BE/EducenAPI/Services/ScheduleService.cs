@@ -344,6 +344,7 @@ namespace EducenAPI.Services
                 ClassName = s.Class?.ClassName ?? "",
                 SubjectId = s.Class?.SubjectId ?? 0,
                 SubjectName = s.Class?.Subject?.SubjectName ?? "",
+                TeacherName = s.Class?.Teacher?.TeacherNavigation?.FullName,
                 DayOfWeek = s.DayOfWeek,
                 DayName = GetDayName(s.DayOfWeek),
                 StartTime = s.StartTime.ToTimeSpan(),

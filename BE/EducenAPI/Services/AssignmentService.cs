@@ -19,7 +19,7 @@ namespace EducenAPI.Services
             _userContextService = userContextService;
         }
 
-        public async Task<Assignment> CreateAssignmentAsync(CreateAssignmentDto dto)
+        public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
             string? fileUrl = null;
             var userId = _userContextService.GetUserId();
@@ -77,7 +77,8 @@ namespace EducenAPI.Services
                 FileUrl = fileUrl,
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
-                UserId = userId,                
+                UserId = userId,
+                GradeId = dto.GradeId,
             };
 
             _context.Assignments.Add(assignment);
@@ -85,34 +86,51 @@ namespace EducenAPI.Services
             // Nếu lưu vào kho và có session, tạo thêm 1 bản copy cho kho (SessionId = null)
             if (dto.SaveToLibrary && dto.SessionId.HasValue)
             {
-                var libNames = await _context.Assignments
-                    .Where(a => a.SessionId == null && !string.IsNullOrEmpty(a.FileUrl))
-                    .Select(a => a.FileUrl)
-                    .ToListAsync();
-                string newName = dto.File?.FileName ?? dto.Title ?? "";
-                bool existsInLib = libNames.Any(url => GetOriginalFileNameFromUrl(url) == newName);
+                var existsInLib = await _context.Assignments
+                    .AnyAsync(a => a.SessionId == null && a.UserId == userId 
+                              && a.Title == assignment.Title && a.FileUrl == assignment.FileUrl);
+                
                 if (!existsInLib)
                 {
                     var libraryAssignment = new Assignment
                     {
                         SessionId = null,
-                        Title = dto.Title,
-                        Description = dto.Description,
-                        FileUrl = fileUrl,
-                        StartTime = dto.StartTime,
-                        EndTime = dto.EndTime,
+                        Title = assignment.Title,
+                        Description = assignment.Description,
+                        FileUrl = assignment.FileUrl,
+                        StartTime = assignment.StartTime,
+                        EndTime = assignment.EndTime,
                         UserId = userId,
+                        GradeId = assignment.GradeId,
                     };
                     _context.Assignments.Add(libraryAssignment);
                 }
             }
 
             await _context.SaveChangesAsync();
-
-            return assignment;
+            return MapToResponseDto(assignment, baseUrl);
         }
 
-        public async Task<Assignment> UpdateAssignmentAsync(int id, CreateAssignmentDto dto)
+        private AssignmentResponseDto MapToResponseDto(Assignment assignment, string baseUrl)
+        {
+            return new AssignmentResponseDto
+            {
+                AsmId = assignment.AsmId,
+                SessionId = assignment.SessionId,
+                GradeId = assignment.GradeId,
+                Title = assignment.Title ?? "",
+                Description = assignment.Description,
+                StartTime = assignment.StartTime,
+                EndTime = assignment.EndTime,
+                FileUrl = !string.IsNullOrEmpty(assignment.FileUrl)
+                    ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                    : null,
+                FileSize = GetFileSizeFromUrl(assignment.FileUrl),
+                OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl)
+            };
+        }
+
+        public async Task<AssignmentResponseDto> UpdateAssignmentAsync(int id, CreateAssignmentDto dto, string baseUrl)
         {
             var assignment = await _context.Assignments.FindAsync(id);
             if (assignment == null)
@@ -162,13 +180,40 @@ namespace EducenAPI.Services
             assignment.StartTime = dto.StartTime;
             assignment.EndTime = dto.EndTime;
             assignment.FileUrl = fileUrl;
+            assignment.GradeId = dto.GradeId;
+
+            // Nếu lưu vào kho và có session, tạo thêm 1 bản copy cho kho (SessionId = null)
+            if (dto.SaveToLibrary && assignment.SessionId.HasValue)
+            {
+                var userId = _userContextService.GetUserId();
+                var existsInLib = await _context.Assignments
+                    .AnyAsync(a => a.SessionId == null && a.UserId == userId 
+                              && a.Title == assignment.Title && a.FileUrl == assignment.FileUrl);
+                
+                if (!existsInLib)
+                {
+                    var libraryAssignment = new Assignment
+                    {
+                        SessionId = null,
+                        Title = assignment.Title,
+                        Description = assignment.Description,
+                        FileUrl = assignment.FileUrl,
+                        StartTime = assignment.StartTime,
+                        EndTime = assignment.EndTime,
+                        UserId = userId,
+                        GradeId = assignment.GradeId,
+                    };
+                    _context.Assignments.Add(libraryAssignment);
+                }
+            }
 
             await _context.SaveChangesAsync();
-            return assignment;
+            return MapToResponseDto(assignment, baseUrl);
         }
         public async Task<List<AssignmentResponseDto>> GetAssignmentsBySessionAsync(int sessionId, string baseUrl)
         {
             var rawAssignments = await _context.Assignments
+                .Include(a => a.Session)
                 .Where(a => a.SessionId == sessionId)
                 .ToListAsync();
 
@@ -176,6 +221,8 @@ namespace EducenAPI.Services
                 {
                     AsmId = a.AsmId,
                     SessionId = a.SessionId,
+                    ClassId = a.Session?.ClassId,
+                    GradeId = a.GradeId,
                     Title = a.Title,
                     Description = a.Description,
                     StartTime = a.StartTime,
@@ -192,24 +239,16 @@ namespace EducenAPI.Services
         }
         public async Task<List<AssignmentResponseDto>> GetAllAssignmentsAsync(string baseUrl)
         {
+            var userId = _userContextService.GetUserId();
             var rawAssignments = await _context.Assignments
-                .Where(a => a.SessionId == null) 
+                .Include(a => a.Session)
+                .Where(a => a.UserId == userId) 
                 .ToListAsync();
 
-            var assignments = rawAssignments.Select(a => new AssignmentResponseDto
-                {
-                    AsmId = a.AsmId,
-                    SessionId = a.SessionId,
-                    Title = a.Title,
-                    Description = a.Description,
-                    StartTime = a.StartTime,
-                    EndTime = a.EndTime,
-                    FileUrl = !string.IsNullOrEmpty(a.FileUrl)
-                        ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                        : null,
-                    FileSize = GetFileSizeFromUrl(a.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl)
-                })
+            var assignments = rawAssignments
+                .GroupBy(x => new { x.Title, x.FileUrl })
+                .Select(g => g.First())
+                .Select(x => MapToResponseDto(x, baseUrl))
                 .ToList();
 
             return assignments;
@@ -220,6 +259,7 @@ namespace EducenAPI.Services
             var source = await _context.Assignments.FindAsync(assignmentId);
             if (source == null) throw new Exception("Source assignment not found");
 
+            var userId = _userContextService.GetUserId();
             string sourceOriginalName = GetOriginalFileNameFromUrl(source.FileUrl);
 
             // Check duplicate by filename only
@@ -249,7 +289,9 @@ namespace EducenAPI.Services
                 Description = source.Description,
                 FileUrl = source.FileUrl,
                 StartTime = DateTime.Now,
-                EndTime = endTime ?? DateTime.Now.AddDays(7)
+                EndTime = endTime ?? DateTime.Now.AddDays(7),
+                UserId = userId,
+                GradeId = source.GradeId
             };
 
             _context.Assignments.Add(assignment);
@@ -323,6 +365,7 @@ namespace EducenAPI.Services
                 {
                     AsmId = assignment.AsmId,
                     SessionId = assignment.SessionId,
+                    GradeId = assignment.GradeId,
                     Title = assignment.Title ?? "",
                     Description = assignment.Description,
                     StartTime = assignment.StartTime,
@@ -373,7 +416,7 @@ namespace EducenAPI.Services
             var userId = _userContextService.GetUserId();
             var assignments = _context.Assignments
                 .Where(e => e.SessionId != null && e.UserId != null && e.UserId == userId);
-            if(string.IsNullOrEmpty(type))
+            if(!string.IsNullOrEmpty(type))
             {
                 var now = DateTime.Now;
                 if(type == "open")
@@ -383,10 +426,6 @@ namespace EducenAPI.Services
                 else if(type == "expired")
                 {
                     assignments = assignments.Where(e => e.EndTime < now);
-                }
-                else if(type == "draft")
-                {
-                    assignments = assignments.Where(e => e.SessionId == 0);
                 }
             }
             return await assignments.ToListAsync();

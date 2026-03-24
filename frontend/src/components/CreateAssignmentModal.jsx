@@ -3,11 +3,12 @@ import { X, Calendar, FileText, Link as LinkIcon, AlertCircle } from 'lucide-rea
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData, classes, isTemplate = false, currentClassId }) => {
+const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData, classes, isTemplate = false, currentClassId, grades = [] }) => {
     const [formData, setFormData] = useState({
         title: '',
         dueDate: '',
         classId: currentClassId || '',
+        gradeId: '',
         description: '',
         status: 'active',
         file: null
@@ -34,6 +35,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                 title: initialData.title || '',
                 dueDate: formatForDateTimeLocal(initialData.endTime),
                 classId: initialData.classId || currentClassId || '',
+                gradeId: initialData.gradeId || initialData.GradeId || '',
                 description: initialData.description || '',
                 status: initialData.status || 'active',
                 file: (initialData.fileUrl || (initialData.file && initialData.file.name)) ? { name: initialData.originalFileName || (initialData.file && initialData.file.name) || 'Tệp hiện tại', isExisting: true } : null
@@ -95,6 +97,9 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
             if (formData.classId) {
                 data.append('ClassId', formData.classId);
             }
+            if (formData.gradeId) {
+                data.append('GradeId', formData.gradeId);
+            }
 
             data.append('Title', formData.title);
             data.append('Description', formData.description || '');
@@ -141,26 +146,41 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                         {errors.title && <span className="error-text">{errors.title}</span>}
                     </div>
 
-                    {/* Hàng 2: Lớp học & Hạn nộp */}
+                    {/* Hàng 2: Khối lớp & Hạn nộp */}
+                    <div className="cam-form-row">
+                        <div className="cam-form-group">
+                            <label>Khối lớp <span className="req">*</span></label>
+                            <select
+                                value={formData.gradeId}
+                                onChange={(e) => setFormData({ ...formData, gradeId: e.target.value })}
+                            >
+                                <option value="">-- Chọn khối lớp --</option>
+                                {grades.map(g => (
+                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {(!isTemplate && !currentClassId) && (
+                            <div className="cam-form-group">
+                                <label>Chọn Lớp <span className="req">*</span></label>
+                                <select
+                                    value={formData.classId}
+                                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                                    className={errors.classId ? 'error' : ''}
+                                >
+                                    <option value="">-- Chọn một lớp --</option>
+                                    {classes.map(cls => (
+                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                                    ))}
+                                </select>
+                                {errors.classId && <span className="error-text">{errors.classId}</span>}
+                            </div>
+                        )}
+                    </div>
+
                     {!isTemplate && (
                         <div className="cam-form-row">
-                            {(!currentClassId || isTemplate) && (
-                                <div className="cam-form-group">
-                                    <label>Chọn Lớp <span className="req">*</span></label>
-                                    <select
-                                        value={formData.classId}
-                                        onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
-                                        className={errors.classId ? 'error' : ''}
-                                    >
-                                        <option value="">-- Chọn một lớp --</option>
-                                        {classes.map(cls => (
-                                            <option key={cls.classId} value={cls.classId}>{cls.className}</option>
-                                        ))}
-                                    </select>
-                                    {errors.classId && <span className="error-text">{errors.classId}</span>}
-                                </div>
-                            )}
-
                             <div className="cam-form-group">
                                 <label>Hạn nộp bài</label>
                                 <div className="cam-input-icon">
