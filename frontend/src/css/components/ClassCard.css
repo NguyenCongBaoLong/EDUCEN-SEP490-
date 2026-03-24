@@ -24,6 +24,12 @@
     margin-bottom: 0.75rem;
 }
 
+.class-badges {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
 .class-subject-badge {
     display: inline-block;
     padding: 0.375rem 0.875rem;
@@ -57,6 +63,19 @@
 .class-subject-badge.gray {
     background: #F3F4F6;
     color: #4B5563;
+}
+
+.class-grade-badge {
+    display: inline-block;
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FCD34D;
 }
 
 .class-card-actions {

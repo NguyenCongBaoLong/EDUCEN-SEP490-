@@ -474,6 +474,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("Status")
+                        .HasColumnType("bit");
+
                     b.HasKey("RoomId");
 
                     b.ToTable("Rooms");
@@ -496,12 +499,17 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
+                    b.Property<int?>("RoomId")
+                        .HasColumnType("int");
+
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
 
                     b.HasKey("ScheduleId");
 
                     b.HasIndex("ClassId");
+
+                    b.HasIndex("RoomId");
 
                     b.ToTable("Schedules");
                 });
@@ -863,7 +871,14 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("EducenAPI.Models.Room", "Room")
+                        .WithMany("Schedules")
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Class");
+
+                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Student", b =>
@@ -981,6 +996,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
             modelBuilder.Entity("EducenAPI.Models.Room", b =>
                 {
                     b.Navigation("Classes");
+
+                    b.Navigation("Schedules");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Schedule", b =>

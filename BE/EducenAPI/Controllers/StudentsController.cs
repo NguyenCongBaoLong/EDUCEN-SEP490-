@@ -165,8 +165,8 @@ namespace EducenAPI.Controllers
             if (user == null)
                 return NotFound("User không tồn tại");
 
-            if (user.Student == null || string.IsNullOrEmpty(user.Student.Email))
-                return BadRequest("Student chưa có email");
+            if (string.IsNullOrEmpty(user.Email))
+                return BadRequest("User chưa có email");
 
             // Nếu chưa có username thì tạo mới (ví dụ: stu_ + id)
             if (string.IsNullOrEmpty(user.Username))
@@ -184,7 +184,7 @@ namespace EducenAPI.Controllers
             await _context.SaveChangesAsync();
 
             // gửi mail
-            await _mailService.SendStudentAccount(user.Student.Email, user.Username!, newPassword);
+            await _mailService.SendStudentAccount(user.Email, user.Username!, newPassword);
 
             return Ok("Đã gửi tài khoản thành công");
         }
@@ -223,13 +223,16 @@ namespace EducenAPI.Controllers
                 if (studentRole == null)
                     return BadRequest("Student role not found");
 
+                // Lấy email từ User nếu đã có, hoặc từ Student nếu chưa có User
+                var userEmail = student.StudentNavigation?.Email ?? student.Email;
+                
                 var user = new User
                 {
                     Username = request.Username,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                     RoleId = studentRole.RoleId,
                     FullName = request.FullName ?? "",
-                    Email = student.Email,  // Dùng email từ student
+                    Email = userEmail,
                     PhoneNumber = request.PhoneNumber,
                     AccountStatus = "Active",
                     IsAccountSent = true
@@ -243,7 +246,7 @@ namespace EducenAPI.Controllers
                 await _context.SaveChangesAsync();
 
                 // Send account email
-                await _mailService.SendStudentAccount(student.Email, request.Username, request.Password);
+                await _mailService.SendStudentAccount(userEmail ?? "", request.Username, request.Password);
 
                 return Ok(new { message = "Account created and sent successfully" });
             }

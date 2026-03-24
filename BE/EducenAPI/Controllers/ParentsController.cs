@@ -19,6 +19,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Parents
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetParents()
         {
             var parents = await _parentService.GetAllParentsAsync();
@@ -27,6 +28,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Parents/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetParent(int id)
         {
             var parent = await _parentService.GetParentByIdAsync(id);
@@ -39,6 +41,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Parents
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateParent(CreateParentDto dto)
         {
             try
@@ -54,6 +57,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Parents/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateParent(int id, UpdateParentDto dto)
         {
             try
@@ -72,6 +76,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Parents/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteParent(int id)
         {
             try

@@ -81,5 +81,9 @@ namespace EducenAPI.DTOs.Schedules
         public string? Notes { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        
+        // Room information
+        public int? RoomId { get; set; }
+        public string? RoomName { get; set; }
     }
 }

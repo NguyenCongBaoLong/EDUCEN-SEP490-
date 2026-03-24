@@ -20,7 +20,7 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<ParentDto>> GetAllParentsAsync()
         {
-            return await _context.Parents
+            var parents = await _context.Parents
                 .Include(p => p.ParentNavigation)
                 .Include(p => p.Students)
                     .ThenInclude(s => s.Classes)
@@ -41,11 +41,13 @@ namespace EducenAPI.Services
                     CreatedAt = DateTime.Now
                 })
                 .ToListAsync();
+
+            return parents;
         }
 
         public async Task<ParentDto?> GetParentByIdAsync(int id)
         {
-            return await _context.Parents
+            var parent = await _context.Parents
                 .Include(p => p.ParentNavigation)
                 .Include(p => p.Students)
                     .ThenInclude(s => s.Classes)
@@ -67,6 +69,8 @@ namespace EducenAPI.Services
                     CreatedAt = DateTime.Now
                 })
                 .FirstOrDefaultAsync();
+
+            return parent;
         }
 
         public async Task<ParentDto> CreateParentAsync(CreateParentDto dto)
@@ -189,34 +193,36 @@ namespace EducenAPI.Services
 
                 if (!string.IsNullOrWhiteSpace(dto.PhoneNumber))
                     existingParent.ParentNavigation.PhoneNumber = dto.PhoneNumber;
-            }
 
-            if (dto.Address != null)
-            {
-                if (existingParent.ParentNavigation != null)
+                if (dto.Address != null)
                 {
-                    existingParent.ParentNavigation.Address = dto.Address;
+                    if (existingParent.ParentNavigation != null)
+                    {
+                        existingParent.ParentNavigation.Address = dto.Address;
+                    }
                 }
-            }
 
-            // Update Linked Students
-            if (dto.StudentIds != null)
-            {
-                // Load existing links
-                await _context.Entry(existingParent).Collection(p => p.Students).LoadAsync();
-                
-                existingParent.Students.Clear();
-                var students = await _context.Students
-                    .Where(s => dto.StudentIds.Contains(s.UserId))
-                    .ToListAsync();
-                foreach (var student in students)
+                // Update Linked Students
+                if (dto.StudentIds != null)
                 {
-                    existingParent.Students.Add(student);
+                    // Load existing links
+                    await _context.Entry(existingParent).Collection(p => p.Students).LoadAsync();
+
+                    existingParent.Students.Clear();
+                    var students = await _context.Students
+                        .Where(s => dto.StudentIds.Contains(s.UserId))
+                        .ToListAsync();
+                    foreach (var student in students)
+                    {
+                        existingParent.Students.Add(student);
+                    }
                 }
+
+                await _context.SaveChangesAsync();
+                return true;
             }
 
-            await _context.SaveChangesAsync();
-            return true;
+            return false;
         }
 
         public async Task<bool> DeleteParentAsync(int id)

@@ -50,6 +50,7 @@ export const ScheduleProvider = ({ children }) => {
                     endDate: parseLocalDate(s.endDate),
                     startTime: s.startTime.substring(0, 5),
                     endTime: s.endTime.substring(0, 5),
+                    roomName: s.roomName,
                     color: color,
                     status: s.status
                 };

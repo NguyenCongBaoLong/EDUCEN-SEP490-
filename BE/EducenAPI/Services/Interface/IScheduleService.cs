@@ -10,5 +10,9 @@ namespace EducenAPI.Services.Interface
         Task<ScheduleDto> CreateScheduleAsync(CreateScheduleDto dto);
         Task<bool> UpdateScheduleAsync(int id, UpdateScheduleDto dto);
         Task<bool> DeleteScheduleAsync(int id);
+        
+        // Personal schedule methods
+        Task<IEnumerable<TeacherScheduleDto>> GetTeacherScheduleAsync(int userId);
+        Task<IEnumerable<StudentScheduleDto>> GetStudentScheduleAsync(int userId);
     }
 }

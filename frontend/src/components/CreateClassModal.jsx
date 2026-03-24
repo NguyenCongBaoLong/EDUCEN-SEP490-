@@ -1,15 +1,22 @@
 import { useState, useEffect } from 'react';
-import { X, UserCheck, Plus, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { X, UserCheck, Plus, Trash2, Calendar, Search } from 'lucide-react';
 import PropTypes from 'prop-types';
 import TeacherAssignModal from './TeacherAssignModal';
+import RoomAssignModal from './RoomAssignModal';
 import '../css/components/CreateClassModal.css';
 
-const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingClasses = [], subjects = [], teachersList = [], assistantsList = [] }) => {
+const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingClasses = [], subjects = [], teachersList = [], assistantsList = [], roomsList = [], gradesList = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         subject: '',
         mainTeacher: '',
+        mainTeacherId: null,
         assistant: '',
+        assistantId: null,
+        room: '',
+        roomId: null,
+        gradeId: null,
         description: '',
         syllabusContent: '',
         scheduleSlots: [{ day: '', startTime: '', endTime: '' }], // Array of time slots
@@ -20,6 +27,9 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
     const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
     const [teacherType, setTeacherType] = useState('main'); // 'main' or 'assistant'
+
+    const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
+    const [activeSlotIndex, setActiveSlotIndex] = useState(null);
 
     useEffect(() => {
         console.log('CreateClassModal: editingClass changed:', editingClass);
@@ -75,7 +85,12 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 name: editingClass.name || '',
                 subject: editingClass.subject || '',
                 mainTeacher: editingClass.mainTeacher?.name || '',
+                mainTeacherId: editingClass.mainTeacher?.id || null,
                 assistant: editingClass.assistant?.name || '',
+                assistantId: editingClass.assistant?.id || null,
+                room: editingClass.roomName || '',
+                roomId: editingClass.roomId || null,
+                gradeId: editingClass.gradeId || null,
                 description: editingClass.description || '',
                 syllabusContent: editingClass.syllabusContent || '',
                 scheduleSlots,
@@ -88,10 +103,14 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 name: '',
                 subject: '',
                 mainTeacher: '',
+                mainTeacherId: null,
                 assistant: '',
+                assistantId: null,
+                roomId: null,
+                gradeId: null,
                 description: '',
                 syllabusContent: '',
-                scheduleSlots: [{ day: '', startTime: '', endTime: '' }],
+                scheduleSlots: [{ day: '', startTime: '', endTime: '', roomId: null }],
                 startDate: '',
                 endDate: '',
                 status: 'active'
@@ -114,9 +133,21 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
     const handleSelectTeacher = (teacher) => {
         if (teacherType === 'main') {
-            setFormData(prev => ({ ...prev, mainTeacher: teacher.name }));
+            setFormData(prev => ({ ...prev, mainTeacher: teacher.name, mainTeacherId: teacher.id }));
         } else {
-            setFormData(prev => ({ ...prev, assistant: teacher.name }));
+            setFormData(prev => ({ ...prev, assistant: teacher.name, assistantId: teacher.id }));
+        }
+    };
+
+    const handleOpenRoomModal = (index) => {
+        setActiveSlotIndex(index);
+        setIsRoomModalOpen(true);
+    };
+
+    const handleSelectRoom = (room) => {
+        if (activeSlotIndex !== null) {
+            handleSlotChange(activeSlotIndex, 'roomId', room.roomId);
+            handleSlotChange(activeSlotIndex, 'roomName', room.roomName);
         }
     };
 
@@ -124,14 +155,14 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
     const handleAddSlot = () => {
         setFormData(prev => ({
             ...prev,
-            scheduleSlots: [...prev.scheduleSlots, { day: '', startTime: '', endTime: '' }]
+            scheduleSlots: [...prev.scheduleSlots, { day: '', startTime: '', endTime: '', roomId: null, roomName: '' }]
         }));
     };
 
     const handleRemoveSlot = (index) => {
         // Prevent removing if only one slot
         if (formData.scheduleSlots.length <= 1) {
-            alert('⚠️ Phải có ít nhất 1 buổi học!');
+            toast.error('⚠️ Phải có ít nhất 1 buổi học!');
             return;
         }
         setFormData(prev => ({
@@ -158,7 +189,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         );
 
         if (invalidSlots.length > 0) {
-            alert('❌ Vui lòng điền đầy đủ thông tin cho tất cả các buổi học!');
+            toast.error('❌ Vui lòng điền đầy đủ thông tin cho tất cả các buổi học!');
             return;
         }
 
@@ -173,7 +204,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         );
 
         if (duplicateSlots) {
-            alert('❌ Có buổi học bị trùng lặp! Vui lòng kiểm tra lại lịch học.');
+            toast.error('❌ Có buổi học bị trùng lặp! Vui lòng kiểm tra lại lịch học.');
             return;
         }
 
@@ -200,7 +231,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 // Only check slots on the same day
                 if (slot1.day === slot2.day) {
                     if (hasTimeOverlap(slot1.startTime, slot1.endTime, slot2.startTime, slot2.endTime)) {
-                        alert(`❌ Phát hiện xung đột lịch học!\n\nCả 2 buổi học đều vào ${slot1.day}:\n• Buổi 1: ${slot1.startTime} - ${slot1.endTime}\n• Buổi 2: ${slot2.startTime} - ${slot2.endTime}\n\nCác buổi học trùng thời gian! Vui lòng điều chỉnh lại.`);
+                        toast.error(`❌ Phát hiện xung đột lịch học!\n\nCả 2 buổi học đều vào ${slot1.day}:\n• Buổi 1: ${slot1.startTime} - ${slot1.endTime}\n• Buổi 2: ${slot2.startTime} - ${slot2.endTime}`);
                         return;
                     }
                 }
@@ -215,8 +246,16 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         });
 
         if (invalidTimes) {
-            alert('❌ Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc!');
+            toast.error('❌ Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc!');
             return;
+        }
+
+        // Validation: Check start date < end date
+        if (formData.startDate && formData.endDate) {
+            if (new Date(formData.startDate) > new Date(formData.endDate)) {
+                toast.error('❌ Ngày bắt đầu không thể sau ngày kết thúc!');
+                return;
+            }
         }
 
         // Format schedule for display (backward compatibility)
@@ -263,10 +302,12 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             scheduleSlots: formData.scheduleSlots, // New format
             currentStudents: editingClass?.currentStudents || 0,
             mainTeacher: {
+                id: formData.mainTeacherId,
                 name: formData.mainTeacher,
                 initials: formData.mainTeacher.split(' ').map(n => n[0]).join('').toUpperCase()
             },
             assistant: formData.assistant ? {
+                id: formData.assistantId,
                 name: formData.assistant,
                 initials: formData.assistant.split(' ').map(n => n[0]).join('').toUpperCase()
             } : null,
@@ -438,20 +479,55 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                 }
                             </select>
                         </div>
+
+                        <div className="form-group">
+                            <label>Khối lớp</label>
+                            <select
+                                name="gradeId"
+                                value={formData.gradeId || ''}
+                                onChange={(e) => {
+                                    const id = e.target.value ? parseInt(e.target.value) : null;
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        gradeId: id
+                                    }));
+                                }}
+                            >
+                                <option value="">Chọn khối lớp</option>
+                                {gradesList.map(g => (
+                                    <option key={g.gradeId} value={g.gradeId}>
+                                        {g.gradeName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <div className="form-row">
                         <div className="form-group">
                             <label>Giáo viên chính *</label>
-                            <div className="input-with-button">
+                            <div className="input-with-button" style={{ display: 'flex', gap: '8px' }}>
                                 <input
                                     type="text"
                                     name="mainTeacher"
                                     value={formData.mainTeacher}
                                     onChange={handleChange}
-                                    placeholder="Họ tên giáo viên"
+                                    placeholder="Chọn giáo viên từ danh sách"
                                     required
+                                    readOnly
+                                    style={{ cursor: 'pointer', backgroundColor: '#f8fafc' }}
+                                    onClick={() => handleOpenTeacherModal('main')}
                                 />
+                                {formData.mainTeacher && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, mainTeacher: '', mainTeacherId: null }))}
+                                        title="Hủy phân công giáo viên"
+                                        style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', padding: '0 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     className="btn-check-teacher"
@@ -465,19 +541,32 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
                         <div className="form-group">
                             <label>Trợ giảng</label>
-                            <div className="input-with-button">
+                            <div className="input-with-button" style={{ display: 'flex', gap: '8px' }}>
                                 <input
                                     type="text"
                                     name="assistant"
                                     value={formData.assistant}
                                     onChange={handleChange}
-                                    placeholder="Tùy chọn"
+                                    placeholder="Tùy chọn trợ giảng"
+                                    readOnly
+                                    style={{ cursor: 'pointer', backgroundColor: '#f8fafc' }}
+                                    onClick={() => handleOpenTeacherModal('assistant')}
                                 />
+                                {formData.assistant && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, assistant: '', assistantId: null }))}
+                                        title="Hủy phân công trợ giảng"
+                                        style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', padding: '0 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                )}
                                 <button
                                     type="button"
                                     className="btn-check-teacher"
                                     onClick={() => handleOpenTeacherModal('assistant')}
-                                    title="Kiểm tra lịch giáo viên"
+                                    title="Kiểm tra lịch trợ giảng"
                                 >
                                     <UserCheck size={18} />
                                 </button>
@@ -563,6 +652,37 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                         />
                                     </div>
 
+                                    <div className="slot-field">
+                                        <label>Phòng học</label>
+                                        <div className="input-with-button">
+                                            <select
+                                                value={slot.roomId || ''}
+                                                onChange={(e) => {
+                                                    const id = e.target.value ? parseInt(e.target.value) : null;
+                                                    const room = roomsList.find(r => r.roomId === id);
+                                                    handleSlotChange(index, 'roomId', id);
+                                                    handleSlotChange(index, 'roomName', room ? room.roomName : '');
+                                                }}
+                                                required
+                                            >
+                                                <option value="">Chọn phòng</option>
+                                                {roomsList.map(r => (
+                                                    <option key={r.roomId} value={r.roomId}>
+                                                        {r.roomName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                className="btn-check-room"
+                                                onClick={() => handleOpenRoomModal(index)}
+                                                title="Kiểm tra lịch phòng"
+                                            >
+                                                <Calendar size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <button
                                         type="button"
                                         className="btn-remove-slot"
@@ -618,6 +738,9 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                         >
                             <option value="active">Đang hoạt động</option>
                             <option value="inactive">Tạm dừng</option>
+                            {formData.status === 'completed' && (
+                                <option value="completed">Đã hoàn thành (Tự động)</option>
+                            )}
                         </select>
                     </div>
 
@@ -636,10 +759,18 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 isOpen={isTeacherModalOpen}
                 onClose={() => setIsTeacherModalOpen(false)}
                 onSelectTeacher={handleSelectTeacher}
-                classSchedule={formatScheduleForDisplay(formData.scheduleSlots)}
+                classSlots={formData.scheduleSlots}
                 teachers={teacherType === 'main' ? teachersList : assistantsList}
             />
-        </div >
+
+            <RoomAssignModal
+                isOpen={isRoomModalOpen}
+                onClose={() => setIsRoomModalOpen(false)}
+                onSelectRoom={handleSelectRoom}
+                slotInfo={activeSlotIndex !== null ? formData.scheduleSlots[activeSlotIndex] : null}
+                rooms={roomsList}
+            />
+        </div>
     );
 };
 
@@ -651,7 +782,9 @@ CreateClassModal.propTypes = {
     existingClasses: PropTypes.array,
     subjects: PropTypes.array,
     teachersList: PropTypes.array,
-    assistantsList: PropTypes.array
+    assistantsList: PropTypes.array,
+    roomsList: PropTypes.array,
+    gradesList: PropTypes.array
 };
 
 export default CreateClassModal;

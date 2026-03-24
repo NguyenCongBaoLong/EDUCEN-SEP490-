@@ -13,7 +13,7 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [step, setStep] = useState('upload'); // 'upload' | 'result'
     const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState(null); // { total, success, failed, errors, defaultPasswordNote }
+    const [result, setResult] = useState(null); // { total, success, failed, skipped, successRecords, errors, defaultPasswordNote }
     const fileInputRef = useRef(null);
 
     const resetState = () => {
@@ -62,18 +62,21 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
             });
 
             const data = res.data;
-            setResult({
+            const newResult = {
                 total: data.importResults?.total ?? 0,
                 success: data.importResults?.success ?? 0,
                 failed: data.importResults?.failed ?? 0,
+                skipped: data.importResults?.skipped ?? 0,
+                successRecords: data.importResults?.successRecords ?? [],
                 errors: data.importResults?.errors ?? [],
                 defaultPasswordNote: data.defaultPasswordNote || ''
-            });
+            };
+            setResult(newResult);
             setStep('result');
 
             // Notify parent to refresh list
             if (data.importResults?.success > 0) {
-                onImport();
+                onImport(data.importResults);
             }
         } catch (err) {
             let msg = err.response?.data?.message || 'Import thất bại, vui lòng thử lại.';
@@ -200,6 +203,12 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                                     <span className="stat-label">Thất bại</span>
                                 </div>
                             )}
+                            {result.skipped > 0 && (
+                                <div className="stat-card skipped">
+                                    <span className="stat-num">{result.skipped}</span>
+                                    <span className="stat-label">Đã tồn tại</span>
+                                </div>
+                            )}
                         </div>
 
                         {result.defaultPasswordNote && (
@@ -219,36 +228,70 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                             </div>
                         )}
 
-                        {result.errors.length > 0 && (
+                        {/* Combined Success + Error Results - WITHOUT summary message */}
+                        {(result.success > 0 || result.failed > 0) && (
                             <div style={{ marginTop: 8 }}>
-                                <h4 style={{ fontSize: '0.875rem', color: '#dc2626', marginBottom: 8 }}>
-                                    Chi tiết lỗi:
+                                <h4 style={{ fontSize: '0.875rem', color: '#1f2937', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <CheckCircle size={14} style={{ color: '#16a34a' }} />
+                                    Kết quả Import
                                 </h4>
-                                <div className="preview-table-wrapper" style={{ maxHeight: 200 }}>
-                                    {result.errors.map((err, i) => (
-                                        <div key={i} style={{
-                                            padding: '6px 10px',
+                                <div className="preview-table-wrapper" style={{ maxHeight: 350, overflowY: 'auto' }}>
+                                    {/* Success rows - show details for each */}
+                                    {result.successRecords && result.successRecords.length > 0 && (
+                                        <>
+                                            {result.successRecords.map((record, i) => (
+                                                <div key={`success-${i}`} style={{
+                                                    padding: '10px 12px',
+                                                    background: '#dcfce7',
+                                                    borderRadius: 6,
+                                                    fontSize: '0.8rem',
+                                                    color: '#166534',
+                                                    marginBottom: 6,
+                                                    borderLeft: '3px solid #16a34a'
+                                                }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                                        <CheckCircle size={13} style={{ color: '#16a34a' }} />
+                                                        <strong>✓ Thành công: {record.sheetName} - Row {record.rowNumber}</strong>
+                                                    </div>
+                                                    <div style={{ paddingLeft: 20, fontSize: '0.75rem', color: '#166534' }}>
+                                                        Username: <strong>{record.username || '(trống)'}</strong> | 
+                                                        FullName: <strong>{record.fullName}</strong> | 
+                                                        Email: <strong>{record.email}</strong>
+                                                        {record.phoneNumber && <> | Phone: <strong>{record.phoneNumber}</strong></>}
+                                                        {record.grade && <> | Grade: <strong>{record.grade}</strong></>}
+                                                        {record.dateOfBirth && <> | DOB: <strong>{record.dateOfBirth}</strong></>}
+                                                        {record.gender && <> | Gender: <strong>{record.gender}</strong></>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </>
+                                    )}
+                                    
+                                    {/* Error rows */}
+                                    {result.errors && result.errors.map((err, i) => (
+                                        <div key={`error-${i}`} style={{
+                                            padding: '10px 12px',
                                             background: '#fef2f2',
                                             borderRadius: 6,
                                             fontSize: '0.8rem',
                                             color: '#dc2626',
-                                            marginBottom: 4,
+                                            marginBottom: 6,
                                             display: 'flex',
                                             gap: 8,
-                                            alignItems: 'flex-start'
+                                            alignItems: 'flex-start',
+                                            borderLeft: '3px solid #dc2626'
                                         }}>
-                                            <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 2 }} />
-                                            {err}
+                                            <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 2, color: '#dc2626' }} />
+                                            <span>{err}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {result.success === result.total && result.total > 0 && (
-                            <div style={{ textAlign: 'center', padding: '1rem', color: '#16a34a' }}>
-                                <CheckCircle size={36} style={{ margin: '0 auto 8px', display: 'block' }} />
-                                <p style={{ fontWeight: 700 }}>Import hoàn tất thành công!</p>
+                        {result.skipped > 0 && result.failed === 0 && result.success === 0 && (
+                            <div style={{ textAlign: 'center', padding: '1rem', color: '#f59e0b' }}>
+                                <p style={{ fontWeight: 700 }}>Không có học sinh mới: {result.skipped} đã tồn tại trong hệ thống</p>
                             </div>
                         )}
                     </div>
