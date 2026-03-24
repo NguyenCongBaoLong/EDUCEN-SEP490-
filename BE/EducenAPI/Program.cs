@@ -164,6 +164,8 @@ builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IGradeService, GradeService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+// builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); // Enrollment feature
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -228,8 +230,10 @@ if (app.Environment.IsDevelopment())
 }
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
-app.UseMiddleware<SystemApiKeyMiddleware>();
+// IMPORTANT: TenantResolver MUST run BEFORE SystemApiKeyMiddleware
+// because we need tenant context to be set first
 app.UseMiddleware<TenantResolver>();
+app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseRouting();
 app.UseStaticFiles();
 app.UseAuthentication();
