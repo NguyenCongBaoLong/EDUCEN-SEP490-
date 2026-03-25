@@ -37,6 +37,7 @@ namespace EducenAPI.Middleware
                 NotFoundException => HttpStatusCode.NotFound,
                 BadRequestException => HttpStatusCode.BadRequest,
                 UnauthorizedException => HttpStatusCode.Unauthorized,
+                ConflictException => HttpStatusCode.Conflict,
                 ArgumentException => HttpStatusCode.BadRequest,
                 _ => HttpStatusCode.InternalServerError
             };

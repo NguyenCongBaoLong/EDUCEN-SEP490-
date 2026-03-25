@@ -18,8 +18,8 @@ namespace EducenAPI.Controllers
         [HttpPost("save")]
         public async Task<IActionResult> SaveMaterial([FromForm] SaveMaterialDto dto)
         {
-            var result = await _lessonMaterialService.SaveMaterials(dto);
-            return Ok(result);
+            var result = await _lessonMaterialService.SaveMaterials(dto);         
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [HttpPut("{id:int}")]
@@ -34,7 +34,7 @@ namespace EducenAPI.Controllers
         public async Task<IActionResult> UploadMaterial([FromForm] UploadMaterialDto dto)
         {
             var result = await _lessonMaterialService.UploadMaterials(dto);
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
         [HttpGet]
         public async Task<IActionResult> GetMaterials()

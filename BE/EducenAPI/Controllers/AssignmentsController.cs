@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Assignments;
+﻿using EducenAPI.DTOs.Assignments;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +22,9 @@ namespace EducenAPI.Controllers
         public async Task<IActionResult> CreateAssignment([FromForm] CreateAssignmentDto dto)
         {
             var result = await _assignmentService.CreateAssignmentAsync(dto);
-            return Ok(result);
+
+            // Thay thế Ok(result) bằng StatusCode 201
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [HttpPut("{id:int}")]
