@@ -8,11 +8,13 @@ import '../../css/pages/sysadmin/SystemAdminDashboard.css';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const SystemAdminDashboard = () => {
-    const [overview, setOverview] = useState(null);
-    const [revenue, setRevenue] = useState(null);
-    const [tenantsByPlan, setTenantsByPlan] = useState([]);
-    const [topCenters, setTopCenters] = useState([]);
-    const [expiringSubs, setExpiringSubs] = useState([]);
+    const [dashboardData, setDashboardData] = useState({
+    overview: null,
+    revenue: null,
+    tenantsByPlan: [],
+    topCenters: [],
+    expiringSubscriptions: [] 
+});
     const [loading, setLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -41,6 +43,14 @@ const SystemAdminDashboard = () => {
         };
         fetchData();
     }, []);
+
+    const { 
+        overview, 
+        revenue, 
+        tenantsByPlan, 
+        topCenters, 
+        expiringSubscriptions: expiringSubs 
+    } = dashboardData;
 
     const kpis = [
         { label: 'Tổng Trung Tâm', value: loading ? '...' : overview?.totalTenants || 0, icon: Building2, color: 'blue', sub: 'Đang quản lý' },

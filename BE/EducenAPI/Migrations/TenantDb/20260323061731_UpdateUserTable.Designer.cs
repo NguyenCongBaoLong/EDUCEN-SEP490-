@@ -4,16 +4,19 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace EducenAPI.Persistence.Migrations.TenantDb
+namespace EducenAPI.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260323061731_UpdateUserTable")]
+    partial class UpdateUserTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -54,9 +57,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("GradeId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("SessionId")
                         .HasColumnType("int");
 
@@ -70,8 +70,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasColumnType("int");
 
                     b.HasKey("AsmId");
-
-                    b.HasIndex("GradeId");
 
                     b.HasIndex("SessionId");
 
@@ -394,9 +392,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("GradeId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("SessionId")
                         .HasColumnType("int");
 
@@ -407,8 +402,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasColumnType("int");
 
                     b.HasKey("MaterialId");
-
-                    b.HasIndex("GradeId");
 
                     b.HasIndex("SessionId");
 
@@ -484,9 +477,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("Status")
-                        .HasColumnType("bit");
-
                     b.HasKey("RoomId");
 
                     b.ToTable("Rooms");
@@ -509,17 +499,12 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<int?>("RoomId")
-                        .HasColumnType("int");
-
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
 
                     b.HasKey("ScheduleId");
 
                     b.HasIndex("ClassId");
-
-                    b.HasIndex("RoomId");
 
                     b.ToTable("Schedules");
                 });
@@ -707,10 +692,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.Assignment", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Grade", "Grade")
-                        .WithMany()
-                        .HasForeignKey("GradeId");
-
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("Assignments")
                         .HasForeignKey("SessionId")
@@ -720,8 +701,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Grade");
 
                     b.Navigation("Session");
 
@@ -853,10 +832,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
             modelBuilder.Entity("EducenAPI.Models.LessonMaterial", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Grade", "Grade")
-                        .WithMany()
-                        .HasForeignKey("GradeId");
-
                     b.HasOne("EducenAPI.Models.ClassSession", "Session")
                         .WithMany("LessonMaterials")
                         .HasForeignKey("SessionId")
@@ -866,8 +841,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Grade");
 
                     b.Navigation("Session");
 
@@ -893,14 +866,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EducenAPI.Models.Room", "Room")
-                        .WithMany("Schedules")
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Class");
-
-                    b.Navigation("Room");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Student", b =>
@@ -1018,8 +984,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
             modelBuilder.Entity("EducenAPI.Models.Room", b =>
                 {
                     b.Navigation("Classes");
-
-                    b.Navigation("Schedules");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Schedule", b =>
