@@ -36,4 +36,6 @@ public partial class User
     public virtual Student? Student { get; set; }
 
     public virtual Teacher? Teacher { get; set; }
+    public virtual ICollection<SupportRequest> SentRequests { get; set; } = new List<SupportRequest>();
+
 }
