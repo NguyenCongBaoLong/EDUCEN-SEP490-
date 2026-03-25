@@ -34,6 +34,7 @@ const StudentManagement = () => {
 
     const [studentList, setStudentList] = useState([]);
     const [parentList, setParentList] = useState([]);
+    const [gradeList, setGradeList] = useState([]);
 
     useEffect(() => {
         fetchData();
@@ -43,6 +44,7 @@ const StudentManagement = () => {
         setIsLoading(true);
         try {
             const parents = await fetchParents();
+            await fetchGrades();
             await fetchStudents(parents);
         } finally {
             setIsLoading(false);
@@ -63,6 +65,15 @@ const StudentManagement = () => {
         } catch (error) {
             console.error("Fetch parents error:", error);
             return [];
+        }
+    };
+
+    const fetchGrades = async () => {
+        try {
+            const res = await api.get('/Grades');
+            setGradeList(res.data);
+        } catch (error) {
+            console.error("Fetch grades error:", error);
         }
     };
 
@@ -489,6 +500,7 @@ const StudentManagement = () => {
                         onSendAccount={handleSendAccount}
                         selectedIds={selectedStudentIds}
                         setSelectedIds={setSelectedStudentIds}
+                        gradeList={gradeList}
                     />
                 ) : (
                     <EnrollmentRequestsTable
@@ -513,6 +525,7 @@ const StudentManagement = () => {
                 editingStudent={editingStudent}
                 existingStudents={studentList}
                 parentList={parentList}
+                gradeList={gradeList}
             />
 
             {/* Student Detail Modal */}

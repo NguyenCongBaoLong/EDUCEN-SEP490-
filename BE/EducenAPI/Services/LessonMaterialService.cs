@@ -42,7 +42,7 @@ namespace EducenAPI.Services
                 
                 // Always check library for duplicate OriginalFileName
                 var existingLibraryNames = await _context.LessonMaterials
-                    .Where(m => m.SessionId == null && !string.IsNullOrEmpty(m.FileUrl))
+                    .Where(m => m.SessionId == null && m.UserId == userId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
                 bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
@@ -204,8 +204,9 @@ namespace EducenAPI.Services
             }
             else
             {
+                var userId = _userServiceContext.GetUserId();
                 var existingNames = await _context.LessonMaterials
-                    .Where(m => m.SessionId == null && m.MaterialId != dto.MaterialId && !string.IsNullOrEmpty(m.FileUrl))
+                    .Where(m => m.SessionId == null && m.UserId == userId && m.MaterialId != dto.MaterialId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
                 bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);

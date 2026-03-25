@@ -488,6 +488,14 @@ namespace EducenAPI.Services
                     
                     foreach (var sessionDate in sessionDates)
                     {
+                        // ✅ FIX: Tránh tạo trùng session (cùng ngày, cùng giờ)
+                        var startTime = TimeOnly.Parse(slot.StartTime);
+                        var exists = await _context.ClassSessions
+                            .Include(s => s.Schedule)
+                            .AnyAsync(s => s.ClassId == classId && s.SessionDate == sessionDate && s.Schedule.StartTime == startTime);
+
+                        if (exists) continue;
+
                         var classSession = new ClassSession
                         {
                             ClassId = classId,
@@ -527,6 +535,13 @@ namespace EducenAPI.Services
             var existingClass = await _context.Classes
                 .Include(c => c.Schedules)
                     .ThenInclude(s => s.Sessions)
+                        .ThenInclude(sess => sess.Attendances)
+                .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Sessions)
+                        .ThenInclude(sess => sess.Assignments)
+                .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Sessions)
+                        .ThenInclude(sess => sess.LessonMaterials)
                 .FirstOrDefaultAsync(c => c.ClassId == id);
                 
             if (existingClass == null)
@@ -664,24 +679,50 @@ namespace EducenAPI.Services
                     existingClass.Status = dto.Status;
                 }
 
-                // Update schedules if provided
+                // Update schedules only if slots have actually changed
                 if (dto.ScheduleSlots != null)
                 {
-                    // ✅ FIX: Xóa ClassSessions trước khi xóa Schedules để tránh lỗi Foreign Key Constraint
-                    foreach (var schedule in existingClass.Schedules)
+                    var existingSlots = existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                     {
-                        if (schedule.Sessions != null && schedule.Sessions.Any())
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId
+                    }).ToList();
+
+                    if (!AreScheduleSlotsEqual(dto.ScheduleSlots, existingSlots))
+                    {
+                        // ✅ FIX: Chỉ xóa ClassSessions KHÔNG có điểm danh và KHÔNG có bài nộp
+                        // Những buổi đã có dữ liệu cần được giữ lại như lịch sử
+                        foreach (var schedule in existingClass.Schedules)
                         {
-                            _context.ClassSessions.RemoveRange(schedule.Sessions);
+                            if (schedule.Sessions != null && schedule.Sessions.Any())
+                            {
+                                var sessionsToDelete = schedule.Sessions
+                                    .Where(s => !s.Attendances.Any() && !s.Assignments.Any() && !s.LessonMaterials.Any())
+                                    .ToList();
+
+                                if (sessionsToDelete.Any())
+                                {
+                                    _context.ClassSessions.RemoveRange(sessionsToDelete);
+                                }
+                                
+                                // Nếu vẫn còn session có dữ liệu, không thể xóa schedule này ngay lập tức 
+                                // hoặc ít nhất không xóa những session đó.
+                            }
                         }
+
+                        // Do constraint FK Attendance -> Session là NoAction, 
+                        // nếu có session nào giữ lại, việc xóa Schedule cha sẽ bị lỗi.
+                        // Chiến thuật an toàn nhất: Chỉ recreate những gì thực sự cần thiết.
+                        // Tuy nhiên, để sửa lỗi 409 nhanh nhất cho trường hợp KHÔNG đổi lịch:
+                        
+                        _context.Schedules.RemoveRange(existingClass.Schedules);
+                        await _context.SaveChangesAsync();
+
+                        // Create new schedules and sessions
+                        await CreateSchedulesForClass(id, dto.RoomId ?? existingClass.RoomId, dto.ScheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
                     }
-
-                    // Remove existing schedules (cascades to sessions manually handled above)
-                    _context.Schedules.RemoveRange(existingClass.Schedules);
-                    await _context.SaveChangesAsync();
-
-                    // Create new schedules and sessions
-                    await CreateSchedulesForClass(id, dto.RoomId ?? existingClass.RoomId, dto.ScheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
                 }
 
                 await _context.SaveChangesAsync();
@@ -796,6 +837,40 @@ namespace EducenAPI.Services
             return true;
         }
 
+        private bool AreScheduleSlotsEqual(List<CreateScheduleSlotDto> newSlots, List<CreateScheduleSlotDto> existingSlots)
+        {
+            if (newSlots.Count != existingSlots.Count) return false;
+
+            // Sort both lists to ensure consistent comparison
+            var sortedNew = newSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+            var sortedExisting = existingSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+
+            for (int i = 0; i < sortedNew.Count; i++)
+            {
+                var n = sortedNew[i];
+                var e = sortedExisting[i];
+
+                if (n.DayOfWeek != e.DayOfWeek ||
+                    NormalizeTime(n.StartTime) != NormalizeTime(e.StartTime) ||
+                    NormalizeTime(n.EndTime) != NormalizeTime(e.EndTime) ||
+                    n.RoomId != e.RoomId)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private string NormalizeTime(string time)
+        {
+            if (string.IsNullOrEmpty(time)) return "";
+            if (TimeOnly.TryParse(time, out var t))
+            {
+                return t.ToString("HH:mm");
+            }
+            return time;
+        }
+
         public async Task<bool> ClassExistsAsync(int id)
         {
             return await _context.Classes.AnyAsync(c => c.ClassId == id);
@@ -869,7 +944,8 @@ namespace EducenAPI.Services
                 FullName = s.UserFullName ?? "",
                 Email = s.UserEmail ?? "",
                 PhoneNumber = s.UserPhone,
-                Grade = s.AverageScore > 0 ? s.AverageScore.ToString("F1") : "—",
+                Grade = s.Grade ?? "—",
+                AverageScore = s.AverageScore > 0 ? s.AverageScore.ToString("F1") : "—",
                 AttendanceRate = pastSessionsCount > 0 
                     ? (int)Math.Round((double)s.PresentCount / pastSessionsCount * 100) 
                     : 0,

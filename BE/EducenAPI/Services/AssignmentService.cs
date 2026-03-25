@@ -42,7 +42,7 @@ namespace EducenAPI.Services
                 
                 // Always check library for duplicate OriginalFileName
                 var existingLibraryNames = await _context.Assignments
-                    .Where(a => a.SessionId == null && !string.IsNullOrEmpty(a.FileUrl))
+                    .Where(a => a.SessionId == null && a.UserId == userId && !string.IsNullOrEmpty(a.FileUrl))
                     .Select(a => a.FileUrl)
                     .ToListAsync();
                 bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
@@ -124,7 +124,8 @@ namespace EducenAPI.Services
                     ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                     : null,
                 FileSize = GetFileSizeFromUrl(assignment.FileUrl),
-                OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl)
+                OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl),
+                SubmissionsCount = assignment.Submissions?.Count ?? 0
             };
         }
 
@@ -132,7 +133,9 @@ namespace EducenAPI.Services
         {
             var assignment = await _context.Assignments.FindAsync(id);
             if (assignment == null)
+            {
                 throw new Exception("Assignment not found");
+            }
 
             string? fileUrl = assignment.FileUrl;
 
@@ -154,8 +157,9 @@ namespace EducenAPI.Services
                 else
                 {
                     // It's a template in the library
+                    var userId = _userContextService.GetUserId();
                     var existingNames = await _context.Assignments
-                        .Where(a => a.SessionId == null && a.AsmId != id && !string.IsNullOrEmpty(a.FileUrl))
+                        .Where(a => a.SessionId == null && a.UserId == userId && a.AsmId != id && !string.IsNullOrEmpty(a.FileUrl))
                         .Select(a => a.FileUrl)
                         .ToListAsync();
                     bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
@@ -212,6 +216,7 @@ namespace EducenAPI.Services
         {
             var rawAssignments = await _context.Assignments
                 .Include(a => a.Session)
+                .Include(a => a.Submissions)
                 .Where(a => a.SessionId == sessionId)
                 .ToListAsync();
 
@@ -229,7 +234,8 @@ namespace EducenAPI.Services
                         ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                         : null,
                     FileSize = GetFileSizeFromUrl(a.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl)
+                    OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl),
+                    SubmissionsCount = a.Submissions?.Count ?? 0
                 })
                 .ToList();
 
@@ -240,6 +246,7 @@ namespace EducenAPI.Services
             var userId = _userContextService.GetUserId();
             var rawAssignments = await _context.Assignments
                 .Include(a => a.Session)
+                .Include(a => a.Submissions)
                 .Where(a => a.UserId == userId) 
                 .ToListAsync();
 

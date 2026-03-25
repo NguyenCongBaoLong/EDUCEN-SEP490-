@@ -9,6 +9,27 @@
     left: 0;
     top: 0;
     z-index: 100;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed {
+    width: 80px;
+}
+
+/* Global Content Adjustment */
+body.sidebar-collapsed main,
+body.sidebar-collapsed .grading-main,
+body.sidebar-collapsed .classes-main,
+body.sidebar-collapsed .ts-main,
+body.sidebar-collapsed .cd-main,
+body.sidebar-collapsed .classes-management {
+    margin-left: 80px !important;
+    max-width: calc(100vw - 80px) !important;
+}
+
+/* Transition for all main containers */
+main, .grading-main, .classes-main, .ts-main, .cd-main, .classes-management {
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .sidebar-header {
@@ -24,6 +45,20 @@
     font-weight: 700;
     font-size: 1.25rem;
     margin-bottom: 0.25rem;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-logo span,
+.sidebar.collapsed .sidebar-subtitle {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 0.5rem;
 }
 
 .sidebar-subtitle {
@@ -52,6 +87,17 @@
     font-weight: 500;
     font-size: 0.9375rem;
     transition: all 0.2s;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-nav-item {
+    justify-content: center;
+    padding: 0.875rem 0;
+}
+
+.sidebar.collapsed .sidebar-nav-item span {
+    display: none;
 }
 
 .sidebar-nav-item:hover {
@@ -71,6 +117,16 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    transition: all 0.3s;
+}
+
+.sidebar.collapsed .sidebar-footer {
+    flex-direction: column;
+    padding: 1rem 0.5rem;
+}
+
+.sidebar.collapsed .sidebar-user-info {
+    display: none;
 }
 
 .sidebar-user {
@@ -170,6 +226,32 @@
 .sidebar-back-link:hover {
     background: #f3f4f6;
     color: #3b82f6;
+}
+
+/* Toggle Button */
+.sidebar-toggle {
+    position: absolute;
+    right: -12px;
+    top: 32px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 101;
+    color: #6b7280;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+    color: #3b82f6;
+    border-color: #3b82f6;
+    transform: scale(1.1);
 }
 
 .sidebar-divider {

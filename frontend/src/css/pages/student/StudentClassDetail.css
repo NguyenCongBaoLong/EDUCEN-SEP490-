@@ -326,6 +326,15 @@
     box-shadow: 0 1px 2px rgba(194, 65, 12, 0.05);
 }
 
+.scd-status-chip.late {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.scd-item-card.scd-asm-item-card.late {
+    border-left-color: #f97316;
+}
+
 .att-future-notice {
     display: flex;
     align-items: center;

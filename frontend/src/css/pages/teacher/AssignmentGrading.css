@@ -12,6 +12,11 @@
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grading-main.sidebar-collapsed {
+    margin-left: 80px;
 }
 
 /* Header */
@@ -297,7 +302,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 2rem;
+    padding: 0.875rem 1.5rem;
     background: white;
     border-bottom: 1px solid #e2e8f0;
 }
@@ -309,8 +314,8 @@
 }
 
 .workspace-avatar {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: #3b82f6;
     color: white;
@@ -318,18 +323,18 @@
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
 }
 
 .workspace-student h2 {
-    margin: 0 0 0.25rem 0;
-    font-size: 1.25rem;
+    margin: 0 0 0.125rem 0;
+    font-size: 1.125rem;
     color: #0f172a;
 }
 
 .submission-time {
     color: #64748b;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     margin: 0;
 }
 

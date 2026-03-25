@@ -59,6 +59,14 @@ function formatDateVN(isoDate) {
 // Removed INITIAL_ATTENDANCE to use real data from API
 
 /* ─── Helpers ──────────────────────────────────── */
+
+function formatGrade(grade) {
+    if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
+    let g = String(grade).trim();
+    if (g.endsWith('.0')) g = g.slice(0, -2);
+    if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
+    return g;
+}
 const AttendanceBar = ({ value }) => {
     const color = value >= 90 ? '#16a34a' : value >= 75 ? '#f59e0b' : '#dc2626';
     return (
@@ -123,7 +131,8 @@ const mapMaterial = (m) => ({
     fileUrl: m.fileUrl || m.FileUrl,
     description: m.description || m.Description || '',
     sessionId: m.sessionId || m.SessionId,
-    classId: m.classId || m.ClassId
+    classId: m.classId || m.ClassId,
+    gradeId: m.gradeId || m.GradeId
 });
 
 const mapAssignment = (a) => ({
@@ -134,13 +143,14 @@ const mapAssignment = (a) => ({
     dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
     endTime: a.endTime || a.EndTime,
     startTime: a.startTime || a.StartTime,
-    submissionsCount: 0,
+    submissionsCount: a.submissionsCount || a.SubmissionsCount || 0,
     fileUrl: a.fileUrl || a.FileUrl,
     fileSize: a.fileSize || a.FileSize,
     originalFileName: a.originalFileName || a.OriginalFileName || '',
     fileName: a.originalFileName || a.OriginalFileName || '', // For modal consistency
     sessionId: a.sessionId || a.SessionId,
-    classId: a.classId || a.ClassId
+    classId: a.classId || a.ClassId,
+    gradeId: a.gradeId || a.GradeId
 });
 
 /* ─── Main Component ────────────────────────────── */
@@ -212,6 +222,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     avatar: name.trim().split(' ').map(w => w[0]).slice(-2).join('').toUpperCase(),
                     attendance: st.attendanceRate || 0,
                     grade: st.grade || '—',
+                    averageScore: st.averageScore || '—',
                 };
             });
 
@@ -951,6 +962,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 <thead>
                                     <tr>
                                         <th>HỌ VÀ TÊN</th>
+                                        <th>KHỐI</th>
                                         <th>ĐIỂM TRUNG BÌNH</th>
                                         <th>CHUYÊN CẦN</th>
                                     </tr>
@@ -965,13 +977,25 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                         <div className="cd-student-name">{student.name}</div>
                                                     </div>
                                                 </td>
-                                                <td><GradeBadge grade={student.grade} /></td>
+                                                <td>
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '2px 10px',
+                                                        borderRadius: 12,
+                                                        background: student.grade && student.grade !== '—' ? '#eff6ff' : '#f1f5f9',
+                                                        color: student.grade && student.grade !== '—' ? '#2563eb' : '#94a3b8',
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {formatGrade(student.grade)}
+                                                    </span>
+                                                </td>
+                                                <td><GradeBadge grade={student.averageScore} /></td>
                                                 <td><AttendanceBar value={student.attendance} /></td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan="3" className="text-center py-4 text-gray-500">
+                                            <td colSpan="4" className="text-center py-4 text-gray-500">
                                                 Không tìm thấy học sinh nào phù hợp.
                                             </td>
                                         </tr>

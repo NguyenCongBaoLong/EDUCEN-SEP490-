@@ -46,6 +46,8 @@ const ParentSchedule = () => {
                     endTime: item.endTime.substring(0, 5),
                     color: colorMap[item.classId],
                     room: item.roomName || 'Phòng học',
+                    startDate: item.startDate,
+                    endDate: item.endDate
                 };
             });
             setStudentClasses(mapped);
@@ -134,7 +136,24 @@ const ParentSchedule = () => {
     };
 
     const renderDayColumn = (date, dayIndex, single = false) => {
-        const dayClasses = studentClasses.filter(c => getDayIndex(c.day) === dayIndex);
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+
+        const dayClasses = studentClasses.filter(c => {
+            if (getDayIndex(c.day) !== dayIndex) return false;
+
+            if (c.startDate) {
+                const start = new Date(c.startDate);
+                start.setHours(0, 0, 0, 0);
+                if (compareDate < start) return false;
+            }
+            if (c.endDate) {
+                const end = new Date(c.endDate);
+                end.setHours(0, 0, 0, 0);
+                if (compareDate > end) return false;
+            }
+            return true;
+        });
         const isToday = date.toDateString() === new Date().toDateString();
 
         const groups = [];

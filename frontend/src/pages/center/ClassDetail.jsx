@@ -54,6 +54,14 @@ function formatScheduleRoom(slots) {
     return uniqueRooms.join(' & ');
 }
 
+function formatGrade(grade) {
+    if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
+    let g = String(grade).trim();
+    if (g.endsWith('.0')) g = g.slice(0, -2);
+    if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
+    return g;
+}
+
 const AttendanceBar = ({ value }) => {
     const color = value >= 90 ? '#16a34a' : value >= 75 ? '#f59e0b' : '#dc2626';
     return (
@@ -482,11 +490,11 @@ const ClassDetail = () => {
                                                         fontSize: '0.75rem',
                                                         padding: '2px 10px',
                                                         borderRadius: 12,
-                                                        background: st.grade ? '#eff6ff' : '#f1f5f9',
-                                                        color: st.grade ? '#2563eb' : '#94a3b8',
+                                                        background: st.grade && st.grade !== '—' ? '#eff6ff' : '#f1f5f9',
+                                                        color: st.grade && st.grade !== '—' ? '#2563eb' : '#94a3b8',
                                                         fontWeight: 600
                                                     }}>
-                                                        {st.grade ? `Khối ${st.grade}` : '—'}
+                                                        {formatGrade(st.grade)}
                                                     </span>
                                                 </td>
                                                 <td>

@@ -20,7 +20,8 @@ const StudentTable = ({
     onToggleStatus,
     onSendAccount,
     selectedIds = [],
-    setSelectedIds = () => { }
+    setSelectedIds = () => { },
+    gradeList = []
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, student: null });
@@ -120,13 +121,9 @@ const StudentTable = ({
                     onChange={(e) => setGradeFilter(e.target.value)}
                 >
                     <option value="">Tất cả khối</option>
-                    <option value="6">Khối 6</option>
-                    <option value="7">Khối 7</option>
-                    <option value="8">Khối 8</option>
-                    <option value="9">Khối 9</option>
-                    <option value="10">Khối 10</option>
-                    <option value="11">Khối 11</option>
-                    <option value="12">Khối 12</option>
+                    {gradeList.map(g => (
+                        <option key={g.gradeId} value={g.gradeName}>{g.gradeName}</option>
+                    ))}
                 </select>
 
                 <select
@@ -207,7 +204,15 @@ const StudentTable = ({
                                         </div>
                                     </td>
                                     <td>
-                                        <span className="grade-badge">Khối {student.grade}</span>
+                                        <span className="grade-badge">
+                                            {(() => {
+                                                if (!student.grade || student.grade === '—' || student.grade === 'None' || student.grade === '') return '—';
+                                                let g = String(student.grade).trim();
+                                                if (g.endsWith('.0')) g = g.slice(0, -2);
+                                                if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
+                                                return g;
+                                            })()}
+                                        </span>
                                     </td>
                                     <td>
                                         <div className="parent-info">
@@ -427,7 +432,8 @@ StudentTable.propTypes = {
     onView: PropTypes.func.isRequired,
     onEdit: PropTypes.func.isRequired,
     onToggleStatus: PropTypes.func.isRequired,
-    onSendAccount: PropTypes.func
+    onSendAccount: PropTypes.func,
+    gradeList: PropTypes.array
 };
 
 export default StudentTable;

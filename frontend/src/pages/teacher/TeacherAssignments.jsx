@@ -86,6 +86,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 id: a.asmId || a.AsmId,
                 asmId: a.asmId || a.AsmId,
                 title: a.title || a.Title,
+                startTime: a.startTime || a.StartTime,
                 endTime: a.endTime || a.EndTime,
                 fileUrl: a.fileUrl || a.FileUrl,
                 className: classesMap[a.classId || a.ClassId] || 'Chưa gán',
@@ -215,7 +216,11 @@ const TeacherAssignments = ({ isTA = false }) => {
             }
             fetchData();
         } catch (error) {
-            console.error("Error saving assignment:", error);
+            console.error("Error saving assignment detail:", error.response?.data);
+            const validationErrors = error.response?.data?.errors;
+            if (validationErrors) {
+                console.table(validationErrors);
+            }
             toast.error(error.response?.data?.message || "Không thể lưu bài tập");
         }
         setIsAssignmentModalOpen(false);
@@ -566,6 +571,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                                             <Clock size={12} /> Hạn: {assignment.endTime ? new Date(assignment.endTime).toLocaleDateString('vi-VN') : 'Không giới hạn'}
                                                         </span>
                                                         <span>{assignment.fileName}</span>
+                                                        <span>• {assignment.submissionsCount || 0} bài nộp</span>
                                                     </div>
                                                 </div>
                                                 <div className="ta-actions-inline" onClick={e => e.stopPropagation()}>

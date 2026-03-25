@@ -12,6 +12,8 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
         description: '',
         status: 'active',
         file: null,
+        sessionId: sessionId || '',
+        startTime: '',
         saveToLibrary: true
     });
 
@@ -39,6 +41,9 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                 gradeId: initialData.gradeId || initialData.GradeId || '',
                 description: initialData.description || '',
                 status: initialData.status || 'active',
+                saveToLibrary: initialData.saveToLibrary ?? true,
+                sessionId: initialData.sessionId || initialData.SessionId || sessionId || '',
+                startTime: initialData.startTime || initialData.StartTime || '',
                 file: (initialData.fileUrl || (initialData.file && initialData.file.name)) ? { name: initialData.originalFileName || (initialData.file && initialData.file.name) || 'Tệp hiện tại', isExisting: true } : null
             });
         } else if (currentClassId) {
@@ -92,8 +97,8 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
             setIsSubmitting(true);
             const data = new FormData();
 
-            if (sessionId) {
-                data.append('SessionId', sessionId);
+            if (formData.sessionId) {
+                data.append('SessionId', formData.sessionId);
             }
             if (formData.classId) {
                 data.append('ClassId', formData.classId);
@@ -106,13 +111,18 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
             data.append('Description', formData.description || '');
 
             if (formData.dueDate) {
-                data.append('EndTime', new Date(formData.dueDate).toISOString());
+                // Send as local datetime string to avoid UTC shift unless server handles it
+                data.append('EndTime', formData.dueDate);
             }
             // Always set StartTime to now for new assignments
             if (!initialData) {
-                data.append('StartTime', new Date().toISOString());
-            } else if (initialData.startTime) {
-                data.append('StartTime', new Date(initialData.startTime).toISOString());
+                // For new, we can use ISO but a local-compatible format is better for consistency
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localISOTime = new Date(now - offset).toISOString().slice(0, 19);
+                data.append('StartTime', localISOTime);
+            } else if (formData.startTime) {
+                data.append('StartTime', formData.startTime);
             }
             if (formData.file && !formData.file.isExisting) {
                 data.append('File', formData.file);

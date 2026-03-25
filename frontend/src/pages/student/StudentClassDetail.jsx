@@ -13,9 +13,18 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
 /* ─── Helpers ─── */
-const formatDate = (dateStr) => {
+const formatDate = (dateStr, includeTime = false) => {
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
+    if (includeTime) {
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
     return date.toLocaleDateString('vi-VN');
 };
 
@@ -32,6 +41,14 @@ const getAssignmentStatus = (assignment) => {
     const sub = assignment.currentSubmission;
     if (sub) {
         if (sub.isPublished || sub.score != null) return 'graded';
+        
+        // Dynamic check against latest dueDate
+        if (assignment.dueDate && sub.submittedAt) {
+            const submittedAt = new Date(sub.submittedAt);
+            const dueDate = new Date(assignment.dueDate);
+            if (submittedAt > dueDate) return 'late';
+        }
+        
         return 'submitted';
     }
     const due = new Date(assignment.dueDate);
@@ -42,6 +59,7 @@ const getAssignmentStatus = (assignment) => {
 const statusConfig = {
     graded: { label: 'Đã chấm', cls: 'graded', icon: <Star size={14} /> },
     submitted: { label: 'Đã nộp', cls: 'submitted', icon: <CheckCircle size={14} /> },
+    late: { label: 'Nộp muộn', cls: 'late', icon: <ClockIcon size={14} /> },
     pending: { label: 'Chưa nộp', cls: 'pending', icon: <ClockIcon size={14} /> },
     overdue: { label: 'Quá hạn', cls: 'overdue', icon: <AlertCircle size={14} /> },
 };
@@ -266,7 +284,7 @@ const StudentClassDetail = () => {
                     </div>
                     <h4 className="scd-item-card-title">{asm.title}</h4>
                     <div className="scd-item-card-meta">
-                        <ClockIcon size={12} /><span>Hạn: {formatDate(asm.dueDate)}</span>
+                        <ClockIcon size={12} /><span>Hạn: {formatDate(asm.dueDate, true)}</span>
                     </div>
                 </div>
                 <div className="scd-item-card-action"><Eye size={15} /></div>
@@ -615,7 +633,7 @@ const StudentClassDetail = () => {
                                     </span>
                                     <h2>{asm.title}</h2>
                                     <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '4px' }}>
-                                        <ClockIcon size={13} style={{ verticalAlign: 'middle' }} /> Hạn nộp: {formatDate(asm.dueDate)}
+                                        <ClockIcon size={13} style={{ verticalAlign: 'middle' }} /> Hạn nộp: {formatDate(asm.dueDate, true)}
                                     </p>
                                 </div>
                                 <button className="scd-modal-close" onClick={() => setSelectedAssignment(null)}><X size={20} /></button>
@@ -648,7 +666,7 @@ const StudentClassDetail = () => {
                                                             <Paperclip size={14} /><span>Xem bài làm</span>
                                                         </div>
                                                     </td>
-                                                    <td className="scd-sub-date">{formatDate(sub.submittedAt)}</td>
+                                                    <td className="scd-sub-date">{formatDate(sub.submittedAt, true)}</td>
                                                     <td style={{ textAlign: 'center' }}>
                                                         {sub.isPublished && sub.score != null
                                                             ? <span className={`scd-score ${sub.score >= 8 ? 'high' : sub.score >= 6.5 ? 'mid' : 'low'}`}>{sub.score}/10</span>
@@ -667,7 +685,7 @@ const StudentClassDetail = () => {
                             </div>
                             <div className="scd-modal-footer">
                                 <button className="scd-btn-cancel" onClick={() => setSelectedAssignment(null)}>Đóng</button>
-                                {status === 'graded' && (
+                                {status === 'graded' && !sub.isPublished && (
                                     <div className="scd-grading-msg">
                                         <AlertCircle size={14} /> 
                                         Giáo viên đang trong quá trình chấm bài, bạn không thể nộp lại lúc này.
@@ -683,7 +701,7 @@ const StudentClassDetail = () => {
                                         }}
                                     >
                                         <Upload size={16} /> 
-                                        {status === 'overdue' ? 'Nộp bài trễ' : (status === 'submitted' ? 'Nộp lại bài' : 'Nộp bài ngay')}
+                                        {status === 'overdue' ? 'Nộp bài trễ' : (status === 'submitted' || status === 'late' ? 'Nộp lại bài' : 'Nộp bài ngay')}
                                     </button>
                                 )}
                             </div>

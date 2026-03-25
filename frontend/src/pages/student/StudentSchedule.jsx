@@ -11,6 +11,8 @@ import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
 const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4'];
+
 const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
     '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
@@ -34,16 +36,25 @@ const StudentSchedule = () => {
             ]);
 
             // Map schedule data
-            const mapped = scheduleRes.data.map(item => ({
-                id: item.classId,
-                code: item.subjectName || 'N/A',
-                name: item.className,
-                day: item.dayOfWeek,
-                startTime: item.startTime.substring(0, 5),
-                endTime: item.endTime.substring(0, 5),
-                color: item.color || '#3b82f6',
-                room: item.roomName || 'Phòng học'
-            }));
+            const colorMap = {};
+            let ci = 0;
+            const mapped = scheduleRes.data.map(item => {
+                if (!colorMap[item.classId]) {
+                    colorMap[item.classId] = COLORS[ci++ % COLORS.length];
+                }
+                return {
+                    id: item.classId,
+                    code: item.subjectName || 'N/A',
+                    name: item.className,
+                    day: item.dayOfWeek,
+                    startTime: item.startTime.substring(0, 5),
+                    endTime: item.endTime.substring(0, 5),
+                    color: colorMap[item.classId],
+                    room: item.roomName || 'Phòng học',
+                    startDate: item.startDate,
+                    endDate: item.endDate
+                };
+            });
             setStudentClasses(mapped);
             setAttendanceRecords(attendanceRes.data);
         } catch (error) {
@@ -164,7 +175,24 @@ const StudentSchedule = () => {
     };
 
     const renderDayColumn = (date, dayIndex, single = false) => {
-        const dayClasses = studentClasses.filter(c => getDayIndex(c.day) === dayIndex);
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+
+        const dayClasses = studentClasses.filter(c => {
+            if (getDayIndex(c.day) !== dayIndex) return false;
+
+            if (c.startDate) {
+                const start = new Date(c.startDate);
+                start.setHours(0, 0, 0, 0);
+                if (compareDate < start) return false;
+            }
+            if (c.endDate) {
+                const end = new Date(c.endDate);
+                end.setHours(0, 0, 0, 0);
+                if (compareDate > end) return false;
+            }
+            return true;
+        });
         const isToday = date.toDateString() === new Date().toDateString();
 
         // Group overlapping
@@ -229,7 +257,24 @@ const StudentSchedule = () => {
 
     const renderMonthDayClasses = (date) => {
         const idx = date.getDay() === 0 ? 6 : date.getDay() - 1;
-        const dayClasses = studentClasses.filter(c => getDayIndex(c.day) === idx);
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+
+        const dayClasses = studentClasses.filter(c => {
+            if (getDayIndex(c.day) !== idx) return false;
+
+            if (c.startDate) {
+                const start = new Date(c.startDate);
+                start.setHours(0, 0, 0, 0);
+                if (compareDate < start) return false;
+            }
+            if (c.endDate) {
+                const end = new Date(c.endDate);
+                end.setHours(0, 0, 0, 0);
+                if (compareDate > end) return false;
+            }
+            return true;
+        });
         
         return dayClasses.map((c, i) => {
             const status = getAttendanceStatus(c, date);

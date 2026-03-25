@@ -31,6 +31,9 @@ const AssignmentGrading = ({ isTA = false }) => {
     const [showResetModal, setShowResetModal] = useState(false);
     const [gradeError, setGradeError] = useState('');
     const [isDirty, setIsDirty] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        return localStorage.getItem('teacher-sidebar-collapsed') === 'true';
+    });
 
     const fetchGradingData = useCallback(async () => {
         try {
@@ -193,26 +196,28 @@ const AssignmentGrading = ({ isTA = false }) => {
     };
 
     const getStatusInfo = (student) => {
-        const status = student.submission?.status || 'Chưa nộp';
+        const sub = student.submission;
+        if (!sub) return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
         
-        switch (status) {
-            case 'Published':
-            case 'Công bố':
-                return { text: 'Đã công bố', class: 'status-published', icon: <CheckCircle size={14} /> };
-            case 'Graded':
-            case 'Đã chấm':
-                return { text: 'Đã chấm', class: 'status-graded', icon: <CheckCircle size={14} />, isGraded: true };
-            case 'Đã nộp':
-            case 'Submitted':
-                return { text: 'Đã nộp', class: 'status-submitted', icon: <CheckCircle size={14} /> };
-            case 'Nộp muộn':
-            case 'LateSubmitted':
-                return { text: 'Nộp trễ', class: 'status-late', icon: <Clock size={14} /> };
-            case 'Chưa nộp':
-            case 'NotSubmitted':
-            default:
-                return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
+        const status = sub.status || 'Submitted';
+        
+        if (status === 'Published' || status === 'Công bố') {
+            return { text: 'Đã công bố', class: 'status-published', icon: <CheckCircle size={14} /> };
         }
+        if (status === 'Graded' || status === 'Đã chấm') {
+            return { text: 'Đã chấm', class: 'status-graded', icon: <CheckCircle size={14} />, isGraded: true };
+        }
+
+        // Dynamic check for late submission
+        if (assignmentInfo?.endTime && sub.submittedAt) {
+            const submittedAt = new Date(sub.submittedAt);
+            const dueDate = new Date(assignmentInfo.endTime);
+            if (submittedAt > dueDate) {
+                return { text: 'Nộp trễ', class: 'status-late', icon: <Clock size={14} /> };
+            }
+        }
+        
+        return { text: 'Đã nộp', class: 'status-submitted', icon: <CheckCircle size={14} /> };
     };
 
     const formatDate = (dateString) => {
@@ -251,10 +256,10 @@ const AssignmentGrading = ({ isTA = false }) => {
     }
 
     return (
-        <div className="assignment-grading-page">
-            <TeacherSidebar isTA={isTA} />
+        <div className={`assignment-grading-page ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            <TeacherSidebar isTA={isTA} onCollapseChange={setIsSidebarCollapsed} />
 
-            <main className="grading-main">
+            <main className={`grading-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 {/* Header (Top Bar) */}
                 <header className="grading-header">
                     <div className="grading-header-left">

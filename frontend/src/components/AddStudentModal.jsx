@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import '../css/components/CreateClassModal.css';
 import '../css/components/AddParentModal.css';
 
-const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingStudents = [], parentList = [] }) => {
+const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingStudents = [], parentList = [], gradeList = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         avatar: null,
@@ -245,8 +245,8 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                                 className={errors.grade ? 'input-error' : ''}
                             >
                                 <option value="">Chọn khối</option>
-                                {[6, 7, 8, 9, 10, 11, 12].map(g => (
-                                    <option key={g} value={g}>Khối {g}</option>
+                                {gradeList.map(g => (
+                                    <option key={g.gradeId} value={g.gradeName}>{g.gradeName}</option>
                                 ))}
                             </select>
                             {errors.grade && <span className="error-message">{errors.grade}</span>}
@@ -380,7 +380,8 @@ AddStudentModal.propTypes = {
     onSubmit: PropTypes.func.isRequired,
     editingStudent: PropTypes.object,
     existingStudents: PropTypes.array,
-    parentList: PropTypes.array
+    parentList: PropTypes.array,
+    gradeList: PropTypes.array
 };
 
 export default AddStudentModal;
