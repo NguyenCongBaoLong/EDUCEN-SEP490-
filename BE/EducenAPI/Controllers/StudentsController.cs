@@ -171,10 +171,10 @@ namespace EducenAPI.Controllers
             if (string.IsNullOrEmpty(user.Email))
                 return BadRequest("Người dùng chưa có email");
 
-            // Nếu chưa có username thì tạo mới (ví dụ: stu_ + id)
+            // Nếu chưa có username thì tạo từ email (phần đằng trước @)
             if (string.IsNullOrEmpty(user.Username))
             {
-                user.Username = $"stu_{user.UserId}";
+                user.Username = user.Email?.Split('@')[0] ?? $"stu_{user.UserId}";
             }
 
             // tạo password mới
