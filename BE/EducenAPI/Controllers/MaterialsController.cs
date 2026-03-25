@@ -36,7 +36,7 @@ namespace EducenAPI.Controllers
         public async Task<IActionResult> UploadMaterial([FromForm] UploadMaterialDto dto)
         {
             var result = await _lessonMaterialService.UploadMaterials(dto);
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
         [HttpGet]
         public async Task<IActionResult> GetMaterials()

@@ -21,10 +21,40 @@ namespace EducenAPI.Services
 
         public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
+            if (dto.StartTime.HasValue && dto.StartTime.Value < DateTime.Now)
+            {
+                // Có thể cho phép độ trễ vài phút (ví dụ < DateTime.Now.AddMinutes(-5)) nếu cần thiết,
+                // nhưng khắt khe nhất thì dùng < DateTime.Now
+                throw new BadRequestException("Thời gian bắt đầu không được ở trong quá khứ.");
+            }
+            //  Validate StartTime > EndTime
+            if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime > dto.EndTime)
+            {
+                throw new BadRequestException("Thời gian bắt đầu không được lớn hơn thời gian kết thúc.");
+            }
+
+            //  Validate SessionId có tồn tại trong database hay không
+            if (dto.SessionId.HasValue)
+            {
+                // Lưu ý: Đổi _context.Sessions thành tên DbSet tương ứng trong DbContext của bạn nếu khác
+                var sessionExists = await _context.ClassSessions.AnyAsync(s => s.SessionId == dto.SessionId.Value);
+                if (!sessionExists)
+                {
+                    throw new BadRequestException("SessionId không tồn tại trong hệ thống.");
+                }
+            }
+
             string? fileUrl = null;
             var userId = _userContextService.GetUserId();
+
             if (dto.File != null)
             {
+                // Validate File = 0MB
+                if (dto.File.Length == 0)
+                {
+                    throw new BadRequestException("File tải lên không được rỗng (0MB).");
+                }
+
                 string originalFileName = dto.File.FileName;
 
                 // Check duplicate by OriginalFileName
@@ -37,7 +67,7 @@ namespace EducenAPI.Services
                         .ToListAsync();
                     bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
                     if (isDuplicate)
-                        throw new BadRequestException("File bài tập này đã tồn tại trong buổi học này.");
+                        throw new ConflictException("File bài tập này đã tồn tại trong buổi học này."); 
                 }
                 
                 // Always check library for duplicate OriginalFileName
@@ -55,17 +85,19 @@ namespace EducenAPI.Services
                 if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
             }
 
-            if(!string.IsNullOrEmpty(dto.Title))
+            if (!string.IsNullOrEmpty(dto.Title))
             {
                 var isUniqueTitle = await _context.Assignments.AnyAsync(e => dto.SessionId != null
-                        && dto.SessionId == e.SessionId 
+                        && dto.SessionId == e.SessionId
                         && e.Title == dto.Title);
-                if (isUniqueTitle) throw new Exception("Title đang bị trùng vui lòng đặt lại");
+                if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại"); // Nên dùng BadRequestException thay vì Exception chung
             }
+
             if (!string.IsNullOrEmpty(dto.FileUrl))
             {
                 fileUrl = dto.FileUrl.Trim();
             }
+
             var assignment = new Assignment
             {
                 SessionId = dto.SessionId,

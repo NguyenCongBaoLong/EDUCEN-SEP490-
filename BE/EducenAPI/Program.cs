@@ -164,6 +164,7 @@ builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<ICenterDashboardService, CenterDashboardService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<IGradeService, GradeService>();
+builder.Services.AddScoped<ICenterHomeService, CenterHomeService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 // builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); // Enrollment feature
