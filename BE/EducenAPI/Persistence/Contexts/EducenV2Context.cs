@@ -46,6 +46,7 @@ public partial class EducenV2Context : DbContext
     public DbSet<ClassSession> ClassSessions { get; set; }
     public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
     public DbSet<SupportRequest> SupportRequests { get; set; }
+    public DbSet<CenterStaff> CenterStaffs { get; set; } = null!;
 
     // ================================
     // MODEL CONFIGURATION
@@ -228,6 +229,12 @@ public partial class EducenV2Context : DbContext
             .HasOne(h => h.CenterProfile)
             .WithMany(c => c.Highlights)
             .HasForeignKey(h => h.CenterProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CenterStaff>()
+            .HasOne(s => s.CenterProfile)
+            .WithMany(c => c.Staffs)
+            .HasForeignKey(s => s.CenterProfileId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Attendance>()

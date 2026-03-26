@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260326131131_RemoveTenantIdFromCenterHome")]
+    partial class RemoveTenantIdFromCenterHome
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -137,12 +140,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HeroImageId"));
 
-                    b.Property<string>("ButtonLink")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ButtonText")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("CenterProfileId")
                         .HasColumnType("int");
 
@@ -152,12 +149,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
-
-                    b.Property<string>("SubTitle")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("HeroImageId");
 
@@ -231,28 +222,16 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("BackgroundColor")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Copyright")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DisplayConfig")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FacebookUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("FooterTagline")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InstagramUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IntroDescription")
@@ -271,9 +250,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PrimaryColor")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("QuoteText")
                         .HasColumnType("nvarchar(max)");
 
@@ -283,46 +259,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Website")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("YoutubeUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("CenterProfileId");
 
                     b.ToTable("CenterProfiles");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.CenterStaff", b =>
-                {
-                    b.Property<int>("CenterStaffId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CenterStaffId"));
-
-                    b.Property<string>("AvatarUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Bio")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CenterProfileId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Role")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("CenterStaffId");
-
-                    b.HasIndex("CenterProfileId");
-
-                    b.ToTable("CenterStaffs");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Class", b =>
@@ -940,17 +879,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("CenterProfile");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.CenterStaff", b =>
-                {
-                    b.HasOne("EducenAPI.Models.CenterProfile", "CenterProfile")
-                        .WithMany("Staffs")
-                        .HasForeignKey("CenterProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CenterProfile");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Class", b =>
                 {
                     b.HasOne("EducenAPI.Models.Assistant", "Assistant")
@@ -1152,8 +1080,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Highlights");
 
                     b.Navigation("Images");
-
-                    b.Navigation("Staffs");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Class", b =>

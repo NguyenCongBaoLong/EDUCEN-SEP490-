@@ -1,4 +1,7 @@
-﻿using EducenAPI.DTOs.CenterHome;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using EducenAPI.DTOs.CenterHome;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -18,15 +21,14 @@ namespace EducenAPI.Services
             _fileService = fileService;
         }
 
-        public async Task<CenterHomeResponseDto?> GetCenterHomeAsync(string tenantId, string baseUrl)
+        public async Task<CenterHomeResponseDto?> GetCenterHomeAsync(string baseUrl)
         {
-            // 1. Query dữ liệu và ÉP BUỘC bỏ qua Filter (để khách vãng lai cũng xem được)
             var profile = await _context.CenterProfiles
-                .IgnoreQueryFilters() // <--- Rất quan trọng cho trang Public
                 .Include(p => p.HeroImages)
                 .Include(p => p.Images)
                 .Include(p => p.Highlights)
-                .FirstOrDefaultAsync(p => p.TenantId == tenantId);
+                .Include(p => p.Staffs)
+                .FirstOrDefaultAsync();
 
             if (profile == null)
             {
@@ -60,8 +62,15 @@ namespace EducenAPI.Services
 
                 // Xử lý danh sách ảnh: Sắp xếp theo SortOrder và Format URL
                 HeroImages = profile.HeroImages != null
-                    ? profile.HeroImages.OrderBy(h => h.SortOrder).Select(h => FormatImageUrl(h.ImageUrl)).ToList()
-                    : new List<string>(),
+                    ? profile.HeroImages.OrderBy(h => h.SortOrder).Select(h => new HeroImageDto
+                    {
+                        ImageUrl = FormatImageUrl(h.ImageUrl),
+                        Title = h.Title,
+                        SubTitle = h.SubTitle,
+                        ButtonText = h.ButtonText,
+                        ButtonLink = h.ButtonLink
+                    }).ToList()
+                    : new List<HeroImageDto>(),
 
                 Images = profile.Images != null
                     ? profile.Images.OrderBy(i => i.SortOrder).Select(i => FormatImageUrl(i.ImageUrl)).ToList()
@@ -73,50 +82,63 @@ namespace EducenAPI.Services
                         Icon = h.Icon,
                         Text = h.Text
                     }).ToList()
-                    : new List<HighlightDto>()
+                    : new List<HighlightDto>(),
+
+                PrimaryColor = profile.PrimaryColor,
+                BackgroundColor = profile.BackgroundColor,
+                FacebookUrl = profile.FacebookUrl,
+                InstagramUrl = profile.InstagramUrl,
+                YoutubeUrl = profile.YoutubeUrl,
+                DisplayConfig = profile.DisplayConfig,
+
+                Staffs = profile.Staffs != null
+                    ? profile.Staffs.OrderBy(s => s.SortOrder).Select(s => new StaffDto
+                    {
+                        Id = s.CenterStaffId,
+                        Name = s.Name,
+                        Role = s.Role,
+                        Bio = s.Bio,
+                        AvatarUrl = FormatImageUrl(s.AvatarUrl)
+                    }).ToList()
+                    : new List<StaffDto>()
             };
 
             return response;
         }
 
-        public async Task<bool> SaveCenterHomeAsync(string tenantId, SaveCenterHomeDto dto)
+        public async Task<CenterHomeResponseDto?> SaveCenterHomeAsync(SaveCenterHomeDto dto, string baseUrl)
         {
-            // Thêm IgnoreQueryFilters() để bỏ qua cơ chế giấu dữ liệu tự động
             var profile = await _context.CenterProfiles
-                .IgnoreQueryFilters() // <--- THÊM DÒNG NÀY VÀO ĐÂY
                 .Include(p => p.HeroImages)
                 .Include(p => p.Images)
                 .Include(p => p.Highlights)
-                .FirstOrDefaultAsync(p => p.TenantId == tenantId);
+                .Include(p => p.Staffs)
+                .FirstOrDefaultAsync();
 
             bool isCreateNew = false;
-            //  Nếu chưa có (Lần đầu tiên lưu) -> Khởi tạo mới
             if (profile == null)
             {
                 profile = new CenterProfile
                 {
-                    TenantId = tenantId,
-                    // BẮT ĐẦU THÊM MỚI 3 DÒNG NÀY ĐỂ KHỞI TẠO DANH SÁCH:
                     HeroImages = new List<CenterHeroImage>(),
                     Images = new List<CenterImage>(),
-                    Highlights = new List<CenterHighlight>()
-                    // KẾT THÚC THÊM MỚI
+                    Highlights = new List<CenterHighlight>(),
+                    Staffs = new List<CenterStaff>()
                 };
                 _context.CenterProfiles.Add(profile);
                 isCreateNew = true;
             }
 
-            // --- 1. XỬ LÝ UPLOAD LOGO ---
+            // --- 1. LOGO & BRANDING ---
             string finalLogoUrl = dto.ExistingLogoUrl ?? profile.LogoUrl;
             if (dto.LogoFile != null)
             {
-                var files = new FormFileCollection { dto.LogoFile };
-                var uploadedFiles = await _fileService.UploadResourceFile(files);
-                if (uploadedFiles.Any()) finalLogoUrl = uploadedFiles.First().FilePath;
+                var col = new FormFileCollection();
+                col.Add(dto.LogoFile);
+                var uploaded = await _fileService.UploadResourceFile(col);
+                if (uploaded.Any()) finalLogoUrl = uploaded.First().FilePath;
             }
 
-            // Cập nhật text & Logo
-            profile.TenantId = tenantId;
             profile.Name = dto.Name;
             profile.LogoUrl = finalLogoUrl;
             profile.Tagline = dto.Tagline;
@@ -130,66 +152,84 @@ namespace EducenAPI.Services
             profile.IntroDescription = dto.IntroDescription;
             profile.QuoteText = dto.QuoteText;
             profile.Copyright = dto.Copyright;
+            
+            // Branding & Layout
+            profile.PrimaryColor = dto.PrimaryColor;
+            profile.BackgroundColor = dto.BackgroundColor;
+            profile.FacebookUrl = dto.FacebookUrl;
+            profile.InstagramUrl = dto.InstagramUrl;
+            profile.YoutubeUrl = dto.YoutubeUrl;
+            profile.DisplayConfig = dto.DisplayConfig;
 
+            // --- 2. CLEAR EXISTING RELATIONS (Except those we want to keep/track) ---
+            // For simplicity in this CMS, we replace lists
             if (!isCreateNew)
             {
                 _context.CenterHeroImages.RemoveRange(profile.HeroImages);
                 _context.CenterImages.RemoveRange(profile.Images);
                 _context.CenterHighlights.RemoveRange(profile.Highlights);
+                _context.CenterStaffs.RemoveRange(profile.Staffs);
             }
 
-            // --- 2. XỬ LÝ HERO IMAGES ---
-            var allHeroUrls = new List<string>();
-            if (dto.ExistingHeroImageUrls != null) allHeroUrls.AddRange(dto.ExistingHeroImageUrls);
-
-            if (dto.HeroImageFiles != null && dto.HeroImageFiles.Count > 0)
+            // --- 3. HERO IMAGES (SLIDES) ---
+            if (dto.HeroImages != null)
             {
-                var heroCollection = new FormFileCollection();
-                foreach (var file in dto.HeroImageFiles) heroCollection.Add(file);
-                var heroUploads = await _fileService.UploadResourceFile(heroCollection);
-                allHeroUrls.AddRange(heroUploads.Select(x => x.FilePath));
-            }
-
-            for (int i = 0; i < allHeroUrls.Count; i++)
-            {
-                profile.HeroImages.Add(new CenterHeroImage
+                // Upload files first
+                var heroUploads = new List<string>();
+                if (dto.HeroImageFiles != null && dto.HeroImageFiles.Count > 0)
                 {
-                    TenantId = tenantId,
-                    ImageUrl = allHeroUrls[i],
-                    SortOrder = i
-                });
+                    var col = new FormFileCollection();
+                    foreach (var f in dto.HeroImageFiles) col.Add(f);
+                    var results = await _fileService.UploadResourceFile(col);
+                    heroUploads = results.Select(r => r.FilePath).ToList();
+                }
+
+                for (int i = 0; i < dto.HeroImages.Count; i++)
+                {
+                    var hDto = dto.HeroImages[i];
+                    string imgUrl = hDto.ExistingImageUrl ?? "";
+                    if (hDto.FileIndex.HasValue && hDto.FileIndex < heroUploads.Count)
+                    {
+                        imgUrl = heroUploads[hDto.FileIndex.Value];
+                    }
+
+                    if (!string.IsNullOrEmpty(imgUrl))
+                    {
+                        profile.HeroImages.Add(new CenterHeroImage
+                        {
+                            ImageUrl = imgUrl,
+                            Title = hDto.Title,
+                            SubTitle = hDto.SubTitle,
+                            ButtonText = hDto.ButtonText,
+                            ButtonLink = hDto.ButtonLink,
+                            SortOrder = i
+                        });
+                    }
+                }
             }
 
-            // --- 3. XỬ LÝ CENTER IMAGES ---
+            // --- 4. CENTER IMAGES (GALLERY) ---
             var allImageUrls = new List<string>();
             if (dto.ExistingImageUrls != null) allImageUrls.AddRange(dto.ExistingImageUrls);
-
             if (dto.ImageFiles != null && dto.ImageFiles.Count > 0)
             {
-                var imgCollection = new FormFileCollection();
-                foreach (var file in dto.ImageFiles) imgCollection.Add(file);
-                var imgUploads = await _fileService.UploadResourceFile(imgCollection);
-                allImageUrls.AddRange(imgUploads.Select(x => x.FilePath));
+                var col = new FormFileCollection();
+                foreach (var f in dto.ImageFiles) col.Add(f);
+                var uploads = await _fileService.UploadResourceFile(col);
+                allImageUrls.AddRange(uploads.Select(x => x.FilePath));
             }
-
             for (int i = 0; i < allImageUrls.Count; i++)
             {
-                profile.Images.Add(new CenterImage // Chú ý: Entity của bạn tên là CenterImages
-                {
-                    TenantId = tenantId,
-                    ImageUrl = allImageUrls[i],
-                    SortOrder = i
-                });
+                profile.Images.Add(new CenterImage { ImageUrl = allImageUrls[i], SortOrder = i });
             }
 
-            // --- 4. XỬ LÝ HIGHLIGHTS ---
+            // --- 5. HIGHLIGHTS ---
             if (dto.Highlights != null)
             {
                 for (int i = 0; i < dto.Highlights.Count; i++)
                 {
                     profile.Highlights.Add(new CenterHighlight
                     {
-                        TenantId = tenantId,
                         Icon = dto.Highlights[i].Icon,
                         Text = dto.Highlights[i].Text,
                         SortOrder = i
@@ -197,8 +237,40 @@ namespace EducenAPI.Services
                 }
             }
 
+            // --- 6. STAFF (TEACHERS) ---
+            if (dto.Staffs != null)
+            {
+                var staffUploads = new List<string>();
+                if (dto.StaffAvatarFiles != null && dto.StaffAvatarFiles.Count > 0)
+                {
+                    var col = new FormFileCollection();
+                    foreach (var f in dto.StaffAvatarFiles) col.Add(f);
+                    var results = await _fileService.UploadResourceFile(col);
+                    staffUploads = results.Select(r => r.FilePath).ToList();
+                }
+
+                for (int i = 0; i < dto.Staffs.Count; i++)
+                {
+                    var sDto = dto.Staffs[i];
+                    string avatarUrl = sDto.ExistingAvatarUrl ?? "";
+                    if (sDto.FileIndex.HasValue && sDto.FileIndex < staffUploads.Count)
+                    {
+                        avatarUrl = staffUploads[sDto.FileIndex.Value];
+                    }
+
+                    profile.Staffs.Add(new CenterStaff
+                    {
+                        Name = sDto.Name,
+                        Role = sDto.Role,
+                        Bio = sDto.Bio,
+                        AvatarUrl = avatarUrl,
+                        SortOrder = i
+                    });
+                }
+            }
+
             await _context.SaveChangesAsync();
-            return true;
+            return await GetCenterHomeAsync(baseUrl);
         }
     }
 }

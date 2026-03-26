@@ -1,13 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models
 {
-    public class CenterHighlight : IMustHaveTenant
+    public class CenterHighlight
     {
         [Key]
         public int HighlightId { get; set; }
-
-        public string TenantId { get; set; } = string.Empty;
 
         public int CenterProfileId { get; set; }
 
