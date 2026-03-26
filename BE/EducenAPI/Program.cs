@@ -167,7 +167,7 @@ builder.Services.AddScoped<IGradeService, GradeService>();
 builder.Services.AddScoped<ICenterHomeService, CenterHomeService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
-// builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); // Enrollment feature
+builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); // Enrollment feature
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {

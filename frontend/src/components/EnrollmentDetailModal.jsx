@@ -79,7 +79,7 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                                     Thông tin duyệt
                                 </div>
                                 <p style={{ color: '#065f46', fontSize: '0.9rem' }}>
-                                    Đã được duyệt vào lúc {formatDate(request.reviewedAt)}
+                                    Yêu cầu đã được duyệt thành công
                                 </p>
                             </div>
                         )}
@@ -87,10 +87,10 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                             <div className="detail-section" style={{ background: '#fef2f2', borderColor: '#fee2e2' }}>
                                 <div className="section-title" style={{ color: '#b91c1c', borderBottomColor: '#fecaca' }}>
                                     <AlertCircle size={20} />
-                                    Lý do từ chối
+                                    Yêu cầu bị từ chối
                                 </div>
                                 <p style={{ color: '#991b1b', fontSize: '0.9rem' }}>
-                                    {request.rejectionReason || 'Không có lý do cụ thể'}
+                                    Yêu cầu đăng ký đã bị từ chối
                                 </p>
                             </div>
                         )}

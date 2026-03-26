@@ -4,25 +4,14 @@ import PropTypes from 'prop-types';
 import '../css/components/DeleteModal.css'; // Use shared modal styles
 
 const RejectEnrollmentModal = ({ isOpen, onClose, onConfirm, request }) => {
-    const [reason, setReason] = useState('');
-    const [error, setError] = useState('');
-
     if (!isOpen || !request) return null;
 
     const handleConfirm = () => {
-        if (!reason.trim()) {
-            setError('Vui lòng nhập lý do từ chối.');
-            return;
-        }
-        onConfirm(request.id, reason);
+        onConfirm(request.id);
         onClose();
-        setReason(''); // Reset
-        setError('');
     };
 
     const handleClose = () => {
-        setReason('');
-        setError('');
         onClose();
     };
 
@@ -47,33 +36,8 @@ const RejectEnrollmentModal = ({ isOpen, onClose, onConfirm, request }) => {
                             <h4>Bạn có chắc muốn từ chối yêu cầu này?</h4>
                             <p>
                                 Yêu cầu đăng ký của học sinh <strong>{request.studentName}</strong> sẽ bị từ chối.
-                                Vui lòng nhập lý do để thông báo cho phụ huynh.
                             </p>
                         </div>
-                    </div>
-
-                    <div className="form-group" style={{ marginTop: '1rem' }}>
-                        <label style={{ fontSize: '0.9rem', fontWeight: 500, color: '#374151', marginBottom: '0.4rem', display: 'block' }}>
-                            Lý do từ chối *
-                        </label>
-                        <textarea
-                            value={reason}
-                            onChange={(e) => {
-                                setReason(e.target.value);
-                                setError('');
-                            }}
-                            rows="3"
-                            placeholder="Nhập lý do từ chối..."
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem',
-                                borderRadius: '6px',
-                                border: error ? '1px solid #dc2626' : '1px solid #d1d5db',
-                                fontSize: '0.9rem',
-                                resize: 'vertical'
-                            }}
-                        />
-                        {error && <span style={{ color: '#dc2626', fontSize: '0.8125rem', marginTop: '0.4rem', display: 'block' }}>{error}</span>}
                     </div>
                 </div>
 

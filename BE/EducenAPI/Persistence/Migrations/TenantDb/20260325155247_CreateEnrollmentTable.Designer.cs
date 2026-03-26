@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260325155247_CreateEnrollmentTable")]
+    partial class CreateEnrollmentTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -403,13 +406,27 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedBy")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("RequestId");
 
@@ -665,47 +682,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasIndex("StudentId");
 
                     b.ToTable("Submissions");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.SupportRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdminResponse")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("SenderId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SenderId");
-
-                    b.ToTable("SupportRequests");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Teacher", b =>
@@ -1028,17 +1004,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Student");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.SupportRequest", b =>
-                {
-                    b.HasOne("EducenAPI.Models.User", "Sender")
-                        .WithMany("SentRequests")
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Sender");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Teacher", b =>
                 {
                     b.HasOne("EducenAPI.Models.User", "TeacherNavigation")
@@ -1157,8 +1122,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Attendances");
 
                     b.Navigation("Parent");
-
-                    b.Navigation("SentRequests");
 
                     b.Navigation("Student");
 

@@ -34,11 +34,17 @@ namespace EducenAPI.Services
 
         public async Task<bool> SetTenant(string tenant)
         {
+            if (string.IsNullOrEmpty(tenant))
+                return false;
+
             var tenantInfo = await _context.Tenants
                 .FirstOrDefaultAsync(x => x.TenantId == tenant);
 
             if (tenantInfo == null)
-                throw new Exception("Tenant invalid");
+            {
+                // Don't throw - just return false and use default connection
+                return false;
+            }
 
             TenantId = tenantInfo.TenantId;
             
