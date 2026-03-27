@@ -3,6 +3,7 @@ using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using EducenAPI.Services.TenantService;
+using EducenAPI.Services.Payment;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -167,7 +168,18 @@ builder.Services.AddScoped<IGradeService, GradeService>();
 builder.Services.AddScoped<ICenterHomeService, CenterHomeService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
-builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); // Enrollment feature
+builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); 
+
+// ── Payment Services ───────────────────────────────────────────────────────
+builder.Services.AddScoped<VNPayService>();
+builder.Services.AddScoped<PaymentGatewayFactory>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ITuitionService, TuitionService>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IRefundService, RefundService>();
+builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
+builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
+
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -230,8 +242,11 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger";
     });
 }
-app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 // IMPORTANT: TenantResolver MUST run BEFORE SystemApiKeyMiddleware
 // because we need tenant context to be set first
 app.UseMiddleware<TenantResolver>();
