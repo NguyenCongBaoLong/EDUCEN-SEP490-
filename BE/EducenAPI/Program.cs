@@ -18,6 +18,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
 builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Xử lý circular reference (Student ↔ User navigation)
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    })
     .ConfigureApiBehaviorOptions(options =>
     {
         // Custom validation error response
@@ -250,10 +256,12 @@ if (!app.Environment.IsDevelopment())
 // IMPORTANT: TenantResolver MUST run BEFORE SystemApiKeyMiddleware
 // because we need tenant context to be set first
 app.UseMiddleware<TenantResolver>();
-app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseRouting();
 app.UseStaticFiles();
 app.UseAuthentication();
+// IMPORTANT: SystemApiKeyMiddleware MUST run AFTER UseAuthentication
+// so that context.User is populated with JWT claims for authenticated users
+app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
 

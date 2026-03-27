@@ -58,6 +58,8 @@ namespace EducenAPI.DTOs.Classes
         }
 
         public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
+
+        public decimal? PricePerSession { get; set; }
     }
 
     public class CreateScheduleSlotDto
@@ -102,6 +104,8 @@ namespace EducenAPI.DTOs.Classes
         public string? Status { get; set; }
 
         public List<CreateScheduleSlotDto>? ScheduleSlots { get; set; }
+
+        public decimal? PricePerSession { get; set; }
     }
 
     public class ClassDto
@@ -127,6 +131,7 @@ namespace EducenAPI.DTOs.Classes
         public int TotalSessions { get; set; }
         public int CompletedSessions { get; set; }
         public DateTime CreatedAt { get; set; }
+        public decimal? PricePerSession { get; set; }
         public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
     }
 }

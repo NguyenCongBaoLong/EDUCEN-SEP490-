@@ -305,13 +305,13 @@ public partial class EducenV2Context : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<TuitionInvoice>()
-            .HasIndex(ti => new { ti.TenantId, ti.InvoiceMonth, ti.InvoiceYear });
+            .HasIndex(ti => new { ti.InvoiceMonth, ti.InvoiceYear });
 
         modelBuilder.Entity<TuitionInvoice>()
             .HasIndex(ti => new { ti.StudentId, ti.Status });
 
         modelBuilder.Entity<TuitionInvoice>()
-            .HasIndex(ti => new { ti.TenantId, ti.Status, ti.DueDate }); // For overdue checking
+            .HasIndex(ti => new { ti.Status, ti.DueDate }); // For overdue checking
 
         // === TuitionInvoiceItem Configuration ===
         modelBuilder.Entity<TuitionInvoiceItem>()

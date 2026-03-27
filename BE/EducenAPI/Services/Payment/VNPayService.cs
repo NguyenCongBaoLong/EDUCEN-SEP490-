@@ -36,7 +36,6 @@ namespace EducenAPI.Services.Payment
                 var vnp_TxnRef = request.OrderId;
                 var vnp_OrderInfo = request.Description;
                 var vnp_OrderType = "other";
-                //var vnp_IpAddr = request.IpAddress;
                 var vnp_IpAddr = request.IpAddress;
 
                 if (vnp_IpAddr == "::1")
@@ -44,7 +43,6 @@ namespace EducenAPI.Services.Payment
                     vnp_IpAddr = "127.0.0.1";
                 }
 
-                var tick = DateTime.Now.Ticks.ToString();
                 var vnp_CreateDate = DateTime.Now.ToString("yyyyMMddHHmmss");
 
                 // Build VNPay parameters
@@ -100,13 +98,7 @@ namespace EducenAPI.Services.Payment
 
                 var paymentUrl = $"{vnp_Url}?{query}&vnp_SecureHash={vnp_SecureHash}";
 
-                // Debug logging — xóa sau khi test xong
-                _logger.LogWarning("=== VNPay DEBUG ===");
-                _logger.LogWarning("HashSecret: {Secret}", vnp_HashSecret);
-                _logger.LogWarning("SignData: {Data}", signData);
-                _logger.LogWarning("SecureHash: {Hash}", vnp_SecureHash);
-                _logger.LogWarning("PaymentUrl: {Url}", paymentUrl);
-                _logger.LogWarning("===================");
+                _logger.LogDebug("VNPay CreatePayment - SignData: {SignData}, SecureHash: {Hash}", signData, vnp_SecureHash);
                 _logger.LogInformation("VNPay payment URL created for Order {OrderId}", request.OrderId);
 
                 return Task.FromResult(new PaymentGatewayResponse
@@ -171,13 +163,8 @@ namespace EducenAPI.Services.Payment
                 var signData = queryBuilder.ToString();
                 var calculatedHash = HmacSHA512(vnp_HashSecret, signData);
 
-                // Debug logging — xóa sau khi test xong
-                _logger.LogWarning("=== VNPay Callback DEBUG ===");
-                _logger.LogWarning("HashSecret: {Secret}", vnp_HashSecret);
-                _logger.LogWarning("SignData: {Data}", signData);
-                _logger.LogWarning("CalculatedHash: {Hash}", calculatedHash);
-                _logger.LogWarning("ReceivedHash: {Hash}", vnp_SecureHash);
-                _logger.LogWarning("============================");
+                _logger.LogDebug("VNPay VerifyCallback - SignData: {SignData}, CalculatedHash: {Hash}, ReceivedHash: {ReceivedHash}",
+                    signData, calculatedHash, vnp_SecureHash);
 
                 if (!calculatedHash.Equals(vnp_SecureHash, StringComparison.InvariantCultureIgnoreCase))
                 {

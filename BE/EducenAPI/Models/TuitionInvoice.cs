@@ -11,8 +11,8 @@ namespace EducenAPI.Models
         [Key]
         public string InvoiceId { get; set; } = Guid.NewGuid().ToString();
 
-        [Required]
-        public string TenantId { get; set; } = string.Empty;
+        //[Required]
+        //public string TenantId { get; set; } = string.Empty;
 
         [Required]
         public int StudentId { get; set; }

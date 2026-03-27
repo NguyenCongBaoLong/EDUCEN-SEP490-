@@ -11,17 +11,25 @@ import {
     Clock,
     AlertCircle,
     ChevronLeft,
-    CreditCard
+    CreditCard,
+    Send
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
+import api from '../../services/api';
 import '../../css/pages/center/TuitionManagement.css';
 
 const TuitionManagement = () => {
     const { classId } = useParams();
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('calculate'); // 'calculate' | 'invoices'
+    
+    // State cho danh sách lớp
+    const [classes, setClasses] = useState([]);
+    const [loadingClasses, setLoadingClasses] = useState(false);
     
     // State cho tính toán học phí
     const [selectedClass, setSelectedClass] = useState(classId || '');
@@ -45,6 +53,17 @@ const TuitionManagement = () => {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [processingPayment, setProcessingPayment] = useState(false);
 
+    // State cho gửi hóa đơn
+    const [sendingInvoice, setSendingInvoice] = useState(null);
+
+    // Lấy tenantId - chấp nhận cả default-tenant
+    const getValidTenantId = () => {
+        const stored = localStorage.getItem('tenantId');
+        if (stored) return stored;
+        if (user?.tenantId) return user.tenantId;
+        return 'default-tenant';
+    };
+
     const months = [
         { value: 1, label: 'Tháng 1' },
         { value: 2, label: 'Tháng 2' },
@@ -61,6 +80,23 @@ const TuitionManagement = () => {
     ];
 
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+
+    // Load danh sách lớp khi mount
+    useEffect(() => {
+        fetchClasses();
+    }, []);
+
+    const fetchClasses = async () => {
+        setLoadingClasses(true);
+        try {
+            const response = await api.get('/Classes');
+            setClasses(response.data);
+        } catch (error) {
+            toast.error('Không thể tải danh sách lớp');
+        } finally {
+            setLoadingClasses(false);
+        }
+    };
 
     // Tính toán học phí cho lớp
     const handleCalculate = async () => {
@@ -79,7 +115,15 @@ const TuitionManagement = () => {
             setCalculations(data);
             toast.success(`Đã tính toán học phí cho ${data.length} học sinh`);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi tính toán học phí');
+            const data = error.response?.data;
+            if (data?.errors) {
+                const errorDetails = data.errors.map(e => 
+                    `${e.field}: ${e.errors?.join(', ')}`
+                ).join('\n');
+                toast.error(`Lỗi:\n${errorDetails}`, { duration: 6000 });
+            } else {
+                toast.error(data?.message || 'Lỗi tính toán học phí');
+            }
         } finally {
             setLoading(false);
         }
@@ -99,9 +143,7 @@ const TuitionManagement = () => {
 
         setGenerating(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
             const result = await tuitionService.createBatchInvoices({
-                tenantId,
                 classId: parseInt(selectedClass),
                 month: selectedMonth,
                 year: selectedYear
@@ -113,10 +155,23 @@ const TuitionManagement = () => {
                 fetchInvoices();
             }
             if (result.failedCount > 0) {
-                toast.error(`${result.failedCount} hóa đơn thất bại`);
+                const errorDetails = result.errors?.join('\n') || '';
+                toast.error(
+                    `${result.failedCount} hóa đơn thất bại${errorDetails ? ':\n' + errorDetails : ''}`,
+                    { duration: 8000 }
+                );
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi tạo hóa đơn');
+            const data = error.response?.data;
+            if (data?.errors) {
+                // Hiện chi tiết validation errors
+                const errorDetails = data.errors.map(e => 
+                    `${e.field}: ${e.errors?.join(', ')}`
+                ).join('\n');
+                toast.error(`Validation lỗi:\n${errorDetails}`, { duration: 6000 });
+            } else {
+                toast.error(data?.message || 'Lỗi tạo hóa đơn');
+            }
         } finally {
             setGenerating(false);
         }
@@ -126,12 +181,7 @@ const TuitionManagement = () => {
     const fetchInvoices = async () => {
         setInvoicesLoading(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
-            const filters = {
-                tenantId,
-                ...invoiceFilters
-            };
-            const data = await tuitionService.getInvoices(filters);
+            const data = await tuitionService.getInvoices(invoiceFilters);
             setInvoices(data);
         } catch (error) {
             toast.error('Lỗi tải danh sách hóa đơn');
@@ -146,7 +196,7 @@ const TuitionManagement = () => {
 
         setProcessingPayment(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const returnUrl = `${window.location.origin}/payment/result`;
             
             const paymentData = {
@@ -183,6 +233,51 @@ const TuitionManagement = () => {
             style: 'currency',
             currency: 'VND'
         }).format(amount);
+    };
+
+    // Gửi 1 hóa đơn (Draft → Sent)
+    const handleSendInvoice = async (invoiceId) => {
+        setSendingInvoice(invoiceId);
+        try {
+            await tuitionService.sendInvoice(invoiceId);
+            toast.success('Đã gửi hóa đơn cho học sinh');
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Lỗi gửi hóa đơn');
+        } finally {
+            setSendingInvoice(null);
+        }
+    };
+
+    // Gửi hàng loạt hóa đơn Draft
+    const handleBatchSend = async () => {
+        const draftInvoices = invoices.filter(inv => inv.status === 'Draft');
+        if (draftInvoices.length === 0) {
+            toast.error('Không có hóa đơn nháp nào để gửi');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Gửi ${draftInvoices.length} hóa đơn nháp cho học sinh?`
+        );
+        if (!confirmed) return;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const invoice of draftInvoices) {
+            try {
+                await tuitionService.sendInvoice(invoice.invoiceId);
+                successCount++;
+            } catch {
+                failCount++;
+            }
+        }
+
+        if (successCount > 0) toast.success(`Đã gửi ${successCount} hóa đơn`);
+        if (failCount > 0) toast.error(`${failCount} hóa đơn gửi thất bại`);
+
+        fetchInvoices();
     };
 
     // Lấy status badge
@@ -250,9 +345,16 @@ const TuitionManagement = () => {
                                     <select 
                                         value={selectedClass} 
                                         onChange={(e) => setSelectedClass(e.target.value)}
+                                        disabled={loadingClasses}
                                     >
-                                        <option value="">Chọn lớp...</option>
-                                        {/* TODO: Load classes from API */}
+                                        <option value="">
+                                            {loadingClasses ? 'Đang tải lớp...' : 'Chọn lớp...'}
+                                        </option>
+                                        {classes.map(cls => (
+                                            <option key={cls.classId} value={cls.classId}>
+                                                {cls.className || `Lớp ${cls.classId}`}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="filter-group">
@@ -307,7 +409,7 @@ const TuitionManagement = () => {
                                                 <th>Học sinh</th>
                                                 <th>Số buổi học</th>
                                                 <th>Đã học</th>
-                                                <th>Vắng có phép</th>
+                                                <th>Vắng mặt</th>
                                                 <th>Đơn giá/buổi</th>
                                                 <th>Thành tiền</th>
                                             </tr>
@@ -318,7 +420,7 @@ const TuitionManagement = () => {
                                                     <td>{calc.studentName}</td>
                                                     <td>{calc.totalSessions}</td>
                                                     <td className="attended">{calc.attendedSessions}</td>
-                                                    <td className="excused">{calc.excusedSessions}</td>
+                                                    <td className="absent">{calc.absentSessions}</td>
                                                     <td>{formatCurrency(calc.pricePerSession)}</td>
                                                     <td className="total">{formatCurrency(calc.finalAmount)}</td>
                                                 </tr>
@@ -357,6 +459,26 @@ const TuitionManagement = () => {
                                     ))}
                                 </select>
                             </div>
+                            {invoices.some(inv => inv.status === 'Draft') && (
+                                <button 
+                                    className="batch-send-btn"
+                                    onClick={handleBatchSend}
+                                    style={{
+                                        padding: '8px 16px',
+                                        background: '#2563eb',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6
+                                    }}
+                                >
+                                    <Send size={16} />
+                                    Gửi tất cả nháp
+                                </button>
+                            )}
                         </div>
 
                         {invoicesLoading ? (
@@ -393,7 +515,29 @@ const TuitionManagement = () => {
                                                     >
                                                         Xem
                                                     </button>
-                                                    {invoice.status !== 'Paid' && invoice.status !== 'Cancelled' && (
+                                                    {invoice.status === 'Draft' && (
+                                                        <button 
+                                                            className="send-btn"
+                                                            onClick={() => handleSendInvoice(invoice.invoiceId)}
+                                                            disabled={sendingInvoice === invoice.invoiceId}
+                                                            style={{
+                                                                padding: '4px 10px',
+                                                                background: '#2563eb',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: 4,
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.8rem',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: 4
+                                                            }}
+                                                        >
+                                                            <Send size={12} />
+                                                            {sendingInvoice === invoice.invoiceId ? 'Đang gửi...' : 'Gửi'}
+                                                        </button>
+                                                    )}
+                                                    {(invoice.status === 'Sent' || invoice.status === 'Overdue') && (
                                                         <button 
                                                             className="pay-btn"
                                                             onClick={() => {

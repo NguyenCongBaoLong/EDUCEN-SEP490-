@@ -69,14 +69,14 @@ const tuitionService = {
     // === Student/Parent Endpoints ===
 
     // Lấy hóa đơn của tôi
-    getMyInvoices: async (tenantId) => {
-        const response = await api.get(`/tuition/my-invoices?tenantId=${tenantId}`);
+    getMyInvoices: async () => {
+        const response = await api.get('/tuition/my-invoices');
         return response.data;
     },
 
     // Lấy hóa đơn chưa thanh toán
-    getOutstandingInvoices: async (tenantId) => {
-        const response = await api.get(`/tuition/outstanding?tenantId=${tenantId}`);
+    getOutstandingInvoices: async () => {
+        const response = await api.get('/tuition/outstanding');
         return response.data;
     }
 };

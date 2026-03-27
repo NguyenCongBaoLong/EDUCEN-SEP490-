@@ -1,6 +1,8 @@
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
 {
@@ -11,15 +13,18 @@ namespace EducenAPI.Controllers
     {
         private readonly ITuitionService _tuitionService;
         private readonly IInvoiceService _invoiceService;
+        private readonly EducenV2Context _tenantContext;
         private readonly ILogger<TuitionController> _logger;
 
         public TuitionController(
             ITuitionService tuitionService,
             IInvoiceService invoiceService,
+            EducenV2Context tenantContext,
             ILogger<TuitionController> logger)
         {
             _tuitionService = tuitionService;
             _invoiceService = invoiceService;
+            _tenantContext = tenantContext;
             _logger = logger;
         }
 
@@ -76,7 +81,6 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.CreateInvoiceAsync(new CreateInvoiceRequest
                 {
-                    TenantId = request.TenantId,
                     StudentId = request.StudentId,
                     ClassId = request.ClassId,
                     Month = request.Month,
@@ -104,9 +108,18 @@ namespace EducenAPI.Controllers
         {
             try
             {
+                // Log để debug validation
+                _logger.LogInformation("CreateBatchInvoices called: ClassId={ClassId}, Month={Month}, Year={Year}",
+                    request?.ClassId, request?.Month, request?.Year);
+
+                if (request == null)
+                    return BadRequest(new { message = "Request body is null" });
+
+                if (request.ClassId <= 0)
+                    return BadRequest(new { message = "Vui lòng chọn lớp học" });
+
                 var result = await _invoiceService.CreateBatchInvoicesAsync(new BatchInvoiceRequest
                 {
-                    TenantId = request.TenantId,
                     ClassId = request.ClassId,
                     Month = request.Month,
                     Year = request.Year,
@@ -133,7 +146,6 @@ namespace EducenAPI.Controllers
             {
                 var invoices = await _invoiceService.GetInvoicesAsync(new InvoiceFilterRequest
                 {
-                    TenantId = filter.TenantId,
                     StudentId = filter.StudentId,
                     ClassId = filter.ClassId,
                     Month = filter.Month,
@@ -225,21 +237,25 @@ namespace EducenAPI.Controllers
 
         /// <summary>
         /// Lấy danh sách hóa đơn của học sinh hiện tại
+        /// (Parent: trả về hóa đơn của TẤT CẢ con)
         /// </summary>
         [HttpGet("my-invoices")]
         [Authorize(Roles = "Student,Parent")]
-        public async Task<IActionResult> GetMyInvoices([FromQuery] string tenantId)
+        public async Task<IActionResult> GetMyInvoices()
         {
             try
             {
-                // TODO: Get current user ID from claims
                 var userId = GetCurrentUserId();
+                var studentIds = await GetStudentIdsFromUserAsync(userId);
 
-                // TODO: Get student ID from user
-                var studentId = await GetStudentIdFromUserAsync(userId);
+                var allInvoices = new List<EducenAPI.Models.TuitionInvoice>();
+                foreach (var studentId in studentIds)
+                {
+                    var invoices = await _tuitionService.GetStudentPaymentHistoryAsync(studentId);
+                    allInvoices.AddRange(invoices);
+                }
 
-                var invoices = await _tuitionService.GetStudentPaymentHistoryAsync(studentId);
-                return Ok(invoices);
+                return Ok(allInvoices.OrderByDescending(i => i.CreatedAt));
             }
             catch (Exception ex)
             {
@@ -250,18 +266,25 @@ namespace EducenAPI.Controllers
 
         /// <summary>
         /// Lấy danh sách hóa đơn chưa thanh toán
+        /// (Parent: trả về hóa đơn của TẤT CẢ con)
         /// </summary>
         [HttpGet("outstanding")]
         [Authorize(Roles = "Student,Parent")]
-        public async Task<IActionResult> GetOutstandingInvoices([FromQuery] string tenantId)
+        public async Task<IActionResult> GetOutstandingInvoices()
         {
             try
             {
                 var userId = GetCurrentUserId();
-                var studentId = await GetStudentIdFromUserAsync(userId);
+                var studentIds = await GetStudentIdsFromUserAsync(userId);
 
-                var invoices = await _tuitionService.GetOutstandingInvoicesAsync(studentId);
-                return Ok(invoices);
+                var allInvoices = new List<EducenAPI.Models.TuitionInvoice>();
+                foreach (var studentId in studentIds)
+                {
+                    var invoices = await _tuitionService.GetOutstandingInvoicesAsync(studentId);
+                    allInvoices.AddRange(invoices);
+                }
+
+                return Ok(allInvoices.OrderBy(i => i.DueDate));
             }
             catch (Exception ex)
             {
@@ -280,11 +303,40 @@ namespace EducenAPI.Controllers
             return userId;
         }
 
-        private async Task<int> GetStudentIdFromUserAsync(int userId)
+        /// <summary>
+        /// Lấy danh sách StudentId từ UserId trong JWT claims.
+        /// - Student: UserId chính là StudentId
+        /// - Parent: Query bảng ParentStudent để tìm TẤT CẢ học sinh
+        /// </summary>
+        private async Task<List<int>> GetStudentIdsFromUserAsync(int userId)
         {
-            // TODO: Implement logic to get student ID from user ID
-            // This should be implemented based on your user-student mapping
-            return userId; // Placeholder
+            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+            if (role == "Student")
+            {
+                var studentExists = await _tenantContext.Students
+                    .AnyAsync(s => s.UserId == userId);
+
+                if (!studentExists)
+                    throw new Exception($"Student not found for UserId {userId}");
+
+                return new List<int> { userId };
+            }
+
+            if (role == "Parent")
+            {
+                var studentIds = await _tenantContext.Set<Dictionary<string, object>>("ParentStudent")
+                    .Where(ps => EF.Property<int>(ps, "ParentsUserId") == userId)
+                    .Select(ps => EF.Property<int>(ps, "StudentsUserId"))
+                    .ToListAsync();
+
+                if (!studentIds.Any())
+                    throw new Exception("No students found for this parent account");
+
+                return studentIds;
+            }
+
+            throw new Exception($"Unsupported role '{role}' for tuition lookup");
         }
     }
 
@@ -307,7 +359,6 @@ namespace EducenAPI.Controllers
 
     public class CreateInvoiceApiRequest
     {
-        public string TenantId { get; set; } = string.Empty;
         public int StudentId { get; set; }
         public int ClassId { get; set; }
         public int Month { get; set; }
@@ -318,7 +369,6 @@ namespace EducenAPI.Controllers
 
     public class CreateBatchInvoicesRequest
     {
-        public string TenantId { get; set; } = string.Empty;
         public int ClassId { get; set; }
         public int Month { get; set; }
         public int Year { get; set; }
@@ -326,7 +376,6 @@ namespace EducenAPI.Controllers
 
     public class InvoiceFilterApiRequest
     {
-        public string? TenantId { get; set; }
         public int? StudentId { get; set; }
         public int? ClassId { get; set; }
         public int? Month { get; set; }

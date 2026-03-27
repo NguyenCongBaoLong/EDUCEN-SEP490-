@@ -16,32 +16,60 @@ namespace EducenAPI.Services.Payment
     public class PaymentService : IPaymentService
     {
         private readonly AdminDbContext _adminDbContext;
+        private readonly EducenV2Context _tenantDbContext;
         private readonly PaymentGatewayFactory _gatewayFactory;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IConfiguration _configuration;
 
         public PaymentService(
             AdminDbContext adminDbContext,
+            EducenV2Context tenantDbContext,
             PaymentGatewayFactory gatewayFactory,
-            ILogger<PaymentService> logger)
+            ILogger<PaymentService> logger,
+            IConfiguration configuration)
         {
             _adminDbContext = adminDbContext;
+            _tenantDbContext = tenantDbContext;
             _gatewayFactory = gatewayFactory;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<PaymentResult> CreatePaymentAsync(CreatePaymentDto dto)
         {
             try
             {
-                // Verify tenant exists
+                // Ensure tenant exists in Admin DB
+                // For "default-tenant", auto-create a placeholder record if it doesn't exist
+                // (FK constraint on PaymentRecords.TenantId requires a valid Tenants record)
                 var tenant = await _adminDbContext.Tenants.FindAsync(dto.TenantId);
                 if (tenant == null)
                 {
-                    return new PaymentResult
+                    if (dto.TenantId == "default-tenant")
                     {
-                        Success = false,
-                        ErrorMessage = $"Tenant with ID '{dto.TenantId}' not found"
-                    };
+                        // Create a minimal tenant record for the default database
+                        tenant = new Tenant
+                        {
+                            TenantId = "default-tenant",
+                            TenantName = "Default Center",
+                            Username = "default",
+                            Password = "N/A",
+                            SubDomain = "default",
+                            ConnectionString = _configuration.GetConnectionString("DefaultTenantConnection")
+                                ?? "Server=localhost;Database=EducenV2;Trusted_Connection=True;TrustServerCertificate=True;",
+                            IsActive = true
+                        };
+                        _adminDbContext.Tenants.Add(tenant);
+                        await _adminDbContext.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        return new PaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = $"Tenant with ID '{dto.TenantId}' not found"
+                        };
+                    }
                 }
 
                 // Create PaymentRecord
@@ -159,6 +187,21 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
+                // Idempotency check: nếu callback đã được xử lý trước đó, trả về kết quả hiện có
+                if (transaction.Status == "Success" || transaction.Status == "Failed")
+                {
+                    _logger.LogInformation("Callback already processed for OrderId: {OrderId}, Status: {Status}. Skipping.",
+                        verification.OrderId, transaction.Status);
+                    return new PaymentVerificationResult
+                    {
+                        IsValid = true,
+                        IsSuccessful = transaction.Status == "Success",
+                        OrderId = verification.OrderId,
+                        Amount = transaction.Amount,
+                        Message = $"Already processed with status: {transaction.Status}"
+                    };
+                }
+
                 // Update transaction
                 transaction.GatewayResponse = System.Text.Json.JsonSerializer.Serialize(callbackData);
                 transaction.CompletedAt = DateTime.UtcNow;
@@ -170,6 +213,15 @@ namespace EducenAPI.Services.Payment
                 {
                     transaction.Status = "Success";
                     transaction.PaymentRecord.Status = "Paid";
+
+                    // Cập nhật TuitionInvoice nếu thanh toán học phí
+                    if (transaction.PaymentRecord.TransactionType == "Tuition"
+                        && !string.IsNullOrEmpty(transaction.PaymentRecord.ReferenceId))
+                    {
+                        await UpdateTuitionInvoiceAsync(
+                            transaction.PaymentRecord.ReferenceId,
+                            transaction.PaymentRecord.PaymentId);
+                    }
                 }
                 else
                 {
@@ -209,6 +261,47 @@ namespace EducenAPI.Services.Payment
                 .Where(t => t.PaymentRecordId == paymentRecordId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
+        }
+
+        /// <summary>
+        /// Cập nhật TuitionInvoice sau khi thanh toán học phí thành công.
+        /// IgnoreQueryFilters vì IPN callback từ VNPay không có tenant header.
+        /// </summary>
+        private async Task UpdateTuitionInvoiceAsync(string invoiceId, string paymentRecordId)
+        {
+            try
+            {
+                var invoice = await _tenantDbContext.TuitionInvoices
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
+
+                if (invoice == null)
+                {
+                    _logger.LogWarning("TuitionInvoice {InvoiceId} not found when updating after payment", invoiceId);
+                    return;
+                }
+
+                if (invoice.Status == "Paid")
+                {
+                    _logger.LogInformation("TuitionInvoice {InvoiceId} already marked as Paid", invoiceId);
+                    return;
+                }
+
+                invoice.Status = "Paid";
+                invoice.PaidAt = DateTime.UtcNow;
+                invoice.PaymentRecordId = paymentRecordId;
+                invoice.UpdatedAt = DateTime.UtcNow;
+
+                await _tenantDbContext.SaveChangesAsync();
+
+                _logger.LogInformation("TuitionInvoice {InvoiceId} marked as Paid with PaymentRecord {PaymentRecordId}",
+                    invoiceId, paymentRecordId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update TuitionInvoice {InvoiceId} after payment", invoiceId);
+                // Không throw — payment đã thành công, invoice update có thể retry sau
+            }
         }
     }
 

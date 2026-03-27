@@ -12,17 +12,30 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StudentSidebar from '../../components/StudentSidebar';
+import ParentSidebar from '../../components/ParentSidebar';
 import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
+import { useAuth } from '../../context/AuthContext';
 import '../../css/pages/student/MyInvoices.css';
 
 const MyInvoices = () => {
+    const { user } = useAuth();
+    const isParent = user?.role === 'Parent';
+    
     const [invoices, setInvoices] = useState([]);
     const [outstandingInvoices, setOutstandingInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
+
+    // Lấy tenantId - chấp nhận cả default-tenant
+    const getValidTenantId = () => {
+        const stored = localStorage.getItem('tenantId');
+        if (stored) return stored;
+        if (user?.tenantId) return user.tenantId;
+        return 'default-tenant';
+    };
 
     useEffect(() => {
         fetchInvoices();
@@ -31,14 +44,12 @@ const MyInvoices = () => {
     const fetchInvoices = async () => {
         setLoading(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
-            
             // Lấy tất cả hóa đơn
-            const allInvoices = await tuitionService.getMyInvoices(tenantId);
+            const allInvoices = await tuitionService.getMyInvoices();
             setInvoices(allInvoices);
 
             // Lấy hóa đơn chưa thanh toán
-            const outstanding = await tuitionService.getOutstandingInvoices(tenantId);
+            const outstanding = await tuitionService.getOutstandingInvoices();
             setOutstandingInvoices(outstanding);
         } catch (error) {
             toast.error('Không thể tải danh sách hóa đơn');
@@ -50,9 +61,26 @@ const MyInvoices = () => {
     const handlePayment = async () => {
         if (!selectedInvoice) return;
 
+        // Kiểm tra invoice có ở trạng thái cho phép thanh toán không
+        if (selectedInvoice.status === 'Paid') {
+            toast.error('Hóa đơn này đã được thanh toán');
+            setShowPaymentModal(false);
+            return;
+        }
+        if (selectedInvoice.status === 'Cancelled') {
+            toast.error('Hóa đơn này đã bị hủy');
+            setShowPaymentModal(false);
+            return;
+        }
+        if (selectedInvoice.status === 'Draft') {
+            toast.error('Hóa đơn chưa được gửi, vui lòng liên hệ trung tâm');
+            setShowPaymentModal(false);
+            return;
+        }
+
         setProcessingPayment(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const returnUrl = `${window.location.origin}/payment/result`;
             
             const paymentData = {
@@ -117,7 +145,7 @@ const MyInvoices = () => {
 
     return (
         <div className="my-invoices-container">
-            <StudentSidebar />
+            {isParent ? <ParentSidebar /> : <StudentSidebar />}
             <div className="invoices-content">
                 <div className="page-header">
                     <h1>Hóa đơn học phí của tôi</h1>

@@ -12,11 +12,13 @@ import {
     PieChart
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
 import '../../css/pages/center/RevenueReport.css';
 
 const RevenueReport = () => {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'monthly' | 'by-class' | 'outstanding'
     const [loading, setLoading] = useState(false);
     const [year, setYear] = useState(new Date().getFullYear());
@@ -31,10 +33,18 @@ const RevenueReport = () => {
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
     const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }));
 
+    // Lấy tenantId - chấp nhận cả default-tenant
+    const getValidTenantId = () => {
+        const stored = localStorage.getItem('tenantId');
+        if (stored) return stored;
+        if (user?.tenantId) return user.tenantId;
+        return 'default-tenant';
+    };
+
     const fetchSummary = async () => {
         setLoading(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const fromDate = new Date(year, 0, 1).toISOString();
             const toDate = new Date(year, 11, 31).toISOString();
             
@@ -50,7 +60,7 @@ const RevenueReport = () => {
     const fetchMonthlyData = async () => {
         setLoading(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const response = await api.get(`/revenue-reports/by-month?tenantId=${tenantId}&year=${year}`);
             setMonthlyData(response.data);
         } catch (error) {
@@ -63,7 +73,7 @@ const RevenueReport = () => {
     const fetchClassData = async () => {
         setLoading(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const response = await api.get(`/revenue-reports/by-class?tenantId=${tenantId}&month=${month}&year=${year}`);
             setClassData(response.data);
         } catch (error) {
@@ -76,7 +86,7 @@ const RevenueReport = () => {
     const fetchOutstanding = async () => {
         setLoading(true);
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const response = await api.get(`/revenue-reports/outstanding?tenantId=${tenantId}`);
             setOutstandingData(response.data);
         } catch (error) {
@@ -88,7 +98,7 @@ const RevenueReport = () => {
 
     const handleExport = async () => {
         try {
-            const tenantId = localStorage.getItem('tenantId');
+            const tenantId = getValidTenantId();
             const fromDate = new Date(year, 0, 1).toISOString();
             const toDate = new Date(year, 11, 31).toISOString();
             

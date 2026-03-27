@@ -10,16 +10,21 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import paymentService from '../services/paymentService';
+import { useAuth } from '../context/AuthContext';
 import '../css/pages/PaymentResult.css';
 
 const PaymentResult = () => {
     const [searchParams] = useSearchParams();
+    const { user } = useAuth();
     const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'failed'
     const [paymentInfo, setPaymentInfo] = useState(null);
 
     const success = searchParams.get('success') === 'true';
     const orderId = searchParams.get('orderId');
     const transactionId = searchParams.get('transactionId');
+
+    // Xác định trang hóa đơn theo role
+    const invoicesPath = user?.role === 'Parent' ? '/parent/invoices' : '/student/invoices';
 
     useEffect(() => {
         verifyPayment();
@@ -145,7 +150,7 @@ const PaymentResult = () => {
                         <div className="action-buttons">
                             <button 
                                 className="primary-btn"
-                                onClick={() => window.location.href = '/student/invoices'}
+                                onClick={() => window.location.href = invoicesPath}
                             >
                                 <FileText size={18} />
                                 Xem hóa đơn

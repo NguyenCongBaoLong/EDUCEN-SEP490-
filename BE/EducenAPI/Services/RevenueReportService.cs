@@ -25,8 +25,7 @@ namespace EducenAPI.Services
         public async Task<RevenueSummaryDto> GetRevenueSummaryAsync(string tenantId, DateTime fromDate, DateTime toDate)
         {
             var invoices = await _tenantContext.TuitionInvoices
-                .Where(i => i.TenantId == tenantId &&
-                           i.CreatedAt >= fromDate &&
+                .Where(i => i.CreatedAt >= fromDate &&
                            i.CreatedAt <= toDate)
                 .ToListAsync();
 
@@ -56,7 +55,7 @@ namespace EducenAPI.Services
         public async Task<List<RevenueByMonthDto>> GetRevenueByMonthAsync(string tenantId, int year)
         {
             var invoices = await _tenantContext.TuitionInvoices
-                .Where(i => i.TenantId == tenantId && i.InvoiceYear == year)
+                .Where(i => i.InvoiceYear == year)
                 .ToListAsync();
 
             var result = new List<RevenueByMonthDto>();
@@ -82,8 +81,7 @@ namespace EducenAPI.Services
         {
             var invoices = await _tenantContext.TuitionInvoices
                 .Include(i => i.Class)
-                .Where(i => i.TenantId == tenantId &&
-                           i.InvoiceMonth == month &&
+                .Where(i => i.InvoiceMonth == month &&
                            i.InvoiceYear == year)
                 .ToListAsync();
 
@@ -119,8 +117,7 @@ namespace EducenAPI.Services
                 .Include(i => i.Student)
                     .ThenInclude(s => s.StudentNavigation)
                 .Include(i => i.Class)
-                .Where(i => i.TenantId == tenantId &&
-                           (i.Status == "Sent" || i.Status == "Overdue"))
+                .Where(i => (i.Status == "Sent" || i.Status == "Overdue"))
                 .OrderBy(i => i.DueDate)
                 .ToListAsync();
 

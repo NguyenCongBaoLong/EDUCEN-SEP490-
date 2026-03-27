@@ -42,7 +42,6 @@ namespace EducenAPI.Services
             var invoice = new TuitionInvoice
             {
                 InvoiceId = Guid.NewGuid().ToString(),
-                TenantId = request.TenantId,
                 StudentId = request.StudentId,
                 ClassId = request.ClassId,
                 InvoiceMonth = request.Month,
@@ -121,7 +120,6 @@ namespace EducenAPI.Services
                     // Create invoice
                     var invoice = await CreateInvoiceAsync(new CreateInvoiceRequest
                     {
-                        TenantId = request.TenantId,
                         StudentId = calc.StudentId,
                         ClassId = request.ClassId,
                         Month = request.Month,
@@ -160,9 +158,6 @@ namespace EducenAPI.Services
                     .ThenInclude(s => s.StudentNavigation)
                 .Include(i => i.Class)
                 .AsQueryable();
-
-            if (!string.IsNullOrEmpty(filter.TenantId))
-                query = query.Where(i => i.TenantId == filter.TenantId);
 
             if (filter.StudentId.HasValue)
                 query = query.Where(i => i.StudentId == filter.StudentId.Value);

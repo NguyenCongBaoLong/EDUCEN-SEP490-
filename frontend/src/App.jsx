@@ -98,6 +98,7 @@ function App() {
                   <Route path="classes" element={<PrivateRoute allowedRoles={['Parent']}><ParentClasses /></PrivateRoute>} />
                   <Route path="schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
                   <Route path="feedback" element={<PrivateRoute allowedRoles={['Parent']}><ParentFeedback /></PrivateRoute>} />
+                  <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
                 </Routes>
               } />
 

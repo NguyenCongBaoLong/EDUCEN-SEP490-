@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EducenAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/revenue-reports")]
     [Authorize]
     public class RevenueReportsController : ControllerBase
     {

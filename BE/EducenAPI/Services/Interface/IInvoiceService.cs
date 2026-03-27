@@ -47,7 +47,6 @@ namespace EducenAPI.Services.Interface
 
     public class CreateInvoiceRequest
     {
-        public string TenantId { get; set; } = string.Empty;
         public int StudentId { get; set; }
         public int ClassId { get; set; }
         public int Month { get; set; }
@@ -59,7 +58,6 @@ namespace EducenAPI.Services.Interface
 
     public class BatchInvoiceRequest
     {
-        public string TenantId { get; set; } = string.Empty;
         public int ClassId { get; set; }
         public int Month { get; set; }
         public int Year { get; set; }
@@ -77,7 +75,6 @@ namespace EducenAPI.Services.Interface
 
     public class InvoiceFilterRequest
     {
-        public string? TenantId { get; set; }
         public int? StudentId { get; set; }
         public int? ClassId { get; set; }
         public int? Month { get; set; }

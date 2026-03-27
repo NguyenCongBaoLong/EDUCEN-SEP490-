@@ -86,7 +86,7 @@ namespace EducenAPI.Services
             // Create notification for Center Admin
             await CreateSystemNotificationAsync(new CreateNotificationRequest
             {
-                TenantId = invoice.TenantId,
+                TenantId = _tenantContext.CurrentTenantId,
                 UserId = int.Parse(invoice.CreatedBy ?? "1"), // Default to admin
                 Title = "Nhắc nhở thanh toán đã được gửi",
                 Message = $"Đã gửi nhắc nhở thanh toán cho hóa đơn {invoice.InvoiceId} - Học sinh: {invoice.Student.StudentNavigation?.FullName}",

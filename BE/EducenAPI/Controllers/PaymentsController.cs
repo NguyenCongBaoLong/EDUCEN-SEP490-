@@ -25,7 +25,7 @@ namespace EducenAPI.Controllers
         /// </summary>
         [HttpPost("create")]
         [Authorize(Roles = "Admin,Student,Parent")]
-        public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentRequest request)
+        public async Task<IActionResult> CreatePayment([FromBody] CreatePaymentApiRequest request)
         {
             try
             {
@@ -111,7 +111,8 @@ namespace EducenAPI.Controllers
                     _logger.LogWarning("VNPay callback verification failed: {Message}", result.Message);
                 }
 
-                var frontendUrl = "http://localhost:5173/payment/result";
+                var frontendUrl = _configuration["PaymentGateways:VNPay:FrontendReturnUrl"]
+                    ?? "http://localhost:5173/payment/result";
                 var redirectUrl = $"{frontendUrl}?success={result.IsSuccessful}&orderId={result.OrderId}";
                 return Redirect(redirectUrl);
             }
@@ -123,10 +124,10 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Kiểm tra trạng thái thanh toán
+        /// Kiểm tra trạng thái thanh toán (public — không cần đăng nhập)
         /// </summary>
         [HttpGet("verify/{paymentRecordId}")]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> VerifyPayment(string paymentRecordId)
         {
             try
@@ -167,7 +168,11 @@ namespace EducenAPI.Controllers
         }
     }
 
-    public class CreatePaymentRequest
+    /// <summary>
+    /// Request body cho API POST /api/payments/create
+    /// (khác với CreatePaymentRequest trong IPaymentGateway.cs dùng cho gateway internal)
+    /// </summary>
+    public class CreatePaymentApiRequest
     {
         public string TenantId { get; set; } = string.Empty;
         public decimal Amount { get; set; }

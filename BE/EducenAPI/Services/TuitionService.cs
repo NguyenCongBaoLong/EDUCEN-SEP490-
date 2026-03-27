@@ -51,19 +51,18 @@ namespace EducenAPI.Services
 
             // Calculate attendance
             var sessionDetails = new List<SessionAttendanceDetail>();
-            int attended = 0, absent = 0, excused = 0;
+            int attended = 0, absent = 0;
 
             foreach (var session in sessions)
             {
                 var attendance = session.Attendances?.FirstOrDefault(a => a.StudentId == studentId);
                 var status = attendance?.Status ?? "Absent";
 
-                if (status == "Attended") attended++;
-                else if (status == "Excused") excused++;
+                if (status == "present" || status == "Attended") attended++;
                 else absent++;
 
                 var pricePerSession = classEntity.PricePerSession.Value;
-                var amount = status == "Excused" ? 0 : (status == "Attended" ? pricePerSession : 0);
+                var amount = (status == "present" || status == "Attended") ? pricePerSession : 0;
 
                 sessionDetails.Add(new SessionAttendanceDetail
                 {
@@ -87,7 +86,6 @@ namespace EducenAPI.Services
                 TotalSessions = sessions.Count,
                 AttendedSessions = attended,
                 AbsentSessions = absent,
-                ExcusedSessions = excused,
                 PricePerSession = classEntity.PricePerSession.Value,
                 TotalAmount = totalAmount,
                 DiscountAmount = 0,
@@ -98,12 +96,28 @@ namespace EducenAPI.Services
 
         public async Task<List<TuitionCalculationResult>> CalculateClassTuitionAsync(int classId, int month, int year)
         {
+            // Verify class exists
+            var classExists = await _context.Classes.AnyAsync(c => c.ClassId == classId);
+            if (!classExists)
+                throw new Exception("Không tìm thấy lớp học");
+
+            // Verify class has PricePerSession set
+            var classPrice = await _context.Classes
+                .Where(c => c.ClassId == classId)
+                .Select(c => c.PricePerSession)
+                .FirstOrDefaultAsync();
+            if (!classPrice.HasValue || classPrice.Value <= 0)
+                throw new Exception("Lớp học chưa có đơn giá mỗi buổi. Vui lòng cập nhật đơn giá trong trang Quản lý lớp học trước khi tính học phí.");
+
             // Get all students in class
             var students = await _context.Students
                 .Include(s => s.Classes)
                 .Include(s => s.StudentNavigation)
                 .Where(s => s.Classes.Any(c => c.ClassId == classId))
                 .ToListAsync();
+
+            if (!students.Any())
+                throw new Exception("Lớp học chưa có học sinh nào. Vui lòng thêm học sinh vào lớp trước khi tính học phí.");
 
             var results = new List<TuitionCalculationResult>();
 
