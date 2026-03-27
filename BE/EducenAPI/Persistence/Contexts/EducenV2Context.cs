@@ -47,6 +47,11 @@ public partial class EducenV2Context : DbContext
     public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
     public DbSet<SupportRequest> SupportRequests { get; set; }
 
+    // === Payment & Tuition System ===
+    public DbSet<TuitionInvoice> TuitionInvoices { get; set; }
+    public DbSet<TuitionInvoiceItem> TuitionInvoiceItems { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+
     // ================================
     // MODEL CONFIGURATION
     // ================================
@@ -275,16 +280,61 @@ public partial class EducenV2Context : DbContext
         .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Assignment>()
-        .HasOne(a => a.User)
-        .WithMany()
-        .HasForeignKey(a => a.UserId)
-        .OnDelete(DeleteBehavior.SetNull);
+            .HasOne(a => a.User)
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<LessonMaterial>()
         .HasOne(m => m.User)
         .WithMany()
         .HasForeignKey(m => m.UserId)
         .OnDelete(DeleteBehavior.SetNull);
+
+        // === TuitionInvoice Configuration ===
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasOne(ti => ti.Student)
+            .WithMany()
+            .HasForeignKey(ti => ti.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasOne(ti => ti.Class)
+            .WithMany()
+            .HasForeignKey(ti => ti.ClassId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.TenantId, ti.InvoiceMonth, ti.InvoiceYear });
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.StudentId, ti.Status });
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.TenantId, ti.Status, ti.DueDate }); // For overdue checking
+
+        // === TuitionInvoiceItem Configuration ===
+        modelBuilder.Entity<TuitionInvoiceItem>()
+            .HasOne(tii => tii.Invoice)
+            .WithMany(ti => ti.Items)
+            .HasForeignKey(tii => tii.InvoiceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TuitionInvoiceItem>()
+            .HasIndex(tii => new { tii.InvoiceId, tii.SessionId });
+
+        // === Notification Configuration ===
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Notification>()
+            .HasIndex(n => new { n.TenantId, n.UserId, n.IsRead });
+
+        modelBuilder.Entity<Notification>()
+            .HasIndex(n => new { n.TenantId, n.Category, n.CreatedAt });
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)
