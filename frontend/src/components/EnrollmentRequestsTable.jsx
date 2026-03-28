@@ -75,8 +75,8 @@ const EnrollmentRequestsTable = ({
                     <thead>
                         <tr>
                             <th>Học Sinh</th>
-                            <th>Khối Đăng Ký</th>
-                            <th>Phụ Huynh</th>
+                            <th>Khóa Học Mong Muốn</th>
+                            <th>Email</th>
                             <th>Ngày Gửi</th>
                             <th>Trạng Thái</th>
                             <th className="text-right">Hành Động</th>
@@ -87,37 +87,17 @@ const EnrollmentRequestsTable = ({
                             currentRequests.map((request) => (
                                 <tr key={request.id}>
                                     <td>
-                                        {/* API version - TEMP DISABLED */}
-                                        {/* <div style={{ fontWeight: 600 }}>{request.studentName}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                            {request.email}
-                                        </div> */}
-                                        {/* Mock version */}
                                         <div style={{ fontWeight: 600 }}>{request.studentName}</div>
                                         <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                            {new Date(request.dateOfBirth).toLocaleDateString('vi-VN')}
+                                            SĐT: {request.phone}
                                         </div>
                                     </td>
                                     <td>
-                                        {/* API version - TEMP DISABLED */}
-                                        {/* <span className="grade-badge">{request.desiredGrade || 'Chưa chọn'}</span> */}
-                                        {/* Mock version */}
-                                        <span className="grade-badge">Khối {request.desiredGrade}</span>
+                                        <span className="grade-badge">{request.desiredGrade || 'Chưa chọn'}</span>
                                     </td>
                                     <td>
-                                        {/* API version - TEMP DISABLED */}
-                                        {/* <div className="parent-info">
-                                            <div style={{ fontWeight: 500 }}>{request.phone}</div>
-                                            {request.address && (
-                                                <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                                    {request.address.length > 30 ? request.address.substring(0, 30) + '...' : request.address}
-                                                </div>
-                                            )}
-                                        </div> */}
-                                        {/* Mock version */}
-                                        <div className="parent-info">
-                                            <div style={{ fontWeight: 500 }}>{request.parentName}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{request.parentPhone}</div>
+                                        <div className="email-info" style={{ wordBreak: 'break-all' }}>
+                                            {request.email}
                                         </div>
                                     </td>
                                     <td>

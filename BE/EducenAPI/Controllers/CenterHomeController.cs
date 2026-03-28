@@ -1,4 +1,5 @@
-﻿using EducenAPI.DTOs.CenterHome;
+using System.Threading.Tasks;
+using EducenAPI.DTOs.CenterHome;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,19 +18,17 @@ namespace EducenAPI.Controllers
             _centerHomeService = centerHomeService;
         }
 
-        [HttpGet("{tenantId}")]
+        [HttpGet]
         [AllowAnonymous] // Cho phép tất cả mọi người (kể cả chưa đăng nhập) xem trang chủ
-        public async Task<IActionResult> GetCenterHome(string tenantId)
+        public async Task<IActionResult> GetCenterHome()
         {
             try
             {
-                if (string.IsNullOrEmpty(tenantId))
-                    return BadRequest("TenantId không hợp lệ.");
 
                 // Lấy BaseUrl (Ví dụ: http://localhost:5106)
                 var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
-                var result = await _centerHomeService.GetCenterHomeAsync(tenantId, baseUrl);
+                var result = await _centerHomeService.GetCenterHomeAsync(baseUrl);
 
                 if (result == null)
                 {
@@ -45,31 +44,39 @@ namespace EducenAPI.Controllers
             }
         }
 
-        [HttpPost("save/{tenantId}")]
-        public async Task<IActionResult> SaveCenterHome(string tenantId, [FromForm] SaveCenterHomeDto dto) // Đổi sang [FromForm]
+        [HttpPost("save")]
+        public async Task<IActionResult> SaveCenterHome([FromForm] SaveCenterHomeDto dto) // Đổi sang [FromForm]
         {
             try
             {
-                if (string.IsNullOrEmpty(tenantId))
-                    return BadRequest("TenantId không hợp lệ");
 
-                var success = await _centerHomeService.SaveCenterHomeAsync(tenantId, dto);
-
-                if (success)
-                    return Ok(new { message = "Lưu thông tin trang chủ thành công!" });
-
-                return BadRequest("Có lỗi xảy ra khi lưu dữ liệu.");
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _centerHomeService.SaveCenterHomeAsync(dto, baseUrl);
+                
+                if (result != null)
+                    return Ok(result);
+                
+                return BadRequest(new { message = "Có lỗi xảy ra khi lưu dữ liệu." });
             }
             catch (Exception ex)
             {
-                // Bóc tách lỗi chi tiết từ Database (Inner Exception)
-                string errorMsg = ex.Message;
-                if (ex.InnerException != null)
-                {
-                    errorMsg = ex.InnerException.Message; // Đây mới là lỗi thực sự từ SQL Server
-                }
+                string errorMsg = ex.InnerException?.Message ?? ex.Message;
+                return BadRequest(new { message = errorMsg });
+            }
+        }
 
-                return BadRequest(new { message = errorMsg }); return BadRequest(new { message = ex.Message });
+        [HttpGet("classes")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUpcomingClasses()
+        {
+            try
+            {
+                var result = await _centerHomeService.GetUpcomingClassesAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

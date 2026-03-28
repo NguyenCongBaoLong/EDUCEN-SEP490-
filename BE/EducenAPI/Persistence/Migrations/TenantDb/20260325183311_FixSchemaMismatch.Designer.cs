@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260325183311_FixSchemaMismatch")]
+    partial class FixSchemaMismatch
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -137,12 +140,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HeroImageId"));
 
-                    b.Property<string>("ButtonLink")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ButtonText")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("CenterProfileId")
                         .HasColumnType("int");
 
@@ -153,10 +150,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
-                    b.Property<string>("SubTitle")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
+                    b.Property<string>("TenantId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("HeroImageId");
@@ -183,6 +178,10 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Text")
                         .IsRequired()
@@ -213,6 +212,10 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("ImageId");
 
                     b.HasIndex("CenterProfileId");
@@ -231,28 +234,16 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("BackgroundColor")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Copyright")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DisplayConfig")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FacebookUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("FooterTagline")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("InstagramUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IntroDescription")
@@ -271,58 +262,22 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PrimaryColor")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("QuoteText")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Tagline")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Website")
+                    b.Property<string>("TenantId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("YoutubeUrl")
+                    b.Property<string>("Website")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("CenterProfileId");
 
                     b.ToTable("CenterProfiles");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.CenterStaff", b =>
-                {
-                    b.Property<int>("CenterStaffId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CenterStaffId"));
-
-                    b.Property<string>("AvatarUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Bio")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("CenterProfileId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Role")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("CenterStaffId");
-
-                    b.HasIndex("CenterProfileId");
-
-                    b.ToTable("CenterStaffs");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Class", b =>
@@ -347,9 +302,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<int?>("GradeId")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("PricePerSession")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("RoomId")
                         .HasColumnType("int");
@@ -415,58 +367,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.ToTable("ClassSessions");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.EnrollmentRequest", b =>
-                {
-                    b.Property<int>("RequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int?>("CreatedStudentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("PreferredCourse")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<DateTime>("RequestDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("RequestId");
-
-                    b.ToTable("EnrollmentRequests");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Grade", b =>
                 {
                     b.Property<int>("GradeId")
@@ -522,66 +422,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.ToTable("LessonMaterials");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.Notification", b =>
-                {
-                    b.Property<int>("NotificationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationId"));
-
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReferenceId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReferenceType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("NotificationId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("TenantId", "Category", "CreatedAt");
-
-                    b.HasIndex("TenantId", "UserId", "IsRead");
-
-                    b.ToTable("Notifications");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Parent", b =>
                 {
                     b.Property<int>("UserId")
@@ -590,128 +430,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasKey("UserId");
 
                     b.ToTable("Parents");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
-                {
-                    b.Property<string>("PaymentId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("PaidBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("PaymentDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("ProcessedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReferenceId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("TransactionType")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.HasKey("PaymentId");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("PaymentRecords");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.PaymentTransaction", b =>
-                {
-                    b.Property<string>("TransactionId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GatewayResponse")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GatewayTransactionId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GatewayType")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("PaymentRecordId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("TransactionId");
-
-                    b.HasIndex("PaymentRecordId");
-
-                    b.ToTable("PaymentTransactions");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.Plan", b =>
-                {
-                    b.Property<string>("PlanId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Features")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("LimitUsers")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PlanName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("StorageLimit")
-                        .HasColumnType("int");
-
-                    b.HasKey("PlanId");
-
-                    b.ToTable("Plan");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Role", b =>
@@ -900,80 +618,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.ToTable("Submissions");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.Subscription", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PlanId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlanId");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("Subscription");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.SupportRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AdminResponse")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("SenderId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SenderId");
-
-                    b.ToTable("SupportRequests");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Teacher", b =>
                 {
                     b.Property<int>("UserId")
@@ -988,173 +632,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasKey("UserId");
 
                     b.ToTable("Teachers");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.Tenant", b =>
-                {
-                    b.Property<string>("TenantId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Address")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("ConnectionString")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ContactPerson")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("SubDomain")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("TenantName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("TenantId");
-
-                    b.ToTable("Tenant");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.TuitionInvoice", b =>
-                {
-                    b.Property<string>("InvoiceId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("AbsentSessions")
-                        .HasColumnType("int");
-
-                    b.Property<int>("AttendedSessions")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ClassId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("DiscountAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("DueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("ExcusedSessions")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("FinalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("InvoiceMonth")
-                        .HasColumnType("int");
-
-                    b.Property<int>("InvoiceYear")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentRecordId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("PricePerSession")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("StudentId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("TotalSessions")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("InvoiceId");
-
-                    b.HasIndex("ClassId");
-
-                    b.HasIndex("InvoiceMonth", "InvoiceYear");
-
-                    b.HasIndex("Status", "DueDate");
-
-                    b.HasIndex("StudentId", "Status");
-
-                    b.ToTable("TuitionInvoices");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.TuitionInvoiceItem", b =>
-                {
-                    b.Property<int>("ItemId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ItemId"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("InvoiceId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("SessionDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SessionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("ItemId");
-
-                    b.HasIndex("InvoiceId", "SessionId");
-
-                    b.ToTable("TuitionInvoiceItems");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.User", b =>
@@ -1325,17 +802,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("CenterProfile");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.CenterStaff", b =>
-                {
-                    b.HasOne("EducenAPI.Models.CenterProfile", "CenterProfile")
-                        .WithMany("Staffs")
-                        .HasForeignKey("CenterProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CenterProfile");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Class", b =>
                 {
                     b.HasOne("EducenAPI.Models.Assistant", "Assistant")
@@ -1413,17 +879,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.Notification", b =>
-                {
-                    b.HasOne("EducenAPI.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Parent", b =>
                 {
                     b.HasOne("EducenAPI.Models.User", "ParentNavigation")
@@ -1433,26 +888,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .IsRequired();
 
                     b.Navigation("ParentNavigation");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
-                {
-                    b.HasOne("EducenAPI.Models.Tenant", null)
-                        .WithMany("PaymentRecords")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.PaymentTransaction", b =>
-                {
-                    b.HasOne("EducenAPI.Models.PaymentRecord", "PaymentRecord")
-                        .WithMany("Transactions")
-                        .HasForeignKey("PaymentRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PaymentRecord");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Schedule", b =>
@@ -1503,36 +938,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Student");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.Subscription", b =>
-                {
-                    b.HasOne("EducenAPI.Models.Plan", "Plan")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EducenAPI.Models.Tenant", "Tenant")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Plan");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.SupportRequest", b =>
-                {
-                    b.HasOne("EducenAPI.Models.User", "Sender")
-                        .WithMany("SentRequests")
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Sender");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.Teacher", b =>
                 {
                     b.HasOne("EducenAPI.Models.User", "TeacherNavigation")
@@ -1542,36 +947,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .IsRequired();
 
                     b.Navigation("TeacherNavigation");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.TuitionInvoice", b =>
-                {
-                    b.HasOne("EducenAPI.Models.Class", "Class")
-                        .WithMany()
-                        .HasForeignKey("ClassId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("EducenAPI.Models.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Class");
-
-                    b.Navigation("Student");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.TuitionInvoiceItem", b =>
-                {
-                    b.HasOne("EducenAPI.Models.TuitionInvoice", "Invoice")
-                        .WithMany("Items")
-                        .HasForeignKey("InvoiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Invoice");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.User", b =>
@@ -1617,8 +992,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Highlights");
 
                     b.Navigation("Images");
-
-                    b.Navigation("Staffs");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Class", b =>
@@ -1640,16 +1013,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
             modelBuilder.Entity("EducenAPI.Models.Grade", b =>
                 {
                     b.Navigation("Classes");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
-                {
-                    b.Navigation("Transactions");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.Plan", b =>
-                {
-                    b.Navigation("Subscriptions");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Role", b =>
@@ -1686,18 +1049,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Classes");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.Tenant", b =>
-                {
-                    b.Navigation("PaymentRecords");
-
-                    b.Navigation("Subscriptions");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.TuitionInvoice", b =>
-                {
-                    b.Navigation("Items");
-                });
-
             modelBuilder.Entity("EducenAPI.Models.User", b =>
                 {
                     b.Navigation("Assistant");
@@ -1705,8 +1056,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Attendances");
 
                     b.Navigation("Parent");
-
-                    b.Navigation("SentRequests");
 
                     b.Navigation("Student");
 
