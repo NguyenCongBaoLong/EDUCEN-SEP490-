@@ -16,7 +16,7 @@ const Sidebar = () => {
     ];
 
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, logout, centerBranding } = useAuth();
 
     const handleLogout = () => {
         logout();
@@ -27,10 +27,18 @@ const Sidebar = () => {
         <aside className="sidebar">
             <div className="sidebar-header">
                 <div className="sidebar-logo">
-                    <GraduationCap size={24} />
-                    <span>TutorCenter</span>
+                    <div className="logo-wrapper">
+                        {centerBranding.logoUrl ? (
+                            <img src={centerBranding.logoUrl} alt="Logo" />
+                        ) : (
+                            <GraduationCap size={24} />
+                        )}
+                    </div>
+                    <div className="logo-content">
+                        <span className="center-name">{centerBranding.name}</span>
+                        <div className="sidebar-subtitle">Quản trị viên</div>
+                    </div>
                 </div>
-                <div className="sidebar-subtitle">Quản trị viên</div>
             </div>
 
             <nav className="sidebar-nav">

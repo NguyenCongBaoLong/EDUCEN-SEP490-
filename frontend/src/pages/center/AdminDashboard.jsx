@@ -11,6 +11,7 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import '../../css/pages/center/AdminDashboard.css';
 
 /* ─── Mock Data ─────────────────────────────────────── */
@@ -120,6 +121,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 /* ─── Main Component ─────────────────────────────────── */
 const AdminDashboard = () => {
+    const { user, centerBranding } = useAuth();
     const [dashboardData, setDashboardData] = useState({
     overview: {
         totalStudents: 0,
@@ -240,7 +242,7 @@ const AdminDashboard = () => {
                         </button>
                         <div className="dashboard-center-badge">
                             <GraduationCap size={18} />
-                            Trung Tâm Gia Sư TutorCenter
+                            {centerBranding.name}
                         </div>
                     </div>
                 </div>

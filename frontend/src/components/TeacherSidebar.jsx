@@ -7,7 +7,7 @@ import '../css/components/Sidebar.css';
 const TeacherSidebar = ({ isTA = false, onCollapseChange }) => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const { user, logout, centerBranding } = useAuth();
     
     const [isCollapsed, setIsCollapsed] = useState(() => {
         const saved = localStorage.getItem('teacher-sidebar-collapsed');
@@ -51,10 +51,18 @@ const TeacherSidebar = ({ isTA = false, onCollapseChange }) => {
             </button>
             <div className="sidebar-header">
                 <div className="sidebar-logo">
-                    <GraduationCap size={24} />
-                    <span>TutorCenter</span>
+                    <div className="logo-wrapper">
+                        {centerBranding.logoUrl ? (
+                            <img src={centerBranding.logoUrl} alt="Logo" />
+                        ) : (
+                            <GraduationCap size={24} />
+                        )}
+                    </div>
+                    <div className="logo-content">
+                        <span className="center-name">{centerBranding.name}</span>
+                        {!isCollapsed && <div className="sidebar-subtitle">{isTA ? 'Trợ giảng' : 'Giáo viên'}</div>}
+                    </div>
                 </div>
-                {!isCollapsed && <div className="sidebar-subtitle">{isTA ? 'Trợ giảng' : 'Giáo viên'}</div>}
             </div>
 
             <nav className="sidebar-nav">

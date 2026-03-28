@@ -41,8 +41,27 @@ function getRedirectPath(role) {
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [centerBranding, setCenterBranding] = useState({
+        name: 'TutorCenter',
+        logoUrl: null
+    });
 
-    // Khởi tạo: đọc token từ localStorage khi app load
+    // Hàm tải thông tin thương hiệu trung tâm
+    const fetchCenterBranding = async () => {
+        try {
+            const response = await api.get('/CenterHome');
+            if (response.data) {
+                setCenterBranding({
+                    name: response.data.name || 'TutorCenter',
+                    logoUrl: response.data.logo || null
+                });
+            }
+        } catch (error) {
+            console.error('Lỗi khi tải thông tin trung tâm:', error);
+        }
+    };
+
+    // Khởi tạo: đọc token từ localStorage khi app load và tải branding
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -61,6 +80,9 @@ export function AuthProvider({ children }) {
                 localStorage.removeItem('user');
             }
         }
+        
+        // Luôn tải thông tin trung tâm
+        fetchCenterBranding();
         setLoading(false);
     }, []);
 
@@ -104,7 +126,16 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, sysadminLogin, loading, getRedirectPath }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            login, 
+            logout, 
+            sysadminLogin, 
+            loading, 
+            getRedirectPath,
+            centerBranding,
+            refreshBranding: fetchCenterBranding
+        }}>
             {children}
         </AuthContext.Provider>
     );
