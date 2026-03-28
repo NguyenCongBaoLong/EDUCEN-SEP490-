@@ -28,14 +28,20 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<ClassDto>> GetAllClassesAsync()
         {
+            await UpdateExpiredClassesAsync();
+
             return await _context.Classes
                 .Include(c => c.Subject)
                 .Include(c => c.Teacher)
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Room)
+                .Include(c => c.Grade)
                 .Include(c => c.Students)
                 .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Room)
+                .Include(c => c.Sessions)
                 .Select(c => new ClassDto
                 {
                     ClassId = c.ClassId,
@@ -48,16 +54,24 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
+                    RoomId = c.RoomId,
+                    RoomName = c.Room != null ? c.Room.RoomName : null,
+                    GradeId = c.GradeId,
+                    GradeName = c.Grade != null ? c.Grade.GradeName : null,
                     StartDate = c.StartDate,
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
-                        EndTime = s.EndTime.ToString("HH:mm")
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId,
+                        RoomName = s.Room != null ? s.Room.RoomName : null
                     }).ToList()
                 })
                 .ToListAsync();
@@ -65,13 +79,20 @@ namespace EducenAPI.Services
 
         public async Task<ClassDto?> GetClassByIdAsync(int id)
         {
+            await UpdateExpiredClassesAsync();
+
             return await _context.Classes
                 .Include(c => c.Subject)
                 .Include(c => c.Teacher)
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Room)
+                .Include(c => c.Grade)
+                .Include(c => c.Students)
+                .Include(c => c.Sessions)
                 .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Room)
                 .Include(c => c.Students)
                 .Where(c => c.ClassId == id)
                 .Select(c => new ClassDto
@@ -86,16 +107,24 @@ namespace EducenAPI.Services
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
                     AssistantId = c.AssistantId,
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
+                    RoomId = c.RoomId,
+                    RoomName = c.Room != null ? c.Room.RoomName : null,
+                    GradeId = c.GradeId,
+                    GradeName = c.Grade != null ? c.Grade.GradeName : null,
                     StartDate = c.StartDate,
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
-                        EndTime = s.EndTime.ToString("HH:mm")
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId,
+                        RoomName = s.Room != null ? s.Room.RoomName : null
                     }).ToList()
                 })
                 .FirstOrDefaultAsync();
@@ -136,6 +165,26 @@ namespace EducenAPI.Services
                 }
             }
 
+            // Validate Rooms for slots
+            if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
+            {
+                foreach (var slot in dto.ScheduleSlots)
+                {
+                    var roomId = slot.RoomId ?? dto.RoomId;
+                    if (roomId.HasValue)
+                    {
+                        await ValidateRoomAvailability(roomId.Value, slot.DayOfWeek, slot.StartTime, slot.EndTime, dto.StartDate, dto.EndDate);
+                        await ValidateRoomStatus(roomId.Value);
+                    }
+                }
+            }
+            else if (dto.RoomId.HasValue)
+            {
+                var room = await _context.Rooms.FindAsync(dto.RoomId.Value);
+                if (room == null) throw new Exception("Room not found");
+                if (!room.Status) throw new Exception($"Phòng '{room.RoomName}' đang bảo trì, không thể sử dụng");
+            }
+
             // Validate date range
             if (dto.StartDate.HasValue && dto.EndDate.HasValue)
             {
@@ -165,6 +214,8 @@ namespace EducenAPI.Services
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
                 AssistantId = dto.AssistantId,
+                RoomId = dto.RoomId,
+                GradeId = dto.GradeId,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Status = dto.Status ?? "Active"
@@ -180,7 +231,7 @@ namespace EducenAPI.Services
                 // Create schedules for this class (including ClassSession)
                 if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
                 {
-                    await CreateSchedulesForClass(newClass.ClassId, dto.ScheduleSlots, dto.StartDate, dto.EndDate);
+                    await CreateSchedulesForClass(newClass.ClassId, dto.RoomId, dto.ScheduleSlots, dto.StartDate, dto.EndDate);
                 }
 
                 await transaction.CommitAsync();
@@ -194,11 +245,11 @@ namespace EducenAPI.Services
             return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
         }
 
-        private async Task ValidateTeacherAvailability(int teacherId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        private async Task ValidateTeacherAvailability(int teacherId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate, int? excludeClassId = null)
         {
             var teacherClasses = await _context.Classes
                 .Include(c => c.Schedules)
-                .Where(c => c.TeacherId == teacherId && c.Status == "Active")
+                .Where(c => c.TeacherId == teacherId && c.Status == "Active" && (excludeClassId == null || c.ClassId != excludeClassId))
                 .ToListAsync();
 
             foreach (var existingClass in teacherClasses)
@@ -227,11 +278,11 @@ namespace EducenAPI.Services
             }
         }
 
-        private async Task ValidateAssistantAvailability(int assistantId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        private async Task ValidateAssistantAvailability(int assistantId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate, int? excludeClassId = null)
         {
             var assistantClasses = await _context.Classes
                 .Include(c => c.Schedules)
-                .Where(c => c.AssistantId == assistantId && c.Status == "Active")
+                .Where(c => c.AssistantId == assistantId && c.Status == "Active" && (excludeClassId == null || c.ClassId != excludeClassId))
                 .ToListAsync();
 
             foreach (var existingClass in assistantClasses)
@@ -258,6 +309,81 @@ namespace EducenAPI.Services
                     }
                 }
             }
+        }
+
+        private async Task ValidateRoomAvailability(int roomId, int dayOfWeek, string startTimeStr, string endTimeStr, DateTime? startDate, DateTime? endDate, int? excludeClassId = null)
+        {
+            var startTime = TimeOnly.Parse(startTimeStr);
+            var endTime = TimeOnly.Parse(endTimeStr);
+
+            // Get day name for error message
+            var dayNames = new[] { "Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7" };
+            var dayName = dayNames[dayOfWeek];
+
+            // Get room name for error message
+            var room = await _context.Rooms.FindAsync(roomId);
+            var roomName = room?.RoomName ?? $"Room {roomId}";
+
+            // Check against ALL schedules in this room for active classes
+            var conflictingSchedules = await _context.Schedules
+                .Include(s => s.Class)
+                .Where(s => s.RoomId == roomId && s.Class.Status == "Active" && (excludeClassId == null || s.ClassId != excludeClassId))
+                .Where(s => s.DayOfWeek == dayOfWeek)
+                .ToListAsync();
+
+            foreach (var existingSlot in conflictingSchedules)
+            {
+                var existingClass = existingSlot.Class;
+                var existingStartDate = existingClass.StartDate;
+                var existingEndDate = existingClass.EndDate;
+
+                // Check date overlap
+                bool dateOverlaps;
+                if (startDate.HasValue && endDate.HasValue && existingStartDate.HasValue && existingEndDate.HasValue)
+                {
+                    // Both have dates - check overlap
+                    dateOverlaps = !(startDate > existingEndDate || endDate < existingStartDate);
+                }
+                else
+                {
+                    // One or both have null dates - always consider as overlap for strict validation
+                    dateOverlaps = true;
+                }
+
+                // Check time overlap if dates overlap
+                if (dateOverlaps && startTime < existingSlot.EndTime && endTime > existingSlot.StartTime)
+                {
+                    // Build detailed error message
+                    var existingDayName = dayNames[existingSlot.DayOfWeek];
+                    var dateRange = "";
+                    
+                    if (existingStartDate.HasValue && existingEndDate.HasValue)
+                    {
+                        dateRange = $" từ ngày {existingStartDate:dd/MM/yyyy} đến ngày {existingEndDate:dd/MM/yyyy}";
+                    }
+                    else if (!existingStartDate.HasValue && !existingEndDate.HasValue)
+                    {
+                        dateRange = " (không xác định)";
+                    }
+                    else if (existingStartDate.HasValue)
+                    {
+                        dateRange = $" từ ngày {existingStartDate:dd/MM/yyyy}";
+                    }
+                    else
+                    {
+                        dateRange = $" đến ngày {existingEndDate:dd/MM/yyyy}";
+                    }
+
+                    throw new Exception($"Phòng '{roomName}' đã được đặt bởi lớp '{existingClass.ClassName}' vào {existingDayName}, {existingSlot.StartTime}-{existingSlot.EndTime}{dateRange}");
+                }
+            }
+        }
+
+        private async Task ValidateRoomStatus(int roomId)
+        {
+            var room = await _context.Rooms.FindAsync(roomId);
+            if (room == null) throw new Exception("Room not found");
+            if (!room.Status) throw new Exception($"Phòng '{room.RoomName}' đang bảo trì, không thể sử dụng");
         }
 
         private void ValidateScheduleSlots(List<CreateScheduleSlotDto> scheduleSlots)
@@ -340,7 +466,7 @@ namespace EducenAPI.Services
             return dates;
         }
 
-        private async Task CreateSchedulesForClass(int classId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
+        private async Task CreateSchedulesForClass(int classId, int? defaultRoomId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate)
         {
             foreach (var slot in scheduleSlots)
             {
@@ -349,7 +475,8 @@ namespace EducenAPI.Services
                     ClassId = classId,
                     DayOfWeek = slot.DayOfWeek,
                     StartTime = TimeOnly.Parse(slot.StartTime),
-                    EndTime = TimeOnly.Parse(slot.EndTime)
+                    EndTime = TimeOnly.Parse(slot.EndTime),
+                    RoomId = slot.RoomId ?? defaultRoomId // Fallback to default room if not specified per slot
                 };
                 _context.Schedules.Add(schedule);
                 await _context.SaveChangesAsync();
@@ -361,6 +488,14 @@ namespace EducenAPI.Services
                     
                     foreach (var sessionDate in sessionDates)
                     {
+                        // ✅ FIX: Tránh tạo trùng session (cùng ngày, cùng giờ)
+                        var startTime = TimeOnly.Parse(slot.StartTime);
+                        var exists = await _context.ClassSessions
+                            .Include(s => s.Schedule)
+                            .AnyAsync(s => s.ClassId == classId && s.SessionDate == sessionDate && s.Schedule.StartTime == startTime);
+
+                        if (exists) continue;
+
                         var classSession = new ClassSession
                         {
                             ClassId = classId,
@@ -399,6 +534,14 @@ namespace EducenAPI.Services
         {
             var existingClass = await _context.Classes
                 .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Sessions)
+                        .ThenInclude(sess => sess.Attendances)
+                .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Sessions)
+                        .ThenInclude(sess => sess.Assignments)
+                .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Sessions)
+                        .ThenInclude(sess => sess.LessonMaterials)
                 .FirstOrDefaultAsync(c => c.ClassId == id);
                 
             if (existingClass == null)
@@ -441,7 +584,7 @@ namespace EducenAPI.Services
                             EndTime = s.EndTime.ToString("HH:mm")
                         }).ToList();
                         
-                        await ValidateTeacherAvailability(dto.TeacherId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                        await ValidateTeacherAvailability(dto.TeacherId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
                     }
                     existingClass.TeacherId = dto.TeacherId;
                 }
@@ -466,13 +609,60 @@ namespace EducenAPI.Services
                             EndTime = s.EndTime.ToString("HH:mm")
                         }).ToList();
                         
-                        await ValidateAssistantAvailability(dto.AssistantId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                        await ValidateAssistantAvailability(dto.AssistantId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
                     }
                     existingClass.AssistantId = dto.AssistantId;
                 }
                 else if (dto.AssistantId == null)
                 {
                     existingClass.AssistantId = null;
+                }
+
+                if (dto.RoomId.HasValue || dto.ScheduleSlots != null)
+                {
+                    var roomIdToValidate = dto.RoomId ?? existingClass.RoomId;
+                    var slotsToValidate = dto.ScheduleSlots ?? existingClass.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId
+                    }).ToList();
+
+                    foreach (var slot in slotsToValidate)
+                    {
+                        var targetRoomId = slot.RoomId ?? roomIdToValidate;
+                        if (targetRoomId.HasValue)
+                        {
+                            await ValidateRoomAvailability(targetRoomId.Value, slot.DayOfWeek, slot.StartTime, slot.EndTime, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
+                            await ValidateRoomStatus(targetRoomId.Value);
+                        }
+                    }
+                    
+                    if (dto.RoomId.HasValue)
+                        existingClass.RoomId = dto.RoomId.Value;
+                }
+                else if (dto.RoomId == null && dto.ScheduleSlots == null)
+                {
+                    existingClass.RoomId = null;
+                }
+
+                // Validate Room status when only RoomId is provided without schedule slots
+                if (dto.RoomId.HasValue && dto.ScheduleSlots == null)
+                {
+                    await ValidateRoomStatus(dto.RoomId.Value);
+                }
+
+                if (dto.GradeId.HasValue)
+                {
+                    var grade = await _context.Grades.FindAsync(dto.GradeId.Value);
+                    if (grade == null)
+                        throw new Exception("Grade not found");
+                    existingClass.GradeId = dto.GradeId.Value;
+                }
+                else if (dto.GradeId == null)
+                {
+                    existingClass.GradeId = null;
                 }
 
                 if (dto.StartDate.HasValue)
@@ -489,30 +679,49 @@ namespace EducenAPI.Services
                     existingClass.Status = dto.Status;
                 }
 
-                // Update schedules if provided
+                // Update schedules only if slots have actually changed
                 if (dto.ScheduleSlots != null)
                 {
-                    // Remove existing schedules
-                    _context.Schedules.RemoveRange(existingClass.Schedules);
-
-                    // Add new schedules
-                    foreach (var slot in dto.ScheduleSlots)
+                    var existingSlots = existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                     {
-                        // More robust time parsing
-                        if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
-                            throw new Exception($"Invalid start time format: {slot.StartTime}. Expected HH:mm or HH:mm:ss");
-                        
-                        if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
-                            throw new Exception($"Invalid end time format: {slot.EndTime}. Expected HH:mm or HH:mm:ss");
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId
+                    }).ToList();
 
-                        var schedule = new Schedule
+                    if (!AreScheduleSlotsEqual(dto.ScheduleSlots, existingSlots))
+                    {
+                        // ✅ FIX: Chỉ xóa ClassSessions KHÔNG có điểm danh và KHÔNG có bài nộp
+                        // Những buổi đã có dữ liệu cần được giữ lại như lịch sử
+                        foreach (var schedule in existingClass.Schedules)
                         {
-                            ClassId = id,
-                            DayOfWeek = slot.DayOfWeek,
-                            StartTime = startTime,
-                            EndTime = endTime
-                        };
-                        _context.Schedules.Add(schedule);
+                            if (schedule.Sessions != null && schedule.Sessions.Any())
+                            {
+                                var sessionsToDelete = schedule.Sessions
+                                    .Where(s => !s.Attendances.Any() && !s.Assignments.Any() && !s.LessonMaterials.Any())
+                                    .ToList();
+
+                                if (sessionsToDelete.Any())
+                                {
+                                    _context.ClassSessions.RemoveRange(sessionsToDelete);
+                                }
+                                
+                                // Nếu vẫn còn session có dữ liệu, không thể xóa schedule này ngay lập tức 
+                                // hoặc ít nhất không xóa những session đó.
+                            }
+                        }
+
+                        // Do constraint FK Attendance -> Session là NoAction, 
+                        // nếu có session nào giữ lại, việc xóa Schedule cha sẽ bị lỗi.
+                        // Chiến thuật an toàn nhất: Chỉ recreate những gì thực sự cần thiết.
+                        // Tuy nhiên, để sửa lỗi 409 nhanh nhất cho trường hợp KHÔNG đổi lịch:
+                        
+                        _context.Schedules.RemoveRange(existingClass.Schedules);
+                        await _context.SaveChangesAsync();
+
+                        // Create new schedules and sessions
+                        await CreateSchedulesForClass(id, dto.RoomId ?? existingClass.RoomId, dto.ScheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
                     }
                 }
 
@@ -628,6 +837,40 @@ namespace EducenAPI.Services
             return true;
         }
 
+        private bool AreScheduleSlotsEqual(List<CreateScheduleSlotDto> newSlots, List<CreateScheduleSlotDto> existingSlots)
+        {
+            if (newSlots.Count != existingSlots.Count) return false;
+
+            // Sort both lists to ensure consistent comparison
+            var sortedNew = newSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+            var sortedExisting = existingSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+
+            for (int i = 0; i < sortedNew.Count; i++)
+            {
+                var n = sortedNew[i];
+                var e = sortedExisting[i];
+
+                if (n.DayOfWeek != e.DayOfWeek ||
+                    NormalizeTime(n.StartTime) != NormalizeTime(e.StartTime) ||
+                    NormalizeTime(n.EndTime) != NormalizeTime(e.EndTime) ||
+                    n.RoomId != e.RoomId)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private string NormalizeTime(string time)
+        {
+            if (string.IsNullOrEmpty(time)) return "";
+            if (TimeOnly.TryParse(time, out var t))
+            {
+                return t.ToString("HH:mm");
+            }
+            return time;
+        }
+
         public async Task<bool> ClassExistsAsync(int id)
         {
             return await _context.Classes.AnyAsync(c => c.ClassId == id);
@@ -667,7 +910,10 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId)
         {
-            // Dùng projection rõ ràng để tránh SELECT cột FullName chưa có trong DB
+            var today = DateTime.UtcNow.AddHours(7).Date;
+            var pastSessionsCount = await _context.ClassSessions
+                .CountAsync(s => s.ClassId == classId && s.SessionDate <= today);
+
             var students = await _context.Classes
                 .Where(c => c.ClassId == classId)
                 .SelectMany(c => c.Students)
@@ -681,6 +927,13 @@ namespace EducenAPI.Services
                     UserFullName = s.StudentNavigation != null ? s.StudentNavigation.FullName : null,
                     UserPhone = s.StudentNavigation != null ? s.StudentNavigation.PhoneNumber : null,
                     UserStatus = s.StudentNavigation != null ? s.StudentNavigation.AccountStatus : null,
+                    // Calculate Average Score
+                    AverageScore = _context.Submissions
+                        .Where(sub => sub.StudentId == s.UserId && sub.Asm.Session.ClassId == classId && sub.Score.HasValue)
+                        .Average(sub => (double?)sub.Score) ?? 0,
+                    // Calculate Attendance Rate
+                    PresentCount = _context.Attendances
+                        .Count(a => a.StudentId == s.UserId && a.Session.ClassId == classId && a.Status == "present")
                 })
                 .ToListAsync();
 
@@ -691,7 +944,11 @@ namespace EducenAPI.Services
                 FullName = s.UserFullName ?? "",
                 Email = s.UserEmail ?? "",
                 PhoneNumber = s.UserPhone,
-                Grade = s.Grade,
+                Grade = s.Grade ?? "—",
+                AverageScore = s.AverageScore > 0 ? s.AverageScore.ToString("F1") : "—",
+                AttendanceRate = pastSessionsCount > 0 
+                    ? (int)Math.Round((double)s.PresentCount / pastSessionsCount * 100) 
+                    : 0,
                 EnrollmentStatus = s.EnrollmentStatus ?? "",
                 AccountStatus = s.UserStatus ?? "",
                 CreatedAt = DateTime.Now
@@ -702,6 +959,7 @@ namespace EducenAPI.Services
         {
             var sessions = await _context.ClassSessions
                 .Include(s => s.Schedule)
+                    .ThenInclude(sc => sc!.Room)
                 .Where(s => s.ClassId == classId || (s.Schedule != null && s.Schedule.ClassId == classId))
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
@@ -727,9 +985,11 @@ namespace EducenAPI.Services
 
             var sessions = await _context.ClassSessions
                 .Include(s => s.Schedule)
+                    .ThenInclude(sc => sc!.Room)
                 .Include(s => s.LessonMaterials)
                 .Include(s => s.Assignments)
                     .ThenInclude(a => a.Submissions.Where(sub => sub.StudentId == studentId))
+                .Include(s => s.Attendances.Where(att => att.StudentId == studentId))
                 .Where(s => s.ClassId == classId)
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
@@ -739,12 +999,21 @@ namespace EducenAPI.Services
             var result = new StudentClassDetailDto
             {
                 ClassInfo = classInfo,
-                Sessions = sessions.Select((s, index) => new StudentSessionDto
-                {
-                    SessionId = s.SessionId,
-                    ScheduleId = s.ScheduleId,
-                    SessionDate = s.SessionDate,
-                    Status = s.Status,
+                Sessions = sessions.Select((s, index) => {
+                    var studentAttendance = s.Attendances.FirstOrDefault();
+                    var effectiveStatus = s.Status;
+                    if (studentAttendance != null)
+                    {
+                        if (studentAttendance.Status == "present") effectiveStatus = "Attended";
+                        else if (studentAttendance.Status == "absent") effectiveStatus = "Absent";
+                    }
+
+                    return new StudentSessionDto
+                    {
+                        SessionId = s.SessionId,
+                        ScheduleId = s.ScheduleId,
+                        SessionDate = s.SessionDate,
+                        Status = effectiveStatus,
                     DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
                     Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
                     Title = $"Buổi {index + 1}: Ngày {s.SessionDate:dd/MM/yyyy}",
@@ -782,6 +1051,7 @@ namespace EducenAPI.Services
                             IsPublished = sub.IsPublished
                         }).FirstOrDefault()
                     }).ToList()
+                    };
                 }).ToList()
             };
 
@@ -790,6 +1060,8 @@ namespace EducenAPI.Services
 
         public async Task<IEnumerable<StudentClassListItemDto>> GetStudentClassesAsync(int studentId)
         {
+            await UpdateExpiredClassesAsync();
+
             var classes = await _context.Classes
                 .Include(c => c.Students)
                 .Include(c => c.Subject)
@@ -827,9 +1099,62 @@ namespace EducenAPI.Services
                     ScheduleTime = scheduleTime,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
-                    Color = GetSubjectColor(c.Subject?.SubjectName)
+                    Color = GetSubjectColor(c.Subject?.SubjectName),
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate
                 };
             }).ToList();
+        }
+
+        public async Task<IEnumerable<ClassDto>> GetClassesByTeacherIdAsync(int teacherId)
+        {
+            await UpdateExpiredClassesAsync();
+
+            return await _context.Classes
+                .Include(c => c.Subject)
+                .Include(c => c.Teacher)
+                    .ThenInclude(t => t!.TeacherNavigation)
+                .Include(c => c.Assistant)
+                    .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Room)
+                .Include(c => c.Grade)
+                .Include(c => c.Students)
+                .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Room)
+                .Where(c => c.TeacherId == teacherId)
+                .Select(c => new ClassDto
+                {
+                    ClassId = c.ClassId,
+                    ClassName = c.ClassName ?? "",
+                    Description = c.Description,
+                    SyllabusContent = c.SyllabusContent,
+                    SubjectId = c.SubjectId,
+                    SubjectName = c.Subject.SubjectName,
+                    TeacherId = c.TeacherId,
+                    TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : null,
+                    AssistantId = c.AssistantId,
+                    AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : null,
+                    RoomId = c.RoomId,
+                    RoomName = c.Room != null ? c.Room.RoomName : null,
+                    GradeId = c.GradeId,
+                    GradeName = c.Grade != null ? c.Grade.GradeName : null,
+                    StartDate = c.StartDate,
+                    EndDate = c.EndDate,
+                    Status = c.Status,
+                    StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
+                    CreatedAt = DateTime.Now,
+                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    {
+                        DayOfWeek = s.DayOfWeek,
+                        StartTime = s.StartTime.ToString("HH:mm"),
+                        EndTime = s.EndTime.ToString("HH:mm"),
+                        RoomId = s.RoomId,
+                        RoomName = s.Room != null ? s.Room.RoomName : null
+                    }).ToList()
+                })
+                .ToListAsync();
         }
 
         private string GetInitials(string? fullName)
@@ -851,6 +1176,31 @@ namespace EducenAPI.Services
             if (lower.Contains("hóa học")) return "#8b5cf6";
             if (lower.Contains("sinh học")) return "#ec4899";
             return "#3b82f6";
+        }
+
+        private async Task UpdateExpiredClassesAsync()
+        {
+            var today = DateTime.Today;
+            var expiredClasses = await _context.Classes
+                .Where(c => c.Status == "Active" && c.EndDate.HasValue && c.EndDate.Value.Date < today)
+                .ToListAsync();
+
+            if (expiredClasses.Any())
+            {
+                foreach (var c in expiredClasses)
+                {
+                    c.Status = "Completed";
+                }
+                
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error auto-completing classes: {ex.Message}");
+                }
+            }
         }
     }
 }

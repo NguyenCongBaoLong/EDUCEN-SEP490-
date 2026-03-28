@@ -116,12 +116,57 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
 
     /* Enrollment form */
-    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
+    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-    const handleSubmit = e => {
+    
+    const handleSubmit = async e => {
         e.preventDefault();
-        alert('Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
-        setForm({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
+        setIsSubmitting(true);
+        
+        try {
+            // Build the EnrollmentRequest payload - only send required fields
+            const payload = {
+                firstName: form.firstName,
+                lastName: form.lastName,
+                email: form.email,
+                phone: form.phone,
+                preferredCourse: form.preferredCourse,
+                address: form.address || null
+            };
+            
+            // Get tenant from localStorage or URL
+            const tenantId = localStorage.getItem('tenantId') || '';
+            
+            // Call the enrollment API
+            const response = await fetch(
+                `${import.meta.env.VITE_API_URL || 'http://localhost:5106/api'}/enrollment-requests`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Tenant': tenantId
+                    },
+                    body: JSON.stringify(payload)
+                }
+            );
+            
+            const data = await response.json();
+            
+            console.log('Enrollment response:', response.status, data);
+            
+            if (response.ok) {
+                alert(data.message || 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
+                setForm({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
+            } else {
+                alert(data.message || data.error || 'Có lỗi xảy ra. Vui lòng thử lại.');
+            }
+        } catch (error) {
+            console.error('Enrollment error:', error);
+            alert('Có lỗi xảy ra. Vui lòng thử lại. Chi tiết: ' + error.message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     /* Edit state */
@@ -520,7 +565,13 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                             ))}
                                         </select>
                                     </div>
-                                    <button type="submit" className="center-btn-submit">Gửi đăng ký</button>
+                                    <div className="center-form-group">
+                                        <label>Địa chỉ</label>
+                                        <input type="text" name="address" value={form.address} onChange={handleFormChange} placeholder="Nhập địa chỉ của bạn" />
+                                    </div>
+                                    <button type="submit" className="center-btn-submit" disabled={isSubmitting}>
+                                        {isSubmitting ? 'Đang gửi...' : 'Gửi đăng ký'}
+                                    </button>
                                 </form>
                             )}
                         </div>

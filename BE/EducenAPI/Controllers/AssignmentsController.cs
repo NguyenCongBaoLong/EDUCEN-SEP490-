@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Assignments;
+﻿using EducenAPI.DTOs.Assignments;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,14 +21,16 @@ namespace EducenAPI.Controllers
         [HttpPost("Create-Assignments")]
         public async Task<IActionResult> CreateAssignment([FromForm] CreateAssignmentDto dto)
         {
-            var result = await _assignmentService.CreateAssignmentAsync(dto);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var result = await _assignmentService.CreateAssignmentAsync(dto, baseUrl);
             return Ok(result);
         }
 
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateAssignment(int id, [FromForm] CreateAssignmentDto dto)
         {
-            var result = await _assignmentService.UpdateAssignmentAsync(id, dto);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var result = await _assignmentService.UpdateAssignmentAsync(id, dto, baseUrl);
             return Ok(result);
         }
 

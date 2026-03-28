@@ -19,15 +19,45 @@ namespace EducenAPI.Services
             _userContextService = userContextService;
         }
 
-        public async Task<Assignment> CreateAssignmentAsync(CreateAssignmentDto dto)
+        public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
+            if (dto.StartTime.HasValue && dto.StartTime.Value < DateTime.Now)
+            {
+                // Có thể cho phép độ trễ vài phút (ví dụ < DateTime.Now.AddMinutes(-5)) nếu cần thiết,
+                // nhưng khắt khe nhất thì dùng < DateTime.Now
+                throw new BadRequestException("Thời gian bắt đầu không được ở trong quá khứ.");
+            }
+            //  Validate StartTime > EndTime
+            if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime > dto.EndTime)
+            {
+                throw new BadRequestException("Thời gian bắt đầu không được lớn hơn thời gian kết thúc.");
+            }
+
+            //  Validate SessionId có tồn tại trong database hay không
+            if (dto.SessionId.HasValue)
+            {
+                // Lưu ý: Đổi _context.Sessions thành tên DbSet tương ứng trong DbContext của bạn nếu khác
+                var sessionExists = await _context.ClassSessions.AnyAsync(s => s.SessionId == dto.SessionId.Value);
+                if (!sessionExists)
+                {
+                    throw new BadRequestException("SessionId không tồn tại trong hệ thống.");
+                }
+            }
+
             string? fileUrl = null;
             var userId = _userContextService.GetUserId();
+
             if (dto.File != null)
             {
+                // Validate File = 0MB
+                if (dto.File.Length == 0)
+                {
+                    throw new BadRequestException("File tải lên không được rỗng (0MB).");
+                }
+
                 string originalFileName = dto.File.FileName;
 
-                // Check duplicate by OriginalFileName only
+                // Check duplicate by OriginalFileName
                 if (dto.SessionId.HasValue)
                 {
                     // Check within the specific session
@@ -37,20 +67,17 @@ namespace EducenAPI.Services
                         .ToListAsync();
                     bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
                     if (isDuplicate)
-                        throw new BadRequestException("File bài tập này đã tồn tại trong buổi học này.");
+                        throw new ConflictException("File bài tập này đã tồn tại trong buổi học này."); 
                 }
                 
-                // Check within the library if explicitly saving to library OR if it's created directly as a template (SessionId is null)
-                if (dto.SaveToLibrary || !dto.SessionId.HasValue)
-                {
-                    var existingNames = await _context.Assignments
-                        .Where(a => a.SessionId == null && !string.IsNullOrEmpty(a.FileUrl))
-                        .Select(a => a.FileUrl)
-                        .ToListAsync();
-                    bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
-                    if (isDuplicate)
-                        throw new BadRequestException("File bài tập này đã tồn tại trong thư viện.");
-                }
+                // Always check library for duplicate OriginalFileName
+                var existingLibraryNames = await _context.Assignments
+                    .Where(a => a.SessionId == null && a.UserId == userId && !string.IsNullOrEmpty(a.FileUrl))
+                    .Select(a => a.FileUrl)
+                    .ToListAsync();
+                bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
+                if (isLibDuplicate)
+                    throw new BadRequestException("File bài tập này đã tồn tại trong thư viện. Vui lòng chọn từ thư viện.");
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
@@ -58,26 +85,29 @@ namespace EducenAPI.Services
                 if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
             }
 
-            if(!string.IsNullOrEmpty(dto.Title))
+            if (!string.IsNullOrEmpty(dto.Title))
             {
                 var isUniqueTitle = await _context.Assignments.AnyAsync(e => dto.SessionId != null
-                        && dto.SessionId == e.SessionId 
+                        && dto.SessionId == e.SessionId
                         && e.Title == dto.Title);
-                if (isUniqueTitle) throw new Exception("Title đang bị trùng vui lòng đặt lại");
+                if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại"); // Nên dùng BadRequestException thay vì Exception chung
             }
+
             if (!string.IsNullOrEmpty(dto.FileUrl))
             {
                 fileUrl = dto.FileUrl.Trim();
             }
+
             var assignment = new Assignment
             {
                 SessionId = dto.SessionId,
                 Title = dto.Title,
                 Description = dto.Description,
                 FileUrl = fileUrl,
-                StartTime = dto.StartTime,
+                StartTime = dto.StartTime ?? DateTime.Now,
                 EndTime = dto.EndTime,
-                UserId = userId,                
+                UserId = userId,
+                GradeId = dto.GradeId,
             };
 
             _context.Assignments.Add(assignment);
@@ -85,38 +115,59 @@ namespace EducenAPI.Services
             // Nếu lưu vào kho và có session, tạo thêm 1 bản copy cho kho (SessionId = null)
             if (dto.SaveToLibrary && dto.SessionId.HasValue)
             {
-                var libNames = await _context.Assignments
-                    .Where(a => a.SessionId == null && !string.IsNullOrEmpty(a.FileUrl))
-                    .Select(a => a.FileUrl)
-                    .ToListAsync();
-                string newName = dto.File?.FileName ?? dto.Title ?? "";
-                bool existsInLib = libNames.Any(url => GetOriginalFileNameFromUrl(url) == newName);
+                var existsInLib = await _context.Assignments
+                    .AnyAsync(a => a.SessionId == null && a.UserId == userId 
+                              && a.Title == assignment.Title && a.FileUrl == assignment.FileUrl);
+                
                 if (!existsInLib)
                 {
                     var libraryAssignment = new Assignment
                     {
                         SessionId = null,
-                        Title = dto.Title,
-                        Description = dto.Description,
-                        FileUrl = fileUrl,
-                        StartTime = dto.StartTime,
-                        EndTime = dto.EndTime,
+                        Title = assignment.Title,
+                        Description = assignment.Description,
+                        FileUrl = assignment.FileUrl,
+                        StartTime = assignment.StartTime,
+                        EndTime = assignment.EndTime,
                         UserId = userId,
+                        GradeId = assignment.GradeId,
                     };
                     _context.Assignments.Add(libraryAssignment);
                 }
             }
 
             await _context.SaveChangesAsync();
-
-            return assignment;
+            return MapToResponseDto(assignment, baseUrl);
         }
 
-        public async Task<Assignment> UpdateAssignmentAsync(int id, CreateAssignmentDto dto)
+        private AssignmentResponseDto MapToResponseDto(Assignment assignment, string baseUrl)
+        {
+            return new AssignmentResponseDto
+            {
+                AsmId = assignment.AsmId,
+                SessionId = assignment.SessionId,
+                ClassId = assignment.Session?.ClassId,
+                GradeId = assignment.GradeId,
+                Title = assignment.Title ?? "",
+                Description = assignment.Description,
+                StartTime = assignment.StartTime,
+                EndTime = assignment.EndTime,
+                FileUrl = !string.IsNullOrEmpty(assignment.FileUrl)
+                    ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                    : null,
+                FileSize = GetFileSizeFromUrl(assignment.FileUrl),
+                OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl),
+                SubmissionsCount = assignment.Submissions?.Count ?? 0
+            };
+        }
+
+        public async Task<AssignmentResponseDto> UpdateAssignmentAsync(int id, CreateAssignmentDto dto, string baseUrl)
         {
             var assignment = await _context.Assignments.FindAsync(id);
             if (assignment == null)
+            {
                 throw new Exception("Assignment not found");
+            }
 
             string? fileUrl = assignment.FileUrl;
 
@@ -138,8 +189,9 @@ namespace EducenAPI.Services
                 else
                 {
                     // It's a template in the library
+                    var userId = _userContextService.GetUserId();
                     var existingNames = await _context.Assignments
-                        .Where(a => a.SessionId == null && a.AsmId != id && !string.IsNullOrEmpty(a.FileUrl))
+                        .Where(a => a.SessionId == null && a.UserId == userId && a.AsmId != id && !string.IsNullOrEmpty(a.FileUrl))
                         .Select(a => a.FileUrl)
                         .ToListAsync();
                     bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
@@ -162,13 +214,41 @@ namespace EducenAPI.Services
             assignment.StartTime = dto.StartTime;
             assignment.EndTime = dto.EndTime;
             assignment.FileUrl = fileUrl;
+            assignment.GradeId = dto.GradeId;
+
+            // Nếu lưu vào kho và có session, tạo thêm 1 bản copy cho kho (SessionId = null)
+            if (dto.SaveToLibrary && assignment.SessionId.HasValue)
+            {
+                var userId = _userContextService.GetUserId();
+                var existsInLib = await _context.Assignments
+                    .AnyAsync(a => a.SessionId == null && a.UserId == userId 
+                              && a.Title == assignment.Title && a.FileUrl == assignment.FileUrl);
+                
+                if (!existsInLib)
+                {
+                    var libraryAssignment = new Assignment
+                    {
+                        SessionId = null,
+                        Title = assignment.Title,
+                        Description = assignment.Description,
+                        FileUrl = assignment.FileUrl,
+                        StartTime = assignment.StartTime,
+                        EndTime = assignment.EndTime,
+                        UserId = userId,
+                        GradeId = assignment.GradeId,
+                    };
+                    _context.Assignments.Add(libraryAssignment);
+                }
+            }
 
             await _context.SaveChangesAsync();
-            return assignment;
+            return MapToResponseDto(assignment, baseUrl);
         }
         public async Task<List<AssignmentResponseDto>> GetAssignmentsBySessionAsync(int sessionId, string baseUrl)
         {
             var rawAssignments = await _context.Assignments
+                .Include(a => a.Session)
+                .Include(a => a.Submissions)
                 .Where(a => a.SessionId == sessionId)
                 .ToListAsync();
 
@@ -176,6 +256,8 @@ namespace EducenAPI.Services
                 {
                     AsmId = a.AsmId,
                     SessionId = a.SessionId,
+                    ClassId = a.Session?.ClassId,
+                    GradeId = a.GradeId,
                     Title = a.Title,
                     Description = a.Description,
                     StartTime = a.StartTime,
@@ -184,7 +266,8 @@ namespace EducenAPI.Services
                         ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                         : null,
                     FileSize = GetFileSizeFromUrl(a.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl)
+                    OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl),
+                    SubmissionsCount = a.Submissions?.Count ?? 0
                 })
                 .ToList();
 
@@ -192,24 +275,15 @@ namespace EducenAPI.Services
         }
         public async Task<List<AssignmentResponseDto>> GetAllAssignmentsAsync(string baseUrl)
         {
+            var userId = _userContextService.GetUserId();
             var rawAssignments = await _context.Assignments
-                .Where(a => a.SessionId == null) 
+                .Include(a => a.Session)
+                .Include(a => a.Submissions)
+                .Where(a => a.UserId == userId) 
                 .ToListAsync();
 
-            var assignments = rawAssignments.Select(a => new AssignmentResponseDto
-                {
-                    AsmId = a.AsmId,
-                    SessionId = a.SessionId,
-                    Title = a.Title,
-                    Description = a.Description,
-                    StartTime = a.StartTime,
-                    EndTime = a.EndTime,
-                    FileUrl = !string.IsNullOrEmpty(a.FileUrl)
-                        ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                        : null,
-                    FileSize = GetFileSizeFromUrl(a.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl)
-                })
+            var assignments = rawAssignments
+                .Select(x => MapToResponseDto(x, baseUrl))
                 .ToList();
 
             return assignments;
@@ -220,6 +294,7 @@ namespace EducenAPI.Services
             var source = await _context.Assignments.FindAsync(assignmentId);
             if (source == null) throw new Exception("Source assignment not found");
 
+            var userId = _userContextService.GetUserId();
             string sourceOriginalName = GetOriginalFileNameFromUrl(source.FileUrl);
 
             // Check duplicate by filename only
@@ -249,7 +324,9 @@ namespace EducenAPI.Services
                 Description = source.Description,
                 FileUrl = source.FileUrl,
                 StartTime = DateTime.Now,
-                EndTime = endTime ?? DateTime.Now.AddDays(7)
+                EndTime = endTime ?? DateTime.Now.AddDays(7),
+                UserId = userId,
+                GradeId = source.GradeId
             };
 
             _context.Assignments.Add(assignment);
@@ -323,6 +400,7 @@ namespace EducenAPI.Services
                 {
                     AsmId = assignment.AsmId,
                     SessionId = assignment.SessionId,
+                    GradeId = assignment.GradeId,
                     Title = assignment.Title ?? "",
                     Description = assignment.Description,
                     StartTime = assignment.StartTime,
@@ -373,7 +451,7 @@ namespace EducenAPI.Services
             var userId = _userContextService.GetUserId();
             var assignments = _context.Assignments
                 .Where(e => e.SessionId != null && e.UserId != null && e.UserId == userId);
-            if(string.IsNullOrEmpty(type))
+            if(!string.IsNullOrEmpty(type))
             {
                 var now = DateTime.Now;
                 if(type == "open")
@@ -383,10 +461,6 @@ namespace EducenAPI.Services
                 else if(type == "expired")
                 {
                     assignments = assignments.Where(e => e.EndTime < now);
-                }
-                else if(type == "draft")
-                {
-                    assignments = assignments.Where(e => e.SessionId == 0);
                 }
             }
             return await assignments.ToListAsync();

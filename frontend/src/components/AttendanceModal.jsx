@@ -1,31 +1,71 @@
-import { useState } from 'react';
-import { X, CheckCircle, XCircle, Calendar, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, CheckCircle, XCircle, Calendar, Users, Zap } from 'lucide-react';
 import PropTypes from 'prop-types';
+import toast from 'react-hot-toast';
+import api from '../services/api';
 import '../css/components/AttendanceModal.css';
 
 /**
  * AttendanceModal
- * Cho phép giáo viên điểm danh từng học sinh theo buổi học (schedule_id).
- * status: 'present' | 'absent'  — theo bảng Attendance trong DB
+ * Cho phép giáo viên điểm danh từng học sinh theo buổi học (sessionId).
+ * status: 'present' | 'absent' | 'notYet' — theo bảng Attendance trong DB
  */
-const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingRecords }) => {
-    // Nếu có existingRecords (sửa buổi cũ) thì pre-fill, ngược lại mặc định "Có mặt"
-    const initialRecords = () => {
-        if (existingRecords && existingRecords.length > 0) {
-            return Object.fromEntries(existingRecords.map(r => [r.studentId, r.status]));
-        }
-        return Object.fromEntries(students.map(s => [s.id, 'present']));
-    };
-
-    const [records, setRecords] = useState(initialRecords);
+const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingRecords, sessionId }) => {
+    const [records, setRecords] = useState({});
     const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadExistingRecords();
+        }
+    }, [isOpen, sessionId]);
+
+    const loadExistingRecords = async () => {
+        if (!sessionId) return;
+        
+        setLoading(true);
+        try {
+            const res = await api.get(`/attendance/session/${sessionId}`);
+            if (res.data && res.data.length > 0) {
+                const recordMap = {};
+                res.data.forEach(r => {
+                    recordMap[r.studentId] = r.status || 'notYet';
+                });
+                setRecords(recordMap);
+            } else {
+                const defaultRecords = {};
+                students.forEach(s => {
+                    defaultRecords[s.id] = 'present';
+                });
+                setRecords(defaultRecords);
+            }
+        } catch (error) {
+            console.error('Load attendance error:', error);
+            const defaultRecords = {};
+            students.forEach(s => {
+                defaultRecords[s.id] = 'present';
+            });
+            setRecords(defaultRecords);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (!isOpen) return null;
 
-    const toggle = (studentId) => {
+    const handleQuickAttendance = () => {
+        const allPresent = {};
+        students.forEach(s => {
+            allPresent[s.id] = 'present';
+        });
+        setRecords(allPresent);
+    };
+
+    const handleStatusChange = (studentId, status) => {
         setRecords(prev => ({
             ...prev,
-            [studentId]: prev[studentId] === 'present' ? 'absent' : 'present',
+            [studentId]: status
         }));
     };
 
@@ -34,15 +74,27 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
 
     const handleSave = async () => {
         setSaving(true);
-        // Chuẩn bị payload theo cấu trúc DB:
-        // attendance_id (auto), schedule_id, student_id, status, updated_by, recorded_at
-        const payload = students.map(s => ({
-            scheduleId: session.scheduleId,
-            studentId: s.id,
-            status: records[s.id],   // 'present' | 'absent'
-        }));
-        await onSave(session, payload);
-        setSaving(false);
+        try {
+            const payload = students.map(s => ({
+                studentId: parseInt(s.id),
+                status: records[s.id] || 'present'
+            }));
+
+            if (sessionId) {
+                await api.post(`/attendance/session/${sessionId}/bulk`, payload);
+                onSave && await onSave(session, payload);
+                toast.success('Lưu điểm danh thành công!');
+                onClose();
+            } else {
+                await onSave(session, payload);
+                onClose();
+            }
+        } catch (error) {
+            console.error('Save attendance error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi lưu điểm danh');
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
@@ -64,6 +116,28 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
                     </button>
                 </div>
 
+                {/* Quick Attendance Button */}
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid #e5e7eb' }}>
+                    <button 
+                        onClick={handleQuickAttendance}
+                        style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px',
+                            padding: '8px 16px',
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                        }}
+                    >
+                        <Zap size={16} />
+                        Điểm danh nhanh (Tất cả có mặt)
+                    </button>
+                </div>
+
                 {/* Summary bar */}
                 <div className="atm-summary">
                     <div className="atm-summary-item present">
@@ -81,42 +155,50 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
                 </div>
 
                 {/* Student list */}
-                <div className="atm-body">
-                    {students.map(st => {
-                        const isPresent = records[st.id] === 'present';
-                        return (
-                            <div
-                                key={st.id}
-                                className={`atm-student-row ${isPresent ? 'present' : 'absent'}`}
-                            >
-                                <div className="atm-student-info">
-                                    <div className="atm-avatar">{st.avatar}</div>
-                                    <div>
-                                        <div className="atm-student-name">{st.name}</div>
-                                        <div className="atm-student-id">ID: #{st.id}</div>
+                {loading ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                        Đang tải dữ liệu...
+                    </div>
+                ) : (
+                    <div className="atm-body">
+                        {students.map(st => {
+                            const status = records[st.id] || 'present';
+                            const isPresent = status === 'present';
+                            const isAbsent = status === 'absent';
+                            
+                            return (
+                                <div
+                                    key={st.id}
+                                    className={`atm-student-row ${isPresent ? 'present' : isAbsent ? 'absent' : ''}`}
+                                >
+                                    <div className="atm-student-info">
+                                        <div className="atm-avatar">{st.avatar}</div>
+                                        <div>
+                                            <div className="atm-student-name">{st.name}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="atm-toggle-group">
+                                        <button
+                                            className={`atm-btn-status ${isPresent ? 'active-present' : ''}`}
+                                            onClick={() => handleStatusChange(st.id, 'present')}
+                                        >
+                                            <CheckCircle size={15} />
+                                            Có mặt
+                                        </button>
+                                        <button
+                                            className={`atm-btn-status ${isAbsent ? 'active-absent' : ''}`}
+                                            onClick={() => handleStatusChange(st.id, 'absent')}
+                                        >
+                                            <XCircle size={15} />
+                                            Vắng
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="atm-toggle-group">
-                                    <button
-                                        className={`atm-btn-status ${isPresent ? 'active-present' : ''}`}
-                                        onClick={() => setRecords(prev => ({ ...prev, [st.id]: 'present' }))}
-                                    >
-                                        <CheckCircle size={15} />
-                                        Có mặt
-                                    </button>
-                                    <button
-                                        className={`atm-btn-status ${!isPresent ? 'active-absent' : ''}`}
-                                        onClick={() => setRecords(prev => ({ ...prev, [st.id]: 'absent' }))}
-                                    >
-                                        <XCircle size={15} />
-                                        Vắng
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className="atm-footer">
@@ -135,9 +217,10 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
 AttendanceModal.propTypes = {
     isOpen: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
-    onSave: PropTypes.func.isRequired,
+    onSave: PropTypes.func,
     session: PropTypes.shape({
-        scheduleId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+        scheduleId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        sessionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         date: PropTypes.string.isRequired,
         dayLabel: PropTypes.string.isRequired,
         time: PropTypes.string.isRequired,
@@ -148,11 +231,16 @@ AttendanceModal.propTypes = {
         avatar: PropTypes.string.isRequired,
     })).isRequired,
     existingRecords: PropTypes.arrayOf(PropTypes.shape({
-        studentId: PropTypes.string.isRequired,
-        status: PropTypes.oneOf(['present', 'absent']).isRequired,
+        studentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+        status: PropTypes.oneOf(['present', 'absent', 'notYet']).isRequired,
     })),
+    sessionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
-AttendanceModal.defaultProps = { existingRecords: null };
+AttendanceModal.defaultProps = { 
+    existingRecords: null,
+    sessionId: null,
+    onSave: null
+};
 
 export default AttendanceModal;

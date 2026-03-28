@@ -111,6 +111,8 @@ namespace EducenAPI.DTOs.Students
         public string AccountStatus { get; set; } = string.Empty;
         public string? ClassName { get; set; }
         public bool IsAccountSent { get; set; }
+        public int AttendanceRate { get; set; }
+        public string? AverageScore { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<string> ParentNames { get; set; } = new List<string>();
         public List<int> ParentIds { get; set; } = new List<int>();

@@ -79,7 +79,7 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                                     Thông tin duyệt
                                 </div>
                                 <p style={{ color: '#065f46', fontSize: '0.9rem' }}>
-                                    Đã được duyệt vào lúc {formatDate(request.reviewedAt)}
+                                    Yêu cầu đã được duyệt thành công
                                 </p>
                             </div>
                         )}
@@ -87,14 +87,67 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                             <div className="detail-section" style={{ background: '#fef2f2', borderColor: '#fee2e2' }}>
                                 <div className="section-title" style={{ color: '#b91c1c', borderBottomColor: '#fecaca' }}>
                                     <AlertCircle size={20} />
-                                    Lý do từ chối
+                                    Yêu cầu bị từ chối
                                 </div>
                                 <p style={{ color: '#991b1b', fontSize: '0.9rem' }}>
-                                    {request.rejectionReason || 'Không có lý do cụ thể'}
+                                    Yêu cầu đăng ký đã bị từ chối
                                 </p>
                             </div>
                         )}
 
+                        {/* Request Info - API version TEMP DISABLED */}
+                        {/* <div className="detail-section">
+                            <div className="section-title">
+                                <BookOpen size={20} />
+                                Thông Tin Đăng Ký
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Khóa học mong muốn</span>
+                                    <span className="info-value">{request.desiredGrade || 'Chưa chọn'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Ngày gửi yêu cầu</span>
+                                    <span className="info-value">
+                                        <Clock size={16} className="info-icon" />
+                                        {formatDate(request.requestDate)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        Contact Info - API version TEMP DISABLED
+                        <div className="detail-section">
+                            <div className="section-title">
+                                <User size={20} />
+                                Thông Tin Liên Hệ
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Email</span>
+                                    <span className="info-value">
+                                        <Mail size={16} className="info-icon" />
+                                        {request.email}
+                                    </span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Số điện thoại</span>
+                                    <span className="info-value">
+                                        <Phone size={16} className="info-icon" />
+                                        {request.phone}
+                                    </span>
+                                </div>
+                                <div className="info-item" style={{ gridColumn: '1 / -1' }}>
+                                    <span className="info-label">Địa chỉ</span>
+                                    <span className="info-value">
+                                        <MapPin size={16} className="info-icon" />
+                                        {request.address || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div> */}
+
+                        {/* Mock version - Original fields */}
                         {/* Request Info */}
                         <div className="detail-section">
                             <div className="section-title">

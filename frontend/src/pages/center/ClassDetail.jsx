@@ -47,6 +47,21 @@ function formatScheduleTime(slots) {
     return `${s.startTime} – ${s.endTime}`;
 }
 
+function formatScheduleRoom(slots) {
+    if (!slots || slots.length === 0) return '';
+    const uniqueRooms = [...new Set(slots.map(s => s.roomName).filter(Boolean))];
+    if (uniqueRooms.length === 0) return '';
+    return uniqueRooms.join(' & ');
+}
+
+function formatGrade(grade) {
+    if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
+    let g = String(grade).trim();
+    if (g.endsWith('.0')) g = g.slice(0, -2);
+    if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
+    return g;
+}
+
 const AttendanceBar = ({ value }) => {
     const color = value >= 90 ? '#16a34a' : value >= 75 ? '#f59e0b' : '#dc2626';
     return (
@@ -80,6 +95,13 @@ const ClassDetail = () => {
     const [centerStudents, setCenterStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Lists for dropdowns
+    const [subjects, setSubjects] = useState([]);
+    const [teachers, setTeachers] = useState([]);
+    const [assistants, setAssistants] = useState([]);
+    const [rooms, setRooms] = useState([]);
+    const [grades, setGrades] = useState([]);
 
     // Modal states
     const [addStudentModal, setAddStudentModal] = useState(false);
@@ -121,11 +143,70 @@ const ClassDetail = () => {
         }
     };
 
+    const fetchSubjects = async () => {
+        try {
+            const res = await api.get('/tenantadmin/Subjects');
+            setSubjects(res.data);
+        } catch (err) { console.error('Lỗi tải môn học:', err); }
+    };
+
+    const fetchTeachersAndAssistants = async () => {
+        try {
+            const [tRes, aRes] = await Promise.all([
+                api.get('/Teachers'),
+                api.get('/Assistants')
+            ]);
+            
+            const mapStaff = (staff, title) => {
+                const dayMap = {
+                    1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 0: 'CN'
+                };
+                
+                return {
+                    id: staff.userId || staff.teacherId || staff.assistantId,
+                    name: staff.fullName,
+                    title: title,
+                    department: staff.specialization || staff.supportLevel || "Tất cả bộ môn",
+                    avatar: staff.fullName ? staff.fullName.substring(0, 2).toUpperCase() : 'ST',
+                    schedule: (staff.schedule || []).map(s => ({
+                        day: dayMap[s.dayOfWeek] || s.dayOfWeek,
+                        startTime: s.startTime,
+                        endTime: s.endTime
+                    }))
+                };
+            };
+
+            setTeachers(tRes.data.map(t => mapStaff(t, 'Giáo viên')));
+            setAssistants(aRes.data.map(a => mapStaff(a, 'Trợ giảng')));
+        } catch (err) { console.error('Lỗi tải nhân viên:', err); }
+    };
+
+    const fetchRooms = async () => {
+        try {
+            const res = await api.get('/Rooms');
+            setRooms(res.data);
+        } catch (err) { console.error('Lỗi tải phòng học:', err); }
+    };
+
+    const fetchGrades = async () => {
+        try {
+            const res = await api.get('/Grades');
+            setGrades(res.data);
+        } catch (err) { console.error('Lỗi tải khối lớp:', err); }
+    };
+
     useEffect(() => {
         if (!classId) return;
         setLoading(true);
-        Promise.all([fetchClassData(), fetchStudents(), fetchCenterStudents()])
-            .finally(() => setLoading(false));
+        Promise.all([
+            fetchClassData(),
+            fetchStudents(),
+            fetchCenterStudents(),
+            fetchSubjects(),
+            fetchTeachersAndAssistants(),
+            fetchRooms(),
+            fetchGrades()
+        ]).finally(() => setLoading(false));
     }, [classId]);
 
     // ── Computed ──
@@ -214,26 +295,39 @@ const ClassDetail = () => {
 
     const handleEditSubmit = async (modalData) => {
         try {
+            const subject = subjects.find(s => s.subjectName === modalData.subject);
+            const teacherId = modalData.mainTeacher?.id;
+            const assistantId = modalData.assistant?.id;
+
             const updateDto = {
                 className: modalData.name,
                 description: modalData.description || null,
                 syllabusContent: modalData.syllabusContent || null,
+                subjectId: subject?.subjectId || classData.subjectId,
+                teacherId: teacherId || null,
+                assistantId: assistantId || null,
+                roomId: modalData.roomId || null,
+                gradeId: modalData.gradeId || null,
                 startDate: modalData.startDate || null,
                 endDate: modalData.endDate || null,
-                status: modalData.status || 'Active',
+                status: modalData.status === 'active' ? 'Active' : modalData.status === 'completed' ? 'Completed' : 'Inactive',
                 scheduleSlots: (modalData.scheduleSlots || [])
                     .filter(s => s.day && s.startTime && s.endTime)
                     .map(s => ({
                         dayOfWeek: DAY_NAME_TO_NUMBER[s.day] ?? 1,
                         startTime: s.startTime,
-                        endTime: s.endTime
+                        endTime: s.endTime,
+                        roomId: s.roomId
                     }))
             };
             await api.put(`/Classes/${classId}`, updateDto);
             await fetchClassData();
+            await fetchTeachersAndAssistants();
+            await fetchRooms();
             setEditModalOpen(false);
             toast.success('Đã cập nhật thông tin lớp học thành công!');
         } catch (err) {
+            console.error("Lỗi khi cập nhật lớp học:", err);
             toast.error(err.response?.data?.message || 'Không thể cập nhật lớp học.');
         }
     };
@@ -272,6 +366,7 @@ const ClassDetail = () => {
 
     const scheduleLabel = formatScheduleSlots(classData.scheduleSlots);
     const timeLabel = formatScheduleTime(classData.scheduleSlots);
+    const roomLabel = formatScheduleRoom(classData.scheduleSlots);
     const durationLabel = calcWeeks(classData.startDate, classData.endDate);
 
     return (
@@ -312,6 +407,12 @@ const ClassDetail = () => {
                         <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
                         <div className="cd-info-card-value">{scheduleLabel}</div>
                         <div className="cd-info-card-sub">{timeLabel}</div>
+                        {roomLabel && (
+                            <div className="cd-info-card-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'currentColor' }}></div>
+                                {roomLabel}
+                            </div>
+                        )}
                     </div>
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
@@ -389,11 +490,11 @@ const ClassDetail = () => {
                                                         fontSize: '0.75rem',
                                                         padding: '2px 10px',
                                                         borderRadius: 12,
-                                                        background: st.grade ? '#eff6ff' : '#f1f5f9',
-                                                        color: st.grade ? '#2563eb' : '#94a3b8',
+                                                        background: st.grade && st.grade !== '—' ? '#eff6ff' : '#f1f5f9',
+                                                        color: st.grade && st.grade !== '—' ? '#2563eb' : '#94a3b8',
                                                         fontWeight: 600
                                                     }}>
-                                                        {st.grade ? `Khối ${st.grade}` : '—'}
+                                                        {formatGrade(st.grade)}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -721,24 +822,32 @@ const ClassDetail = () => {
                 onClose={() => setEditModalOpen(false)}
                 onSubmit={handleEditSubmit}
                 editingClass={classData ? {
-                    // Map ClassDto → CreateClassModal's expected shape
                     id: classData.classId,
                     name: classData.className,
                     subject: classData.subjectName,
-                    mainTeacher: classData.teacherName ? { name: classData.teacherName } : null,
-                    assistant: classData.assistantName ? { name: classData.assistantName } : null,
+                    mainTeacher: classData.teacherName ? { id: classData.teacherId, name: classData.teacherName } : null,
+                    assistant: classData.assistantName ? { id: classData.assistantId, name: classData.assistantName } : null,
+                    roomName: classData.roomName || classData.RoomName || '',
+                    roomId: classData.roomId || classData.RoomId,
+                    gradeId: classData.gradeId || classData.GradeId,
                     description: classData.description || '',
                     syllabusContent: classData.syllabusContent || '',
                     startDate: classData.startDate ? classData.startDate.split('T')[0] : '',
                     endDate: classData.endDate ? classData.endDate.split('T')[0] : '',
-                    status: classData.status || 'active',
-                    // Map ScheduleSlots: dayOfWeek (0–6) → day label, keep times
+                    status: classData.status?.toLowerCase() || 'active',
                     scheduleSlots: (classData.scheduleSlots || []).map(s => ({
                         day: ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][s.dayOfWeek] || '',
-                        startTime: s.startTime,
-                        endTime: s.endTime
+                        startTime: s.startTime || s.StartTime,
+                        endTime: s.endTime || s.EndTime,
+                        roomId: s.roomId || s.RoomId,
+                        roomName: s.roomName || s.RoomName
                     }))
                 } : null}
+                subjects={subjects}
+                teachersList={teachers}
+                assistantsList={assistants}
+                roomsList={rooms}
+                gradesList={grades}
                 existingClasses={[]}
             />
         </div>

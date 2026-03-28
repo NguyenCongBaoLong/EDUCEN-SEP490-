@@ -1,47 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
-    CheckCircle, XCircle, MinusCircle
+    CheckCircle, XCircle, MinusCircle, AlertCircle, Loader2, BookOpen
 } from 'lucide-react';
 import StudentSidebar from '../../components/StudentSidebar';
 import '../../css/pages/student/StudentSchedule.css';
-
-// Shared schedule data cho học sinh này
-const STUDENT_CLASSES = [
-    {
-        id: 201, code: 'TOÁN-G10', name: 'Đại Số Nâng Cao',
-        day: 1, startTime: '16:30', endTime: '18:00', color: '#3b82f6',
-    },
-    {
-        id: 201, code: 'TOÁN-G10', name: 'Đại Số Nâng Cao',
-        day: 3, startTime: '16:30', endTime: '18:00', color: '#3b82f6',
-    },
-    {
-        id: 202, code: 'ANH-G10', name: 'Tiếng Anh Giao Tiếp',
-        day: 2, startTime: '17:00', endTime: '18:30', color: '#10b981',
-    },
-    {
-        id: 202, code: 'ANH-G10', name: 'Tiếng Anh Giao Tiếp',
-        day: 4, startTime: '17:00', endTime: '18:30', color: '#10b981',
-    },
-    {
-        id: 203, code: 'LÝ-G10', name: 'Vật Lý Cơ Bản',
-        day: 5, startTime: '15:00', endTime: '16:30', color: '#f59e0b',
-    },
-];
-
-// Mock attendance per (classId, dayOfWeek)
-// 'present' | 'absent' | 'future' (calculated)
-const ATTENDANCE_MOCK = {
-    '201_1': 'present',
-    '201_3': 'absent',
-    '202_2': 'present',
-    '202_4': 'present',
-    '203_5': 'present',
-};
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-hot-toast';
 
 const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4'];
+
 const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
     '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
@@ -49,8 +20,54 @@ const timeSlots = [
 
 const StudentSchedule = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState('week');
+    const [studentClasses, setStudentClasses] = useState([]);
+    const [attendanceRecords, setAttendanceRecords] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchSchedule = async () => {
+        try {
+            setIsLoading(true);
+            const [scheduleRes, attendanceRes] = await Promise.all([
+                api.get('/Schedules/student/me'),
+                api.get(`/attendance/student/${user.userId}`)
+            ]);
+
+            // Map schedule data
+            const colorMap = {};
+            let ci = 0;
+            const mapped = scheduleRes.data.map(item => {
+                if (!colorMap[item.classId]) {
+                    colorMap[item.classId] = COLORS[ci++ % COLORS.length];
+                }
+                return {
+                    id: item.classId,
+                    code: item.subjectName || 'N/A',
+                    name: item.className,
+                    day: item.dayOfWeek,
+                    startTime: item.startTime.substring(0, 5),
+                    endTime: item.endTime.substring(0, 5),
+                    color: colorMap[item.classId],
+                    room: item.roomName || 'Phòng học',
+                    startDate: item.startDate,
+                    endDate: item.endDate
+                };
+            });
+            setStudentClasses(mapped);
+            setAttendanceRecords(attendanceRes.data);
+        } catch (error) {
+            console.error('Error fetching schedule/attendance:', error);
+            toast.error('Không thể tải lịch học');
+        } finally {
+            setTimeout(() => setIsLoading(false), 300);
+        }
+    };
+
+    useEffect(() => {
+        fetchSchedule();
+    }, []);
 
     /* ─── Date helpers ─── */
     const getWeekDates = () => {
@@ -109,11 +126,26 @@ const StudentSchedule = () => {
     };
 
     const getAttendanceStatus = (classItem, date) => {
+        const dStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        // Find if there's an attendance record for this class on this date
+        const record = attendanceRecords.find(r => {
+            if (!r.sessionDate) return false;
+            const rDate = new Date(r.sessionDate);
+            const rDateStr = `${rDate.getFullYear()}-${String(rDate.getMonth() + 1).padStart(2, '0')}-${String(rDate.getDate()).padStart(2, '0')}`;
+            return rDateStr === dStr && r.className === classItem.name;
+        });
+
+        if (record) {
+            if (record.status === 'present') return 'present';
+            if (record.status === 'absent') return 'absent';
+        }
+
         const isToday = date.toDateString() === new Date().toDateString();
         const isFuture = date > new Date();
         if (isFuture || isToday) return 'upcoming';
-        const key = `${classItem.id}_${classItem.day}`;
-        return ATTENDANCE_MOCK[key] || 'unknown';
+        
+        return 'missing';
     };
 
     const AttendanceBadge = ({ status }) => {
@@ -121,6 +153,7 @@ const StudentSchedule = () => {
             present: { icon: <CheckCircle size={12} />, label: 'Có mặt', cls: 'present' },
             absent: { icon: <XCircle size={12} />, label: 'Vắng', cls: 'absent' },
             upcoming: { icon: <MinusCircle size={12} />, label: 'Sắp tới', cls: 'upcoming' },
+            missing: { icon: <AlertCircle size={12} />, label: 'Chưa điểm danh', cls: 'missing' },
             unknown: { icon: <MinusCircle size={12} />, label: '—', cls: 'upcoming' },
         };
         const s = map[status] || map.unknown;
@@ -142,19 +175,40 @@ const StudentSchedule = () => {
     };
 
     const renderDayColumn = (date, dayIndex, single = false) => {
-        const dayClasses = STUDENT_CLASSES.filter(c => getDayIndex(c.day) === dayIndex);
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+
+        const dayClasses = studentClasses.filter(c => {
+            if (getDayIndex(c.day) !== dayIndex) return false;
+
+            if (c.startDate) {
+                const start = new Date(c.startDate);
+                start.setHours(0, 0, 0, 0);
+                if (compareDate < start) return false;
+            }
+            if (c.endDate) {
+                const end = new Date(c.endDate);
+                end.setHours(0, 0, 0, 0);
+                if (compareDate > end) return false;
+            }
+            return true;
+        });
         const isToday = date.toDateString() === new Date().toDateString();
 
         // Group overlapping
         const groups = [];
         dayClasses.forEach(c => {
-            const c1s = parseInt(c.startTime) * 60 + parseInt(c.startTime.split(':')[1]);
-            const c1e = parseInt(c.endTime) * 60 + parseInt(c.endTime.split(':')[1]);
+            const [sh, sm] = c.startTime.split(':').map(Number);
+            const [eh, em] = c.endTime.split(':').map(Number);
+            const c1s = sh * 60 + sm;
+            const c1e = eh * 60 + em;
             let added = false;
             for (const g of groups) {
                 const has = g.some(gc => {
-                    const gs = parseInt(gc.startTime) * 60 + parseInt(gc.startTime.split(':')[1]);
-                    const ge = parseInt(gc.endTime) * 60 + parseInt(gc.endTime.split(':')[1]);
+                    const [gsh, gsm] = gc.startTime.split(':').map(Number);
+                    const [geh, gem] = gc.endTime.split(':').map(Number);
+                    const gs = gsh * 60 + gsm;
+                    const ge = geh * 60 + gem;
                     return c1s < ge && c1e > gs;
                 });
                 if (has) { g.push(c); added = true; break; }
@@ -171,18 +225,21 @@ const StudentSchedule = () => {
                 <div className="ss-day-grid">
                     {timeSlots.map((_, i) => <div key={i} className="ss-grid-cell" />)}
                     <div className="ss-classes-container">
-                        {groups.map(group =>
+                        {groups.map((group, gIdx) =>
                             group.map((c, idx) => {
                                 const status = getAttendanceStatus(c, date);
                                 return (
                                     <div
-                                        key={`${c.id}-${c.day}`}
+                                        key={`${c.id}-${c.day}-${gIdx}-${idx}`}
                                         className="ss-class-card"
                                         style={getClassStyle(c, idx, group.length)}
                                         onClick={() => navigate(`/student/classes/${c.id}`)}
                                     >
                                         <div className="ss-class-code">{c.code}</div>
                                         <div className="ss-class-name">{c.name}</div>
+                                        <div className="ss-class-room">
+                                            <BookOpen size={10} /> {c.room}
+                                        </div>
                                         <div className="ss-class-time">
                                             <Clock size={10} />
                                             {c.startTime} - {c.endTime}
@@ -197,6 +254,55 @@ const StudentSchedule = () => {
             </div>
         );
     };
+
+    const renderMonthDayClasses = (date) => {
+        const idx = date.getDay() === 0 ? 6 : date.getDay() - 1;
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+
+        const dayClasses = studentClasses.filter(c => {
+            if (getDayIndex(c.day) !== idx) return false;
+
+            if (c.startDate) {
+                const start = new Date(c.startDate);
+                start.setHours(0, 0, 0, 0);
+                if (compareDate < start) return false;
+            }
+            if (c.endDate) {
+                const end = new Date(c.endDate);
+                end.setHours(0, 0, 0, 0);
+                if (compareDate > end) return false;
+            }
+            return true;
+        });
+        
+        return dayClasses.map((c, i) => {
+            const status = getAttendanceStatus(c, date);
+            return (
+                <div
+                    key={`${c.id}-${c.day}-${i}`}
+                    className={`ss-month-class-badge att-${status}`}
+                    style={{ background: c.color }}
+                    onClick={() => navigate(`/student/classes/${c.id}`)}
+                >
+                    <span className="sc-code">{c.code}</span>
+                    <span className="sc-room">{c.room}</span>
+                </div>
+            );
+        });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="ss-page">
+                <StudentSidebar />
+                <div className="ss-main ss-loading">
+                    <Loader2 className="animate-spin" size={40} />
+                    <p>Đang tải lịch học...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="ss-page">
@@ -298,26 +404,12 @@ const StudentSchedule = () => {
                                                 <div key={`p${i}`} className="ss-month-day-cell empty" />
                                             ))}
                                             {monthDates.map((date, i) => {
-                                                const idx = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                                const dayClasses = STUDENT_CLASSES.filter(c => getDayIndex(c.day) === idx);
                                                 const isToday = date.toDateString() === new Date().toDateString();
                                                 return (
                                                     <div key={i} className={`ss-month-day-cell ${isToday ? 'today' : ''}`}>
                                                         <div className="ss-month-day-number">{date.getDate()}</div>
                                                         <div className="ss-month-day-classes">
-                                                            {dayClasses.map(c => {
-                                                                const status = getAttendanceStatus(c, date);
-                                                                return (
-                                                                    <div
-                                                                        key={`${c.id}-${c.day}`}
-                                                                        className={`ss-month-class-badge att-${status}`}
-                                                                        style={{ background: c.color }}
-                                                                        onClick={() => navigate(`/student/classes/${c.id}`)}
-                                                                    >
-                                                                        {c.code}
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                            {renderMonthDayClasses(date)}
                                                         </div>
                                                     </div>
                                                 );

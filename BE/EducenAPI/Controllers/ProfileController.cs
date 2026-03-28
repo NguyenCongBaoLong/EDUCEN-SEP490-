@@ -163,6 +163,10 @@ namespace EducenAPI.Controllers
             if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
                 return BadRequest(new { message = "Mật khẩu hiện tại không đúng" });
 
+            // Validate: NewPassword must be different from OldPassword
+            if (request.OldPassword == request.NewPassword)
+                return BadRequest(new { message = "Mật khẩu mới phải khác mật khẩu hiện tại" });
+
             user.PasswordHash =
                 BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 

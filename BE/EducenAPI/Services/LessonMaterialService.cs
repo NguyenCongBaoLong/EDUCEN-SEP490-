@@ -19,16 +19,29 @@ namespace EducenAPI.Services
             _fileService = fileService;
             _userServiceContext = userServiceContext;
         }
-        public async Task<LessonMaterial> SaveMaterials(SaveMaterialDto dto)
+        public async Task<MaterialResponseDto> SaveMaterials(SaveMaterialDto dto, string baseUrl)
         {
+            if (dto.SessionId.HasValue)
+            {
+               
+                var sessionExists = await _context.ClassSessions.AnyAsync(s => s.SessionId == dto.SessionId.Value);
+                if (!sessionExists)
+                {
+                    throw new BadRequestException("SessionId không tồn tại trong hệ thống.");
+                }
+            }
             string? fileUrl = null;
             string? contentType = null;
             var userId = _userServiceContext.GetUserId();
             if (dto.File != null)
             {
+                if (dto.File.Length == 0)
+                {
+                    throw new BadRequestException("File tải lên không được rỗng (0MB).");
+                }
                 string originalFileName = dto.File.FileName;
 
-                // Check duplicate by OriginalFileName only (size check broken in Docker)
+                // Check duplicate by OriginalFileName
                 if (dto.SessionId.HasValue)
                 {
                     var existingNames = await _context.LessonMaterials
@@ -37,18 +50,17 @@ namespace EducenAPI.Services
                         .ToListAsync();
                     bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
                     if (isDuplicate)
-                        throw new BadRequestException("File này đã tồn tại trong buổi học này.");
+                        throw new ConflictException("File này đã tồn tại trong buổi học này.");
                 }
-                else if (dto.SaveToLibrary)
-                {
-                    var existingNames = await _context.LessonMaterials
-                        .Where(m => m.SessionId == null && !string.IsNullOrEmpty(m.FileUrl))
-                        .Select(m => m.FileUrl)
-                        .ToListAsync();
-                    bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
-                    if (isDuplicate)
-                        throw new BadRequestException("File này đã tồn tại trong thư viện.");
-                }
+                
+                // Always check library for duplicate OriginalFileName
+                var existingLibraryNames = await _context.LessonMaterials
+                    .Where(m => m.SessionId == null && m.UserId == userId && !string.IsNullOrEmpty(m.FileUrl))
+                    .Select(m => m.FileUrl)
+                    .ToListAsync();
+                bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
+                if (isLibDuplicate)
+                    throw new BadRequestException("File tài liệu này đã tồn tại trong thư viện. Vui lòng chọn từ thư viện.");
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
@@ -64,44 +76,62 @@ namespace EducenAPI.Services
                     && dto.SessionId == e.SessionId
                     && e.Title == dto.Title);
             if (isTitleUnique)
-                throw new Exception("Title đang bị trùng");
+                throw new ConflictException("Title đang bị trùng");
             var material = new LessonMaterial
             {
                 SessionId = dto.SessionId,
                 Title = dto.Title,
                 FileUrl = fileUrl,
                 ContentType = contentType,
-                UserId = userId
+                UserId = userId,
+                GradeId = dto.GradeId
             };
             _context.LessonMaterials.Add(material);
 
             if (dto.SaveToLibrary && dto.SessionId.HasValue)
+            // Save to library if the same original filename doesn't already exist
+            if (dto.SaveToLibrary && dto.SessionId.HasValue)
             {
-                // Save to library if the same original filename doesn't already exist
-                var libNames = await _context.LessonMaterials
-                    .Where(m => m.SessionId == null && !string.IsNullOrEmpty(m.FileUrl))
-                    .Select(m => m.FileUrl)
-                    .ToListAsync();
-                string newName = dto.File?.FileName ?? dto.Title ?? "";
-                bool existsInLib = libNames.Any(url => GetOriginalFileNameFromUrl(url) == newName);
+                var existsInLib = await _context.LessonMaterials
+                    .AnyAsync(m => m.SessionId == null && m.UserId == userId 
+                              && m.Title == material.Title && m.FileUrl == material.FileUrl);
+                
                 if (!existsInLib)
                 {
                     var libraryMaterial = new LessonMaterial
                     {
                         SessionId = null,
-                        Title = dto.Title,
-                        FileUrl = fileUrl,
-                        ContentType = contentType,
-                        UserId = userId
+                        Title = material.Title,
+                        FileUrl = material.FileUrl,
+                        ContentType = material.ContentType,
+                        UserId = userId,
+                        GradeId = material.GradeId
                     };
                     _context.LessonMaterials.Add(libraryMaterial);
                 }
             }
             await _context.SaveChangesAsync();
-            return material;
+            return MapToResponseDto(material, baseUrl);
         }
 
-        public async Task<LessonMaterial> UpdateMaterialAsync(int id, SaveMaterialDto dto)
+        private MaterialResponseDto MapToResponseDto(LessonMaterial material, string baseUrl)
+        {
+            return new MaterialResponseDto
+            {
+                MaterialId = material.MaterialId,
+                SessionId = material.SessionId,
+                GradeId = material.GradeId,
+                Title = material.Title,
+                ContentType = material.ContentType,
+                FileUrl = !string.IsNullOrEmpty(material.FileUrl)
+                    ? $"{baseUrl}/{material.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                    : null,
+                FileSize = GetFileSizeFromUrl(material.FileUrl),
+                OriginalFileName = GetOriginalFileNameFromUrl(material.FileUrl)
+            };
+        }
+
+        public async Task<MaterialResponseDto> UpdateMaterialAsync(int id, SaveMaterialDto dto, string baseUrl)
         {
             var material = await _context.LessonMaterials.FindAsync(id);
             if (material == null)
@@ -109,6 +139,10 @@ namespace EducenAPI.Services
 
             if (dto.File != null)
             {
+                if (dto.File.Length == 0)
+                {
+                    throw new BadRequestException("File tải lên không được rỗng (0MB).");
+                }
                 string newOriginalFileName = dto.File.FileName;
 
                 // Check duplicate in session (exclude current material), by filename only
@@ -120,7 +154,7 @@ namespace EducenAPI.Services
                         .ToListAsync();
                     bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
                     if (isDuplicate)
-                        throw new BadRequestException("File này đã tồn tại trong buổi học này.");
+                        throw new ConflictException("File này đã tồn tại trong buổi học này.");
                 }
 
                 var files = new FormFileCollection { dto.File };
@@ -135,9 +169,33 @@ namespace EducenAPI.Services
 
             material.Title = dto.Title;
             material.SessionId = dto.SessionId;
+            material.GradeId = dto.GradeId;
+
+            // Save to library if requested and not already exists
+            if (dto.SaveToLibrary)
+            {
+                var userId = _userServiceContext.GetUserId();
+                var existsInLib = await _context.LessonMaterials
+                    .AnyAsync(m => m.SessionId == null && m.UserId == userId 
+                              && m.Title == material.Title && m.FileUrl == material.FileUrl);
+                
+                if (!existsInLib)
+                {
+                    var libraryMaterial = new LessonMaterial
+                    {
+                        SessionId = null,
+                        Title = material.Title,
+                        FileUrl = material.FileUrl,
+                        ContentType = material.ContentType,
+                        UserId = userId,
+                        GradeId = material.GradeId
+                    };
+                    _context.LessonMaterials.Add(libraryMaterial);
+                }
+            }
 
             await _context.SaveChangesAsync();
-            return material;
+            return MapToResponseDto(material, baseUrl);
         }
 
         public async Task<LessonMaterial> UploadMaterials(UploadMaterialDto dto)
@@ -148,6 +206,10 @@ namespace EducenAPI.Services
             if (material == null)
                 throw new Exception("Material not found");
 
+            if (dto.File.Length == 0)
+            {
+                throw new BadRequestException("File tải lên không được rỗng (0MB).");
+            }
             string newOriginalFileName = dto.File.FileName;
 
             // Check duplicate by filename only (size check broken in Docker)
@@ -159,17 +221,18 @@ namespace EducenAPI.Services
                     .ToListAsync();
                 bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
                 if (isDuplicate)
-                    throw new BadRequestException("File này đã tồn tại trong buổi học này.");
+                    throw new ConflictException("File này đã tồn tại trong buổi học này.");
             }
             else
             {
+                var userId = _userServiceContext.GetUserId();
                 var existingNames = await _context.LessonMaterials
-                    .Where(m => m.SessionId == null && m.MaterialId != dto.MaterialId && !string.IsNullOrEmpty(m.FileUrl))
+                    .Where(m => m.SessionId == null && m.UserId == userId && m.MaterialId != dto.MaterialId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
                 bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
                 if (isDuplicate)
-                    throw new BadRequestException("File này đã tồn tại trong thư viện.");
+                    throw new ConflictException("File này đã tồn tại trong thư viện.");
             }
 
             var files = new FormFileCollection
@@ -201,6 +264,7 @@ namespace EducenAPI.Services
                 {
                     MaterialId = x.MaterialId,
                     SessionId = x.SessionId,
+                    GradeId = x.GradeId,
                     Title = x.Title,
                     ContentType = x.ContentType,
                     FileUrl = !string.IsNullOrEmpty(x.FileUrl)
@@ -215,25 +279,14 @@ namespace EducenAPI.Services
         }
         public async Task<List<MaterialResponseDto>> GetAllMaterialsAsync(string baseUrl)
         {
+            var userId = _userServiceContext.GetUserId();
             var rawMaterials = await _context.LessonMaterials
-                .Where(x => x.SessionId == null) 
+                .Where(x => x.SessionId == null && x.UserId == userId) 
                 .ToListAsync();
 
-            var materials = rawMaterials.Select(x => new MaterialResponseDto
-                {
-                    MaterialId = x.MaterialId,
-                    SessionId = x.SessionId,
-                    Title = x.Title,
-                    ContentType = x.ContentType,
-                    FileUrl = !string.IsNullOrEmpty(x.FileUrl)
-                        ? $"{baseUrl}/{x.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                        : null,
-                    FileSize = GetFileSizeFromUrl(x.FileUrl),
-                    OriginalFileName = GetOriginalFileNameFromUrl(x.FileUrl)
-                })
+            return rawMaterials
+                .Select(x => MapToResponseDto(x, baseUrl))
                 .ToList();
-
-            return materials;
         }
 
         public async Task<LessonMaterial> ImportMaterialAsync(int materialId, int sessionId)
@@ -241,6 +294,7 @@ namespace EducenAPI.Services
             var source = await _context.LessonMaterials.FindAsync(materialId);
             if (source == null) throw new Exception("Source material not found");
 
+            var userId = _userServiceContext.GetUserId();
             string sourceOriginalName = GetOriginalFileNameFromUrl(source.FileUrl);
 
             // Check duplicate by filename only (no DB size column needed)
@@ -252,7 +306,7 @@ namespace EducenAPI.Services
                     .ToListAsync();
                 bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == sourceOriginalName);
                 if (isDuplicate)
-                    throw new BadRequestException("File này đã tồn tại trong buổi học này.");
+                    throw new ConflictException("File này đã tồn tại trong buổi học này.");
             }
             else
             {
@@ -260,7 +314,7 @@ namespace EducenAPI.Services
                 bool isDuplicate = await _context.LessonMaterials
                     .AnyAsync(m => m.SessionId == sessionId && m.FileUrl == source.FileUrl);
                 if (isDuplicate)
-                    throw new BadRequestException("File này đã tồn tại trong buổi học này.");
+                    throw new ConflictException("File này đã tồn tại trong buổi học này.");
             }
 
             var material = new LessonMaterial
@@ -268,7 +322,9 @@ namespace EducenAPI.Services
                 SessionId = sessionId,
                 Title = source.Title,
                 FileUrl = source.FileUrl,
-                ContentType = source.ContentType
+                ContentType = source.ContentType,
+                UserId = userId,
+                GradeId = source.GradeId
             };
 
             _context.LessonMaterials.Add(material);

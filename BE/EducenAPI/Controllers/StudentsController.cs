@@ -163,15 +163,18 @@ namespace EducenAPI.Controllers
         .FirstOrDefaultAsync(x => x.UserId == studentId);
 
             if (user == null)
-                return NotFound("User không tồn tại");
+                return NotFound("Người dùng không tồn tại");
+
+            if (string.IsNullOrEmpty(user.Username))
+                return BadRequest("Tên người dùng là bắt buộc");
 
             if (string.IsNullOrEmpty(user.Email))
-                return BadRequest("User chưa có email");
+                return BadRequest("Người dùng chưa có email");
 
-            // Nếu chưa có username thì tạo mới (ví dụ: stu_ + id)
+            // Nếu chưa có username thì tạo từ email (phần đằng trước @)
             if (string.IsNullOrEmpty(user.Username))
             {
-                user.Username = $"stu_{user.UserId}";
+                user.Username = user.Email?.Split('@')[0] ?? $"stu_{user.UserId}";
             }
 
             // tạo password mới

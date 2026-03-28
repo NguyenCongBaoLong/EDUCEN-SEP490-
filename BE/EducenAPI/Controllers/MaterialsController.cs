@@ -16,16 +16,18 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("save")]
-        public async Task<IActionResult> SaveMaterial([FromForm] SaveMaterialDto dto)
+        public async Task<IActionResult> SaveMaterials([FromForm] SaveMaterialDto dto)
         {
-            var result = await _lessonMaterialService.SaveMaterials(dto);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var result = await _lessonMaterialService.SaveMaterials(dto, baseUrl);
             return Ok(result);
         }
 
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateMaterial(int id, [FromForm] SaveMaterialDto dto)
         {
-            var result = await _lessonMaterialService.UpdateMaterialAsync(id, dto);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var result = await _lessonMaterialService.UpdateMaterialAsync(id, dto, baseUrl);
             return Ok(result);
         }
 
@@ -34,7 +36,7 @@ namespace EducenAPI.Controllers
         public async Task<IActionResult> UploadMaterial([FromForm] UploadMaterialDto dto)
         {
             var result = await _lessonMaterialService.UploadMaterials(dto);
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
         [HttpGet]
         public async Task<IActionResult> GetMaterials()

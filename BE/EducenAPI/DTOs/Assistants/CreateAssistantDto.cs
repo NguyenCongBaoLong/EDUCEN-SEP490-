@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EducenAPI.DTOs.Classes;
 
 namespace EducenAPI.DTOs.Assistants
 {
@@ -96,5 +97,6 @@ namespace EducenAPI.DTOs.Assistants
         public string AccountStatus { get; set; } = string.Empty;
         public int AssignedClassesCount { get; set; }
         public DateTime CreatedAt { get; set; }
+        public List<CreateScheduleSlotDto> Schedule { get; set; } = new();
     }
 }

@@ -44,6 +44,8 @@ public partial class EducenV2Context : DbContext
     public DbSet<Grade> Grades { get; set; }
     public DbSet<Room> Rooms { get; set; }
     public DbSet<ClassSession> ClassSessions { get; set; }
+    public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
+    public DbSet<SupportRequest> SupportRequests { get; set; }
 
     // ================================
     // MODEL CONFIGURATION
@@ -75,15 +77,30 @@ public partial class EducenV2Context : DbContext
         {
             if (typeof(IMustHaveTenant).IsAssignableFrom(entityType.ClrType))
             {
+                // Create a parameter for the entity
                 var parameter = Expression.Parameter(entityType.ClrType, "e");
-                var property = Expression.Property(parameter, "TenantId");
-                var tenantProperty = Expression.Property(
-                Expression.Constant(this),
-                nameof(CurrentTenantId)
+                
+                // Get the TenantId property
+                var tenantIdProperty = Expression.Property(parameter, "TenantId");
+                
+                // Get CurrentTenantId from this context instance
+                var currentTenantIdProperty = Expression.Property(
+                    Expression.Constant(this), 
+                    nameof(CurrentTenantId)
                 );
-
-                var body = Expression.Equal(property, tenantProperty);
-
+                
+                // Build expression: 
+                // If CurrentTenantId is null or empty, return true (no filter)
+                // Otherwise, check if TenantId == CurrentTenantId
+                var isEmptyCheck = Expression.Equal(currentTenantIdProperty, Expression.Constant(""));
+                var isNullCheck = Expression.Equal(currentTenantIdProperty, Expression.Constant(null, typeof(string)));
+                var isEmptyOrNull = Expression.OrElse(isEmptyCheck, isNullCheck);
+                
+                var equalityCheck = Expression.Equal(tenantIdProperty, currentTenantIdProperty);
+                
+                // Combine: (CurrentTenantId == "" || CurrentTenantId == null) || (TenantId == CurrentTenantId)
+                var body = Expression.OrElse(isEmptyOrNull, equalityCheck);
+                
                 var lambda = Expression.Lambda(body, parameter);
 
                 builder.Entity(entityType.ClrType)
@@ -111,7 +128,13 @@ public partial class EducenV2Context : DbContext
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.TenantId = CurrentTenantId;
+                // CHỈ GHI ĐÈ TỰ ĐỘNG NẾU TENANT ID ĐANG BỊ RỖNG HOẶC NULL
+                if (string.IsNullOrEmpty(entry.Entity.TenantId))
+                {
+                    // Use CurrentTenantId, or a placeholder if also empty
+                    var tenantToUse = string.IsNullOrEmpty(CurrentTenantId) ? "pending" : CurrentTenantId;
+                    entry.Entity.TenantId = tenantToUse;
+                }
             }
         }
     }
@@ -218,6 +241,12 @@ public partial class EducenV2Context : DbContext
         .WithMany(s => s.Sessions)
         .HasForeignKey(cs => cs.ScheduleId)
         .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Schedule>()
+        .HasOne(s => s.Room)
+        .WithMany(r => r.Schedules)
+        .HasForeignKey(s => s.RoomId)
+        .OnDelete(DeleteBehavior.SetNull);
 
 
         modelBuilder.Entity<Assignment>()

@@ -18,7 +18,7 @@ namespace EducenAPI.Services
             _fileService = fileService;
         }
 
-        public async Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request)
+        public async Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request, string baseUrl)
         {
             string fileUrl = string.Empty;
             var assignment = await _context.Assignments.FindAsync(request.AsmId);
@@ -68,10 +68,10 @@ namespace EducenAPI.Services
             _context.Submissions.Add(submission);
             await _context.SaveChangesAsync();
 
-            return MapToResponseDto(submission);
+            return MapToResponseDto(submission, baseUrl);
         }
 
-        public async Task<SubmissionResponseDto> UpdateSubmissionAsync(int subId, UpdateSubmissionRequest request)
+        public async Task<SubmissionResponseDto> UpdateSubmissionAsync(int subId, UpdateSubmissionRequest request, string baseUrl)
         {
             string fileUrl = string.Empty;
             var submission = await _context.Submissions
@@ -115,10 +115,10 @@ namespace EducenAPI.Services
             submission.IsPublished = false;
 
             await _context.SaveChangesAsync();
-            return MapToResponseDto(submission);
+            return MapToResponseDto(submission, baseUrl);
         }
 
-        public async Task<SubmissionResponseDto> GradeSubmissionAsync(int subId, GradeSubmissionRequest request)
+        public async Task<SubmissionResponseDto> GradeSubmissionAsync(int subId, GradeSubmissionRequest request, string baseUrl)
         {
             var submission = await _context.Submissions
                 .FirstOrDefaultAsync(x => x.SubId == subId);
@@ -135,10 +135,10 @@ namespace EducenAPI.Services
             submission.Status = "Graded";
 
             await _context.SaveChangesAsync();
-            return MapToResponseDto(submission);
+            return MapToResponseDto(submission, baseUrl);
         }
 
-        public async Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished)
+        public async Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished, string baseUrl)
         {
             var submission = await _context.Submissions
                 .FirstOrDefaultAsync(x => x.SubId == subId);
@@ -153,10 +153,10 @@ namespace EducenAPI.Services
             submission.Status = isPublished ? "Published" : "Unpublished";
 
             await _context.SaveChangesAsync();
-            return MapToResponseDto(submission);
+            return MapToResponseDto(submission, baseUrl);
         }
 
-        public async Task<SubmissionResponseDto> ResetSubmissionAsync(int subId)
+        public async Task<SubmissionResponseDto> ResetSubmissionAsync(int subId, string baseUrl)
         {
             var submission = await _context.Submissions
                 .Include(x => x.Asm)
@@ -170,36 +170,49 @@ namespace EducenAPI.Services
             submission.GradedAt = null;
             submission.IsPublished = false;
             
-            // Recalculate status
-            var now = DateTime.Now;
-            submission.Status = SubmissionStatus.Submitted;
-            if (submission.Asm.EndTime.HasValue && submission.SubmittedAt > submission.Asm.EndTime.Value)
-            {
-                submission.Status = SubmissionStatus.LateSubmitted;
-            }
-
             await _context.SaveChangesAsync();
-            return MapToResponseDto(submission);
+            return MapToResponseDto(submission, baseUrl);
         }
 
-        public async Task<SubmissionResponseDto?> GetByIdAsync(int subId)
+        public async Task<SubmissionResponseDto?> GetByIdAsync(int subId, string baseUrl)
         {
             var submission = await _context.Submissions
                 .Include(x => x.Student)
                 .Include(x => x.Asm)
                 .FirstOrDefaultAsync(x => x.SubId == subId);
             
-            return submission != null ? MapToResponseDto(submission) : null;
+            return submission != null ? MapToResponseDto(submission, baseUrl) : null;
         }
 
-        private SubmissionResponseDto MapToResponseDto(Submission submission)
+        public async Task<bool> PublishAllGradesAsync(int assignmentId, bool isPublished)
+        {
+            var submissions = await _context.Submissions
+                .Where(x => x.AsmId == assignmentId && x.Score != null)
+                .ToListAsync();
+
+            if (!submissions.Any())
+                return false;
+
+            foreach (var sub in submissions)
+            {
+                sub.IsPublished = isPublished;
+                sub.Status = isPublished ? "Published" : "Graded";
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        private SubmissionResponseDto MapToResponseDto(Submission submission, string baseUrl)
         {
             return new SubmissionResponseDto
             {
                 SubId = submission.SubId,
                 AsmId = submission.AsmId,
                 StudentId = submission.StudentId,
-                FileUrl = submission.FileUrl,
+                FileUrl = !string.IsNullOrEmpty(submission.FileUrl)
+                    ? $"{baseUrl}/{submission.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                    : null,
                 SubmittedAt = submission.SubmittedAt,
                 Status = submission.Status,
                 Score = submission.Score,

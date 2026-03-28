@@ -74,8 +74,7 @@
               "RelativeToolTip": "Services\\Interface\\IAssignmentService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAuwAcAAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-23T15:51:21.853Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-23T15:51:21.853Z"
             },
             {
               "$type": "Document",
@@ -97,7 +96,7 @@
               "RelativeDocumentMoniker": "Services\\AssignmentService.cs",
               "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AssignmentService.cs",
               "RelativeToolTip": "Services\\AssignmentService.cs",
-              "ViewState": "AgIAAB4AAAAAAAAAAAAQwDcAAABJAAAAAAAAAA==",
+              "ViewState": "AgIAAGwAAAAAAAAAAAAQwDcAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-23T15:36:56.48Z",
               "EditorCaption": ""
@@ -136,8 +135,7 @@
               "RelativeToolTip": "Controllers\\AssignmentsController.cs",
               "ViewState": "AgIAAAoAAAAAAAAAAAAIwBoAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-23T14:40:52.318Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-23T14:40:52.318Z"
             }
           ]
         }

@@ -11,6 +11,7 @@ public partial class Assignment
 
     public int? SessionId { get; set; }
     public int? UserId { get; set; }
+    public int? GradeId { get; set; }
 
     public string? Title { get; set; }
 
@@ -24,6 +25,7 @@ public partial class Assignment
 
     public ClassSession Session { get; set; } = null!;
     public virtual User? User { get; set; }
+    public virtual Grade? Grade { get; set; }
 
     public virtual ICollection<Submission> Submissions { get; set; } = new List<Submission>();
 }

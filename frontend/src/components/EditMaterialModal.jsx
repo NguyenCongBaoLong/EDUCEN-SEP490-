@@ -3,9 +3,10 @@ import { X, Save, FileText } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData }) => {
+const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [] }) => {
     const [formData, setFormData] = useState({
         title: '',
+        gradeId: '',
     });
     const [newFile, setNewFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,6 +15,7 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData }) => {
         if (materialData) {
             setFormData({
                 title: materialData.title || '',
+                gradeId: materialData.gradeId || materialData.GradeId || '',
             });
             setNewFile(null);
         }
@@ -39,6 +41,7 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData }) => {
             
             const data = new FormData();
             data.append('Title', formData.title);
+            if (formData.gradeId) data.append('GradeId', formData.gradeId);
             if (materialData.sessionId) data.append('SessionId', materialData.sessionId);
             if (materialData.classId) data.append('ClassId', materialData.classId);
             
@@ -85,6 +88,21 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData }) => {
                                 value={formData.title}
                                 onChange={handleChange}
                             />
+                        </div>
+
+                        <div className="cam-field">
+                            <label className="cam-label">Khối lớp (Tùy chọn)</label>
+                            <select
+                                className="cam-input"
+                                name="gradeId"
+                                value={formData.gradeId}
+                                onChange={handleChange}
+                            >
+                                <option value="">-- Chọn khối lớp --</option>
+                                {grades.map(g => (
+                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="cam-field">

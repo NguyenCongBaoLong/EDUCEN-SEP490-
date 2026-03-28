@@ -37,6 +37,10 @@ namespace EducenAPI.DTOs.Classes
         [Required(ErrorMessage = "SubjectId is required")]
         public int SubjectId { get; set; }
 
+        public int? RoomId { get; set; }
+
+        public int? GradeId { get; set; }
+
         public int? TeacherId { get; set; }
 
         public int? AssistantId { get; set; }
@@ -61,6 +65,8 @@ namespace EducenAPI.DTOs.Classes
         public int DayOfWeek { get; set; } // 0 = Sunday, 1 = Monday, ...
         public string StartTime { get; set; } = string.Empty; // Format "HH:mm"
         public string EndTime { get; set; } = string.Empty;   // Format "HH:mm"
+        public int? RoomId { get; set; }
+        public string? RoomName { get; set; }
     }
 
     public class UpdateClassDto
@@ -78,6 +84,10 @@ namespace EducenAPI.DTOs.Classes
         public string? SyllabusContent { get; set; }
 
         public int? SubjectId { get; set; }
+
+        public int? RoomId { get; set; }
+
+        public int? GradeId { get; set; }
 
         public int? TeacherId { get; set; }
 
@@ -106,10 +116,16 @@ namespace EducenAPI.DTOs.Classes
         public string? TeacherName { get; set; }
         public int? AssistantId { get; set; }
         public string? AssistantName { get; set; }
+        public int? RoomId { get; set; }
+        public string? RoomName { get; set; }
+        public int? GradeId { get; set; }
+        public string? GradeName { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? Status { get; set; }
         public int StudentCount { get; set; }
+        public int TotalSessions { get; set; }
+        public int CompletedSessions { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
     }

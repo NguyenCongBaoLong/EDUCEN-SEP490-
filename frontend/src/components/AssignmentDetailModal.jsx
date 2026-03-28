@@ -54,6 +54,8 @@ const AssignmentDetailModal = ({ isOpen, onClose, assignment, onDownload }) => {
                             <span>Hạn nộp: <strong>{formatDate(assignment.endTime)}</strong></span>
                             <span className="dot">•</span>
                             <span>Tệp đính kèm: <strong>{assignment.fileName}</strong></span>
+                            <span className="dot">•</span>
+                            <span>Số bài nộp: <strong>{assignment.submissionsCount}</strong></span>
                         </div>
                     </div>
                 </div>

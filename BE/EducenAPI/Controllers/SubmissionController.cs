@@ -21,7 +21,8 @@ namespace EducenAPI.Controllers
         {
             try
             {
-                var result = await _submissionService.CreateSubmissionAsync(request);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _submissionService.CreateSubmissionAsync(request, baseUrl);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -35,7 +36,8 @@ namespace EducenAPI.Controllers
         {
             try
             {
-                var result = await _submissionService.UpdateSubmissionAsync(subId, request);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _submissionService.UpdateSubmissionAsync(subId, request, baseUrl);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -49,7 +51,8 @@ namespace EducenAPI.Controllers
         {
             try
             {
-                var result = await _submissionService.GradeSubmissionAsync(subId, request);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _submissionService.GradeSubmissionAsync(subId, request, baseUrl);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -63,7 +66,8 @@ namespace EducenAPI.Controllers
         {
             try
             {
-                var result = await _submissionService.PublishGradeAsync(subId, request.IsPublished);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _submissionService.PublishGradeAsync(subId, request.IsPublished, baseUrl);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -77,8 +81,26 @@ namespace EducenAPI.Controllers
         {
             try
             {
-                var result = await _submissionService.ResetSubmissionAsync(subId);
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _submissionService.ResetSubmissionAsync(subId, baseUrl);
                 return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("assignment/{assignmentId}/publish-all")]
+        public async Task<IActionResult> PublishAllGrades(int assignmentId, [FromBody] PublishGradeRequest request)
+        {
+            try
+            {
+                var result = await _submissionService.PublishAllGradesAsync(assignmentId, request.IsPublished);
+                if (!result)
+                    return NotFound(new { message = "No graded submissions found for this assignment." });
+
+                return Ok(new { message = request.IsPublished ? "All grades published successfully." : "All grades unpublished successfully." });
             }
             catch (Exception ex)
             {
@@ -89,7 +111,8 @@ namespace EducenAPI.Controllers
         [HttpGet("{subId}")]
         public async Task<IActionResult> GetSubmissionById(int subId)
         {
-            var result = await _submissionService.GetByIdAsync(subId);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var result = await _submissionService.GetByIdAsync(subId, baseUrl);
             if (result == null)
                 return NotFound(new { message = "Submission not found" });
 

@@ -10,6 +10,7 @@ namespace EducenAPI.DTOs.Schedules
         public string ClassName { get; set; } = string.Empty;
         public int SubjectId { get; set; }
         public string SubjectName { get; set; } = string.Empty;
+        public string? TeacherName { get; set; }
         
         // Day and Time
         public int DayOfWeek { get; set; }

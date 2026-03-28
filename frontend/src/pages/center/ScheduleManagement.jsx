@@ -21,18 +21,28 @@ const ScheduleManagement = () => {
     const { scheduledClasses, setScheduledClasses, refreshSchedules } = useSchedule();
     const [loading, setLoading] = useState(false);
     const [subjects, setSubjects] = useState([]);
+    const [staffList, setStaffList] = useState([]);
 
-    // Fetch center subjects for filter
+    // Fetch center subjects and staff for filter
     useEffect(() => {
-        const fetchSubjects = async () => {
+        const fetchFilters = async () => {
             try {
-                const res = await api.get('/tenantadmin/Subjects');
-                setSubjects(res.data);
+                const [subRes, tRes] = await Promise.all([
+                    api.get('/tenantadmin/Subjects'),
+                    api.get('/Teachers')
+                ]);
+                setSubjects(subRes.data);
+                
+                const allStaff = [
+                    ...(tRes.data || []).map(t => t.fullName)
+                ].filter(Boolean);
+                
+                setStaffList([...new Set(allStaff)].sort());
             } catch (error) {
-                console.error('Lỗi khi tải môn học:', error);
+                console.error('Lỗi khi tải bộ lọc:', error);
             }
         };
-        fetchSubjects();
+        fetchFilters();
     }, []);
 
     // Refresh schedules when component mounts (so data is always up-to-date when navigating here)
@@ -266,7 +276,7 @@ const ScheduleManagement = () => {
                             onChange={(e) => setTeacherFilter(e.target.value)}
                         >
                             <option value="">Tất cả giáo viên</option>
-                            {[...new Set(scheduledClasses.map(c => c.teacher))].filter(Boolean).map(t => (
+                            {staffList.map(t => (
                                 <option key={t} value={t}>{t}</option>
                             ))}
                         </select>
@@ -410,6 +420,12 @@ const ScheduleManagement = () => {
                                                                 <div className="schedule-class-teacher">
                                                                     <User size={12} />
                                                                     {classItem.teacher}
+                                                                </div>
+                                                            )}
+                                                            {classItem.roomName && (
+                                                                <div className="schedule-class-room" style={{ fontSize: '10px', opacity: 0.9, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'currentColor' }}></div>
+                                                                    {classItem.roomName}
                                                                 </div>
                                                             )}
                                                         </div>

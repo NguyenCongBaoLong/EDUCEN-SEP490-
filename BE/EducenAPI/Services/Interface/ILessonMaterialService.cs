@@ -8,8 +8,8 @@ namespace EducenAPI.Services.Interface
     {
         Task<LessonMaterial> UploadMaterials(UploadMaterialDto dto);
 
-        Task<LessonMaterial> SaveMaterials(SaveMaterialDto dto);
-        Task<LessonMaterial> UpdateMaterialAsync(int id, SaveMaterialDto dto);
+        Task<MaterialResponseDto> SaveMaterials(SaveMaterialDto dto, string baseUrl);
+        Task<MaterialResponseDto> UpdateMaterialAsync(int id, SaveMaterialDto dto, string baseUrl);
 
         Task<List<MaterialResponseDto>> GetMaterialsBySessionAsync(int sessionId, string baseUrl);
         Task<List<MaterialResponseDto>> GetAllMaterialsAsync(string baseUrl);

@@ -3,6 +3,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using EducenAPI.DTOs.Classes;
 
 namespace EducenAPI.Services
 {
@@ -19,6 +20,8 @@ namespace EducenAPI.Services
         {
             return await _context.Assistants
                 .Include(a => a.AssistantNavigation)
+                .Include(a => a.Classes)
+                    .ThenInclude(c => c.Schedules)
                 .Select(a => new AssistantDto
                 {
                     AssistantId = a.UserId,
@@ -31,7 +34,16 @@ namespace EducenAPI.Services
                     SupportLevel = a.SupportLevel,
                     AccountStatus = a.AssistantNavigation.AccountStatus,
                     AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    Schedule = a.Classes
+                        .Where(c => c.Status.ToLower() == "active")
+                        .SelectMany(c => c.Schedules)
+                        .Select(s => new CreateScheduleSlotDto
+                        {
+                            DayOfWeek = s.DayOfWeek,
+                            StartTime = s.StartTime.ToString("HH:mm"),
+                            EndTime = s.EndTime.ToString("HH:mm")
+                        }).ToList()
                 })
                 .ToListAsync();
         }
@@ -40,6 +52,8 @@ namespace EducenAPI.Services
         {
             return await _context.Assistants
                 .Include(a => a.AssistantNavigation)
+                .Include(a => a.Classes)
+                    .ThenInclude(c => c.Schedules)
                 .Where(a => a.UserId == id)
                 .Select(a => new AssistantDto
                 {
@@ -52,8 +66,17 @@ namespace EducenAPI.Services
                     Address = a.AssistantNavigation.Address,
                     SupportLevel = a.SupportLevel,
                     AccountStatus = a.AssistantNavigation.AccountStatus,
-                    AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
-                    CreatedAt = DateTime.Now
+                    AssignedClassesCount = a.Classes.Count,
+                    CreatedAt = DateTime.Now,
+                    Schedule = a.Classes
+                        .Where(c => c.Status.ToLower() == "active")
+                        .SelectMany(c => c.Schedules)
+                        .Select(s => new CreateScheduleSlotDto
+                        {
+                            DayOfWeek = s.DayOfWeek,
+                            StartTime = s.StartTime.ToString("HH:mm"),
+                            EndTime = s.EndTime.ToString("HH:mm")
+                        }).ToList()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -229,6 +252,7 @@ namespace EducenAPI.Services
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Assistant)
                     .ThenInclude(a => a!.AssistantNavigation)
+                .Include(c => c.Sessions)
                 .Include(c => c.Schedules)
                 .Where(c => c.AssistantId == id)
                 .Select(c => new
@@ -239,6 +263,8 @@ namespace EducenAPI.Services
                     c.Status,
                     c.StartDate,
                     c.EndDate,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : "",
                     AssistantName = assistant.AssistantNavigation.FullName ?? "",

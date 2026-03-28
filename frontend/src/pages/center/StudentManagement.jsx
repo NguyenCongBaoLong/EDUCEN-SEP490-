@@ -34,6 +34,7 @@ const StudentManagement = () => {
 
     const [studentList, setStudentList] = useState([]);
     const [parentList, setParentList] = useState([]);
+    const [gradeList, setGradeList] = useState([]);
 
     useEffect(() => {
         fetchData();
@@ -43,6 +44,7 @@ const StudentManagement = () => {
         setIsLoading(true);
         try {
             const parents = await fetchParents();
+            await fetchGrades();
             await fetchStudents(parents);
         } finally {
             setIsLoading(false);
@@ -63,6 +65,15 @@ const StudentManagement = () => {
         } catch (error) {
             console.error("Fetch parents error:", error);
             return [];
+        }
+    };
+
+    const fetchGrades = async () => {
+        try {
+            const res = await api.get('/Grades');
+            setGradeList(res.data);
+        } catch (error) {
+            console.error("Fetch grades error:", error);
         }
     };
 
@@ -103,52 +114,34 @@ const StudentManagement = () => {
         }
     };
 
-    // Mock data - Enrollment Requests
-    const [requestsList, setRequestsList] = useState([
-        {
-            id: 'REQ-001',
-            studentName: 'Phạm Văn Long',
-            dateOfBirth: '2012-09-15',
-            gender: 'male',
-            desiredGrade: 6,
-            parentName: 'Phạm Văn Hùng',
-            parentPhone: '0987654321',
-            parentEmail: 'hungpham@gmail.com',
-            address: '123 Đinh Tiên Hoàng, Quận 1, TP.HCM',
-            requestDate: '2024-02-10',
-            status: 'pending',
-            notes: 'Học sinh chuyển trường từ Hà Nội vào'
-        },
-        {
-            id: 'REQ-002',
-            studentName: 'Lê Thị Mai',
-            dateOfBirth: '2011-05-20',
-            gender: 'female',
-            desiredGrade: 7,
-            parentName: 'Lê Văn Tuấn',
-            parentPhone: '0976543210',
-            parentEmail: 'tuanle@gmail.com',
-            address: '456 Nguyễn Trãi, Quận 1, TP.HCM',
-            requestDate: '2024-02-08',
-            status: 'pending',
-            notes: 'Muốn học lớp nâng cao'
-        },
-        {
-            id: 'REQ-003',
-            studentName: 'Trần Văn Nam',
-            dateOfBirth: '2010-12-10',
-            gender: 'male',
-            desiredGrade: 8,
-            parentName: 'Trần Văn Bình',
-            parentPhone: '0965432109',
-            parentEmail: 'binhtran@gmail.com',
-            address: '789 Lý Thường Kiệt, Quận 10, TP.HCM',
-            requestDate: '2024-02-05',
-            status: 'approved',
-            reviewedAt: '2024-02-06',
-            notes: ''
+    // Enrollment Requests từ API
+    const [requestsList, setRequestsList] = useState([]);
+
+    const fetchEnrollmentRequests = async () => {
+        try {
+            const res = await api.get('/enrollment-requests');
+            const data = res.data.map(r => ({
+                id: r.requestId?.toString() || '',
+                studentName: `${r.firstName || ''} ${r.lastName || ''}`.trim(),
+                firstName: r.firstName,
+                lastName: r.lastName,
+                email: r.email,
+                phone: r.phone,
+                address: r.address || '',
+                desiredGrade: r.preferredCourse || '',
+                requestDate: r.requestDate ? new Date(r.requestDate).toISOString().split('T')[0] : '',
+                status: r.status?.toLowerCase() || 'pending',
+                createdStudentId: r.createdStudentId
+            }));
+            setRequestsList(data);
+        } catch (error) {
+            console.error("Fetch enrollment requests error:", error);
         }
-    ]);
+    };
+
+    useEffect(() => {
+        fetchEnrollmentRequests();
+    }, []);
 
     // Derived state for pending count
     const pendingCount = requestsList.filter(r => r.status === 'pending').length;
@@ -278,11 +271,10 @@ const StudentManagement = () => {
         if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
     };
 
-    const handleImportStudents = () => {
-        // Called by ImportStudentModal when at least 1 student was imported successfully
+    const handleImportStudents = (importResults) => {
+        // Just refresh the student list - do NOT close modal here
+        // User will manually close the modal after seeing results
         fetchStudents();
-        toast.success('Import học sinh thành công! Danh sách đã được cập nhật.');
-        setIsImportModalOpen(false);
     };
 
     // Enrollment Request Handlers
@@ -290,48 +282,51 @@ const StudentManagement = () => {
         setViewingRequest(request);
     };
 
-    const handleApproveClick = (requestData) => {
-        // Direct approval without class assignment modal and no confirmation dialog (Instant Action)
-
-        // 1. Update request status
-        setRequestsList(requestsList.map(r =>
-            r.id === requestData.id
-                ? { ...r, status: 'approved', reviewedAt: new Date().toISOString() }
-                : r
-        ));
-
-        // 2. Create new student
-        const newStudent = {
-            id: `STU-${String(studentList.length + 1).padStart(3, '0')}`,
-            name: requestData.studentName,
-            avatar: null,
-            grade: requestData.desiredGrade,
-            class: 'Chưa xếp lớp', // Default to unassigned
-            dateOfBirth: requestData.dateOfBirth,
-            gender: requestData.gender,
-            parentName: requestData.parentName,
-            parentPhone: requestData.parentPhone,
-            parentEmail: requestData.parentEmail,
-            address: requestData.address,
-            enrollmentDate: new Date().toISOString().split('T')[0],
-            status: 'active',
-            notes: requestData.notes
-        };
-
-        setStudentList([...studentList, newStudent]);
-        // No alert, just silent update
+    const handleApproveClick = async (requestData) => {
+        try {
+            // Gọi API approve
+            const res = await api.put(`/enrollment-requests/${requestData.id}/approve`);
+            
+            if (res.status === 200 || res.status === 204) {
+                // Update local state
+                setRequestsList(requestsList.map(r =>
+                    r.id === requestData.id
+                        ? { ...r, status: 'approved' }
+                        : r
+                ));
+                
+                // Refresh student list to get the newly created student
+                fetchStudents();
+                
+                toast.success('Đã duyệt yêu cầu và tạo tài khoản học sinh!');
+            }
+        } catch (error) {
+            console.error('Approve error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+        }
     };
 
     const handleRejectRequest = (request) => {
         setRejectingRequest(request);
     };
 
-    const handleConfirmReject = (requestId, reason) => {
-        setRequestsList(requestsList.map(r =>
-            r.id === requestId
-                ? { ...r, status: 'rejected', rejectionReason: reason }
-                : r
-        ));
+    const handleConfirmReject = async (requestId) => {
+        try {
+            // Gọi API reject
+            const res = await api.put(`/enrollment-requests/${requestId}/reject`);
+            
+            if (res.status === 200 || res.status === 204) {
+                setRequestsList(requestsList.map(r =>
+                    r.id === requestId
+                        ? { ...r, status: 'rejected' }
+                        : r
+                ));
+                toast.success('Đã từ chối yêu cầu');
+            }
+        } catch (error) {
+            console.error('Reject error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+        }
         setRejectingRequest(null);
     };
 
@@ -413,6 +408,7 @@ const StudentManagement = () => {
                         onSendAccount={handleSendAccount}
                         selectedIds={selectedStudentIds}
                         setSelectedIds={setSelectedStudentIds}
+                        gradeList={gradeList}
                     />
                 ) : (
                     <EnrollmentRequestsTable
@@ -437,6 +433,7 @@ const StudentManagement = () => {
                 editingStudent={editingStudent}
                 existingStudents={studentList}
                 parentList={parentList}
+                gradeList={gradeList}
             />
 
             {/* Student Detail Modal */}

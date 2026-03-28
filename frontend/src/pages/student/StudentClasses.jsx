@@ -142,6 +142,13 @@ const StudentClasses = () => {
                                     ? Math.round((cls.completedSessions / cls.totalSessions) * 100) 
                                     : 0;
                                 const accentColor = SUBJECT_COLORS[cls.subjectName] || cls.color;
+                                    const hasStarted = cls.startDate ? new Date(cls.startDate) <= new Date() : false;
+                                    const statusKey = cls.status !== 'Active' 
+                                        ? 'inactive' 
+                                        : (cls.completedSessions === 0 && !hasStarted ? 'notstarted' : 'active');
+                                    const statusLabel = cls.status !== 'Active' 
+                                        ? 'Đã kết thúc' 
+                                        : (cls.completedSessions === 0 && !hasStarted ? 'Chưa học' : 'Đang học');
                                 return (
                                     <div
                                         key={cls.classId}
@@ -155,8 +162,8 @@ const StudentClasses = () => {
                                                 <div className="sc-card-subject-badge" style={{ background: accentColor + '18', color: accentColor }}>
                                                     {cls.subjectName}
                                                 </div>
-                                                <span className={`sc-card-status ${cls.status === 'Active' ? 'active' : 'inactive'}`}>
-                                                    {cls.status === 'Active' ? 'Đang học' : 'Đã kết thúc'}
+                                                <span className={`sc-card-status ${statusKey}`}>
+                                                    {statusLabel}
                                                 </span>
                                             </div>
                                             <h3 className="sc-card-name">{cls.className}</h3>

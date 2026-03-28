@@ -3,9 +3,10 @@ import { X, UploadCloud, FileText, CheckCircle, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId }) => {
+const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = [] }) => {
     const [formData, setFormData] = useState({
         title: '',
+        gradeId: '',
     });
 
     const [files, setFiles] = useState([]);
@@ -77,6 +78,9 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId }) => {
                 }
                 uploadFormData.append('Title', formData.title || f.name);
                 uploadFormData.append('SaveToLibrary', saveToLibrary);
+                if (formData.gradeId) {
+                    uploadFormData.append('GradeId', formData.gradeId);
+                }
                 uploadFormData.append('File', f.file);
 
                 await api.post('/Materials/save', uploadFormData, {
@@ -182,6 +186,21 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId }) => {
                                 value={formData.title}
                                 onChange={handleChange}
                             />
+                        </div>
+
+                        <div className="cam-field">
+                            <label className="cam-label">Khối lớp (Tùy chọn)</label>
+                            <select
+                                className="cam-input"
+                                name="gradeId"
+                                value={formData.gradeId}
+                                onChange={handleChange}
+                            >
+                                <option value="">-- Chọn khối lớp --</option>
+                                {grades.map(g => (
+                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                ))}
+                            </select>
                         </div>
 
 

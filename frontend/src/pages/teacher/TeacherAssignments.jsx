@@ -26,14 +26,16 @@ const TeacherAssignments = ({ isTA = false }) => {
     const [assignments, setAssignments] = useState([]);
     const [materials, setMaterials] = useState([]);
     const [classes, setClasses] = useState([]);
+    const [grades, setGrades] = useState([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [matsRes, asmsRes, classesRes] = await Promise.all([
+            const [matsRes, asmsRes, classesRes, gradesRes] = await Promise.all([
                 api.get('/Materials'),
                 api.get('/Assignments'),
-                api.get('/Classes')
+                api.get('/Classes/teacher/my-classes'),
+                api.get('/Grades')
             ]);
             
             const classesMap = (classesRes.data || []).reduce((acc, cls) => {
@@ -54,7 +56,19 @@ const TeacherAssignments = ({ isTA = false }) => {
                 return url.split('.').pop().toLowerCase();
             };
 
-            setMaterials((matsRes.data || []).map(m => ({
+            const groupUnique = (list) => {
+                return list.reduce((acc, curr) => {
+                    const isDup = acc.some(item => 
+                        item.title === curr.title && 
+                        curr.fileUrl && // Chỉ gộp nếu bài tập đó thật sự có file trùng nhau
+                        item.fileUrl === curr.fileUrl
+                    );
+                    if (!isDup) acc.push(curr);
+                    return acc;
+                }, []);
+            };
+
+            setMaterials(groupUnique((matsRes.data || []).map(m => ({
                 ...m,
                 id: m.materialId || m.MaterialId,
                 materialId: m.materialId || m.MaterialId,
@@ -63,7 +77,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 type: getFileType(m.fileUrl || m.FileUrl),
                 fileSize: m.fileSize,
                 originalFileName: m.originalFileName
-            })));
+            }))));
 
             const allAsms = asmsRes.data || [];
             
@@ -72,6 +86,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 id: a.asmId || a.AsmId,
                 asmId: a.asmId || a.AsmId,
                 title: a.title || a.Title,
+                startTime: a.startTime || a.StartTime,
                 endTime: a.endTime || a.EndTime,
                 fileUrl: a.fileUrl || a.FileUrl,
                 className: classesMap[a.classId || a.ClassId] || 'Chưa gán',
@@ -83,7 +98,8 @@ const TeacherAssignments = ({ isTA = false }) => {
             })));
 
             setClasses(classesRes.data || []);
-            setTemplates(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
+            setGrades(gradesRes.data || []);
+            setTemplates(groupUnique(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
                 ...a,
                 id: a.asmId || a.AsmId,
                 asmId: a.asmId || a.AsmId,
@@ -94,7 +110,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 type: getFileType(a.fileUrl || a.FileUrl),
                 fileSize: a.fileSize,
                 originalFileName: a.originalFileName
-            })));
+            }))));
 
         } catch (error) {
             console.error("Error fetching library data:", error);
@@ -143,30 +159,42 @@ const TeacherAssignments = ({ isTA = false }) => {
     };
 
     /* --- FILTERS --- */
-    const filteredTemplates = templates.filter(t =>
-        t.title?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredTemplates = templates.filter(t => {
+        const matchesSearch = t.title?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesLevel = !levelFilter || t.gradeId?.toString() === levelFilter || t.GradeId?.toString() === levelFilter;
+        return matchesSearch && matchesLevel;
+    });
 
     const filteredAssignments = assignments.filter(assignment => {
         const matchesSearch = assignment.title?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesClass = !classFilter || assignment.classId?.toString() === classFilter;
         const matchesStatus = !statusFilter || (assignment.endTime && new Date(assignment.endTime) < new Date() ? 'closed' : 'active') === statusFilter;
-        return matchesSearch && matchesClass && matchesStatus;
+        const matchesLevel = !levelFilter || assignment.gradeId?.toString() === levelFilter || assignment.GradeId?.toString() === levelFilter;
+        return matchesSearch && matchesClass && matchesStatus && matchesLevel;
     });
 
     const filteredMaterials = materials
         .filter(m => {
             const matchesSearch = m.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase()));
-            const matchesLevel = !levelFilter || m.targetLevel === levelFilter;
+            const matchesLevel = !levelFilter || m.gradeId?.toString() === levelFilter || m.GradeId?.toString() === levelFilter;
             return matchesSearch && matchesLevel;
         });
 
     // Pagination Logic
-    const totalPages = Math.ceil(filteredMaterials.length / materialsPerPage);
-    const indexOfLastItem = currentPage * materialsPerPage;
-    const indexOfFirstItem = indexOfLastItem - materialsPerPage;
-    const currentMaterials = filteredMaterials.slice(indexOfFirstItem, indexOfLastItem);
+    const totalMaterialsPages = Math.ceil(filteredMaterials.length / materialsPerPage);
+    const currentMaterials = filteredMaterials.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
+
+    const totalTemplatesPages = Math.ceil(filteredTemplates.length / materialsPerPage);
+    const currentTemplates = filteredTemplates.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
+
+    const totalAssignmentsPages = Math.ceil(filteredAssignments.length / materialsPerPage);
+    const currentAssignments = filteredAssignments.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
+
+    // Reset page when switching tabs or filtering
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchQuery, classFilter, statusFilter, levelFilter]);
 
     /* --- TEMPLATE HANDLERS --- */
     // Note: Reusing Assignment UI for templating for simplicity currently
@@ -188,7 +216,11 @@ const TeacherAssignments = ({ isTA = false }) => {
             }
             fetchData();
         } catch (error) {
-            console.error("Error saving assignment:", error);
+            console.error("Error saving assignment detail:", error.response?.data);
+            const validationErrors = error.response?.data?.errors;
+            if (validationErrors) {
+                console.table(validationErrors);
+            }
             toast.error(error.response?.data?.message || "Không thể lưu bài tập");
         }
         setIsAssignmentModalOpen(false);
@@ -312,7 +344,14 @@ const TeacherAssignments = ({ isTA = false }) => {
                             />
                         </div>
 
-                        {activeTab === 'assignments' ? (
+                        <select className="filter-select" value={levelFilter} onChange={e => setLevelFilter(e.target.value)}>
+                            <option value="">Tất cả khối lớp</option>
+                            {grades.map(g => (
+                                <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                            ))}
+                        </select>
+
+                        {activeTab === 'assignments' && (
                             <>
                                 <select className="filter-select" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
                                     <option value="">Tất cả các lớp</option>
@@ -322,20 +361,8 @@ const TeacherAssignments = ({ isTA = false }) => {
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="active">Đang mở</option>
                                     <option value="closed">Đã đóng</option>
-                                    <option value="draft">Bản nháp</option>
                                 </select>
                             </>
-                        ) : (
-                            <select className="filter-select" value={levelFilter} onChange={e => setLevelFilter(e.target.value)}>
-                                <option value="">Tất cả khối lớp</option>
-                                <option value="Lớp 6">Lớp 6</option>
-                                <option value="Lớp 7">Lớp 7</option>
-                                <option value="Lớp 8">Lớp 8</option>
-                                <option value="Lớp 9">Lớp 9</option>
-                                <option value="Lớp 10">Lớp 10</option>
-                                <option value="Lớp 11">Lớp 11</option>
-                                <option value="Lớp 12">Lớp 12</option>
-                            </select>
                         )}
                     </div>
 
@@ -410,7 +437,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                     {filteredMaterials.length > materialsPerPage && (
                                         <div className="pagination" style={{ marginTop: '24px' }}>
                                             <span className="pagination-info">
-                                                Hiển thị {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredMaterials.length)} trên tổng số {filteredMaterials.length} tài liệu
+                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredMaterials.length)}-{Math.min(currentPage * materialsPerPage, filteredMaterials.length)} trên tổng số {filteredMaterials.length} tài liệu
                                             </span>
                                             <div className="pagination-controls">
                                                 <button
@@ -421,12 +448,12 @@ const TeacherAssignments = ({ isTA = false }) => {
                                                     ‹
                                                 </button>
                                                 <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
-                                                    Trang {currentPage} / {totalPages}
+                                                    Trang {currentPage} / {totalMaterialsPages}
                                                 </span>
                                                 <button
                                                     className="pagination-btn"
-                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                                    disabled={currentPage === totalPages}
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalMaterialsPages))}
+                                                    disabled={currentPage === totalMaterialsPages}
                                                 >
                                                     ›
                                                 </button>
@@ -446,7 +473,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 </div>
                             ) : (
                                 <div className="ta-vertical-list">
-                                    {filteredTemplates.map(template => (
+                                    {currentTemplates.map(template => (
                                         <div 
                                             key={template.asmId} 
                                             className="ta-assignment-row" 
@@ -478,6 +505,34 @@ const TeacherAssignments = ({ isTA = false }) => {
                                             </div>
                                         </div>
                                     ))}
+
+                                    {/* Pagination UI for Templates */}
+                                    {filteredTemplates.length > materialsPerPage && (
+                                        <div className="pagination" style={{ marginTop: '24px' }}>
+                                            <span className="pagination-info">
+                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredTemplates.length)}-{Math.min(currentPage * materialsPerPage, filteredTemplates.length)} trên tổng số {filteredTemplates.length} bộ đề
+                                            </span>
+                                            <div className="pagination-controls">
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                >
+                                                    ‹
+                                                </button>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
+                                                    Trang {currentPage} / {totalTemplatesPages}
+                                                </span>
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalTemplatesPages))}
+                                                    disabled={currentPage === totalTemplatesPages}
+                                                >
+                                                    ›
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -491,7 +546,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 </div>
                             ) : (
                                 <div className="ta-vertical-list">
-                                    {filteredAssignments.map(assignment => {
+                                    {currentAssignments.map(assignment => {
                                         const { icon, className } = getFileStyles(assignment.type);
                                         return (
                                             <div 
@@ -516,6 +571,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                                             <Clock size={12} /> Hạn: {assignment.endTime ? new Date(assignment.endTime).toLocaleDateString('vi-VN') : 'Không giới hạn'}
                                                         </span>
                                                         <span>{assignment.fileName}</span>
+                                                        <span>• {assignment.submissionsCount || 0} bài nộp</span>
                                                     </div>
                                                 </div>
                                                 <div className="ta-actions-inline" onClick={e => e.stopPropagation()}>
@@ -540,16 +596,46 @@ const TeacherAssignments = ({ isTA = false }) => {
                                                             </button>
                                                         </>
                                                     )}
-                                                    <button
-                                                        className="btn-grade"
-                                                        onClick={() => navigate(`${isTA ? '/ta' : '/teacher'}/assignments/${assignment.asmId}/grade`)}
-                                                    >
-                                                        Chấm bài
-                                                    </button>
+                                                    {!isTA && (
+                                                        <button
+                                                            className="btn-grade"
+                                                            onClick={() => navigate(`${isTA ? '/ta' : '/teacher'}/assignments/${assignment.asmId}/grade`)}
+                                                        >
+                                                            Chấm bài
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
                                     })}
+
+                                    {/* Pagination UI for Assignments */}
+                                    {filteredAssignments.length > materialsPerPage && (
+                                        <div className="pagination" style={{ marginTop: '24px' }}>
+                                            <span className="pagination-info">
+                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredAssignments.length)}-{Math.min(currentPage * materialsPerPage, filteredAssignments.length)} trên tổng số {filteredAssignments.length} bài tập đã giao
+                                            </span>
+                                            <div className="pagination-controls">
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                >
+                                                    ‹
+                                                </button>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
+                                                    Trang {currentPage} / {totalAssignmentsPages}
+                                                </span>
+                                                <button
+                                                    className="pagination-btn"
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalAssignmentsPages))}
+                                                    disabled={currentPage === totalAssignmentsPages}
+                                                >
+                                                    ›
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -562,7 +648,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 <CreateAssignmentModal
                     isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)}
                     onSave={handleSaveAssignment} initialData={editingAssignment} classes={classes}
-                    isTemplate={activeTab === 'templates'}
+                    isTemplate={activeTab === 'templates'} grades={grades}
                 />
             )}
 
@@ -594,7 +680,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             {isUploadMaterialOpen && (
                 <UploadMaterialModal
                     isOpen={isUploadMaterialOpen} onClose={() => setIsUploadMaterialOpen(false)}
-                    onUpload={handleUploadMaterial}
+                    onUpload={handleUploadMaterial} grades={grades}
                 />
             )}
 
@@ -618,6 +704,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                     onClose={() => setEditMaterialData(null)}
                     onUpdate={fetchData}
                     materialData={editMaterialData}
+                    grades={grades}
                 />
             )}
         </div>

@@ -109,5 +109,17 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // GET: api/Parents/my-children
+        [HttpGet("my-children")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetMyChildren()
+        {
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+            int parentUserId = int.Parse(userIdClaim.Value);
+            var children = await _parentService.GetMyChildrenAsync(parentUserId);
+            return Ok(children);
+        }
     }
 }

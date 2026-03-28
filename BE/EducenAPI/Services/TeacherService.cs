@@ -3,6 +3,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using EducenAPI.DTOs.Classes;
 
 namespace EducenAPI.Services
 {
@@ -32,7 +33,16 @@ namespace EducenAPI.Services
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
                     ClassesCount = _context.Classes.Count(c => c.TeacherId == t.UserId),
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    Schedule = t.Classes
+                        .Where(c => c.Status.ToLower() == "active")
+                        .SelectMany(c => c.Schedules)
+                        .Select(s => new CreateScheduleSlotDto
+                        {
+                            DayOfWeek = s.DayOfWeek,
+                            StartTime = s.StartTime.ToString("HH:mm"),
+                            EndTime = s.EndTime.ToString("HH:mm")
+                        }).ToList()
                 })
                 .ToListAsync();
         }
@@ -56,7 +66,16 @@ namespace EducenAPI.Services
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
                     ClassesCount = t.Classes.Count,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    Schedule = t.Classes
+                        .Where(c => c.Status.ToLower() == "active")
+                        .SelectMany(c => c.Schedules)
+                        .Select(s => new CreateScheduleSlotDto
+                        {
+                            DayOfWeek = s.DayOfWeek,
+                            StartTime = s.StartTime.ToString("HH:mm"),
+                            EndTime = s.EndTime.ToString("HH:mm")
+                        }).ToList()
                 })
                 .FirstOrDefaultAsync();
         }
@@ -234,10 +253,6 @@ namespace EducenAPI.Services
                 return new { message = "Teacher not found" };
 
             var classes = await _context.Classes
-                .Include(c => c.Subject)
-                .Include(c => c.Assistant)
-                    .ThenInclude(a => a!.AssistantNavigation)
-                .Include(c => c.Schedules)
                 .Where(c => c.TeacherId == id)
                 .Select(c => new
                 {
@@ -251,6 +266,8 @@ namespace EducenAPI.Services
                     TeacherName = teacher.TeacherNavigation.FullName ?? "",
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : "",
                     StudentCount = c.Students.Count,
+                    TotalSessions = c.Sessions.Count,
+                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     ScheduleSlots = c.Schedules.Select(s => new
                     {
                         s.DayOfWeek,

@@ -3,14 +3,18 @@ import { X, Calendar, FileText, Link as LinkIcon, AlertCircle } from 'lucide-rea
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData, classes, isTemplate = false, currentClassId }) => {
+const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData, classes, isTemplate = false, currentClassId, grades = [] }) => {
     const [formData, setFormData] = useState({
         title: '',
         dueDate: '',
         classId: currentClassId || '',
+        gradeId: '',
         description: '',
         status: 'active',
-        file: null
+        file: null,
+        sessionId: sessionId || '',
+        startTime: '',
+        saveToLibrary: true
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,8 +38,12 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                 title: initialData.title || '',
                 dueDate: formatForDateTimeLocal(initialData.endTime),
                 classId: initialData.classId || currentClassId || '',
+                gradeId: initialData.gradeId || initialData.GradeId || '',
                 description: initialData.description || '',
                 status: initialData.status || 'active',
+                saveToLibrary: initialData.saveToLibrary ?? true,
+                sessionId: initialData.sessionId || initialData.SessionId || sessionId || '',
+                startTime: initialData.startTime || initialData.StartTime || '',
                 file: (initialData.fileUrl || (initialData.file && initialData.file.name)) ? { name: initialData.originalFileName || (initialData.file && initialData.file.name) || 'Tệp hiện tại', isExisting: true } : null
             });
         } else if (currentClassId) {
@@ -89,22 +97,37 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
             setIsSubmitting(true);
             const data = new FormData();
 
-            if (sessionId) {
-                data.append('SessionId', sessionId);
+            if (formData.sessionId) {
+                data.append('SessionId', formData.sessionId);
             }
             if (formData.classId) {
                 data.append('ClassId', formData.classId);
+            }
+            if (formData.gradeId) {
+                data.append('GradeId', formData.gradeId);
             }
 
             data.append('Title', formData.title);
             data.append('Description', formData.description || '');
 
             if (formData.dueDate) {
-                data.append('EndTime', new Date(formData.dueDate).toISOString());
+                // Send as local datetime string to avoid UTC shift unless server handles it
+                data.append('EndTime', formData.dueDate);
+            }
+            // Always set StartTime to now for new assignments
+            if (!initialData) {
+                // For new, we can use ISO but a local-compatible format is better for consistency
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const localISOTime = new Date(now - offset).toISOString().slice(0, 19);
+                data.append('StartTime', localISOTime);
+            } else if (formData.startTime) {
+                data.append('StartTime', formData.startTime);
             }
             if (formData.file && !formData.file.isExisting) {
                 data.append('File', formData.file);
             }
+            data.append('SaveToLibrary', formData.saveToLibrary);
 
             // Instead of call api here, pass data to parent
             await onSave(data);
@@ -141,26 +164,41 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                         {errors.title && <span className="error-text">{errors.title}</span>}
                     </div>
 
-                    {/* Hàng 2: Lớp học & Hạn nộp */}
+                    {/* Hàng 2: Khối lớp & Hạn nộp */}
+                    <div className="cam-form-row">
+                        <div className="cam-form-group">
+                            <label>Khối lớp <span className="req">*</span></label>
+                            <select
+                                value={formData.gradeId}
+                                onChange={(e) => setFormData({ ...formData, gradeId: e.target.value })}
+                            >
+                                <option value="">-- Chọn khối lớp --</option>
+                                {grades.map(g => (
+                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {(!isTemplate && !currentClassId) && (
+                            <div className="cam-form-group">
+                                <label>Chọn Lớp <span className="req">*</span></label>
+                                <select
+                                    value={formData.classId}
+                                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                                    className={errors.classId ? 'error' : ''}
+                                >
+                                    <option value="">-- Chọn một lớp --</option>
+                                    {classes.map(cls => (
+                                        <option key={cls.classId} value={cls.classId}>{cls.className}</option>
+                                    ))}
+                                </select>
+                                {errors.classId && <span className="error-text">{errors.classId}</span>}
+                            </div>
+                        )}
+                    </div>
+
                     {!isTemplate && (
                         <div className="cam-form-row">
-                            {(!currentClassId || isTemplate) && (
-                                <div className="cam-form-group">
-                                    <label>Chọn Lớp <span className="req">*</span></label>
-                                    <select
-                                        value={formData.classId}
-                                        onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
-                                        className={errors.classId ? 'error' : ''}
-                                    >
-                                        <option value="">-- Chọn một lớp --</option>
-                                        {classes.map(cls => (
-                                            <option key={cls.classId} value={cls.classId}>{cls.className}</option>
-                                        ))}
-                                    </select>
-                                    {errors.classId && <span className="error-text">{errors.classId}</span>}
-                                </div>
-                            )}
-
                             <div className="cam-form-group">
                                 <label>Hạn nộp bài</label>
                                 <div className="cam-input-icon">
@@ -254,6 +292,21 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                             )}
                         </div>
                     </div>
+
+                    {/* Lưu vào thư viện option */}
+                    {!initialData && (
+                        <div className="cam-form-group" style={{ marginTop: '0.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={formData.saveToLibrary}
+                                    onChange={(e) => setFormData({ ...formData, saveToLibrary: e.target.checked })}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                                <span style={{ fontWeight: 500 }}>Lưu vào Thư viện bài tập chung</span> (giúp tái sử dụng cho các lớp khác)
+                            </label>
+                        </div>
+                    )}
 
                     <div className="cam-modal-footer">
                         <button type="button" className="btn-cancel" onClick={onClose}>Hủy</button>

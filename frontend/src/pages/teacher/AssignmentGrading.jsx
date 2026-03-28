@@ -26,10 +26,14 @@ const AssignmentGrading = ({ isTA = false }) => {
     const [feedbackInput, setFeedbackInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isPublishingAll, setIsPublishingAll] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
     const [showResetModal, setShowResetModal] = useState(false);
     const [gradeError, setGradeError] = useState('');
     const [isDirty, setIsDirty] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        return localStorage.getItem('teacher-sidebar-collapsed') === 'true';
+    });
 
     const fetchGradingData = useCallback(async () => {
         try {
@@ -141,25 +145,26 @@ const AssignmentGrading = ({ isTA = false }) => {
         }
     };
 
-    const handlePublishGrade = async (isPublish) => {
-        if (!selectedStudent?.submission || selectedStudent.submission.score == null) {
-            toast.error('Cần chấm điểm trước khi công bố');
+    const handlePublishAll = async (isPublish) => {
+        const gradedCount = students.filter(s => s.submission && s.submission.score != null).length;
+        if (gradedCount === 0) {
+            toast.error('Không có bài nào đã chấm để công bố');
             return;
         }
 
         try {
-            setIsPublishing(true);
-            await api.put(`/Submissions/${selectedStudent.submission.subId}/publish`, {
+            setIsPublishingAll(true);
+            await api.put(`/Submissions/assignment/${assignmentId}/publish-all`, {
                 isPublished: isPublish
             });
 
-            toast.success(isPublish ? 'Đã công bố điểm cho học sinh' : 'Đã hủy công bố điểm');
+            toast.success(isPublish ? 'Đã công bố tất cả điểm' : 'Đã hủy công bố tất cả điểm');
             await fetchGradingData();
         } catch (error) {
-            console.error('Error publishing grade:', error);
-            toast.error('Có lỗi xảy ra khi thay đổi trạng thái công bố');
+            console.error('Error publishing all grades:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi công bố hàng loạt');
         } finally {
-            setIsPublishing(false);
+            setIsPublishingAll(false);
         }
     };
 
@@ -191,26 +196,28 @@ const AssignmentGrading = ({ isTA = false }) => {
     };
 
     const getStatusInfo = (student) => {
-        const status = student.submission?.status || 'Chưa nộp';
+        const sub = student.submission;
+        if (!sub) return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
         
-        switch (status) {
-            case 'Published':
-            case 'Công bố':
-                return { text: 'Đã công bố', class: 'status-published', icon: <CheckCircle size={14} /> };
-            case 'Graded':
-            case 'Đã chấm':
-                return { text: 'Đã chấm', class: 'status-graded', icon: <CheckCircle size={14} />, isGraded: true };
-            case 'Đã nộp':
-            case 'Submitted':
-                return { text: 'Đã nộp', class: 'status-submitted', icon: <CheckCircle size={14} /> };
-            case 'Nộp muộn':
-            case 'LateSubmitted':
-                return { text: 'Nộp trễ', class: 'status-late', icon: <Clock size={14} /> };
-            case 'Chưa nộp':
-            case 'NotSubmitted':
-            default:
-                return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
+        const status = sub.status || 'Submitted';
+        
+        if (status === 'Published' || status === 'Công bố') {
+            return { text: 'Đã công bố', class: 'status-published', icon: <CheckCircle size={14} /> };
         }
+        if (status === 'Graded' || status === 'Đã chấm') {
+            return { text: 'Đã chấm', class: 'status-graded', icon: <CheckCircle size={14} />, isGraded: true };
+        }
+
+        // Dynamic check for late submission
+        if (assignmentInfo?.endTime && sub.submittedAt) {
+            const submittedAt = new Date(sub.submittedAt);
+            const dueDate = new Date(assignmentInfo.endTime);
+            if (submittedAt > dueDate) {
+                return { text: 'Nộp trễ', class: 'status-late', icon: <Clock size={14} /> };
+            }
+        }
+        
+        return { text: 'Đã nộp', class: 'status-submitted', icon: <CheckCircle size={14} /> };
     };
 
     const formatDate = (dateString) => {
@@ -249,10 +256,10 @@ const AssignmentGrading = ({ isTA = false }) => {
     }
 
     return (
-        <div className="assignment-grading-page">
-            <TeacherSidebar isTA={isTA} />
+        <div className={`assignment-grading-page ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            <TeacherSidebar isTA={isTA} onCollapseChange={setIsSidebarCollapsed} />
 
-            <main className="grading-main">
+            <main className={`grading-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 {/* Header (Top Bar) */}
                 <header className="grading-header">
                     <div className="grading-header-left">
@@ -285,6 +292,20 @@ const AssignmentGrading = ({ isTA = false }) => {
                                 <span className="stat-value highlight">{stats.graded}/{stats.submitted}</span>
                             </div>
                         </div>
+
+                        <button 
+                            className={`btn-publish-all ${stats.graded === 0 ? 'disabled' : ''}`}
+                            onClick={() => handlePublishAll(true)}
+                            disabled={isPublishingAll || stats.graded === 0}
+                        >
+                            {isPublishingAll ? (
+                                <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Send size={18} /> Công bố tất cả
+                                </>
+                            )}
+                        </button>
                     </div>
                 </header>
 

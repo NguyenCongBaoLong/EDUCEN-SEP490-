@@ -9,7 +9,7 @@ import {
     CheckCircle, UserCheck, CalendarClock,
     MessageSquare, Pencil, Lock, Edit2,
     FileText, Download, Plus, PlayCircle, MoreVertical, Trash2,
-    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen
+    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen, MapPin
 } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import AttendanceModal from '../../components/AttendanceModal';
@@ -56,24 +56,17 @@ function formatDateVN(isoDate) {
 
 
 
-const INITIAL_ATTENDANCE = {
-    1: [
-        { studentId: 'ST-001', status: 'present' },
-        { studentId: 'ST-002', status: 'absent' },
-        { studentId: 'ST-003', status: 'present' },
-        { studentId: 'ST-004', status: 'present' },
-        { studentId: 'ST-005', status: 'present' },
-    ],
-    2: [
-        { studentId: 'ST-001', status: 'present' },
-        { studentId: 'ST-002', status: 'present' },
-        { studentId: 'ST-003', status: 'present' },
-        { studentId: 'ST-004', status: 'absent' },
-        { studentId: 'ST-005', status: 'absent' },
-    ],
-};
+// Removed INITIAL_ATTENDANCE to use real data from API
 
 /* ─── Helpers ──────────────────────────────────── */
+
+function formatGrade(grade) {
+    if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
+    let g = String(grade).trim();
+    if (g.endsWith('.0')) g = g.slice(0, -2);
+    if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
+    return g;
+}
 const AttendanceBar = ({ value }) => {
     const color = value >= 90 ? '#16a34a' : value >= 75 ? '#f59e0b' : '#dc2626';
     return (
@@ -109,6 +102,18 @@ const LIBRARY_MATERIALS = [
     { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.' },
 ];
 
+const groupUnique = (list) => {
+    return list.reduce((acc, curr) => {
+        const isDup = acc.some(item => 
+            item.title === curr.title && 
+            curr.fileUrl && // Chỉ gộp nếu bài tập đó thật sự có file trùng nhau
+            item.fileUrl === curr.fileUrl
+        );
+        if (!isDup) acc.push(curr);
+        return acc;
+    }, []);
+};
+
 // Centralized mapping functions to ensure consistency
 const mapMaterial = (m) => ({
     id: m.materialId || m.MaterialId,
@@ -126,7 +131,8 @@ const mapMaterial = (m) => ({
     fileUrl: m.fileUrl || m.FileUrl,
     description: m.description || m.Description || '',
     sessionId: m.sessionId || m.SessionId,
-    classId: m.classId || m.ClassId
+    classId: m.classId || m.ClassId,
+    gradeId: m.gradeId || m.GradeId
 });
 
 const mapAssignment = (a) => ({
@@ -137,13 +143,14 @@ const mapAssignment = (a) => ({
     dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
     endTime: a.endTime || a.EndTime,
     startTime: a.startTime || a.StartTime,
-    submissionsCount: 0,
+    submissionsCount: a.submissionsCount || a.SubmissionsCount || 0,
     fileUrl: a.fileUrl || a.FileUrl,
     fileSize: a.fileSize || a.FileSize,
     originalFileName: a.originalFileName || a.OriginalFileName || '',
     fileName: a.originalFileName || a.OriginalFileName || '', // For modal consistency
     sessionId: a.sessionId || a.SessionId,
-    classId: a.classId || a.ClassId
+    classId: a.classId || a.ClassId,
+    gradeId: a.gradeId || a.GradeId
 });
 
 /* ─── Main Component ────────────────────────────── */
@@ -157,6 +164,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [loading, setLoading] = useState(true);
     const [libraryMaterials, setLibraryMaterials] = useState([]);
     const [libraryAssignments, setLibraryAssignments] = useState([]);
+    const [grades, setGrades] = useState([]);
 
     // classData dùng trong UI — gộp từ API + defaults
     const [classData, setClassData] = useState({
@@ -170,24 +178,27 @@ const TeacherClassDetail = ({ isTA = false }) => {
         totalClasses: 0,
     });
 
-    // Fetch class info
-    useEffect(() => {
+    // Fetch all data
+    const fetchClassData = async (isRefresh = false) => {
         if (!classId) return;
-        const fetchAll = async () => {
-            setLoading(true);
-            try {
-                const [classRes, sessionsRes, studentsRes] = await Promise.all([
-                    api.get(`/Classes/${classId}`),
-                    api.get(`/Classes/${classId}/sessions`),
-                    api.get(`/Classes/${classId}/students`),
-                ]);
+        if (!isRefresh) setLoading(true);
+        try {
+            const [classRes, sessionsRes, studentsRes, attendanceSummaryRes] = await Promise.all([
+                api.get(`/Classes/${classId}`),
+                api.get(`/Classes/${classId}/sessions`),
+                api.get(`/Classes/${classId}/students`),
+                api.get(`/attendance/class/${classId}/sessions-summary`),
+            ]);
 
-                const c = classRes.data;
-                const rawSessions = sessionsRes.data || [];
-                const rawStudents = studentsRes.data || [];
+            const c = classRes.data;
+            const rawSessions = sessionsRes.data || [];
+            const rawStudents = studentsRes.data || [];
+            const attendanceSummary = attendanceSummaryRes.data || [];
 
-                // Map sessions từ BE sang format UI
-                const mappedSessions = rawSessions.map((s, idx) => ({
+            // Map sessions
+            const mappedSessions = rawSessions.map((s, idx) => {
+                const summary = attendanceSummary.find(sum => sum.sessionId === s.sessionId);
+                return {
                     sessionId: s.sessionId,
                     sessionNum: idx + 1,
                     date: formatDateVN(s.sessionDate),
@@ -195,60 +206,73 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     time: s.time || '',
                     title: s.title || `Buổi ${idx + 1}`,
                     status: s.status,
+                    presentCount: summary?.presentCount || 0,
+                    absentCount: summary?.absentCount || 0,
                     materials: [],
                     assignments: [],
-                }));
+                };
+            });
 
-                // Map students từ BE
-                const mappedStudents = rawStudents.map(st => ({
+            // Map students
+            const mappedStudents = rawStudents.map(st => {
+                const name = st.fullName || st.username || '';
+                return {
                     id: Number(st.userId),
-                    name: st.fullName || st.username || '',
-                    avatar: (st.fullName || st.username || '?').split(' ').map(w => w[0]).slice(-2).join('').toUpperCase(),
-                    attendance: 0,
-                    lastAttended: '',
-                    grade: '',
-                }));
+                    name: name,
+                    avatar: name.trim().split(' ').map(w => w[0]).slice(-2).join('').toUpperCase(),
+                    attendance: st.attendanceRate || 0,
+                    grade: st.grade || '—',
+                    averageScore: st.averageScore || '—',
+                };
+            });
 
-                // Build schedule display string
-                const scheduleSlots = c.scheduleSlots || [];
-                const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-                const scheduleStr = scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(' & ');
-                const timeStr = scheduleSlots.length > 0
-                    ? `${scheduleSlots[0].startTime} - ${scheduleSlots[0].endTime}`
-                    : '';
+            // Schedule info
+            const scheduleSlots = c.scheduleSlots || [];
+            const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+            const scheduleStr = scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(' & ');
+            const timeStr = scheduleSlots.length > 0
+                ? `${scheduleSlots[0].startTime} - ${scheduleSlots[0].endTime}`
+                : '';
 
-                setClassData({
-                    id: c.classId,
-                    name: c.className || '',
-                    subject: c.subjectName || '',
-                    gradeLevel: '',
-                    status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
-                    schedule: scheduleStr,
-                    scheduleTime: timeStr,
-                    startDate: c.startDate ? formatDateVN(c.startDate) : '',
-                    duration: c.startDate && c.endDate
-                        ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuần`
-                        : '',
-                    mainTeacher: {
-                        name: c.teacherName || '',
-                        initials: (c.teacherName || '?').split(' ').pop().charAt(0),
-                        subject: '',
-                    },
-                    assistant: c.assistantName ? {
-                        name: c.assistantName,
-                        initials: c.assistantName.split(' ').pop().charAt(0),
-                        subject: '',
-                    } : null,
-                    sessions: mappedSessions,
-                    activities: [],
-                    classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
-                    totalClasses: mappedSessions.length,
-                });
+            setClassInfo(c);
+            setClassData(prev => ({
+                ...prev,
+                id: c.classId,
+                name: c.className || '',
+                subject: c.subjectName || '',
+                schedule: scheduleStr,
+                scheduleTime: timeStr,
+                startDate: c.startDate ? formatDateVN(c.startDate) : '',
+                duration: c.startDate && c.endDate
+                    ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuần`
+                    : '',
+                mainTeacher: {
+                    name: c.teacherName || '',
+                    initials: (c.teacherName || '?').split(' ').pop().charAt(0),
+                    subject: '',
+                },
+                assistant: c.assistantName ? {
+                    name: c.assistantName,
+                    initials: (c.assistantName || '?').trim().split(' ').pop().charAt(0).toUpperCase(),
+                    subject: '',
+                } : prev.assistant,
+                sessions: isRefresh ? prev.sessions.map(ps => {
+                    const latest = mappedSessions.find(ls => ls.sessionId === ps.sessionId);
+                    return latest ? { ...ps, ...latest, materials: ps.materials, assignments: ps.assignments } : ps;
+                }) : mappedSessions,
+                classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
+                totalClasses: mappedSessions.length,
+                roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'Chưa gán phòng'),
+            }));
 
-                setStudents(mappedStudents);
-                setSessions(mappedSessions);
+            setStudents(mappedStudents);
+            setSessions(isRefresh ? prevSessions => prevSessions.map(ps => {
+                const latest = mappedSessions.find(ls => ls.sessionId === ps.sessionId);
+                return latest ? { ...ps, ...latest } : ps;
+            }) : mappedSessions);
 
-                // Fetch materials and assignments per session
+            if (!isRefresh) {
+                // Initial load: Fetch materials/assignments and libraries
                 const sessionsWithItems = await Promise.all(
                     mappedSessions.map(async (s) => {
                         try {
@@ -256,43 +280,31 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 api.get(`/Materials/Get-By-Session/${s.sessionId}`),
                                 api.get(`/Assignments/Get-By-Session/${s.sessionId}`)
                             ]);
-                            
-                            const mats = (matRes.data || []).map(mapMaterial);
-                            const asms = (asmRes.data || []).map(mapAssignment);
-
-                            return { ...s, materials: mats, assignments: asms };
-                        } catch {
-                            return { ...s, materials: [], assignments: [] };
-                        }
+                            return { ...s, materials: (matRes.data || []).map(mapMaterial), assignments: (asmRes.data || []).map(mapAssignment) };
+                        } catch { return s; }
                     })
                 );
-
                 setClassData(prev => ({ ...prev, sessions: sessionsWithItems }));
+                setSessions(sessionsWithItems);
 
                 // Fetch libraries
-                try {
-                    const [libMatRes, libAsmRes] = await Promise.all([
-                        api.get('/Materials'),
-                        api.get('/Assignments')
-                    ]);
-                    
-                    const allMaterials = libMatRes.data || [];
-                    setLibraryMaterials(allMaterials.map(mapMaterial));
-
-                    const allAssignments = libAsmRes.data || [];
-                    setLibraryAssignments(allAssignments.map(mapAssignment));
-                } catch {
-                    setLibraryMaterials([]);
-                    setLibraryAssignments([]);
-                }
-            } catch (err) {
-                console.error('Failed to fetch class detail:', err);
-                toast.error('Không thể tải thông tin lớp học.');
-            } finally {
-                setLoading(false);
+                const [libMatRes, libAsmRes, gradesRes] = await Promise.all([
+                    api.get('/Materials'), api.get('/Assignments'), api.get('/Grades')
+                ]);
+                setLibraryMaterials(groupUnique((libMatRes.data || []).map(mapMaterial)));
+                setLibraryAssignments(groupUnique((libAsmRes.data || []).map(mapAssignment)));
+                setGrades(gradesRes.data || []);
             }
-        };
-        fetchAll();
+        } catch (err) {
+            console.error('Failed to fetch class detail:', err);
+            if (!isRefresh) toast.error('Không thể tải thông tin lớp học.');
+        } finally {
+            if (!isRefresh) setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchClassData();
     }, [classId]);
 
 
@@ -324,7 +336,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
     const [attendanceOpen, setAttendanceOpen] = useState(false);
     const [selectedSession, setSelectedSession] = useState(null);
-    const [attendanceData, setAttendanceData] = useState(INITIAL_ATTENDANCE);
+    const [attendanceData, setAttendanceData] = useState({});
 
     // Import Modal
     const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
@@ -585,25 +597,18 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
     // Buổi tiếp theo chưa điểm danh VÀ đã đến ngày
     const nextSession = classData.sessions.find(
-        s => !attendanceData[s.scheduleId] && isPast(s.date)
+        s => (s.presentCount === 0 && s.absentCount === 0) && isPast(s.date)
     );
 
-    const getSessionSummary = (scheduleId) => {
-        const records = attendanceData[scheduleId] || [];
-        return {
-            present: records.filter(r => r.status === 'present').length,
-            absent: records.filter(r => r.status === 'absent').length,
-        };
-    };
+    // Removed getSessionSummary as counts are now in session object
 
     const handleOpen = (session) => { setSelectedSession(session); setAttendanceOpen(true); };
     const handleClose = () => { setAttendanceOpen(false); setSelectedSession(null); };
-    const handleSave = (session, payload) => {
-        setAttendanceData(prev => ({
-            ...prev,
-            [session.scheduleId]: payload.map(p => ({ studentId: p.studentId, status: p.status })),
-        }));
+    
+    // Refresh all data after attendance is saved
+    const handleSave = async () => {
         handleClose();
+        await fetchClassData(true); // Update all numbers and lists immediately (refresh mode)
     };
 
     /* Sessions đã qua, mới nhất trước */
@@ -617,7 +622,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const materialsCount = classData.sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
     const assignmentsCount = classData.sessions.reduce((acc, s) => acc + (s.assignments?.length || 0), 0);
 
-    if (loading) {
+    if (loading && !classData.id) {
         return (
             <div className="class-detail">
                 <TeacherSidebar isTA={isTA} />
@@ -647,9 +652,20 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     <div className="cd-title-block">
                         <div className="cd-title-row">
                             <h1>{classData.name}</h1>
-                            <span className={`cd-status-badge ${classData.status}`}>
-                                {classData.status === 'active' ? 'Đang hoạt động' : 'Tạm dừng'}
-                            </span>
+                            {(() => {
+                                const hasStarted = classData.startDate ? new Date(classData.startDate) <= new Date() : false;
+                                const statusKey = classData.status === 'active' 
+                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'notstarted' : 'active') 
+                                    : 'inactive';
+                                const statusLabel = classData.status === 'active' 
+                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'Chưa học' : 'Đang hoạt động') 
+                                    : 'Tạm dừng';
+                                return (
+                                    <span className={`cd-status-badge ${statusKey}`}>
+                                        {statusLabel}
+                                    </span>
+                                );
+                            })()}
                         </div>
                         <p className="cd-title-meta">
                             Môn: {classData.subject} &nbsp;•&nbsp; Mã lớp: {classData.code} &nbsp;•&nbsp; {classData.gradeLevel}
@@ -677,7 +693,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
                         <div className="cd-info-card-value">{classData.schedule}</div>
-                        <div className="cd-info-card-sub">{classData.scheduleTime}</div>
+                        <div className="cd-info-card-sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span>{classData.scheduleTime}</span>
+                            <span style={{ color: '#4f46e5', fontWeight: 600 }}>{classData.roomName}</span>
+                        </div>
                     </div>
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
@@ -741,8 +760,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                 </thead>
                                                 <tbody>
                                                     {pastSessions.map((session, idx) => {
-                                                        const done = !!attendanceData[session.sessionId];
-                                                        const { present, absent } = getSessionSummary(session.sessionId);
+                                                        const hasAttendance = session.presentCount > 0 || session.absentCount > 0;
+                                                        const { presentCount: present, absentCount: absent } = session;
                                                         return (
                                                             <tr key={session.sessionId}>
                                                                 <td>
@@ -754,19 +773,19 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     </div>
                                                                 </td>
                                                                 <td style={{ textAlign: 'center' }}>
-                                                                    {done
+                                                                    {hasAttendance
                                                                         ? <span className="att-badge present">{present}</span>
                                                                         : <span className="att-badge pending">—</span>
                                                                     }
                                                                 </td>
                                                                 <td style={{ textAlign: 'center' }}>
-                                                                    {done
+                                                                    {hasAttendance
                                                                         ? <span className={`att-badge ${absent > 0 ? 'absent' : 'present'}`}>{absent}</span>
                                                                         : <span className="att-badge pending">—</span>
                                                                     }
                                                                 </td>
                                                                 <td style={{ textAlign: 'right' }}>
-                                                                    {done ? (
+                                                                    {hasAttendance ? (
                                                                         <button
                                                                             className="att-btn-edit"
                                                                             onClick={() => handleOpen(session)}
@@ -839,7 +858,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                             <div className="cd-staff-item">
                                                 <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
                                                 <div className="cd-staff-info">
-                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>TRỢ GIẢNG</div>
+                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trợ giảng (TA)</div>
                                                     <div className="cd-staff-name">{classData.assistant.name}</div>
                                                     <div className="cd-staff-sub">{classData.assistant.subject}</div>
                                                 </div>
@@ -854,7 +873,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     <div className="cd-overview-stats">
                                         <div className="cd-overview-row">
                                             <span>Tổng học sinh</span>
-                                            <span className="cd-overview-val">{students.length} / {classData.maxStudents}</span>
+                                            <span className="cd-overview-val">
+                                                {students.length}{classData.maxStudents ? ` / ${classData.maxStudents}` : ''}
+                                            </span>
                                         </div>
                                         <div className="cd-overview-row">
                                             <span>Chuyên cần TB</span>
@@ -867,7 +888,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         <div className="cd-overview-row">
                                             <span>Đã điểm danh</span>
                                             <span className="cd-overview-val">
-                                                {Object.keys(attendanceData).length} / {pastSessions.length} buổi
+                                                {pastSessions.filter(s => s.presentCount > 0 || s.absentCount > 0).length} / {pastSessions.length} buổi
                                             </span>
                                         </div>
                                     </div>
@@ -941,7 +962,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 <thead>
                                     <tr>
                                         <th>HỌ VÀ TÊN</th>
-                                        <th>MÃ SỐ</th>
+                                        <th>KHỐI</th>
                                         <th>ĐIỂM TRUNG BÌNH</th>
                                         <th>CHUYÊN CẦN</th>
                                     </tr>
@@ -956,8 +977,19 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                         <div className="cd-student-name">{student.name}</div>
                                                     </div>
                                                 </td>
-                                                <td><span className="cd-student-id">ID: #{student.id}</span></td>
-                                                <td><GradeBadge grade={student.grade} /></td>
+                                                <td>
+                                                    <span style={{
+                                                        fontSize: '0.75rem',
+                                                        padding: '2px 10px',
+                                                        borderRadius: 12,
+                                                        background: student.grade && student.grade !== '—' ? '#eff6ff' : '#f1f5f9',
+                                                        color: student.grade && student.grade !== '—' ? '#2563eb' : '#94a3b8',
+                                                        fontWeight: 600
+                                                    }}>
+                                                        {formatGrade(student.grade)}
+                                                    </span>
+                                                </td>
+                                                <td><GradeBadge grade={student.averageScore} /></td>
                                                 <td><AttendanceBar value={student.attendance} /></td>
                                             </tr>
                                         ))
@@ -1141,9 +1173,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         <div className="material-meta"><Clock size={12} /> Hạn: {asm.dueDate} &nbsp;•&nbsp; {asm.submissionsCount} bài nộp</div>
                                                                     </div>
                                                                     <div className="material-actions" onClick={(e) => e.stopPropagation()}>
-                                                                        <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Chấm bài" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
-                                                                            Chấm bài
-                                                                        </Link>
+                                                                        {!isTA && (
+                                                                            <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Chấm bài" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                                                                                Chấm bài
+                                                                            </Link>
+                                                                        )}
                                                                         {!isTA && (
                                                                             <>
                                                                                 <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId, classId: classData.id }, session.sessionId)}><Edit2 size={16} /></button>
@@ -1178,7 +1212,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onSave={handleSave}
                         session={selectedSession}
                         students={students}
-                        existingRecords={attendanceData[selectedSession.scheduleId]}
+                        existingRecords={attendanceData[selectedSession.sessionId]}
+                        sessionId={selectedSession.sessionId}
                     />
                 )
             }
@@ -1206,6 +1241,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onClose={() => setUploadModalOpen(false)}
                         onUpload={handleUploadMaterial}
                         sessionId={uploadTargetSession}
+                        grades={grades}
                     />
                 )
             }
@@ -1218,6 +1254,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onClose={() => { setEditMaterial(null); setEditTargetSession(null); }}
                         onUpdate={handleUpdateMaterial}
                         materialData={editMaterial}
+                        grades={grades}
                     />
                 )
             }
@@ -1282,6 +1319,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     initialData={editAssignment}
                     classes={[{ classId: classData.id, className: classData.name }]}
                     currentClassId={classData.id}
+                    grades={grades}
                 />
             )}
 

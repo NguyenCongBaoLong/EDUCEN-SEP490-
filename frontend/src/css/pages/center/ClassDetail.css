@@ -88,6 +88,11 @@
     color: #6b7280;
 }
 
+.cd-status-badge.notstarted {
+    background: #fef9c3;
+    color: #ca8a04;
+}
+
 .cd-title-meta {
     font-size: 0.9375rem;
     color: #6b7280;
