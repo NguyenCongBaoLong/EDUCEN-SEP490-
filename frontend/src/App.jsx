@@ -27,6 +27,10 @@ import StudentClassDetail from './pages/student/StudentClassDetail';
 import ParentClasses from './pages/parent/ParentClasses';
 import ParentSchedule from './pages/parent/ParentSchedule';
 import ParentFeedback from './pages/parent/ParentFeedback';
+import TuitionManagement from './pages/center/TuitionManagement';
+import RevenueReport from './pages/center/RevenueReport';
+import MyInvoices from './pages/student/MyInvoices';
+import PaymentResult from './pages/PaymentResult';
 import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
 import TenantManagement from './pages/sysadmin/TenantManagement';
 import PlansManagement from './pages/sysadmin/PlansManagement';
@@ -52,6 +56,7 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/payment/result" element={<PaymentResult />} />
               <Route path="/center" element={<CenterHome isAdmin={true} />} />
 
               {/* ── Admin Routes (chỉ Admin) ── */}
@@ -62,6 +67,9 @@ function App() {
               <Route path="/center/students" element={<PrivateRoute allowedRoles={['Admin']}><StudentManagement /></PrivateRoute>} />
               <Route path="/center/parents" element={<PrivateRoute allowedRoles={['Admin']}><ParentManagement /></PrivateRoute>} />
               <Route path="/center/dashboard" element={<PrivateRoute allowedRoles={['Admin']}><AdminDashboard /></PrivateRoute>} />
+              <Route path="/center/tuition" element={<PrivateRoute allowedRoles={['Admin']}><TuitionManagement /></PrivateRoute>} />
+              <Route path="/center/tuition/:classId" element={<PrivateRoute allowedRoles={['Admin']}><TuitionManagement /></PrivateRoute>} />
+              <Route path="/center/revenue" element={<PrivateRoute allowedRoles={['Admin']}><RevenueReport /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant', 'Student', 'Parent']}><UserProfile /></PrivateRoute>} />
 
               {/* ── Teacher Routes (chỉ Teacher) ── */}
@@ -82,6 +90,7 @@ function App() {
               <Route path="/student/classes" element={<PrivateRoute allowedRoles={['Student']}><StudentClasses /></PrivateRoute>} />
               <Route path="/student/classes/:classId" element={<PrivateRoute allowedRoles={['Student']}><StudentClassDetail /></PrivateRoute>} />
               <Route path="/student/schedules" element={<PrivateRoute allowedRoles={['Student']}><StudentSchedule /></PrivateRoute>} />
+              <Route path="/student/invoices" element={<PrivateRoute allowedRoles={['Student']}><MyInvoices /></PrivateRoute>} />
 
               {/* ── Parent Routes (Parent) ── */}
               <Route path="/parent/*" element={
@@ -89,6 +98,7 @@ function App() {
                   <Route path="classes" element={<PrivateRoute allowedRoles={['Parent']}><ParentClasses /></PrivateRoute>} />
                   <Route path="schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
                   <Route path="feedback" element={<PrivateRoute allowedRoles={['Parent']}><ParentFeedback /></PrivateRoute>} />
+                  <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
                 </Routes>
               } />
 

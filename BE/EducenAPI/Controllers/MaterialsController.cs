@@ -1,5 +1,6 @@
 using EducenAPI.DTOs.LessionMaterials;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace EducenAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class MaterialsController : ControllerBase
     {
         private readonly ILessonMaterialService _lessonMaterialService;

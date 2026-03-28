@@ -1,5 +1,6 @@
 using EducenAPI.DTOs.Submissions;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace EducenAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SubmissionsController : ControllerBase
     {
         private readonly ISubmissionService _submissionService;

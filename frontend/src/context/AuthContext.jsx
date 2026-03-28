@@ -3,15 +3,22 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
+// Kiểm tra tenantId hợp lệ (không phải giá trị fallback sai)
+function isValidTenantId(tenantId) {
+    return tenantId && tenantId !== 'default-tenant' && tenantId !== 'undefined' && tenantId !== 'null';
+}
+
 // Decode JWT payload (không cần thư viện bên ngoài)
 function decodeToken(token) {
     try {
         const payload = token.split('.')[1];
         const decoded = JSON.parse(atob(payload));
+        const tenantId = decoded['TenantId'];
         return {
             username: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'],
             role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'],
             userId: decoded['UserId'],
+            tenantId: isValidTenantId(tenantId) ? tenantId : null,
         };
     } catch {
         return null;
@@ -48,6 +55,11 @@ export function AuthProvider({ children }) {
         if (token) {
             const decoded = decodeToken(token);
             if (decoded) {
+                // Xóa tenantId sai khỏi localStorage nếu có
+                const storedTenantId = localStorage.getItem('tenantId');
+                if (!isValidTenantId(storedTenantId)) {
+                    localStorage.removeItem('tenantId');
+                }
                 setUser(decoded);
             } else if (token === 'sysadmin-session') {
                 // Hỗ trợ login System Admin bằng case đặc biệt (không dùng JWT)
@@ -59,13 +71,21 @@ export function AuthProvider({ children }) {
                 // Token không hợp lệ → xóa
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
+                localStorage.removeItem('tenantId');
             }
         }
         setLoading(false);
     }, []);
 
     const login = async (username, password) => {
-        const response = await api.post('/Auth/login', {
+        // Gửi tenantId trong URL query param để TenantResolver middleware resolve đúng
+        // (quan trọng cho lần đăng nhập đầu tiên khi localStorage chưa có tenantId)
+        const tenantId = localStorage.getItem('tenantId');
+        const loginUrl = tenantId && tenantId !== 'default-tenant'
+            ? `/Auth/login?tenant=${encodeURIComponent(tenantId)}`
+            : '/Auth/login';
+
+        const response = await api.post(loginUrl, {
             username,
             password,
         });
@@ -76,6 +96,21 @@ export function AuthProvider({ children }) {
 
         const decoded = decodeToken(token);
         localStorage.setItem('user', JSON.stringify(decoded));
+        
+        // Lưu tenantId vào localStorage chỉ nếu hợp lệ
+        if (isValidTenantId(decoded.tenantId)) {
+            localStorage.setItem('tenantId', decoded.tenantId);
+        } else {
+            // Xóa tenantId sai (default-tenant, undefined, null)
+            localStorage.removeItem('tenantId');
+        }
+        
+        // Fallback: nếu JWT không có tenantId hợp lệ, thử dùng giá trị hiện có trong localStorage
+        const existingTenantId = localStorage.getItem('tenantId');
+        if (!decoded.tenantId && isValidTenantId(existingTenantId)) {
+            decoded.tenantId = existingTenantId;
+        }
+        
         setUser(decoded);
 
         return decoded;
@@ -86,6 +121,7 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('systemApiKey');
+        localStorage.removeItem('tenantId'); // Xóa cả tenantId
         setUser(null);
 
         // Nếu là SystemAdmin thì mặc định về trang chủ tổng (/)

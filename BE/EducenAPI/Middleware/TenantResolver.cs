@@ -55,7 +55,17 @@ namespace EducenAPI.Middleware
                 }
             }
 
-            // 3. Set tenant only if we have a valid tenantId
+            // 3. Nếu không lấy được từ header, thử query parameter (?tenant=xxx)
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                var tenantFromQuery = context.Request.Query["tenant"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(tenantFromQuery))
+                {
+                    tenantId = tenantFromQuery;
+                }
+            }
+
+            // 4. Set tenant only if we have a valid tenantId
             if (!string.IsNullOrEmpty(tenantId))
             {
                 try

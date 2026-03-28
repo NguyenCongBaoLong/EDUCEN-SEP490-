@@ -6,6 +6,7 @@ import {
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSchedule } from '../../context/ScheduleContext';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import '../../css/pages/center/CenterHome.css';
 
 /* ─── Initial data ──────────────────────────────────── */
@@ -135,27 +136,14 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                 address: form.address || null
             };
             
-            // Get tenant from localStorage or URL
-            const tenantId = localStorage.getItem('tenantId') || '';
+            // Call the enrollment API using api instance (auto-attaches tenant header)
+            const response = await api.post('/enrollment-requests', payload);
             
-            // Call the enrollment API
-            const response = await fetch(
-                `${import.meta.env.VITE_API_URL || 'http://localhost:5106/api'}/enrollment-requests`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Tenant': tenantId
-                    },
-                    body: JSON.stringify(payload)
-                }
-            );
-            
-            const data = await response.json();
+            const data = response.data;
             
             console.log('Enrollment response:', response.status, data);
             
-            if (response.ok) {
+            if (response.status >= 200 && response.status < 300) {
                 alert(data.message || 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
                 setForm({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
             } else {
@@ -163,7 +151,8 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             }
         } catch (error) {
             console.error('Enrollment error:', error);
-            alert('Có lỗi xảy ra. Vui lòng thử lại. Chi tiết: ' + error.message);
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Có lỗi xảy ra';
+            alert('Có lỗi xảy ra. Vui lòng thử lại. Chi tiết: ' + errorMsg);
         } finally {
             setIsSubmitting(false);
         }

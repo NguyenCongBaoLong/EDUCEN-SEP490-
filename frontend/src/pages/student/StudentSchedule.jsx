@@ -66,8 +66,10 @@ const StudentSchedule = () => {
     };
 
     useEffect(() => {
-        fetchSchedule();
-    }, []);
+        if (user?.userId) {
+            fetchSchedule();
+        }
+    }, [user?.userId]);
 
     /* ─── Date helpers ─── */
     const getWeekDates = () => {

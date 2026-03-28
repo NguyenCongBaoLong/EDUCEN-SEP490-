@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using EducenAPI.Services;
 using EducenAPI.Models;
 
@@ -47,6 +48,15 @@ public partial class EducenV2Context : DbContext
     public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
     public DbSet<SupportRequest> SupportRequests { get; set; }
 
+    // === Payment & Tuition System ===
+    public DbSet<TuitionInvoice> TuitionInvoices { get; set; }
+    public DbSet<TuitionInvoiceItem> TuitionInvoiceItems { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+
+    // === Payment Records (Học phí - lưu trong Tenant DB) ===
+    public DbSet<PaymentRecord> PaymentRecords { get; set; }
+    public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+
     // ================================
     // MODEL CONFIGURATION
     // ================================
@@ -54,13 +64,23 @@ public partial class EducenV2Context : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("...");
+            // Đọc connection string từ appsettings.json (chỉ dùng khi chạy migration, không qua DI)
+            var config = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            var connectionString = config.GetConnectionString("DefaultTenantConnection");
+            optionsBuilder.UseSqlServer(connectionString);
         }
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
+        // PaymentRecord trong Tenant DB không có bảng Tenants → bỏ navigation property
+        modelBuilder.Entity<PaymentRecord>()
+            .Ignore(p => p.Tenant);
 
         ConfigureEntities(modelBuilder);
         SeedRoles(modelBuilder);
@@ -275,16 +295,61 @@ public partial class EducenV2Context : DbContext
         .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Assignment>()
-        .HasOne(a => a.User)
-        .WithMany()
-        .HasForeignKey(a => a.UserId)
-        .OnDelete(DeleteBehavior.SetNull);
+            .HasOne(a => a.User)
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<LessonMaterial>()
         .HasOne(m => m.User)
         .WithMany()
         .HasForeignKey(m => m.UserId)
         .OnDelete(DeleteBehavior.SetNull);
+
+        // === TuitionInvoice Configuration ===
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasOne(ti => ti.Student)
+            .WithMany()
+            .HasForeignKey(ti => ti.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasOne(ti => ti.Class)
+            .WithMany()
+            .HasForeignKey(ti => ti.ClassId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.InvoiceMonth, ti.InvoiceYear });
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.StudentId, ti.Status });
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.Status, ti.DueDate }); // For overdue checking
+
+        // === TuitionInvoiceItem Configuration ===
+        modelBuilder.Entity<TuitionInvoiceItem>()
+            .HasOne(tii => tii.Invoice)
+            .WithMany(ti => ti.Items)
+            .HasForeignKey(tii => tii.InvoiceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TuitionInvoiceItem>()
+            .HasIndex(tii => new { tii.InvoiceId, tii.SessionId });
+
+        // === Notification Configuration ===
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Notification>()
+            .HasIndex(n => new { n.TenantId, n.UserId, n.IsRead });
+
+        modelBuilder.Entity<Notification>()
+            .HasIndex(n => new { n.TenantId, n.Category, n.CreatedAt });
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

@@ -22,7 +22,8 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         scheduleSlots: [{ day: '', startTime: '', endTime: '' }], // Array of time slots
         startDate: '', // Ngày bắt đầu lớp
         endDate: '', // Ngày kết thúc lớp
-        status: 'active'
+        status: 'active',
+        pricePerSession: '' // Đơn giá mỗi buổi học
     });
 
     const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
@@ -96,7 +97,8 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 scheduleSlots,
                 startDate: editingClass.startDate || '',
                 endDate: editingClass.endDate || '',
-                status: editingClass.status || 'active'
+                status: editingClass.status || 'active',
+                pricePerSession: editingClass.pricePerSession || ''
             });
         } else {
             setFormData({
@@ -113,7 +115,8 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 scheduleSlots: [{ day: '', startTime: '', endTime: '', roomId: null }],
                 startDate: '',
                 endDate: '',
-                status: 'active'
+                status: 'active',
+                pricePerSession: ''
             });
         }
     }, [editingClass, isOpen]);
@@ -258,6 +261,12 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             }
         }
 
+        // Validation: Check price per session
+        if (!formData.pricePerSession || formData.pricePerSession <= 0) {
+            toast.error('❌ Vui lòng nhập đơn giá mỗi buổi học!');
+            return;
+        }
+
         // Format schedule for display (backward compatibility)
         const schedule = formatScheduleForDisplay(formData.scheduleSlots);
 
@@ -297,21 +306,21 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         }
 
         const classData = {
-            ...formData,
-            schedule, // For display compatibility
-            scheduleSlots: formData.scheduleSlots, // New format
-            currentStudents: editingClass?.currentStudents || 0,
-            mainTeacher: {
-                id: formData.mainTeacherId,
-                name: formData.mainTeacher,
-                initials: formData.mainTeacher.split(' ').map(n => n[0]).join('').toUpperCase()
-            },
-            assistant: formData.assistant ? {
-                id: formData.assistantId,
-                name: formData.assistant,
-                initials: formData.assistant.split(' ').map(n => n[0]).join('').toUpperCase()
-            } : null,
-        };
+    ...formData, // <-- Cái này đã bao gồm pricePerSession
+    schedule, // For display compatibility
+    scheduleSlots: formData.scheduleSlots, // New format
+    currentStudents: editingClass?.currentStudents || 0,
+    mainTeacher: {
+        id: formData.mainTeacherId,
+        name: formData.mainTeacher,
+        initials: formData.mainTeacher.split(' ').map(n => n[0]).join('').toUpperCase()
+    },
+    assistant: formData.assistant ? {
+        id: formData.assistantId,
+        name: formData.assistant,
+        initials: formData.assistant.split(' ').map(n => n[0]).join('').toUpperCase()
+    } : null,
+};
 
         if (editingClass) {
             classData.id = editingClass.id;
@@ -698,6 +707,22 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                         <small className="schedule-hint">
                             Mỗi buổi học có thể có thời gian khác nhau. Ví dụ: Thứ 2 từ 10:00-11:30, Thứ 4 từ 13:30-15:00
                         </small>
+                    </div>
+
+                    {/* Price Per Session */}
+                    <div className="form-group">
+                        <label>Đơn giá mỗi buổi (VNĐ) *</label>
+                        <input
+                            type="number"
+                            name="pricePerSession"
+                            value={formData.pricePerSession}
+                            onChange={handleChange}
+                            placeholder="VD: 200000"
+                            min="0"
+                            step="1000"
+                            required
+                        />
+                        <small className="field-hint">Số tiền học phí cho mỗi buổi học. Dùng để tính hóa đơn hàng tháng.</small>
                     </div>
 
                     {/* Start Date and End Date Section */}
