@@ -19,6 +19,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Student")]
         public async Task<IActionResult> CreateSubmission([FromForm] CreateSubmissionRequest request)
         {
             try
@@ -34,6 +35,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{subId}")]
+        [Authorize(Roles = "Student")]
         public async Task<IActionResult> UpdateSubmission(int subId, [FromForm] UpdateSubmissionRequest request)
         {
             try
@@ -49,6 +51,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{subId}/grade")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> GradeSubmission(int subId, [FromBody] GradeSubmissionRequest request)
         {
             try
@@ -64,6 +67,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{subId}/publish")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> PublishGrade(int subId, [FromBody] PublishGradeRequest request)
         {
             try
@@ -79,6 +83,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{subId}/reset")]
+        [Authorize(Roles = "Teacher,Admin")]
         public async Task<IActionResult> ResetSubmission(int subId)
         {
             try
@@ -94,6 +99,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("assignment/{assignmentId}/publish-all")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> PublishAllGrades(int assignmentId, [FromBody] PublishGradeRequest request)
         {
             try
@@ -111,6 +117,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("{subId}")]
+        [Authorize(Roles = "Teacher,Assistant,Admin,Student")]
         public async Task<IActionResult> GetSubmissionById(int subId)
         {
             var baseUrl = $"{Request.Scheme}://{Request.Host}";

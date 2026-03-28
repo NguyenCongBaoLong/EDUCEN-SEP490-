@@ -17,6 +17,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetDashboard()
         {
             var result = await _dashboardService.GetDashboardAsync();

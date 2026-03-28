@@ -1,10 +1,12 @@
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/admin/dashboard")]
+    [Authorize(Roles = "Admin,TenantAdmin")]
     public class AdminDashboardController : ControllerBase
     {
         private readonly IAdminDashboardService _dashboardService;
