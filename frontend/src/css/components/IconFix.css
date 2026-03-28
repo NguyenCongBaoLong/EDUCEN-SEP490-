@@ -96,7 +96,14 @@ svg.lucide {
 }
 
 /* Action button container fixes */
-.action-buttons,
+.action-buttons {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+}
+
 .button-group {
   display: flex !important;
   align-items: center !important;
