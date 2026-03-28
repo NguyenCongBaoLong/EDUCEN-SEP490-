@@ -101,7 +101,8 @@ const MyInvoices = () => {
                 toast.error(result.errorMessage || 'Lỗi tạo thanh toán');
             }
         } catch (error) {
-            toast.error('Lỗi thanh toán');
+            console.error('Payment create failed', error);
+            toast.error(error.response?.data?.message || error.message || 'Lỗi thanh toán');
         } finally {
             setProcessingPayment(false);
         }

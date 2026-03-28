@@ -9,8 +9,8 @@ namespace EducenAPI.Services.Payment
     {
         Task<PaymentResult> CreatePaymentAsync(CreatePaymentDto dto);
         Task<PaymentVerificationResult> ProcessCallbackAsync(string gatewayType, Dictionary<string, string> callbackData);
-        Task<PaymentTransaction?> GetTransactionAsync(string transactionId);
-        Task<List<PaymentTransaction>> GetTransactionsByPaymentIdAsync(string paymentRecordId);
+        Task<PaymentTransactionInfo?> GetTransactionAsync(string transactionId);
+        Task<List<PaymentTransactionInfo>> GetTransactionsByPaymentIdAsync(string paymentRecordId);
     }
 
     public class PaymentService : IPaymentService
@@ -39,19 +39,14 @@ namespace EducenAPI.Services.Payment
         /// Học phí → lưu vào Tenant DB (EducenV2)
         /// Gói dịch vụ → lưu vào Admin DB (EducenAdmin)
         /// </summary>
-        private DbContext GetTargetDb(string transactionType)
-        {
-            return transactionType == "Tuition" ? _tenantDbContext : _adminDbContext;
-        }
-
         public async Task<PaymentResult> CreatePaymentAsync(CreatePaymentDto dto)
         {
             try
             {
-                var targetDb = GetTargetDb(dto.TransactionType);
+                var isTuition = dto.TransactionType == "Tuition";
 
-                // Nếu là Subscription → kiểm tra tenant trong Admin DB
-                if (dto.TransactionType != "Tuition")
+                //Nếu là Subscription → kiểm tra tenant trong Admin DB
+                if (!isTuition)
                 {
                     var tenant = await _adminDbContext.Tenants.FindAsync(dto.TenantId);
                     if (tenant == null)
@@ -83,80 +78,151 @@ namespace EducenAPI.Services.Payment
                     }
                 }
 
-                // Tạo PaymentRecord trong DB đích
-                var paymentRecord = new PaymentRecord
+                if (isTuition)
                 {
-                    PaymentId = Guid.NewGuid().ToString(),
-                    TenantId = dto.TenantId,
-                    Amount = dto.Amount,
-                    Status = "Pending",
-                    PaymentDate = DateTime.UtcNow,
-                    TransactionType = dto.TransactionType,
-                    ReferenceId = dto.ReferenceId,
-                    PaymentMethod = dto.GatewayType,
-                    Description = dto.Description,
-                    PaidBy = dto.PaidBy
-                };
+                    var paymentRecord = new PaymentRecordTenant
+                    {
+                        PaymentId = Guid.NewGuid().ToString(),
+                        Amount = dto.Amount,
+                        Status = "Pending",
+                        PaymentDate = DateTime.UtcNow,
+                        TransactionType = dto.TransactionType,
+                        ReferenceId = dto.ReferenceId,
+                        PaymentMethod = dto.GatewayType,
+                        Description = dto.Description,
+                        PaidBy = dto.PaidBy
+                    };
 
-                targetDb.Set<PaymentRecord>().Add(paymentRecord);
-                await targetDb.SaveChangesAsync();
+                    _tenantDbContext.PaymentRecordTenants.Add(paymentRecord);
+                    await _tenantDbContext.SaveChangesAsync();
 
-                // Tạo PaymentTransaction trong cùng DB
-                var transaction = new PaymentTransaction
-                {
-                    PaymentRecordId = paymentRecord.PaymentId,
-                    GatewayType = dto.GatewayType,
-                    Amount = dto.Amount,
-                    Status = "Pending",
-                    CreatedAt = DateTime.UtcNow
-                };
+                    var transaction = new PaymentTransactionTenant
+                    {
+                        PaymentRecordId = paymentRecord.PaymentId,
+                        GatewayType = dto.GatewayType,
+                        Amount = dto.Amount,
+                        Status = "Pending",
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                targetDb.Set<PaymentTransaction>().Add(transaction);
-                await targetDb.SaveChangesAsync();
+                    _tenantDbContext.PaymentTransactionTenants.Add(transaction);
+                    await _tenantDbContext.SaveChangesAsync();
 
-                // Gọi gateway tạo thanh toán
-                var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
-                var gatewayRequest = new CreatePaymentRequest
-                {
-                    OrderId = paymentRecord.PaymentId,
-                    Amount = dto.Amount,
-                    Description = dto.Description,
-                    ReturnUrl = dto.ReturnUrl,
-                    IpAddress = dto.IpAddress,
-                    CustomerName = dto.CustomerName,
-                    CustomerEmail = dto.CustomerEmail,
-                    CustomerPhone = dto.CustomerPhone
-                };
+                    var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
+                    var gatewayRequest = new CreatePaymentRequest
+                    {
+                        OrderId = paymentRecord.PaymentId,
+                        Amount = dto.Amount,
+                        Description = dto.Description,
+                        ReturnUrl = dto.ReturnUrl,
+                        IpAddress = dto.IpAddress,
+                        CustomerName = dto.CustomerName,
+                        CustomerEmail = dto.CustomerEmail,
+                        CustomerPhone = dto.CustomerPhone
+                    };
 
-                var gatewayResponse = await gateway.CreatePaymentAsync(gatewayRequest);
+                    var gatewayResponse = await gateway.CreatePaymentAsync(gatewayRequest);
 
-                if (!gatewayResponse.Success)
-                {
-                    transaction.Status = "Failed";
-                    transaction.ErrorMessage = gatewayResponse.ErrorMessage;
-                    await targetDb.SaveChangesAsync();
+                    if (!gatewayResponse.Success)
+                    {
+                        transaction.Status = "Failed";
+                        transaction.ErrorMessage = gatewayResponse.ErrorMessage;
+                        await _tenantDbContext.SaveChangesAsync();
+
+                        return new PaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = gatewayResponse.ErrorMessage,
+                            PaymentRecordId = paymentRecord.PaymentId
+                        };
+                    }
+
+                    transaction.GatewayTransactionId = gatewayResponse.TransactionId;
+                    await _tenantDbContext.SaveChangesAsync();
 
                     return new PaymentResult
                     {
-                        Success = false,
-                        ErrorMessage = gatewayResponse.ErrorMessage,
-                        PaymentRecordId = paymentRecord.PaymentId
+                        Success = true,
+                        PaymentRecordId = paymentRecord.PaymentId,
+                        TransactionId = transaction.TransactionId,
+                        PaymentUrl = gatewayResponse.PaymentUrl,
+                        QrCodeUrl = gatewayResponse.QrCodeUrl,
+                        Deeplink = gatewayResponse.Deeplink
                     };
                 }
-
-                // Cập nhật gateway transaction ID
-                transaction.GatewayTransactionId = gatewayResponse.TransactionId;
-                await targetDb.SaveChangesAsync();
-
-                return new PaymentResult
+                else
                 {
-                    Success = true,
-                    PaymentRecordId = paymentRecord.PaymentId,
-                    TransactionId = transaction.TransactionId,
-                    PaymentUrl = gatewayResponse.PaymentUrl,
-                    QrCodeUrl = gatewayResponse.QrCodeUrl,
-                    Deeplink = gatewayResponse.Deeplink
-                };
+                    var paymentRecord = new PaymentRecord
+                    {
+                        PaymentId = Guid.NewGuid().ToString(),
+                        TenantId = dto.TenantId,
+                        Amount = dto.Amount,
+                        Status = "Pending",
+                        PaymentDate = DateTime.UtcNow,
+                        TransactionType = dto.TransactionType,
+                        ReferenceId = dto.ReferenceId,
+                        PaymentMethod = dto.GatewayType,
+                        Description = dto.Description,
+                        PaidBy = dto.PaidBy
+                    };
+
+                    _adminDbContext.PaymentRecords.Add(paymentRecord);
+                    await _adminDbContext.SaveChangesAsync();
+
+                    var transaction = new PaymentTransaction
+                    {
+                        PaymentRecordId = paymentRecord.PaymentId,
+                        GatewayType = dto.GatewayType,
+                        Amount = dto.Amount,
+                        Status = "Pending",
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _adminDbContext.PaymentTransactions.Add(transaction);
+                    await _adminDbContext.SaveChangesAsync();
+
+                    var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
+                    var gatewayRequest = new CreatePaymentRequest
+                    {
+                        OrderId = paymentRecord.PaymentId,
+                        Amount = dto.Amount,
+                        Description = dto.Description,
+                        ReturnUrl = dto.ReturnUrl,
+                        IpAddress = dto.IpAddress,
+                        CustomerName = dto.CustomerName,
+                        CustomerEmail = dto.CustomerEmail,
+                        CustomerPhone = dto.CustomerPhone
+                    };
+
+                    var gatewayResponse = await gateway.CreatePaymentAsync(gatewayRequest);
+
+                    if (!gatewayResponse.Success)
+                    {
+                        transaction.Status = "Failed";
+                        transaction.ErrorMessage = gatewayResponse.ErrorMessage;
+                        await _adminDbContext.SaveChangesAsync();
+
+                        return new PaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = gatewayResponse.ErrorMessage,
+                            PaymentRecordId = paymentRecord.PaymentId
+                        };
+                    }
+
+                    transaction.GatewayTransactionId = gatewayResponse.TransactionId;
+                    await _adminDbContext.SaveChangesAsync();
+
+                    return new PaymentResult
+                    {
+                        Success = true,
+                        PaymentRecordId = paymentRecord.PaymentId,
+                        TransactionId = transaction.TransactionId,
+                        PaymentUrl = gatewayResponse.PaymentUrl,
+                        QrCodeUrl = gatewayResponse.QrCodeUrl,
+                        Deeplink = gatewayResponse.Deeplink
+                    };
+                }
             }
             catch (Exception ex)
             {
@@ -183,30 +249,22 @@ namespace EducenAPI.Services.Payment
                 }
 
                 // Tìm transaction trong CẢ 2 DB (vì không biết TransactionType từ callback)
-                PaymentTransaction? transaction = null;
-                DbContext? targetDb = null;
+                PaymentTransactionTenant? tenantTransaction = null;
+                PaymentTransaction? adminTransaction = null;
 
                 // Thử Tenant DB trước (Tuition - phổ biến hơn)
-                transaction = await _tenantDbContext.PaymentTransactions
+                tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
                     .Include(t => t.PaymentRecord)
                     .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
 
-                if (transaction != null)
+                if (tenantTransaction == null)
                 {
-                    targetDb = _tenantDbContext;
-                }
-                else
-                {
-                    // Thử Admin DB (Subscription)
-                    transaction = await _adminDbContext.PaymentTransactions
+                    adminTransaction = await _adminDbContext.PaymentTransactions
                         .Include(t => t.PaymentRecord)
                         .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
-
-                    if (transaction != null)
-                        targetDb = _adminDbContext;
                 }
 
-                if (transaction == null || targetDb == null)
+                if (tenantTransaction == null && adminTransaction == null)
                 {
                     _logger.LogError("Transaction not found for OrderId: {OrderId}", verification.OrderId);
                     return new PaymentVerificationResult
@@ -216,53 +274,26 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
-                // Idempotency check
-                if (transaction.Status == "Success" || transaction.Status == "Failed")
+                if (tenantTransaction != null)
                 {
-                    _logger.LogInformation("Callback already processed for OrderId: {OrderId}, Status: {Status}. Skipping.",
-                        verification.OrderId, transaction.Status);
-                    return new PaymentVerificationResult
-                    {
-                        IsValid = true,
-                        IsSuccessful = transaction.Status == "Success",
-                        OrderId = verification.OrderId,
-                        Amount = transaction.Amount,
-                        Message = $"Already processed with status: {transaction.Status}"
-                    };
+                    var idempotentResult = await ApplyVerificationToTenantAsync(tenantTransaction, callbackData, verification);
+                    if (idempotentResult != null) return idempotentResult;
+
+                    _logger.LogInformation("Payment {PaymentId} processed in {DbType} with status: {Status}",
+                        verification.OrderId,
+                        "TenantDB",
+                        verification.IsSuccessful ? "Success" : "Failed");
                 }
-
-                // Cập nhật transaction
-                transaction.GatewayResponse = System.Text.Json.JsonSerializer.Serialize(callbackData);
-                transaction.CompletedAt = DateTime.UtcNow;
-                transaction.PaymentRecord.PaymentDate = DateTime.UtcNow;
-
-                if (verification.IsSuccessful)
+                else if (adminTransaction != null)
                 {
-                    transaction.Status = "Success";
-                    transaction.PaymentRecord.Status = "Paid";
+                    var idempotentResult = await ApplyVerificationToAdminAsync(adminTransaction, callbackData, verification);
+                    if (idempotentResult != null) return idempotentResult;
 
-                    // Cập nhật TuitionInvoice nếu thanh toán học phí
-                    if (transaction.PaymentRecord.TransactionType == "Tuition"
-                        && !string.IsNullOrEmpty(transaction.PaymentRecord.ReferenceId))
-                    {
-                        await UpdateTuitionInvoiceAsync(
-                            transaction.PaymentRecord.ReferenceId,
-                            transaction.PaymentRecord.PaymentId);
-                    }
+                    _logger.LogInformation("Payment {PaymentId} processed in {DbType} with status: {Status}",
+                        verification.OrderId,
+                        "AdminDB",
+                        verification.IsSuccessful ? "Success" : "Failed");
                 }
-                else
-                {
-                    transaction.Status = "Failed";
-                    transaction.PaymentRecord.Status = "Failed";
-                    transaction.ErrorMessage = verification.Message;
-                }
-
-                await targetDb.SaveChangesAsync();
-
-                _logger.LogInformation("Payment {PaymentId} processed in {DbType} with status: {Status}",
-                    verification.OrderId,
-                    targetDb == _tenantDbContext ? "TenantDB" : "AdminDB",
-                    verification.IsSuccessful ? "Success" : "Failed");
 
                 return verification;
             }
@@ -277,36 +308,158 @@ namespace EducenAPI.Services.Payment
             }
         }
 
-        public async Task<PaymentTransaction?> GetTransactionAsync(string transactionId)
+        public async Task<PaymentTransactionInfo?> GetTransactionAsync(string transactionId)
         {
-            // Tìm trong Tenant DB trước
-            var transaction = await _tenantDbContext.PaymentTransactions
+            var tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
                 .Include(t => t.PaymentRecord)
                 .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
 
-            if (transaction != null) return transaction;
+            if (tenantTransaction != null)
+                return MapTransaction(tenantTransaction);
 
-            // Tìm trong Admin DB
-            return await _adminDbContext.PaymentTransactions
+            var adminTransaction = await _adminDbContext.PaymentTransactions
                 .Include(t => t.PaymentRecord)
                 .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+
+            return adminTransaction == null ? null : MapTransaction(adminTransaction);
         }
 
-        public async Task<List<PaymentTransaction>> GetTransactionsByPaymentIdAsync(string paymentRecordId)
+        public async Task<List<PaymentTransactionInfo>> GetTransactionsByPaymentIdAsync(string paymentRecordId)
         {
-            // Tìm trong Tenant DB trước
-            var tenantTransactions = await _tenantDbContext.PaymentTransactions
+            var tenantTransactions = await _tenantDbContext.PaymentTransactionTenants
                 .Where(t => t.PaymentRecordId == paymentRecordId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            if (tenantTransactions.Any()) return tenantTransactions;
+            if (tenantTransactions.Any())
+                return tenantTransactions.Select(MapTransaction).ToList();
 
-            // Tìm trong Admin DB
-            return await _adminDbContext.PaymentTransactions
+            var adminTransactions = await _adminDbContext.PaymentTransactions
                 .Where(t => t.PaymentRecordId == paymentRecordId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
+
+            return adminTransactions.Select(MapTransaction).ToList();
+        }
+
+        private async Task<PaymentVerificationResult?> ApplyVerificationToTenantAsync(
+            PaymentTransactionTenant transaction,
+            Dictionary<string, string> callbackData,
+            PaymentVerificationResult verification)
+        {
+            if (transaction.Status == "Success" || transaction.Status == "Failed")
+            {
+                _logger.LogInformation("Callback already processed for OrderId: {OrderId}, Status: {Status}. Skipping.",
+                    verification.OrderId, transaction.Status);
+                return new PaymentVerificationResult
+                {
+                    IsValid = true,
+                    IsSuccessful = transaction.Status == "Success",
+                    OrderId = verification.OrderId,
+                    Amount = transaction.Amount,
+                    Message = $"Already processed with status: {transaction.Status}"
+                };
+            }
+
+            transaction.GatewayResponse = System.Text.Json.JsonSerializer.Serialize(callbackData);
+            transaction.CompletedAt = DateTime.UtcNow;
+            if (transaction.PaymentRecord != null)
+                transaction.PaymentRecord.PaymentDate = DateTime.UtcNow;
+
+            if (verification.IsSuccessful)
+            {
+                transaction.Status = "Success";
+                if (transaction.PaymentRecord != null)
+                    transaction.PaymentRecord.Status = "Paid";
+
+                if (transaction.PaymentRecord?.TransactionType == "Tuition"
+                    && !string.IsNullOrEmpty(transaction.PaymentRecord.ReferenceId))
+                {
+                    await UpdateTuitionInvoiceAsync(
+                        transaction.PaymentRecord.ReferenceId,
+                        transaction.PaymentRecord.PaymentId);
+                }
+            }
+            else
+            {
+                transaction.Status = "Failed";
+                if (transaction.PaymentRecord != null)
+                    transaction.PaymentRecord.Status = "Failed";
+                transaction.ErrorMessage = verification.Message;
+            }
+
+            await _tenantDbContext.SaveChangesAsync();
+            return null;
+        }
+
+        private async Task<PaymentVerificationResult?> ApplyVerificationToAdminAsync(
+            PaymentTransaction transaction,
+            Dictionary<string, string> callbackData,
+            PaymentVerificationResult verification)
+        {
+            if (transaction.Status == "Success" || transaction.Status == "Failed")
+            {
+                _logger.LogInformation("Callback already processed for OrderId: {OrderId}, Status: {Status}. Skipping.",
+                    verification.OrderId, transaction.Status);
+                return new PaymentVerificationResult
+                {
+                    IsValid = true,
+                    IsSuccessful = transaction.Status == "Success",
+                    OrderId = verification.OrderId,
+                    Amount = transaction.Amount,
+                    Message = $"Already processed with status: {transaction.Status}"
+                };
+            }
+
+            transaction.GatewayResponse = System.Text.Json.JsonSerializer.Serialize(callbackData);
+            transaction.CompletedAt = DateTime.UtcNow;
+            if (transaction.PaymentRecord != null)
+                transaction.PaymentRecord.PaymentDate = DateTime.UtcNow;
+
+            if (verification.IsSuccessful)
+            {
+                transaction.Status = "Success";
+                if (transaction.PaymentRecord != null)
+                    transaction.PaymentRecord.Status = "Paid";
+            }
+            else
+            {
+                transaction.Status = "Failed";
+                if (transaction.PaymentRecord != null)
+                    transaction.PaymentRecord.Status = "Failed";
+                transaction.ErrorMessage = verification.Message;
+            }
+
+            await _adminDbContext.SaveChangesAsync();
+            return null;
+        }
+
+        private static PaymentTransactionInfo MapTransaction(PaymentTransactionTenant transaction)
+        {
+            return new PaymentTransactionInfo
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentRecordId = transaction.PaymentRecordId,
+                GatewayType = transaction.GatewayType,
+                Amount = transaction.Amount,
+                Status = transaction.Status,
+                CreatedAt = transaction.CreatedAt,
+                CompletedAt = transaction.CompletedAt
+            };
+        }
+
+        private static PaymentTransactionInfo MapTransaction(PaymentTransaction transaction)
+        {
+            return new PaymentTransactionInfo
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentRecordId = transaction.PaymentRecordId,
+                GatewayType = transaction.GatewayType,
+                Amount = transaction.Amount,
+                Status = transaction.Status,
+                CreatedAt = transaction.CreatedAt,
+                CompletedAt = transaction.CompletedAt
+            };
         }
 
         /// <summary>
@@ -374,5 +527,16 @@ namespace EducenAPI.Services.Payment
         public string? QrCodeUrl { get; set; }
         public string? Deeplink { get; set; }
         public string? ErrorMessage { get; set; }
+    }
+
+    public class PaymentTransactionInfo
+    {
+        public string TransactionId { get; set; } = string.Empty;
+        public string PaymentRecordId { get; set; } = string.Empty;
+        public string GatewayType { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
     }
 }

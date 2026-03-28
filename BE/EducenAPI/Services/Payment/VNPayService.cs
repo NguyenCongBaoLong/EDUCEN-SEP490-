@@ -26,7 +26,7 @@ namespace EducenAPI.Services.Payment
                 var vnp_TmnCode = _configuration["PaymentGateways:VNPay:TmnCode"]!;
                 var vnp_HashSecret = _configuration["PaymentGateways:VNPay:HashSecret"]!;
                 var vnp_Url = _configuration["PaymentGateways:VNPay:BaseUrl"]!;
-                // Sandbox: dùng frontend URL trực tiếp (bypass ngrok interstitial)
+                
                 var vnp_ReturnUrl = _configuration["PaymentGateways:VNPay:FrontendReturnUrl"]
                     ?? "http://localhost:5173/payment/result";
 

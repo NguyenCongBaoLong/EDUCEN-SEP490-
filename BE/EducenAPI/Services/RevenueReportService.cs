@@ -165,7 +165,8 @@ namespace EducenAPI.Services
                 {
                     TenantId = tenant.TenantId,
                     TenantName = tenant.TenantName,
-                    SubscriptionRevenue = tenantPayments.Where(p => p.Status == "Paid").Sum(p => p.Amount),
+                    SubscriptionRevenue = tenantPayments.Where(p => p.Status == "Paid").Sum(p => p.Amount)
+                                          - tenantRefunds.Sum(r => r.RefundAmount),
                     RefundAmount = tenantRefunds.Sum(r => r.RefundAmount),
                     LastPaymentDate = tenantPayments.Where(p => p.Status == "Paid").Max(p => (DateTime?)p.PaymentDate),
                     Status = tenant.IsActive ? "Active" : "Inactive"
@@ -174,15 +175,16 @@ namespace EducenAPI.Services
 
             var totalRevenue = tenantRevenues.Sum(t => t.SubscriptionRevenue);
             var totalRefunds = tenantRevenues.Sum(t => t.RefundAmount);
+            var totalNetRevenue = totalRevenue;
 
             return new SystemRevenueReportDto
             {
                 FromDate = fromDate,
                 ToDate = toDate,
                 TotalTenants = tenants.Count,
-                TotalSubscriptionRevenue = totalRevenue,
+                TotalSubscriptionRevenue = totalNetRevenue,
                 TotalRefundAmount = totalRefunds,
-                NetRevenue = totalRevenue - totalRefunds,
+                NetRevenue = totalNetRevenue,
                 TenantRevenues = tenantRevenues
             };
         }

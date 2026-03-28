@@ -55,8 +55,8 @@ public partial class EducenV2Context : DbContext
     public DbSet<Notification> Notifications { get; set; }
 
     // === Payment Records (Học phí - lưu trong Tenant DB) ===
-    public DbSet<PaymentRecord> PaymentRecords { get; set; }
-    public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+    public DbSet<PaymentRecordTenant> PaymentRecordTenants { get; set; }
+    public DbSet<PaymentTransactionTenant> PaymentTransactionTenants { get; set; }
 
     // ================================
     // MODEL CONFIGURATION
@@ -78,10 +78,6 @@ public partial class EducenV2Context : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // PaymentRecord trong Tenant DB không có bảng Tenants → bỏ navigation property
-        modelBuilder.Entity<PaymentRecord>()
-            .Ignore(p => p.Tenant);
 
         ConfigureEntities(modelBuilder);
         SeedRoles(modelBuilder);
@@ -357,6 +353,16 @@ public partial class EducenV2Context : DbContext
 
         modelBuilder.Entity<Notification>()
             .HasIndex(n => new { n.TenantId, n.Category, n.CreatedAt });
+
+        // === PaymentTransactionTenant Configuration ===
+        modelBuilder.Entity<PaymentTransactionTenant>()
+            .HasOne(pt => pt.PaymentRecord)
+            .WithMany(pr => pr.Transactions)
+            .HasForeignKey(pt => pt.PaymentRecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PaymentTransactionTenant>()
+            .HasIndex(pt => pt.PaymentRecordId);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

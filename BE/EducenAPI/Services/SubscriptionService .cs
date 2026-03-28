@@ -69,7 +69,11 @@ namespace EducenAPI.Services
                 TenantId = tenant.TenantId,
                 Amount = plan.Price,
                 Status = "Paid",
-                PaymentDate = DateTime.UtcNow
+                PaymentDate = DateTime.UtcNow,
+                TransactionType = "Subscription",
+                ReferenceId = subscription.Id,
+                PaymentMethod = "SystemAdmin",
+                SubscriptionMonths = 1
             };
 
             _context.PaymentRecords.Add(payment);
@@ -140,7 +144,11 @@ namespace EducenAPI.Services
                 TenantId = request.TenantId,
                 Amount = subscription.Plan.Price * request.Months,
                 Status = "Paid",
-                PaymentDate = DateTime.UtcNow
+                PaymentDate = DateTime.UtcNow,
+                TransactionType = "Subscription",
+                ReferenceId = subscription.Id,
+                PaymentMethod = "SystemAdmin",
+                SubscriptionMonths = request.Months
             };
 
             _context.PaymentRecords.Add(payment);
@@ -205,7 +213,11 @@ namespace EducenAPI.Services
                 TenantId = tenant.TenantId,
                 Amount = newPlan.Price * request.Months,
                 Status = "Paid",
-                PaymentDate = DateTime.UtcNow
+                PaymentDate = DateTime.UtcNow,
+                TransactionType = "Subscription",
+                ReferenceId = newSubscription.Id,
+                PaymentMethod = "SystemAdmin",
+                SubscriptionMonths = request.Months
             };
 
             _context.PaymentRecords.Add(payment);

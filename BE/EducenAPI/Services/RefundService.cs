@@ -1,6 +1,5 @@
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
-using EducenAPI.Services.Payment;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
@@ -8,17 +7,17 @@ namespace EducenAPI.Services
     public class RefundService : IRefundService
     {
         private readonly AdminDbContext _adminContext;
-        private readonly PaymentGatewayFactory _gatewayFactory;
         private readonly ILogger<RefundService> _logger;
+        private readonly IConfiguration _configuration;
 
         public RefundService(
             AdminDbContext adminContext,
-            PaymentGatewayFactory gatewayFactory,
-            ILogger<RefundService> logger)
+            ILogger<RefundService> logger,
+            IConfiguration configuration)
         {
             _adminContext = adminContext;
-            _gatewayFactory = gatewayFactory;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<Models.RefundRequest> CreateRefundRequestAsync(CreateRefundRequest request)
@@ -35,6 +34,12 @@ namespace EducenAPI.Services
 
             if (payment.TransactionType != "Subscription")
                 throw new Exception("Only subscription payments can be refunded");
+
+            if (payment.SubscriptionMonths.GetValueOrDefault() != 1)
+                throw new Exception("Only monthly subscription payments can be refunded");
+
+            if (!IsWithinGracePeriod(payment.PaymentDate))
+                throw new Exception("Refund grace period has expired");
 
             // Check if refund already exists
             var existingRefund = await _adminContext.RefundRequests
@@ -130,46 +135,38 @@ namespace EducenAPI.Services
 
             try
             {
-                // Get original transaction to find gateway
-                var transaction = await _adminContext.PaymentTransactions
-                    .FirstOrDefaultAsync(t => t.PaymentRecordId == refund.PaymentRecordId && t.Status == "Success");
+                var tenant = await _adminContext.Tenants
+                    .FirstOrDefaultAsync(t => t.TenantId == refund.TenantId);
 
-                if (transaction == null)
-                    throw new Exception("Original transaction not found");
+                if (tenant == null)
+                    throw new Exception("Tenant not found");
 
-                // Process refund through gateway
-                var gateway = _gatewayFactory.GetGateway(transaction.GatewayType);
-                var refundRequest = new Interface.RefundRequest
+                tenant.CreditBalance += refund.RefundAmount;
+
+                var ledger = new Models.TenantCreditLedger
                 {
-                    OriginalTransactionId = transaction.GatewayTransactionId ?? transaction.TransactionId,
-                    OrderId = refund.PaymentRecordId,
+                    TenantId = tenant.TenantId,
                     Amount = refund.RefundAmount,
-                    Reason = refund.Reason
+                    EntryType = "Credit",
+                    ReferenceId = refund.RefundId,
+                    ReferenceType = "Refund",
+                    BalanceAfter = tenant.CreditBalance,
+                    Note = $"Refund credit for payment {refund.PaymentRecordId}",
+                    CreatedAt = DateTime.UtcNow
                 };
 
-                var result = await gateway.ProcessRefundAsync(refundRequest);
+                _adminContext.TenantCreditLedgers.Add(ledger);
 
-                if (result.Success)
-                {
-                    refund.Status = "Completed";
-                    refund.GatewayRefundId = result.RefundTransactionId;
-                    refund.GatewayResponse = System.Text.Json.JsonSerializer.Serialize(result.AdditionalData);
-                    refund.ProcessedAt = DateTime.UtcNow;
-                    refund.UpdatedAt = DateTime.UtcNow;
+                refund.Status = "Completed";
+                refund.ProcessedAt = DateTime.UtcNow;
+                refund.UpdatedAt = DateTime.UtcNow;
 
-                    // Update payment record
+                if (refund.PaymentRecord != null)
                     refund.PaymentRecord.Status = "Refunded";
-                }
-                else
-                {
-                    refund.Status = "Failed";
-                    refund.ErrorMessage = result.ErrorMessage;
-                    refund.UpdatedAt = DateTime.UtcNow;
-                }
 
                 await _adminContext.SaveChangesAsync();
 
-                _logger.LogInformation("Refund {RefundId} processed with status: {Status}",
+                _logger.LogInformation("Refund {RefundId} processed as credit with status: {Status}",
                     refundId, refund.Status);
 
                 return refund;
@@ -223,12 +220,25 @@ namespace EducenAPI.Services
             if (payment == null || payment.Status != "Paid" || payment.TransactionType != "Subscription")
                 return false;
 
+            if (payment.SubscriptionMonths.GetValueOrDefault() != 1)
+                return false;
+
+            if (!IsWithinGracePeriod(payment.PaymentDate))
+                return false;
+
             // Check if refund already exists
             var existingRefund = await _adminContext.RefundRequests
                 .AnyAsync(r => r.PaymentRecordId == paymentRecordId &&
                     (r.Status == "Pending" || r.Status == "Approved" || r.Status == "Processing" || r.Status == "Completed"));
 
             return !existingRefund;
+        }
+
+        private bool IsWithinGracePeriod(DateTime paymentDate)
+        {
+            var graceDays = _configuration.GetValue("RefundPolicy:SubscriptionGraceDays", 7);
+            var deadline = paymentDate.AddDays(graceDays);
+            return DateTime.UtcNow <= deadline;
         }
     }
 }

@@ -592,7 +592,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.ToTable("Parents");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
+            modelBuilder.Entity("EducenAPI.Models.PaymentRecordTenant", b =>
                 {
                     b.Property<string>("PaymentId")
                         .HasColumnType("nvarchar(450)");
@@ -625,22 +625,16 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("TransactionType")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
                     b.HasKey("PaymentId");
 
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("PaymentRecords");
+                    b.ToTable("PaymentRecordTenant");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.PaymentTransaction", b =>
+            modelBuilder.Entity("EducenAPI.Models.PaymentTransactionTenant", b =>
                 {
                     b.Property<string>("TransactionId")
                         .HasColumnType("nvarchar(450)");
@@ -681,7 +675,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.HasIndex("PaymentRecordId");
 
-                    b.ToTable("PaymentTransactions");
+                    b.ToTable("PaymentTransactionTenant");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.Plan", b =>
@@ -1435,18 +1429,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("ParentNavigation");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
+            modelBuilder.Entity("EducenAPI.Models.PaymentTransactionTenant", b =>
                 {
-                    b.HasOne("EducenAPI.Models.Tenant", null)
-                        .WithMany("PaymentRecords")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.PaymentTransaction", b =>
-                {
-                    b.HasOne("EducenAPI.Models.PaymentRecord", "PaymentRecord")
+                    b.HasOne("EducenAPI.Models.PaymentRecordTenant", "PaymentRecord")
                         .WithMany("Transactions")
                         .HasForeignKey("PaymentRecordId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1642,7 +1627,7 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Classes");
                 });
 
-            modelBuilder.Entity("EducenAPI.Models.PaymentRecord", b =>
+            modelBuilder.Entity("EducenAPI.Models.PaymentRecordTenant", b =>
                 {
                     b.Navigation("Transactions");
                 });
