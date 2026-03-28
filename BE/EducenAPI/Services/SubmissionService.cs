@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Submissions;
+﻿using EducenAPI.DTOs.Submissions;
 using EducenAPI.Enums;
 using EducenAPI.Exceptions;
 using EducenAPI.Models;
@@ -23,17 +23,17 @@ namespace EducenAPI.Services
             string fileUrl = string.Empty;
             var assignment = await _context.Assignments.FindAsync(request.AsmId);
             if (assignment == null)
-                throw new Exception("Assignment not found");
+                throw new Exception("Không tìm thấy bài tập");
 
             var student = await _context.Students.FindAsync(request.StudentId);
             if (student == null)
-                throw new Exception("Student not found");
+                throw new Exception("Không tìm thấy học sinh");
 
             var existing = await _context.Submissions
                 .FirstOrDefaultAsync(x => x.AsmId == request.AsmId && x.StudentId == request.StudentId);
 
             if (existing != null)
-                throw new Exception("Submission already exists, use update API");
+                throw new Exception("Bài nộp đã tồn tại");
             if (!string.IsNullOrEmpty(request.FileUrl))
             {
                 fileUrl = request.FileUrl;
@@ -79,10 +79,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
-                throw new Exception("Submission not found");
+                throw new Exception("Không tìm thấy bài nộp");
 
             if (submission.Score != null || submission.Status == "Graded" || submission.Status == "Published" || submission.IsPublished)
-                throw new Exception("Cannot update submission because it has already been graded or published.");
+                throw new Exception("Không thể cập nhật bài nộp vì nó đã được chấm hoặc công khai.");
 
             if (!string.IsNullOrEmpty(request.FileUrl))
             {
@@ -124,10 +124,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
-                throw new Exception("Submission not found");
+                throw new Exception("Không tìm thấy bài nộp");
 
             if (string.IsNullOrWhiteSpace(submission.FileUrl))
-                throw new Exception("Cannot grade because no file was submitted");
+                throw new Exception("Không thể chấm điểm vì không tìm thấy file bài làm");
 
             submission.Score = request.Score;
             submission.TeacherComment = request.TeacherComment;
@@ -144,10 +144,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
-                throw new Exception("Submission not found");
+                throw new Exception("Không tìm thấy bài nộp");
 
             if (submission.Score == null)
-                throw new Exception("Cannot publish grade before grading");
+                throw new Exception("Không thể công khai điểm trước khi chấm điểm");
 
             submission.IsPublished = isPublished;
             submission.Status = isPublished ? "Published" : "Unpublished";
@@ -163,7 +163,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
-                throw new Exception("Submission not found");
+                throw new Exception("Không tìm thấy bài nộp");
 
             submission.Score = null;
             submission.TeacherComment = null;

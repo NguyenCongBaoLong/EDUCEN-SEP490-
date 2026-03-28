@@ -46,7 +46,10 @@ namespace EducenAPI.Services
 
             string? fileUrl = null;
             var userId = _userContextService.GetUserId();
-
+            if (!string.IsNullOrEmpty(dto.FileUrl))
+            {
+                fileUrl = dto.FileUrl.Trim();
+            }
             if (dto.File != null)
             {
                 // Validate File = 0MB
@@ -93,10 +96,7 @@ namespace EducenAPI.Services
                 if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại"); // Nên dùng BadRequestException thay vì Exception chung
             }
 
-            if (!string.IsNullOrEmpty(dto.FileUrl))
-            {
-                fileUrl = dto.FileUrl.Trim();
-            }
+            
 
             var assignment = new Assignment
             {
