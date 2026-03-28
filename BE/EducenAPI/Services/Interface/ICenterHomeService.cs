@@ -7,5 +7,6 @@ namespace EducenAPI.Services.Interface
     {
         Task<CenterHomeResponseDto?> SaveCenterHomeAsync(SaveCenterHomeDto dto, string baseUrl);
         Task<CenterHomeResponseDto?> GetCenterHomeAsync(string baseUrl);
+        Task<IEnumerable<HomeClassDto>> GetUpcomingClassesAsync();
     }
 }

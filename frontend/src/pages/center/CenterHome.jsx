@@ -66,6 +66,7 @@ const INIT = {
             { id: 'teachers', enabled: true, title: 'Giáo viên' },
             { id: 'courses', enabled: true, title: 'Khóa học' },
             { id: 'schedule', enabled: true, title: 'Lịch học' },
+            { id: 'upcoming-classes', enabled: true, title: 'Các lớp học' },
             { id: 'gallery', enabled: true, title: 'Thư viện ảnh' },
             { id: 'quote', enabled: true, title: 'Châm ngôn' },
             { id: 'enrollment', enabled: true, title: 'Đăng ký' }
@@ -258,9 +259,17 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                 data.heroImages = data.heroImages || [];
                 data.staffs = data.staffs || [];
 
-                // Parse displayConfig if needed
-                if (!data.displayConfig) {
-                    data.displayConfig = INIT.displayConfig;
+                // Merge displayConfig if needed
+                let config = data.displayConfig ? JSON.parse(data.displayConfig) : JSON.parse(INIT.displayConfig);
+                const defaultConfig = JSON.parse(INIT.displayConfig);
+
+                // Add missing sections from defaultConfig
+                const existingIds = config.sections.map(s => s.id);
+                const missingSections = defaultConfig.sections.filter(s => !existingIds.includes(s.id));
+                
+                if (missingSections.length > 0) {
+                    config.sections = [...config.sections, ...missingSections];
+                    data.displayConfig = JSON.stringify(config);
                 }
 
                 setSaved(data);
@@ -281,6 +290,21 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
     const [isSubmittingEnrollment, setIsSubmittingEnrollment] = useState(false);
     const [availableSubjects, setAvailableSubjects] = useState([]);
+    const [upcomingClasses, setUpcomingClasses] = useState([]);
+    const [showAllClasses, setShowAllClasses] = useState(false);
+
+    const fetchUpcomingClasses = async () => {
+        try {
+            const resp = await axios.get(`${API_URL}/CenterHome/classes`);
+            setUpcomingClasses(resp.data || []);
+        } catch (err) {
+            console.error("Failed to fetch upcoming classes:", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchUpcomingClasses();
+    }, []);
 
     useEffect(() => {
         const fetchSubjects = async () => {
@@ -886,7 +910,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                             <div
                                                 key={idx}
                                                 className={`hero-slide-bg ${idx === currentHeroSlide ? 'active' : ''}`}
-                                                style={{ backgroundImage: `url(${imgUrl})` }}
+                                                style={{ backgroundImage: `url("${imgUrl}")` }}
                                             />
                                         );
                                     })}
@@ -1196,6 +1220,61 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                 ))}
                                             </div>
                                         </div>
+                                    </section>
+                                </div>
+                            );
+
+                        case 'upcoming-classes':
+                            if (upcomingClasses.length === 0 && !editMode) return null;
+                            return (
+                                <div key="upcoming-classes" className="center-container">
+                                    <section className={`center-upcoming-classes ${sectionClass}`}>
+                                        <div className="center-section-badge"><Calendar size={16} /> LỚP HỌC SẮP KHAI GIẢNG</div>
+                                        <h2 className="section-title">Cơ hội học tập mới dành cho bạn</h2>
+                                        <div className="section-title-underline"></div>
+                                        
+                                        <div className="classes-grid">
+                                            {(showAllClasses ? upcomingClasses : upcomingClasses.slice(0, 6)).concat(editMode && upcomingClasses.length === 0 ? [
+                                                { classId: -1, className: 'Lớp học mẫu 1', subjectName: 'Toán học', teacherName: 'Nguyễn Văn A', startDate: new Date().toISOString(), scheduleSummary: 'Thứ 2, 4, 6 (18:00 - 20:00)' },
+                                                { classId: -2, className: 'Lớp học mẫu 2', subjectName: 'Tiếng Anh', teacherName: 'Trần Thị B', startDate: new Date().toISOString(), scheduleSummary: 'Thứ 3, 5, 7 (17:30 - 19:30)' }
+                                            ] : []).map((cls) => (
+                                                <div key={cls.classId} className="class-card-home">
+                                                    <div className="class-card-header">
+                                                        <span className="class-subject-tag">{cls.subjectName || 'Khóa học'}</span>
+                                                        <div className="class-status-dot"></div>
+                                                    </div>
+                                                    <h3 className="home-class-name">{cls.className}</h3>
+                                                    <div className="home-class-info-list">
+                                                        <div className="home-class-info-row">
+                                                            <Users size={14} /> <span>Giáo viên: <b>{cls.teacherName || 'Đang cập nhật'}</b></span>
+                                                        </div>
+                                                        <div className="home-class-info-row">
+                                                            <Calendar size={14} /> <span>Khai giảng: <b>{cls.startDate ? new Date(cls.startDate).toLocaleDateString('vi-VN') : 'Sắp tới'}</b></span>
+                                                        </div>
+                                                        <div className="home-class-info-row">
+                                                            <Clock size={14} /> <span>Lịch học: <i>{cls.scheduleSummary}</i></span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="class-card-footer">
+                                                        <a href="#enrollment" className="class-enroll-link">
+                                                            Đăng ký ngay <ArrowRight size={16} />
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {upcomingClasses.length > 6 && (
+                                            <div className="classes-view-more">
+                                                <button 
+                                                    className="center-btn-view-all"
+                                                    onClick={() => setShowAllClasses(!showAllClasses)}
+                                                >
+                                                    {showAllClasses ? 'Thu gọn' : `Xem tất cả ${upcomingClasses.length} lớp học`}
+                                                    {showAllClasses ? <ChevronUp size={20} /> : <ArrowRight size={20} />}
+                                                </button>
+                                            </div>
+                                        )}
                                     </section>
                                 </div>
                             );

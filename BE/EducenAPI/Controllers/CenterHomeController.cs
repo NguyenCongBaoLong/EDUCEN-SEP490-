@@ -64,5 +64,20 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = errorMsg });
             }
         }
+
+        [HttpGet("classes")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetUpcomingClasses()
+        {
+            try
+            {
+                var result = await _centerHomeService.GetUpcomingClassesAsync();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

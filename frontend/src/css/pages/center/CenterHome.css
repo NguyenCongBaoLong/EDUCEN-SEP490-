@@ -2107,3 +2107,194 @@
 .center-header-enroll:hover {
     background: #e8f0fe;
 }
+/* Upcoming Classes Section - Premium Redesign */
+.center-home .center-upcoming-classes {
+    margin-bottom: 6rem;
+    position: relative;
+}
+
+.center-home .classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.25rem;
+    margin-top: 2.5rem;
+}
+
+.center-home .class-card-home {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+}
+
+.center-home .class-card-home::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--center-primary, #0066FF);
+    opacity: 0.8;
+}
+
+.center-home .class-card-home:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    border-color: var(--center-primary, #0066FF);
+}
+
+.center-home .class-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.center-home .class-subject-tag {
+    background: var(--center-primary-light, rgba(0, 102, 255, 0.1));
+    color: var(--center-primary, #0066FF);
+    padding: 0.35rem 0.85rem;
+    border-radius: 50px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.center-home .class-status-dot {
+    width: 10px;
+    height: 10px;
+    background: #10B981;
+    border-radius: 50%;
+    position: relative;
+}
+
+.center-home .class-status-dot::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 2px solid #10B981;
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+.center-home .home-class-name {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.center-home .home-class-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-bottom: 1.5rem;
+}
+
+.center-home .home-class-info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    font-size: 0.85rem;
+    transition: color 0.3s;
+}
+
+.center-home .class-card-home:hover .home-class-info-row {
+    color: #475569;
+}
+
+.center-home .home-class-info-row svg {
+    color: var(--center-primary, #0066FF);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.center-home .home-class-info-row b {
+    color: #334155;
+    font-weight: 600;
+}
+
+.center-home .class-card-footer {
+    margin-top: auto;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.center-home .class-enroll-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--center-primary, #0066FF);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    transition: all 0.3s;
+}
+
+.center-home .class-enroll-link:hover {
+    gap: 1rem;
+    letter-spacing: 0.5px;
+}
+
+/* View all button */
+.center-home .classes-view-more {
+    margin-top: 4rem;
+    display: flex;
+    justify-content: center;
+}
+
+.center-home .center-btn-view-all {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: white;
+    color: #334155;
+    border: 2px solid #e2e8f0;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.center-home .center-btn-view-all:hover {
+    background: var(--center-primary, #0066FF);
+    color: white;
+    border-color: var(--center-primary, #0066FF);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 102, 255, 0.2);
+}
+
+.center-home .center-btn-view-all svg {
+    transition: transform 0.3s;
+}
+
+.center-home .center-btn-view-all:hover svg {
+    transform: translateX(5px);
+}

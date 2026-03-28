@@ -106,6 +106,59 @@ namespace EducenAPI.Services
             return response;
         }
 
+        public async Task<IEnumerable<HomeClassDto>> GetUpcomingClassesAsync()
+        {
+            var now = DateTime.Now;
+            var classes = await _context.Classes
+                .Include(c => c.Subject)
+                .Include(c => c.Teacher)
+                    .ThenInclude(t => t!.TeacherNavigation)
+                .Include(c => c.Schedules)
+                .Include(c => c.Students)
+                .Where(c => c.Status != "Completed" && c.Status != "Cancelled")
+                .Where(c => c.EndDate >= now)
+                .OrderBy(c => c.StartDate)
+                .ToListAsync();
+
+            return classes.Select(c => new HomeClassDto
+            {
+                ClassId = c.ClassId,
+                ClassName = c.ClassName ?? "",
+                SubjectName = c.Subject?.SubjectName,
+                TeacherName = c.Teacher?.TeacherNavigation?.FullName,
+                StartDate = c.StartDate,
+                Status = c.Status,
+                StudentCount = c.Students.Count,
+                ScheduleSummary = FormatScheduleSummary(c.Schedules)
+            });
+        }
+
+        private string FormatScheduleSummary(ICollection<Schedule> schedules)
+        {
+            if (schedules == null || !schedules.Any()) return "Chưa cập nhật";
+
+            var dayNames = new[] { "Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7" };
+            
+            var groupedSchedules = schedules
+                .GroupBy(s => new { s.StartTime, s.EndTime })
+                .Select(g => {
+                    var days = string.Join(", ", g.OrderBy(s => s.DayOfWeek).Select(s => dayNames[s.DayOfWeek]));
+                    return $"{days} ({g.Key.StartTime:HH:mm} - {g.Key.EndTime:HH:mm})";
+                });
+
+            return string.Join("; ", groupedSchedules);
+        }
+
+        private string StripBaseUrl(string? url, string baseUrl)
+        {
+            if (string.IsNullOrEmpty(url)) return "";
+            if (url.StartsWith(baseUrl))
+            {
+                return url.Substring(baseUrl.Length).TrimStart('/');
+            }
+            return url;
+        }
+
         public async Task<CenterHomeResponseDto?> SaveCenterHomeAsync(SaveCenterHomeDto dto, string baseUrl)
         {
             var profile = await _context.CenterProfiles
@@ -130,7 +183,9 @@ namespace EducenAPI.Services
             }
 
             // --- 1. LOGO & BRANDING ---
-            string finalLogoUrl = dto.ExistingLogoUrl ?? profile.LogoUrl;
+            string finalLogoUrl = StripBaseUrl(dto.ExistingLogoUrl, baseUrl);
+            if (string.IsNullOrEmpty(finalLogoUrl)) finalLogoUrl = profile.LogoUrl;
+
             if (dto.LogoFile != null)
             {
                 var col = new FormFileCollection();
@@ -187,7 +242,7 @@ namespace EducenAPI.Services
                 for (int i = 0; i < dto.HeroImages.Count; i++)
                 {
                     var hDto = dto.HeroImages[i];
-                    string imgUrl = hDto.ExistingImageUrl ?? "";
+                    string imgUrl = StripBaseUrl(hDto.ExistingImageUrl, baseUrl);
                     if (hDto.FileIndex.HasValue && hDto.FileIndex < heroUploads.Count)
                     {
                         imgUrl = heroUploads[hDto.FileIndex.Value];
@@ -210,7 +265,10 @@ namespace EducenAPI.Services
 
             // --- 4. CENTER IMAGES (GALLERY) ---
             var allImageUrls = new List<string>();
-            if (dto.ExistingImageUrls != null) allImageUrls.AddRange(dto.ExistingImageUrls);
+            if (dto.ExistingImageUrls != null) 
+            {
+                allImageUrls.AddRange(dto.ExistingImageUrls.Select(u => StripBaseUrl(u, baseUrl)));
+            }
             if (dto.ImageFiles != null && dto.ImageFiles.Count > 0)
             {
                 var col = new FormFileCollection();
@@ -252,7 +310,7 @@ namespace EducenAPI.Services
                 for (int i = 0; i < dto.Staffs.Count; i++)
                 {
                     var sDto = dto.Staffs[i];
-                    string avatarUrl = sDto.ExistingAvatarUrl ?? "";
+                    string avatarUrl = StripBaseUrl(sDto.ExistingAvatarUrl, baseUrl);
                     if (sDto.FileIndex.HasValue && sDto.FileIndex < staffUploads.Count)
                     {
                         avatarUrl = staffUploads[sDto.FileIndex.Value];
