@@ -12,6 +12,7 @@ namespace EducenAPI.Models
         [Required]
         public int SenderId { get; set; }
 
+        public int? ReceiverId { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -32,6 +33,11 @@ namespace EducenAPI.Models
         // Navigation
         [ForeignKey("SenderId")]
         public User Sender { get; set; }
+
+        // Navigation
+        [ForeignKey("ReceiverId")]
+        public User Receiver { get; set; }
+
 
     }
 }

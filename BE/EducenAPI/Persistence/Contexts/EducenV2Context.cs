@@ -285,6 +285,20 @@ public partial class EducenV2Context : DbContext
         .WithMany()
         .HasForeignKey(m => m.UserId)
         .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<SupportRequest>(enttiy =>
+        {
+            enttiy.HasOne(e => e.Sender)
+                .WithMany(e => e.SentRequests)
+                .HasForeignKey(e => e.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            enttiy.HasOne(e => e.Receiver)
+                .WithMany(e => e.ReceiveRequests)
+                .HasForeignKey(e => e.ReceiverId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)
