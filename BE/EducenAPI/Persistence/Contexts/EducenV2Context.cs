@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using EducenAPI.Services;
 using EducenAPI.Models;
 
@@ -52,6 +53,10 @@ public partial class EducenV2Context : DbContext
     public DbSet<TuitionInvoiceItem> TuitionInvoiceItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
 
+    // === Payment Records (Học phí - lưu trong Tenant DB) ===
+    public DbSet<PaymentRecord> PaymentRecords { get; set; }
+    public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+
     // ================================
     // MODEL CONFIGURATION
     // ================================
@@ -59,13 +64,23 @@ public partial class EducenV2Context : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("...");
+            // Đọc connection string từ appsettings.json (chỉ dùng khi chạy migration, không qua DI)
+            var config = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            var connectionString = config.GetConnectionString("DefaultTenantConnection");
+            optionsBuilder.UseSqlServer(connectionString);
         }
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
+        // PaymentRecord trong Tenant DB không có bảng Tenants → bỏ navigation property
+        modelBuilder.Entity<PaymentRecord>()
+            .Ignore(p => p.Tenant);
 
         ConfigureEntities(modelBuilder);
         SeedRoles(modelBuilder);

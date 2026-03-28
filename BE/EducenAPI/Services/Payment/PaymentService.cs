@@ -35,44 +35,55 @@ namespace EducenAPI.Services.Payment
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Học phí → lưu vào Tenant DB (EducenV2)
+        /// Gói dịch vụ → lưu vào Admin DB (EducenAdmin)
+        /// </summary>
+        private DbContext GetTargetDb(string transactionType)
+        {
+            return transactionType == "Tuition" ? _tenantDbContext : _adminDbContext;
+        }
+
         public async Task<PaymentResult> CreatePaymentAsync(CreatePaymentDto dto)
         {
             try
             {
-                // Ensure tenant exists in Admin DB
-                // For "default-tenant", auto-create a placeholder record if it doesn't exist
-                // (FK constraint on PaymentRecords.TenantId requires a valid Tenants record)
-                var tenant = await _adminDbContext.Tenants.FindAsync(dto.TenantId);
-                if (tenant == null)
+                var targetDb = GetTargetDb(dto.TransactionType);
+
+                // Nếu là Subscription → kiểm tra tenant trong Admin DB
+                if (dto.TransactionType != "Tuition")
                 {
-                    if (dto.TenantId == "default-tenant")
+                    var tenant = await _adminDbContext.Tenants.FindAsync(dto.TenantId);
+                    if (tenant == null)
                     {
-                        // Create a minimal tenant record for the default database
-                        tenant = new Tenant
+                        if (dto.TenantId == "default-tenant")
                         {
-                            TenantId = "default-tenant",
-                            TenantName = "Default Center",
-                            Username = "default",
-                            Password = "N/A",
-                            SubDomain = "default",
-                            ConnectionString = _configuration.GetConnectionString("DefaultTenantConnection")
-                                ?? "Server=localhost;Database=EducenV2;Trusted_Connection=True;TrustServerCertificate=True;",
-                            IsActive = true
-                        };
-                        _adminDbContext.Tenants.Add(tenant);
-                        await _adminDbContext.SaveChangesAsync();
-                    }
-                    else
-                    {
-                        return new PaymentResult
+                            tenant = new Tenant
+                            {
+                                TenantId = "default-tenant",
+                                TenantName = "Default Center",
+                                Username = "default",
+                                Password = "N/A",
+                                SubDomain = "default",
+                                ConnectionString = _configuration.GetConnectionString("DefaultTenantConnection")
+                                    ?? "Server=localhost;Database=EducenV2;Trusted_Connection=True;TrustServerCertificate=True;",
+                                IsActive = true
+                            };
+                            _adminDbContext.Tenants.Add(tenant);
+                            await _adminDbContext.SaveChangesAsync();
+                        }
+                        else
                         {
-                            Success = false,
-                            ErrorMessage = $"Tenant with ID '{dto.TenantId}' not found"
-                        };
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = $"Tenant with ID '{dto.TenantId}' not found"
+                            };
+                        }
                     }
                 }
 
-                // Create PaymentRecord
+                // Tạo PaymentRecord trong DB đích
                 var paymentRecord = new PaymentRecord
                 {
                     PaymentId = Guid.NewGuid().ToString(),
@@ -87,10 +98,10 @@ namespace EducenAPI.Services.Payment
                     PaidBy = dto.PaidBy
                 };
 
-                _adminDbContext.PaymentRecords.Add(paymentRecord);
-                await _adminDbContext.SaveChangesAsync();
+                targetDb.Set<PaymentRecord>().Add(paymentRecord);
+                await targetDb.SaveChangesAsync();
 
-                // Create PaymentTransaction
+                // Tạo PaymentTransaction trong cùng DB
                 var transaction = new PaymentTransaction
                 {
                     PaymentRecordId = paymentRecord.PaymentId,
@@ -100,10 +111,10 @@ namespace EducenAPI.Services.Payment
                     CreatedAt = DateTime.UtcNow
                 };
 
-                _adminDbContext.PaymentTransactions.Add(transaction);
-                await _adminDbContext.SaveChangesAsync();
+                targetDb.Set<PaymentTransaction>().Add(transaction);
+                await targetDb.SaveChangesAsync();
 
-                // Call gateway to create payment
+                // Gọi gateway tạo thanh toán
                 var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
                 var gatewayRequest = new CreatePaymentRequest
                 {
@@ -121,10 +132,9 @@ namespace EducenAPI.Services.Payment
 
                 if (!gatewayResponse.Success)
                 {
-                    // Update transaction status to failed
                     transaction.Status = "Failed";
                     transaction.ErrorMessage = gatewayResponse.ErrorMessage;
-                    await _adminDbContext.SaveChangesAsync();
+                    await targetDb.SaveChangesAsync();
 
                     return new PaymentResult
                     {
@@ -134,9 +144,9 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
-                // Update transaction with gateway info
+                // Cập nhật gateway transaction ID
                 transaction.GatewayTransactionId = gatewayResponse.TransactionId;
-                await _adminDbContext.SaveChangesAsync();
+                await targetDb.SaveChangesAsync();
 
                 return new PaymentResult
                 {
@@ -172,12 +182,31 @@ namespace EducenAPI.Services.Payment
                     return verification;
                 }
 
-                // Find transaction
-                var transaction = await _adminDbContext.PaymentTransactions
+                // Tìm transaction trong CẢ 2 DB (vì không biết TransactionType từ callback)
+                PaymentTransaction? transaction = null;
+                DbContext? targetDb = null;
+
+                // Thử Tenant DB trước (Tuition - phổ biến hơn)
+                transaction = await _tenantDbContext.PaymentTransactions
                     .Include(t => t.PaymentRecord)
                     .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
 
-                if (transaction == null)
+                if (transaction != null)
+                {
+                    targetDb = _tenantDbContext;
+                }
+                else
+                {
+                    // Thử Admin DB (Subscription)
+                    transaction = await _adminDbContext.PaymentTransactions
+                        .Include(t => t.PaymentRecord)
+                        .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
+
+                    if (transaction != null)
+                        targetDb = _adminDbContext;
+                }
+
+                if (transaction == null || targetDb == null)
                 {
                     _logger.LogError("Transaction not found for OrderId: {OrderId}", verification.OrderId);
                     return new PaymentVerificationResult
@@ -187,7 +216,7 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
-                // Idempotency check: nếu callback đã được xử lý trước đó, trả về kết quả hiện có
+                // Idempotency check
                 if (transaction.Status == "Success" || transaction.Status == "Failed")
                 {
                     _logger.LogInformation("Callback already processed for OrderId: {OrderId}, Status: {Status}. Skipping.",
@@ -202,11 +231,9 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
-                // Update transaction
+                // Cập nhật transaction
                 transaction.GatewayResponse = System.Text.Json.JsonSerializer.Serialize(callbackData);
                 transaction.CompletedAt = DateTime.UtcNow;
-
-                // Update payment record
                 transaction.PaymentRecord.PaymentDate = DateTime.UtcNow;
 
                 if (verification.IsSuccessful)
@@ -230,10 +257,12 @@ namespace EducenAPI.Services.Payment
                     transaction.ErrorMessage = verification.Message;
                 }
 
-                await _adminDbContext.SaveChangesAsync();
+                await targetDb.SaveChangesAsync();
 
-                _logger.LogInformation("Payment {PaymentId} processed with status: {Status}",
-                    verification.OrderId, verification.IsSuccessful ? "Success" : "Failed");
+                _logger.LogInformation("Payment {PaymentId} processed in {DbType} with status: {Status}",
+                    verification.OrderId,
+                    targetDb == _tenantDbContext ? "TenantDB" : "AdminDB",
+                    verification.IsSuccessful ? "Success" : "Failed");
 
                 return verification;
             }
@@ -250,6 +279,14 @@ namespace EducenAPI.Services.Payment
 
         public async Task<PaymentTransaction?> GetTransactionAsync(string transactionId)
         {
+            // Tìm trong Tenant DB trước
+            var transaction = await _tenantDbContext.PaymentTransactions
+                .Include(t => t.PaymentRecord)
+                .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+
+            if (transaction != null) return transaction;
+
+            // Tìm trong Admin DB
             return await _adminDbContext.PaymentTransactions
                 .Include(t => t.PaymentRecord)
                 .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
@@ -257,6 +294,15 @@ namespace EducenAPI.Services.Payment
 
         public async Task<List<PaymentTransaction>> GetTransactionsByPaymentIdAsync(string paymentRecordId)
         {
+            // Tìm trong Tenant DB trước
+            var tenantTransactions = await _tenantDbContext.PaymentTransactions
+                .Where(t => t.PaymentRecordId == paymentRecordId)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            if (tenantTransactions.Any()) return tenantTransactions;
+
+            // Tìm trong Admin DB
             return await _adminDbContext.PaymentTransactions
                 .Where(t => t.PaymentRecordId == paymentRecordId)
                 .OrderByDescending(t => t.CreatedAt)
@@ -265,7 +311,6 @@ namespace EducenAPI.Services.Payment
 
         /// <summary>
         /// Cập nhật TuitionInvoice sau khi thanh toán học phí thành công.
-        /// IgnoreQueryFilters vì IPN callback từ VNPay không có tenant header.
         /// </summary>
         private async Task UpdateTuitionInvoiceAsync(string invoiceId, string paymentRecordId)
         {
@@ -300,7 +345,6 @@ namespace EducenAPI.Services.Payment
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update TuitionInvoice {InvoiceId} after payment", invoiceId);
-                // Không throw — payment đã thành công, invoice update có thể retry sau
             }
         }
     }

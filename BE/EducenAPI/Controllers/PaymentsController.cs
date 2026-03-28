@@ -156,6 +156,42 @@ namespace EducenAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Frontend confirm thanh toán sau khi VNPay redirect về.
+        /// Dùng khi IPN (server-to-server) chưa đến (ví dụ: ngrok expired).
+        /// </summary>
+        [HttpPost("confirm")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmPayment([FromBody] Dictionary<string, string> vnpayParams)
+        {
+            try
+            {
+                if (vnpayParams == null || !vnpayParams.ContainsKey("vnp_TxnRef"))
+                    return BadRequest(new { message = "Missing VNPay parameters" });
+
+                _logger.LogInformation("Frontend confirm payment received: {Params}",
+                    System.Text.Json.JsonSerializer.Serialize(vnpayParams));
+
+                var result = await _paymentService.ProcessCallbackAsync("VNPay", vnpayParams);
+
+                if (!result.IsSuccessful)
+                    return Ok(new { success = false, message = result.Message });
+
+                return Ok(new
+                {
+                    success = true,
+                    orderId = result.OrderId,
+                    amount = result.Amount,
+                    status = "Paid"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming payment from frontend");
+                return StatusCode(500, new { message = "Internal server error" });
+            }
+        }
+
         private string GetClientIpAddress()
         {
             var forwardedFor = Request.Headers["X-Forwarded-For"].FirstOrDefault();

@@ -51,22 +51,36 @@ const PaymentResult = () => {
         }
 
         try {
-            if (isDirectVNPayRedirect) {
-                // Gọi backend verify ngay (không cần chờ IPN)
-                const result = await paymentService.verifyPayment(paymentOrderId);
-                setPaymentInfo(result);
+            if (isDirectVNPayRedirect && vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
+                // VNPay báo thành công → gửi toàn bộ vnp_ params lên backend để confirm
+                const vnpParams = {};
+                searchParams.forEach((value, key) => {
+                    if (key.startsWith('vnp_')) {
+                        vnpParams[key] = value;
+                    }
+                });
 
-                if (result.status === 'Paid' || result.status === 'Success') {
+                try {
+                    const confirmResult = await paymentService.confirmPayment(vnpParams);
+                    if (confirmResult.success) {
+                        setPaymentInfo({ amount: confirmResult.amount, gatewayType: 'VNPay', status: 'Paid' });
+                        setStatus('success');
+                        toast.success('Thanh toán thành công!');
+                    } else {
+                        // Confirm fail nhưng VNPay báo thành công → vẫn hiển thị success
+                        setPaymentInfo({ amount: confirmResult.amount, gatewayType: 'VNPay' });
+                        setStatus('success');
+                        toast.success('Thanh toán thành công!');
+                    }
+                } catch {
+                    // Backend confirm fail → vẫn hiển thị success (VNPay đã confirm)
                     setStatus('success');
                     toast.success('Thanh toán thành công!');
-                } else if (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
-                    // VNPay báo thành công nhưng DB chưa update (IPN chưa đến)
-                    setStatus('success');
-                    toast.success('Thanh toán thành công!');
-                } else {
-                    setStatus('failed');
-                    toast.error('Thanh toán thất bại');
                 }
+            } else if (isDirectVNPayRedirect) {
+                // VNPay redirect nhưng không thành công
+                setStatus('failed');
+                toast.error('Thanh toán thất bại');
             } else {
                 // Redirect từ backend callback (có orderId param)
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -82,7 +96,6 @@ const PaymentResult = () => {
                 }
             }
         } catch (error) {
-            // Nếu verify API fail nhưng VNPay báo thành công
             if (isDirectVNPayRedirect && vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
                 setStatus('success');
                 toast.success('Thanh toán thành công!');

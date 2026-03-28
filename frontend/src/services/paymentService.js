@@ -13,6 +13,13 @@ const paymentService = {
         return response.data;
     },
 
+    // Frontend confirm thanh toán sau khi VNPay redirect về
+    // (dùng khi IPN chưa đến backend, ví dụ ngrok expired)
+    confirmPayment: async (vnpayParams) => {
+        const response = await api.post('/payments/confirm', vnpayParams);
+        return response.data;
+    },
+
     // Các gateway URLs (được sử dụng khi redirect)
     getVNPayReturnUrl: () => {
         return `${window.location.origin}/payment/result`;
