@@ -3,7 +3,7 @@ import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
     CheckCircle, AlertCircle, Info, ChevronRight, BookOpen,
     TrendingUp, MessageSquare, X, Inbox, Star, ShieldAlert,
-    MessageCircle, ArrowLeft, Mail, MailOpen
+    MessageCircle, ArrowLeft, Mail, MailOpen, HardDrive
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import {
@@ -127,7 +127,11 @@ const AdminDashboard = () => {
         totalClasses: 0,
         upcomingClasses: 0,
         totalStaff: 0,
-        activeStaff: 0
+        activeStaff: 0,
+        currentUsers: 0,
+        maxUsers: 0,
+        currentStorageMB: 0,
+        maxStorageMB: 0
     },
     studentRegistrationChart: [],
     studentsBySubject: [],
@@ -262,6 +266,49 @@ const AdminDashboard = () => {
                             </div>
                         );
                     })}
+                </div>
+
+                {/* ── Resource Usage ── */}
+                <div className="kpi-grid" style={{ marginTop: '1rem' }}>
+                    {/* Users Usage */}
+                    <div className="kpi-card kpi-blue" style={{ flex: 1 }}>
+                        <div className="kpi-icon-wrap"><Users size={22} /></div>
+                        <div className="kpi-info" style={{ flex: 1 }}>
+                            <div className="kpi-value">{loading ? '...' : `${overview.currentUsers || 0} / ${overview.maxUsers || 0}`}</div>
+                            <div className="kpi-label">Người Dùng</div>
+                            <div style={{
+                                marginTop: '8px', height: '8px', borderRadius: '4px',
+                                background: '#e5e7eb', overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    height: '100%', borderRadius: '4px', transition: 'width 0.5s',
+                                    width: `${loading ? 0 : Math.min(((overview.currentUsers || 0) / (overview.maxUsers || 1)) * 100, 100)}%`,
+                                    background: ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.9 ? '#ef4444' :
+                                        ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.7 ? '#f59e0b' : '#3b82f6'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Storage Usage */}
+                    <div className="kpi-card kpi-purple" style={{ flex: 1 }}>
+                        <div className="kpi-icon-wrap"><HardDrive size={22} /></div>
+                        <div className="kpi-info" style={{ flex: 1 }}>
+                            <div className="kpi-value">{loading ? '...' : `${(overview.currentStorageMB || 0).toFixed(1)} / ${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}</div>
+                            <div className="kpi-label">Dung Lượng</div>
+                            <div style={{
+                                marginTop: '8px', height: '8px', borderRadius: '4px',
+                                background: '#e5e7eb', overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    height: '100%', borderRadius: '4px', transition: 'width 0.5s',
+                                    width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / ((overview.maxStorageMB || 1))) * 100, 100)}%`,
+                                    background: ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.9 ? '#ef4444' :
+                                        ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.7 ? '#f59e0b' : '#8b5cf6'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── Content Grid ── */}
