@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, CreditCard, PackageOpen } from 'lucide-react';
+import { Check, CreditCard, PackageOpen, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -12,6 +12,8 @@ const SubscriptionPlans = () => {
     const [loading, setLoading] = useState(true);
     const [payingPlanId, setPayingPlanId] = useState(null);
     const [activeSubscription, setActiveSubscription] = useState(null);
+    const [renewTarget, setRenewTarget] = useState(null);
+    const [renewMonths, setRenewMonths] = useState(1);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -41,7 +43,7 @@ const SubscriptionPlans = () => {
         fetchPlans();
     }, []);
 
-    const handlePay = async (plan) => {
+    const handlePay = async (plan, months = 1) => {
         const tenantId = user?.tenantId || localStorage.getItem('tenantId');
         if (!tenantId) {
             toast.error('Không tìm thấy thông tin trung tâm');
@@ -50,15 +52,16 @@ const SubscriptionPlans = () => {
 
         setPayingPlanId(plan.planId);
         try {
+            const normalizedMonths = Math.max(1, Number(months) || 1);
             const paymentData = {
                 tenantId,
-                amount: plan.price,
+                amount: plan.price * normalizedMonths,
                 gatewayType: 'VNPay',
                 transactionType: 'Subscription',
                 referenceId: plan.planId,
-                description: `Thanh toán gói ${plan.planName}`,
+                description: `Thanh toán gói ${plan.planName} (${normalizedMonths} tháng)`,
                 returnUrl: paymentService.getVNPayReturnUrl(),
-                subscriptionMonths: 1,
+                subscriptionMonths: normalizedMonths,
             };
 
             const result = await paymentService.createPayment(paymentData);
@@ -75,6 +78,11 @@ const SubscriptionPlans = () => {
         }
     };
 
+    const openRenewModal = (plan) => {
+        setRenewTarget(plan);
+        setRenewMonths(1);
+    };
+
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(price);
     const formatDate = (value) => new Date(value).toLocaleDateString('vi-VN');
 
@@ -85,7 +93,7 @@ const SubscriptionPlans = () => {
                 <header className="subscription-header">
                     <div>
                         <h1>Chọn gói dịch vụ</h1>
-                        <p>Chọn gói phù hợp và thanh toán qua VNPay để kích hoạt.</p>
+                        <p>Có thể gia hạn gói hiện tại hoặc chọn gói mới để thanh toán qua VNPay.</p>
                     </div>
                 </header>
 
@@ -104,7 +112,7 @@ const SubscriptionPlans = () => {
                                 : [];
                             const isActivePlan = activeSubscription?.planId === plan.planId;
                             const isPaying = payingPlanId === plan.planId;
-                            const disablePay = isPaying || isActivePlan;
+                            const disablePay = isPaying || !plan.isActive;
 
                             return (
                                 <div key={plan.planId} className="subscription-card">
@@ -122,6 +130,9 @@ const SubscriptionPlans = () => {
                                         {isActivePlan && activeSubscription?.endDate && (
                                             <div className="subscription-status">Hết hạn: {formatDate(activeSubscription.endDate)}</div>
                                         )}
+                                        {isActivePlan && !activeSubscription?.endDate && (
+                                            <div className="subscription-status">Đang hoạt động</div>
+                                        )}
                                     </div>
 
                                     <div className="subscription-metrics">
@@ -137,14 +148,14 @@ const SubscriptionPlans = () => {
 
                                     <button
                                         className={`subscription-pay-btn${isActivePlan ? ' is-active' : ''}`}
-                                        onClick={() => handlePay(plan)}
+                                        onClick={() => (isActivePlan ? openRenewModal(plan) : handlePay(plan, 1))}
                                         disabled={disablePay}
                                     >
                                         <CreditCard size={16} />
                                         {isPaying
                                             ? 'Đang chuyển đến VNPay...'
                                             : isActivePlan
-                                                ? 'Đã kích hoạt'
+                                                ? 'Gia hạn gói này'
                                                 : 'Thanh toán gói này'}
                                     </button>
 
@@ -164,6 +175,57 @@ const SubscriptionPlans = () => {
                     </div>
                 )}
             </main>
+
+            {renewTarget && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => !payingPlanId && setRenewTarget(null)} />
+                    <div className="subscription-modal">
+                        <div className="subscription-modal-header">
+                            <h2>Gia hạn gói</h2>
+                            <button className="subscription-modal-close" onClick={() => !payingPlanId && setRenewTarget(null)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="subscription-modal-body">
+                            <p>Chọn số tháng muốn gia hạn cho gói <strong>{renewTarget.planName}</strong>.</p>
+                            <div className="subscription-modal-field">
+                                <label>Số tháng</label>
+                                <select
+                                    value={renewMonths}
+                                    onChange={(event) => setRenewMonths(event.target.value)}
+                                >
+                                    {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
+                                        <option key={month} value={month}>{month} tháng</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="subscription-modal-summary">
+                                <span>Tổng thanh toán:</span>
+                                <strong>{formatPrice((renewTarget.price || 0) * Number(renewMonths || 1))} VNĐ</strong>
+                            </div>
+                        </div>
+                        <div className="subscription-modal-actions">
+                            <button
+                                className="subscription-modal-cancel"
+                                onClick={() => setRenewTarget(null)}
+                                disabled={!!payingPlanId}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                className="subscription-modal-submit"
+                                onClick={() => {
+                                    setRenewTarget(null);
+                                    handlePay(renewTarget, renewMonths);
+                                }}
+                                disabled={!!payingPlanId}
+                            >
+                                {payingPlanId === renewTarget.planId ? 'Đang xử lý...' : 'Thanh toán'}
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
