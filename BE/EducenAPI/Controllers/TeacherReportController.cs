@@ -1,4 +1,5 @@
 ﻿using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
@@ -15,6 +16,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("{classId}")]
+        [Authorize(Roles = "Teacher,Assistant")]
         public async Task<IActionResult> GetClassReport(int classId)
         {
             var data = await _reportService.GetReportByClassAsync(classId);

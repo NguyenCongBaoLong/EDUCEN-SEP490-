@@ -1106,7 +1106,7 @@ namespace EducenAPI.Services
             }).ToList();
         }
 
-        public async Task<IEnumerable<ClassDto>> GetClassesByTeacherIdAsync(int teacherId)
+        public async Task<IEnumerable<ClassDto>> GetClassesByTeacherIdAsync(int userId)
         {
             await UpdateExpiredClassesAsync();
 
@@ -1121,7 +1121,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Students)
                 .Include(c => c.Schedules)
                     .ThenInclude(s => s.Room)
-                .Where(c => c.TeacherId == teacherId)
+                .Where(c => c.TeacherId == userId || c.AssistantId == userId)
                 .Select(c => new ClassDto
                 {
                     ClassId = c.ClassId,

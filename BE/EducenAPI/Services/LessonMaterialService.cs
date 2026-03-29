@@ -19,6 +19,52 @@ namespace EducenAPI.Services
             _fileService = fileService;
             _userServiceContext = userServiceContext;
         }
+
+        private void CreateResourceFileForMaterial(LessonMaterial material, string fileName, string contentType, string extension, string filePath, long fileSize)
+        {
+            var rf = new ResourceFile
+            {
+                FileName = fileName,
+                ContentType = contentType,
+                Extension = extension,
+                FilePath = filePath,
+                FileSize = fileSize,
+                LessonMaterialId = material.MaterialId,
+            };
+            _context.ResourceFiles.Add(rf);
+        }
+
+        private async Task CleanupFileAsync(string? fileUrl)
+        {
+            if (string.IsNullOrEmpty(fileUrl)) return;
+
+            var otherRefs = await _context.ResourceFiles
+                .AnyAsync(rf => rf.FilePath == fileUrl);
+
+            if (!otherRefs)
+            {
+                string normalizedPath = fileUrl.Replace("/", Path.DirectorySeparatorChar.ToString())
+                                              .Replace("\\", Path.DirectorySeparatorChar.ToString());
+                if (!normalizedPath.StartsWith("wwwroot" + Path.DirectorySeparatorChar))
+                    normalizedPath = Path.Combine("wwwroot", normalizedPath);
+
+                if (File.Exists(normalizedPath))
+                    File.Delete(normalizedPath);
+            }
+        }
+
+        private async Task DeleteResourceFilesForMaterialAsync(int materialId)
+        {
+            var resourceFiles = await _context.ResourceFiles
+                .Where(rf => rf.LessonMaterialId == materialId)
+                .ToListAsync();
+
+            foreach (var rf in resourceFiles)
+            {
+                await CleanupFileAsync(rf.FilePath);
+                _context.ResourceFiles.Remove(rf);
+            }
+        }
         public async Task<MaterialResponseDto> SaveMaterials(SaveMaterialDto dto, string baseUrl)
         {
             if (dto.SessionId.HasValue)
@@ -33,6 +79,9 @@ namespace EducenAPI.Services
             string? fileUrl = null;
             string? contentType = null;
             var userId = _userServiceContext.GetUserId();
+
+            FileUploadDto? uploadedFileDto = null;
+
             if (dto.File != null)
             {
                 if (dto.File.Length == 0)
@@ -64,11 +113,11 @@ namespace EducenAPI.Services
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
-                var uploadedFile = uploadedFiles.FirstOrDefault();
-                if (uploadedFile != null)
+                uploadedFileDto = uploadedFiles.FirstOrDefault();
+                if (uploadedFileDto != null)
                 {
-                    fileUrl = uploadedFile.FilePath;
-                    contentType = uploadedFile.ContentType;
+                    fileUrl = uploadedFileDto.FilePath;
+                    contentType = uploadedFileDto.ContentType;
                 }
             }
 
@@ -87,9 +136,19 @@ namespace EducenAPI.Services
                 GradeId = dto.GradeId
             };
             _context.LessonMaterials.Add(material);
+            await _context.SaveChangesAsync();
 
-            if (dto.SaveToLibrary && dto.SessionId.HasValue)
-            // Save to library if the same original filename doesn't already exist
+            // Create ResourceFile record if file was uploaded
+            if (uploadedFileDto != null)
+            {
+                CreateResourceFileForMaterial(material,
+                    uploadedFileDto.FileName,
+                    uploadedFileDto.ContentType,
+                    uploadedFileDto.Extension,
+                    uploadedFileDto.FilePath,
+                    uploadedFileDto.FileSize ?? 0);
+            }
+
             if (dto.SaveToLibrary && dto.SessionId.HasValue)
             {
                 var existsInLib = await _context.LessonMaterials
@@ -108,9 +167,21 @@ namespace EducenAPI.Services
                         GradeId = material.GradeId
                     };
                     _context.LessonMaterials.Add(libraryMaterial);
+                    await _context.SaveChangesAsync();
+
+                    // Create ResourceFile for library copy (same physical file)
+                    if (uploadedFileDto != null)
+                    {
+                        CreateResourceFileForMaterial(libraryMaterial,
+                            uploadedFileDto.FileName,
+                            uploadedFileDto.ContentType,
+                            uploadedFileDto.Extension,
+                            uploadedFileDto.FilePath,
+                            uploadedFileDto.FileSize ?? 0);
+                    }
                 }
             }
-            await _context.SaveChangesAsync();
+
             return MapToResponseDto(material, baseUrl);
         }
 
@@ -137,6 +208,9 @@ namespace EducenAPI.Services
             if (material == null)
                 throw new Exception("Material not found");
 
+            FileUploadDto? uploadedFileDto = null;
+            string? oldFileUrl = material.FileUrl;
+
             if (dto.File != null)
             {
                 if (dto.File.Length == 0)
@@ -159,11 +233,20 @@ namespace EducenAPI.Services
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
-                var uploadedFile = uploadedFiles.FirstOrDefault();
-                if (uploadedFile != null)
+                uploadedFileDto = uploadedFiles.FirstOrDefault();
+                if (uploadedFileDto != null)
                 {
-                    material.FileUrl = uploadedFile.FilePath;
-                    material.ContentType = uploadedFile.ContentType;
+                    material.FileUrl = uploadedFileDto.FilePath;
+                    material.ContentType = uploadedFileDto.ContentType;
+                }
+
+                // Delete old ResourceFile records for this material
+                var oldResourceFiles = await _context.ResourceFiles
+                    .Where(rf => rf.LessonMaterialId == id)
+                    .ToListAsync();
+                foreach (var rf in oldResourceFiles)
+                {
+                    _context.ResourceFiles.Remove(rf);
                 }
             }
 
@@ -195,6 +278,24 @@ namespace EducenAPI.Services
             }
 
             await _context.SaveChangesAsync();
+
+            // Create ResourceFile record if new file was uploaded
+            if (uploadedFileDto != null)
+            {
+                CreateResourceFileForMaterial(material,
+                    uploadedFileDto.FileName,
+                    uploadedFileDto.ContentType,
+                    uploadedFileDto.Extension,
+                    uploadedFileDto.FilePath,
+                    uploadedFileDto.FileSize ?? 0);
+            }
+
+            // Clean up old physical file if no other ResourceFile references it
+            if (dto.File != null && !string.IsNullOrEmpty(oldFileUrl))
+            {
+                await CleanupFileAsync(oldFileUrl);
+            }
+
             return MapToResponseDto(material, baseUrl);
         }
 
@@ -246,10 +347,36 @@ namespace EducenAPI.Services
             if (uploadedFile == null)
                 throw new Exception("Upload file failed");
 
+            string? oldFileUrl = material.FileUrl;
+
             material.FileUrl = uploadedFile.FilePath;
             material.ContentType = uploadedFile.ContentType;
 
+            // Delete old ResourceFile records for this material
+            var oldResourceFiles = await _context.ResourceFiles
+                .Where(rf => rf.LessonMaterialId == dto.MaterialId)
+                .ToListAsync();
+            foreach (var rf in oldResourceFiles)
+            {
+                _context.ResourceFiles.Remove(rf);
+            }
+
             await _context.SaveChangesAsync();
+
+            // Create new ResourceFile record
+            CreateResourceFileForMaterial(material,
+                uploadedFile.FileName,
+                uploadedFile.ContentType,
+                uploadedFile.Extension,
+                uploadedFile.FilePath,
+                uploadedFile.FileSize ?? 0);
+            await _context.SaveChangesAsync();
+
+            // Clean up old physical file if no other ResourceFile references it
+            if (!string.IsNullOrEmpty(oldFileUrl))
+            {
+                await CleanupFileAsync(oldFileUrl);
+            }
 
             return material;
         }
@@ -329,6 +456,23 @@ namespace EducenAPI.Services
 
             _context.LessonMaterials.Add(material);
             await _context.SaveChangesAsync();
+
+            // Create ResourceFile for imported material (references same physical file)
+            if (!string.IsNullOrEmpty(source.FileUrl))
+            {
+                var rf = new ResourceFile
+                {
+                    FileName = Path.GetFileName(source.FileUrl),
+                    ContentType = source.ContentType,
+                    Extension = Path.GetExtension(source.FileUrl)?.TrimStart('.'),
+                    FilePath = source.FileUrl,
+                    FileSize = GetFileSizeFromUrl(source.FileUrl),
+                    LessonMaterialId = material.MaterialId,
+                };
+                _context.ResourceFiles.Add(rf);
+                await _context.SaveChangesAsync();
+            }
+
             return material;
         }
 
@@ -374,8 +518,14 @@ namespace EducenAPI.Services
             var material = await _context.LessonMaterials.FindAsync(id);
             if (material == null) return false;
 
+            await DeleteResourceFilesForMaterialAsync(id);
+
             _context.LessonMaterials.Remove(material);
             await _context.SaveChangesAsync();
+
+            // Clean up physical file if no other ResourceFile references it
+            await CleanupFileAsync(material.FileUrl);
+
             return true;
         }
     }

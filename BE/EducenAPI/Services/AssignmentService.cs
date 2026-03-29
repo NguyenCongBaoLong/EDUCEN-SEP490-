@@ -19,6 +19,52 @@ namespace EducenAPI.Services
             _userContextService = userContextService;
         }
 
+        private void CreateResourceFileForAssignment(Assignment assignment, string fileName, string contentType, string extension, string filePath, long fileSize)
+        {
+            var rf = new ResourceFile
+            {
+                FileName = fileName,
+                ContentType = contentType,
+                Extension = extension,
+                FilePath = filePath,
+                FileSize = fileSize,
+                AssignmentId = assignment.AsmId,
+            };
+            _context.ResourceFiles.Add(rf);
+        }
+
+        private async Task CleanupFileAsync(string? fileUrl)
+        {
+            if (string.IsNullOrEmpty(fileUrl)) return;
+
+            var otherRefs = await _context.ResourceFiles
+                .AnyAsync(rf => rf.FilePath == fileUrl);
+
+            if (!otherRefs)
+            {
+                string normalizedPath = fileUrl.Replace("/", Path.DirectorySeparatorChar.ToString())
+                                              .Replace("\\", Path.DirectorySeparatorChar.ToString());
+                if (!normalizedPath.StartsWith("wwwroot" + Path.DirectorySeparatorChar))
+                    normalizedPath = Path.Combine("wwwroot", normalizedPath);
+
+                if (File.Exists(normalizedPath))
+                    File.Delete(normalizedPath);
+            }
+        }
+
+        private async Task DeleteResourceFilesForAssignmentAsync(int asmId)
+        {
+            var resourceFiles = await _context.ResourceFiles
+                .Where(rf => rf.AssignmentId == asmId)
+                .ToListAsync();
+
+            foreach (var rf in resourceFiles)
+            {
+                await CleanupFileAsync(rf.FilePath);
+                _context.ResourceFiles.Remove(rf);
+            }
+        }
+
         public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
             if (dto.StartTime.HasValue && dto.StartTime.Value < DateTime.Now)
@@ -46,6 +92,9 @@ namespace EducenAPI.Services
 
             string? fileUrl = null;
             var userId = _userContextService.GetUserId();
+
+            // Store uploaded file info for ResourceFile creation
+            DTOs.FileUpload.FileUploadDto? uploadedFileDto = null;
 
             if (dto.File != null)
             {
@@ -81,8 +130,8 @@ namespace EducenAPI.Services
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
-                var uploadedFile = uploadedFiles.FirstOrDefault();
-                if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
+                uploadedFileDto = uploadedFiles.FirstOrDefault();
+                if (uploadedFileDto != null) fileUrl = uploadedFileDto.FilePath;
             }
 
             if (!string.IsNullOrEmpty(dto.Title))
@@ -90,7 +139,7 @@ namespace EducenAPI.Services
                 var isUniqueTitle = await _context.Assignments.AnyAsync(e => dto.SessionId != null
                         && dto.SessionId == e.SessionId
                         && e.Title == dto.Title);
-                if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại"); // Nên dùng BadRequestException thay vì Exception chung
+                if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại");
             }
 
             if (!string.IsNullOrEmpty(dto.FileUrl))
@@ -111,6 +160,18 @@ namespace EducenAPI.Services
             };
 
             _context.Assignments.Add(assignment);
+            await _context.SaveChangesAsync();
+
+            // Create ResourceFile record if file was uploaded
+            if (uploadedFileDto != null)
+            {
+                CreateResourceFileForAssignment(assignment,
+                    uploadedFileDto.FileName,
+                    uploadedFileDto.ContentType,
+                    uploadedFileDto.Extension,
+                    uploadedFileDto.FilePath,
+                    uploadedFileDto.FileSize ?? 0);
+            }
 
             // Nếu lưu vào kho và có session, tạo thêm 1 bản copy cho kho (SessionId = null)
             if (dto.SaveToLibrary && dto.SessionId.HasValue)
@@ -133,10 +194,21 @@ namespace EducenAPI.Services
                         GradeId = assignment.GradeId,
                     };
                     _context.Assignments.Add(libraryAssignment);
+                    await _context.SaveChangesAsync();
+
+                    // Create ResourceFile for library copy (same physical file)
+                    if (uploadedFileDto != null)
+                    {
+                        CreateResourceFileForAssignment(libraryAssignment,
+                            uploadedFileDto.FileName,
+                            uploadedFileDto.ContentType,
+                            uploadedFileDto.Extension,
+                            uploadedFileDto.FilePath,
+                            uploadedFileDto.FileSize ?? 0);
+                    }
                 }
             }
 
-            await _context.SaveChangesAsync();
             return MapToResponseDto(assignment, baseUrl);
         }
 
@@ -170,6 +242,8 @@ namespace EducenAPI.Services
             }
 
             string? fileUrl = assignment.FileUrl;
+            DTOs.FileUpload.FileUploadDto? uploadedFileDto = null;
+            string? oldFileUrl = assignment.FileUrl;
 
             if (dto.File != null)
             {
@@ -201,10 +275,19 @@ namespace EducenAPI.Services
 
                 var files = new FormFileCollection { dto.File };
                 var uploadedFiles = await _fileService.UploadResourceFile(files);
-                var uploadedFile = uploadedFiles.FirstOrDefault();
-                if (uploadedFile != null)
+                uploadedFileDto = uploadedFiles.FirstOrDefault();
+                if (uploadedFileDto != null)
                 {
-                    fileUrl = uploadedFile.FilePath;
+                    fileUrl = uploadedFileDto.FilePath;
+                }
+
+                // Delete old ResourceFile records for this assignment
+                var oldResourceFiles = await _context.ResourceFiles
+                    .Where(rf => rf.AssignmentId == id)
+                    .ToListAsync();
+                foreach (var rf in oldResourceFiles)
+                {
+                    _context.ResourceFiles.Remove(rf);
                 }
             }
 
@@ -242,6 +325,24 @@ namespace EducenAPI.Services
             }
 
             await _context.SaveChangesAsync();
+
+            // Create ResourceFile record if new file was uploaded
+            if (uploadedFileDto != null)
+            {
+                CreateResourceFileForAssignment(assignment,
+                    uploadedFileDto.FileName,
+                    uploadedFileDto.ContentType,
+                    uploadedFileDto.Extension,
+                    uploadedFileDto.FilePath,
+                    uploadedFileDto.FileSize ?? 0);
+            }
+
+            // Clean up old physical file if no other ResourceFile references it
+            if (dto.File != null && !string.IsNullOrEmpty(oldFileUrl))
+            {
+                await CleanupFileAsync(oldFileUrl);
+            }
+
             return MapToResponseDto(assignment, baseUrl);
         }
         public async Task<List<AssignmentResponseDto>> GetAssignmentsBySessionAsync(int sessionId, string baseUrl)
@@ -331,6 +432,23 @@ namespace EducenAPI.Services
 
             _context.Assignments.Add(assignment);
             await _context.SaveChangesAsync();
+
+            // Create ResourceFile for imported assignment (references same physical file)
+            if (!string.IsNullOrEmpty(source.FileUrl))
+            {
+                var rf = new ResourceFile
+                {
+                    FileName = Path.GetFileName(source.FileUrl),
+                    ContentType = null,
+                    Extension = Path.GetExtension(source.FileUrl)?.TrimStart('.'),
+                    FilePath = source.FileUrl,
+                    FileSize = GetFileSizeFromUrl(source.FileUrl),
+                    AssignmentId = assignment.AsmId,
+                };
+                _context.ResourceFiles.Add(rf);
+                await _context.SaveChangesAsync();
+            }
+
             return assignment;
         }
 
@@ -376,8 +494,14 @@ namespace EducenAPI.Services
             var assignment = await _context.Assignments.FindAsync(id);
             if (assignment == null) return false;
 
+            await DeleteResourceFilesForAssignmentAsync(id);
+
             _context.Assignments.Remove(assignment);
             await _context.SaveChangesAsync();
+
+            // Clean up physical file if no other ResourceFile references it
+            await CleanupFileAsync(assignment.FileUrl);
+
             return true;
         }
 

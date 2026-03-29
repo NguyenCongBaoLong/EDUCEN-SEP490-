@@ -18,6 +18,25 @@ namespace EducenAPI.Services
             _fileService = fileService;
         }
 
+        private async Task CleanupFileAsync(string? fileUrl)
+        {
+            if (string.IsNullOrEmpty(fileUrl)) return;
+
+            var otherRefs = await _context.ResourceFiles
+                .AnyAsync(rf => rf.FilePath == fileUrl);
+
+            if (!otherRefs)
+            {
+                string normalizedPath = fileUrl.Replace("/", Path.DirectorySeparatorChar.ToString())
+                                              .Replace("\\", Path.DirectorySeparatorChar.ToString());
+                if (!normalizedPath.StartsWith("wwwroot" + Path.DirectorySeparatorChar))
+                    normalizedPath = Path.Combine("wwwroot", normalizedPath);
+
+                if (File.Exists(normalizedPath))
+                    File.Delete(normalizedPath);
+            }
+        }
+
         public async Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request, string baseUrl)
         {
             string fileUrl = string.Empty;
@@ -84,6 +103,8 @@ namespace EducenAPI.Services
             if (submission.Score != null || submission.Status == "Graded" || submission.Status == "Published" || submission.IsPublished)
                 throw new Exception("Cannot update submission because it has already been graded or published.");
 
+            string? oldFileUrl = submission.FileUrl;
+
             if (!string.IsNullOrEmpty(request.FileUrl))
             {
                 fileUrl = request.FileUrl;
@@ -115,6 +136,13 @@ namespace EducenAPI.Services
             submission.IsPublished = false;
 
             await _context.SaveChangesAsync();
+
+            // Clean up old physical file if replaced
+            if (request.File != null && !string.IsNullOrEmpty(oldFileUrl) && oldFileUrl != fileUrl)
+            {
+                await CleanupFileAsync(oldFileUrl);
+            }
+
             return MapToResponseDto(submission, baseUrl);
         }
 

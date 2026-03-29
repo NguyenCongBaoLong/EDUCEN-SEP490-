@@ -46,6 +46,7 @@ public partial class EducenV2Context : DbContext
     public DbSet<ClassSession> ClassSessions { get; set; }
     public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
     public DbSet<SupportRequest> SupportRequests { get; set; }
+    public DbSet<ResourceFile> ResourceFiles { get; set; }
 
     // ================================
     // MODEL CONFIGURATION
@@ -285,6 +286,18 @@ public partial class EducenV2Context : DbContext
         .WithMany()
         .HasForeignKey(m => m.UserId)
         .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ResourceFile>()
+            .HasOne(rf => rf.Assignment)
+            .WithMany()
+            .HasForeignKey(rf => rf.AssignmentId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ResourceFile>()
+            .HasOne(rf => rf.LessonMaterial)
+            .WithMany()
+            .HasForeignKey(rf => rf.LessonMaterialId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)
