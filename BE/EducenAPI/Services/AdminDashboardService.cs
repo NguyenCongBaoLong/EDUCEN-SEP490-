@@ -65,6 +65,22 @@ namespace EducenAPI.Services
                         var studentCount = await db.Students.CountAsync();
                         var classCount = await db.Classes.CountAsync();
 
+                        // Calculate storage from ResourceFile table
+                        long totalBytes = 0;
+                        try
+                        {
+                            var fileSizes = await db.ResourceFiles
+                                .Where(rf => rf.FileSize.HasValue)
+                                .Select(rf => rf.FileSize!.Value)
+                                .ToListAsync();
+                            totalBytes = fileSizes.Sum();
+                        }
+                        catch
+                        {
+                            // ResourceFile table may not exist yet in some tenant DBs
+                        }
+                        var storageMB = Math.Round(totalBytes / 1024.0 / 1024.0, 2);
+
                         Interlocked.Add(ref totalUsers, userCount);
                         Interlocked.Add(ref totalStudents, studentCount);
                         Interlocked.Add(ref totalClasses, classCount);
@@ -73,7 +89,8 @@ namespace EducenAPI.Services
                         {
                             TenantName = tenant.TenantName,
                             TotalStudents = studentCount,
-                            TotalClasses = classCount
+                            TotalClasses = classCount,
+                            StorageMB = storageMB
                         });
                     }
                     finally
@@ -87,7 +104,8 @@ namespace EducenAPI.Services
                     {
                         TenantName = tenant.TenantName,
                         TotalStudents = 0,
-                        TotalClasses = 0
+                        TotalClasses = 0,
+                        StorageMB = 0
                     });
                 }
             });
@@ -110,7 +128,7 @@ namespace EducenAPI.Services
                 TotalUsers = totalUsers,
                 TotalStudents = totalStudents,
                 TotalClasses = totalClasses,
-                TotalStorageMB = 0
+                TotalStorageMB = Math.Round(topCentersBag.Sum(x => x.StorageMB), 2)
             };
 
             var totalRevenue = await _adminDbContext.PaymentRecords.SumAsync(x => x.Amount);
