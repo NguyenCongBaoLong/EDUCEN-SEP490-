@@ -29,12 +29,14 @@ const SystemAdminDashboard = () => {
             try {
                 const response = await adminApi.get('/admin/dashboard');
                 const { overview, revenue, tenantsByPlan, topCenters, expiringSubscriptions } = response.data;
-                
-                setOverview(overview);
-                setRevenue(revenue);
-                setTenantsByPlan(tenantsByPlan || []);
-                setTopCenters(topCenters || []);
-                setExpiringSubs(expiringSubscriptions || []);
+
+                setDashboardData({
+                    overview,
+                    revenue,
+                    tenantsByPlan: tenantsByPlan || [],
+                    topCenters: topCenters || [],
+                    expiringSubscriptions: expiringSubscriptions || []
+                });
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
