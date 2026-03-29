@@ -23,7 +23,7 @@ namespace EducenAPI.Controllers
         {
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
             var result = await _assignmentService.CreateAssignmentAsync(dto, baseUrl);
-            return Ok(result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
 
         [HttpPut("{id:int}")]

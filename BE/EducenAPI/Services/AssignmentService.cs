@@ -21,12 +21,7 @@ namespace EducenAPI.Services
 
         public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
-            if (dto.StartTime.HasValue && dto.StartTime.Value < DateTime.Now)
-            {
-                // Có thể cho phép độ trễ vài phút (ví dụ < DateTime.Now.AddMinutes(-5)) nếu cần thiết,
-                // nhưng khắt khe nhất thì dùng < DateTime.Now
-                throw new BadRequestException("Thời gian bắt đầu không được ở trong quá khứ.");
-            }
+            
             //  Validate StartTime > EndTime
             if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime > dto.EndTime)
             {
