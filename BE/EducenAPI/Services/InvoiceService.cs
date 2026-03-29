@@ -153,26 +153,32 @@ namespace EducenAPI.Services
 
         public async Task<List<TuitionInvoice>> GetInvoicesAsync(InvoiceFilterRequest filter)
         {
+            var studentId = NormalizePositiveInt(filter.StudentId);
+            var classId = NormalizePositiveInt(filter.ClassId);
+            var month = NormalizePositiveInt(filter.Month);
+            var year = NormalizePositiveInt(filter.Year);
+            var status = NormalizeString(filter.Status);
+
             var query = _context.TuitionInvoices
                 .Include(i => i.Student)
                     .ThenInclude(s => s.StudentNavigation)
                 .Include(i => i.Class)
                 .AsQueryable();
 
-            if (filter.StudentId.HasValue)
-                query = query.Where(i => i.StudentId == filter.StudentId.Value);
+            if (studentId.HasValue)
+                query = query.Where(i => i.StudentId == studentId.Value);
 
-            if (filter.ClassId.HasValue)
-                query = query.Where(i => i.ClassId == filter.ClassId.Value);
+            if (classId.HasValue)
+                query = query.Where(i => i.ClassId == classId.Value);
 
-            if (filter.Month.HasValue)
-                query = query.Where(i => i.InvoiceMonth == filter.Month.Value);
+            if (month.HasValue)
+                query = query.Where(i => i.InvoiceMonth == month.Value);
 
-            if (filter.Year.HasValue)
-                query = query.Where(i => i.InvoiceYear == filter.Year.Value);
+            if (year.HasValue)
+                query = query.Where(i => i.InvoiceYear == year.Value);
 
-            if (!string.IsNullOrEmpty(filter.Status))
-                query = query.Where(i => i.Status == filter.Status);
+            if (!string.IsNullOrEmpty(status))
+                query = query.Where(i => i.Status == status);
 
             if (filter.FromDate.HasValue)
                 query = query.Where(i => i.CreatedAt >= filter.FromDate.Value);
@@ -187,6 +193,20 @@ namespace EducenAPI.Services
             return await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
         }
 
+        private static int? NormalizePositiveInt(int? value)
+        {
+            if (!value.HasValue || value.Value <= 0)
+                return null;
+            return value.Value;
+        }
+
+        private static string? NormalizeString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            return value.Trim();
+        }
+
         public async Task<bool> MarkAsPaidAsync(string invoiceId, string paymentRecordId)
         {
             var invoice = await _context.TuitionInvoices.FindAsync(invoiceId);
@@ -195,6 +215,23 @@ namespace EducenAPI.Services
             invoice.Status = "Paid";
             invoice.PaidAt = DateTime.UtcNow;
             invoice.PaymentRecordId = paymentRecordId;
+            invoice.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> MarkInvoiceAsPaidAsync(string invoiceId, string paymentMethod, string? notes)
+        {
+            var invoice = await _context.TuitionInvoices.FindAsync(invoiceId);
+            if (invoice == null) return false;
+
+            if (invoice.Status == "Paid")
+                return false; // Already paid
+
+            invoice.Status = "Paid";
+            invoice.PaidAt = DateTime.UtcNow;
+            invoice.Notes = notes;
             invoice.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

@@ -80,9 +80,19 @@ export function AuthProvider({ children }) {
     const login = async (username, password) => {
         // Gửi tenantId trong URL query param để TenantResolver middleware resolve đúng
         // (quan trọng cho lần đăng nhập đầu tiên khi localStorage chưa có tenantId)
-        const tenantId = localStorage.getItem('tenantId');
-        const loginUrl = tenantId && tenantId !== 'default-tenant'
-            ? `/Auth/login?tenant=${encodeURIComponent(tenantId)}`
+        const urlParams = new URLSearchParams(window.location.search);
+        const tenantFromUrl = urlParams.get('tenant');
+        const storedTenantId = localStorage.getItem('tenantId');
+        const effectiveTenantId = isValidTenantId(storedTenantId)
+            ? storedTenantId
+            : (isValidTenantId(tenantFromUrl) ? tenantFromUrl : null);
+
+        if (isValidTenantId(effectiveTenantId)) {
+            localStorage.setItem('tenantId', effectiveTenantId);
+        }
+
+        const loginUrl = isValidTenantId(effectiveTenantId)
+            ? `/Auth/login?tenant=${encodeURIComponent(effectiveTenantId)}`
             : '/Auth/login';
 
         const response = await api.post(loginUrl, {
@@ -96,19 +106,18 @@ export function AuthProvider({ children }) {
 
         const decoded = decodeToken(token);
         localStorage.setItem('user', JSON.stringify(decoded));
-        
+
+        // Fallback: nếu JWT không có tenantId hợp lệ, thử dùng giá trị hiện có trong localStorage
+        if (!isValidTenantId(decoded.tenantId) && isValidTenantId(effectiveTenantId)) {
+            decoded.tenantId = effectiveTenantId;
+        }
+
         // Lưu tenantId vào localStorage chỉ nếu hợp lệ
         if (isValidTenantId(decoded.tenantId)) {
             localStorage.setItem('tenantId', decoded.tenantId);
-        } else {
+        } else if (!isValidTenantId(effectiveTenantId)) {
             // Xóa tenantId sai (default-tenant, undefined, null)
             localStorage.removeItem('tenantId');
-        }
-        
-        // Fallback: nếu JWT không có tenantId hợp lệ, thử dùng giá trị hiện có trong localStorage
-        const existingTenantId = localStorage.getItem('tenantId');
-        if (!decoded.tenantId && isValidTenantId(existingTenantId)) {
-            decoded.tenantId = existingTenantId;
         }
         
         setUser(decoded);

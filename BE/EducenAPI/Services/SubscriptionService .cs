@@ -238,5 +238,32 @@ namespace EducenAPI.Services
                 Status = newSubscription.Status
             };
         }
+
+        public async Task<SubscriptionResponseDTO?> GetActiveSubscriptionAsync(string tenantId)
+        {
+            var subscription = await _context.Subscriptions
+                .Include(s => s.Plan)
+                .Include(s => s.Tenant)
+                .Where(s => s.TenantId == tenantId && s.Status == "Active" && s.EndDate > DateTime.UtcNow)
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+            if (subscription == null)
+                return null;
+
+            return new SubscriptionResponseDTO
+            {
+                SubscriptionId = subscription.Id,
+                TenantId = subscription.TenantId,
+                TenantName = subscription.Tenant.TenantName,
+
+                PlanId = subscription.PlanId,
+                PlanName = subscription.Plan.PlanName,
+
+                StartDate = subscription.StartDate,
+                EndDate = subscription.EndDate,
+                Status = subscription.Status
+            };
+        }
     }
 }

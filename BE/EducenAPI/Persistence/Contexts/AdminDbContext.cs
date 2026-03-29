@@ -20,6 +20,7 @@ namespace EducenAPI.Persistence.Contexts
 
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
         public DbSet<TenantRegistration> TenantRegistrations { get; set; }
+        public DbSet<TenantCreditLedger> TenantCreditLedgers { get; set; }
 
         // === Payment System ===
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
@@ -54,6 +55,16 @@ namespace EducenAPI.Persistence.Contexts
                 .WithMany(t => t.PaymentRecords)
                 .HasForeignKey(p => p.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Tenant - Credit Ledger
+            builder.Entity<TenantCreditLedger>()
+                .HasOne(l => l.Tenant)
+                .WithMany(t => t.CreditLedgers)
+                .HasForeignKey(l => l.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TenantCreditLedger>()
+                .HasIndex(l => new { l.TenantId, l.CreatedAt });
 
             // Subscription index
             builder.Entity<Subscription>()

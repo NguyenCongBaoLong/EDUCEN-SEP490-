@@ -12,7 +12,8 @@ import {
     AlertCircle,
     ChevronLeft,
     CreditCard,
-    Send
+    Send,
+    Globe
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -280,6 +281,22 @@ const TuitionManagement = () => {
         fetchInvoices();
     };
 
+    // Admin thu tiền học phí mặt
+    const handleMarkAsPaid = async (invoiceId) => {
+        const confirmed = window.confirm(
+            'Xác nhận đã thu tiền từ học sinh? Hóa đơn sẽ được đánh dấu là đã thanh toán.'
+        );
+        if (!confirmed) return;
+
+        try {
+            await tuitionService.markAsPaid(invoiceId, 'Cash', 'Học sinh nộp tiền mặt tại văn phòng');
+            toast.success('Đã xác nhận thu tiền thành công');
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+        }
+    };
+
     // Lấy status badge
     const getStatusBadge = (status) => {
         const styles = {
@@ -540,13 +557,10 @@ const TuitionManagement = () => {
                                                     {(invoice.status === 'Sent' || invoice.status === 'Overdue') && (
                                                         <button 
                                                             className="pay-btn"
-                                                            onClick={() => {
-                                                                setSelectedInvoice(invoice);
-                                                                setShowPaymentModal(true);
-                                                            }}
+                                                            onClick={() => handleMarkAsPaid(invoice.invoiceId)}
                                                         >
                                                             <CreditCard size={14} />
-                                                            Thu tiền
+                                                            Đã thu tiền
                                                         </button>
                                                     )}
                                                 </td>

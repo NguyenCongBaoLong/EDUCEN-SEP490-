@@ -49,6 +49,9 @@ namespace EducenAPI.Services.Interface
         public int RequestedBy { get; set; }
         public string Reason { get; set; } = string.Empty;
         public decimal RefundAmount { get; set; }
+        public string? RefundMethod { get; set; }
+        public string? GatewayRef { get; set; }
+        public bool IsServiceIssue { get; set; } = false;
     }
 
     public class RefundFilterRequest

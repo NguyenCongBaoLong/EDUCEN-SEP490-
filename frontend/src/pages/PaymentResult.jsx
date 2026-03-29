@@ -23,8 +23,14 @@ const PaymentResult = () => {
     const orderId = searchParams.get('orderId');
     const transactionId = searchParams.get('transactionId');
 
-    // Xác định trang hóa đơn theo role
-    const invoicesPath = user?.role === 'Parent' ? '/parent/invoices' : '/student/invoices';
+    // Xác định trang điều hướng theo role
+    const invoicesPath = user?.role === 'Parent'
+        ? '/parent/invoices'
+        : user?.role === 'Admin'
+            ? '/center/subscription'
+            : '/student/invoices';
+
+    const invoicesLabel = user?.role === 'Admin' ? 'Quản lý gói dịch vụ' : 'Xem hóa đơn';
 
     useEffect(() => {
         verifyPayment();
@@ -166,7 +172,7 @@ const PaymentResult = () => {
                                 onClick={() => window.location.href = invoicesPath}
                             >
                                 <FileText size={18} />
-                                Xem hóa đơn
+                                {invoicesLabel}
                             </button>
                             <button 
                                 className="secondary-btn"

@@ -25,6 +25,11 @@ namespace EducenAPI.Models
         [Required]
         public string Reason { get; set; } = string.Empty;
 
+        [MaxLength(20)]
+        public string RefundMethod { get; set; } = "Credit"; // Credit | Cash
+
+        public bool IsServiceIssue { get; set; } = false;
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal OriginalAmount { get; set; } // Số tiền gốc đã thanh toán
 
@@ -42,6 +47,8 @@ namespace EducenAPI.Models
         public DateTime? ProcessedAt { get; set; }
 
         public string? GatewayRefundId { get; set; } // Mã hoàn tiền từ VNPay
+
+        public string? GatewayRef { get; set; } // Mã giao dịch gốc từ gateway
 
         public string? GatewayResponse { get; set; } // JSON response từ gateway
 

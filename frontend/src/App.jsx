@@ -29,6 +29,7 @@ import ParentSchedule from './pages/parent/ParentSchedule';
 import ParentFeedback from './pages/parent/ParentFeedback';
 import TuitionManagement from './pages/center/TuitionManagement';
 import RevenueReport from './pages/center/RevenueReport';
+import SubscriptionPlans from './pages/center/SubscriptionPlans';
 import MyInvoices from './pages/student/MyInvoices';
 import PaymentResult from './pages/PaymentResult';
 import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
@@ -70,6 +71,7 @@ function App() {
               <Route path="/center/tuition" element={<PrivateRoute allowedRoles={['Admin']}><TuitionManagement /></PrivateRoute>} />
               <Route path="/center/tuition/:classId" element={<PrivateRoute allowedRoles={['Admin']}><TuitionManagement /></PrivateRoute>} />
               <Route path="/center/revenue" element={<PrivateRoute allowedRoles={['Admin']}><RevenueReport /></PrivateRoute>} />
+              <Route path="/center/subscription" element={<PrivateRoute allowedRoles={['Admin']}><SubscriptionPlans /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant', 'Student', 'Parent']}><UserProfile /></PrivateRoute>} />
 
               {/* ── Teacher Routes (chỉ Teacher) ── */}

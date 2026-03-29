@@ -1,6 +1,8 @@
 using EducenAPI.Persistence.Contexts;
+using EducenAPI.Services.Payment;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace EducenAPI.Services
 {
@@ -9,15 +11,18 @@ namespace EducenAPI.Services
         private readonly AdminDbContext _adminContext;
         private readonly ILogger<RefundService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly PaymentGatewayFactory _gatewayFactory;
 
         public RefundService(
             AdminDbContext adminContext,
             ILogger<RefundService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            PaymentGatewayFactory gatewayFactory)
         {
             _adminContext = adminContext;
             _logger = logger;
             _configuration = configuration;
+            _gatewayFactory = gatewayFactory;
         }
 
         public async Task<Models.RefundRequest> CreateRefundRequestAsync(CreateRefundRequest request)
@@ -38,13 +43,14 @@ namespace EducenAPI.Services
             if (payment.SubscriptionMonths.GetValueOrDefault() != 1)
                 throw new Exception("Only monthly subscription payments can be refunded");
 
-            if (!IsWithinGracePeriod(payment.PaymentDate))
-                throw new Exception("Refund grace period has expired");
+            var withinGracePeriod = IsWithinGracePeriod(payment.PaymentDate);
+            if (!withinGracePeriod && !request.IsServiceIssue)
+                throw new Exception("Refund is only allowed within the grace period or for service issues");
 
             // Check if refund already exists
             var existingRefund = await _adminContext.RefundRequests
                 .FirstOrDefaultAsync(r => r.PaymentRecordId == request.PaymentRecordId &&
-                    (r.Status == "Pending" || r.Status == "Approved" || r.Status == "Processing"));
+                    (r.Status == "Pending" || r.Status == "Approved" || r.Status == "Processing" || r.Status == "Completed"));
 
             if (existingRefund != null)
                 throw new Exception("A refund request already exists for this payment");
@@ -52,6 +58,28 @@ namespace EducenAPI.Services
             // Validate refund amount
             if (request.RefundAmount <= 0 || request.RefundAmount > payment.Amount)
                 throw new Exception("Invalid refund amount");
+
+            var refundMethod = NormalizeRefundMethod(request.RefundMethod);
+            string? gatewayRef = null;
+
+            if (refundMethod == "Cash")
+            {
+                if (!string.Equals(payment.PaymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase))
+                    throw new Exception("Cash refund is only supported for VNPay payments");
+
+                gatewayRef = request.GatewayRef;
+                if (string.IsNullOrWhiteSpace(gatewayRef))
+                {
+                    gatewayRef = await _adminContext.PaymentTransactions
+                        .Where(t => t.PaymentRecordId == payment.PaymentId && t.Status == "Success")
+                        .OrderByDescending(t => t.CompletedAt ?? t.CreatedAt)
+                        .Select(t => t.GatewayTransactionId)
+                        .FirstOrDefaultAsync();
+                }
+
+                if (string.IsNullOrWhiteSpace(gatewayRef))
+                    throw new Exception("Gateway reference is required for cash refunds");
+            }
 
             var refund = new Models.RefundRequest
             {
@@ -63,6 +91,9 @@ namespace EducenAPI.Services
                 Reason = request.Reason,
                 OriginalAmount = payment.Amount,
                 RefundAmount = request.RefundAmount,
+                RefundMethod = refundMethod,
+                GatewayRef = gatewayRef,
+                IsServiceIssue = request.IsServiceIssue,
                 Status = "Pending",
                 CreatedAt = DateTime.UtcNow
             };
@@ -131,10 +162,52 @@ namespace EducenAPI.Services
                 throw new Exception("Only approved refunds can be processed");
 
             refund.Status = "Processing";
+            refund.UpdatedAt = DateTime.UtcNow;
             await _adminContext.SaveChangesAsync();
 
             try
             {
+                if (string.Equals(refund.RefundMethod, "Cash", StringComparison.OrdinalIgnoreCase))
+                {
+                    var payment = refund.PaymentRecord ?? throw new Exception("Payment record not found");
+
+                    if (!string.Equals(payment.PaymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase))
+                        throw new Exception("Cash refund is only supported for VNPay payments");
+
+                    if (string.IsNullOrWhiteSpace(refund.GatewayRef))
+                        throw new Exception("Gateway reference is required for cash refunds");
+
+                    var gateway = _gatewayFactory.GetGateway("VNPay");
+                    var gatewayResponse = await gateway.ProcessRefundAsync(new EducenAPI.Services.Interface.RefundRequest
+                    {
+                        OriginalTransactionId = refund.GatewayRef,
+                        OrderId = payment.PaymentId,
+                        Amount = refund.RefundAmount,
+                        Reason = refund.Reason
+                    });
+
+                    refund.GatewayRefundId = gatewayResponse.RefundTransactionId;
+                    refund.GatewayResponse = gatewayResponse.AdditionalData == null
+                        ? null
+                        : JsonSerializer.Serialize(gatewayResponse.AdditionalData);
+
+                    if (!gatewayResponse.Success)
+                        throw new Exception(gatewayResponse.ErrorMessage ?? "Refund failed");
+
+                    refund.Status = "Completed";
+                    refund.ProcessedAt = DateTime.UtcNow;
+                    refund.UpdatedAt = DateTime.UtcNow;
+
+                    UpdatePaymentStatusForRefund(payment, refund.RefundAmount);
+
+                    await _adminContext.SaveChangesAsync();
+
+                    _logger.LogInformation("Refund {RefundId} processed as cash with status: {Status}",
+                        refundId, refund.Status);
+
+                    return refund;
+                }
+
                 var tenant = await _adminContext.Tenants
                     .FirstOrDefaultAsync(t => t.TenantId == refund.TenantId);
 
@@ -162,7 +235,7 @@ namespace EducenAPI.Services
                 refund.UpdatedAt = DateTime.UtcNow;
 
                 if (refund.PaymentRecord != null)
-                    refund.PaymentRecord.Status = "Refunded";
+                    UpdatePaymentStatusForRefund(refund.PaymentRecord, refund.RefundAmount);
 
                 await _adminContext.SaveChangesAsync();
 
@@ -236,9 +309,38 @@ namespace EducenAPI.Services
 
         private bool IsWithinGracePeriod(DateTime paymentDate)
         {
-            var graceDays = _configuration.GetValue("RefundPolicy:SubscriptionGraceDays", 7);
+            var graceDays = GetGraceDays();
             var deadline = paymentDate.AddDays(graceDays);
             return DateTime.UtcNow <= deadline;
+        }
+
+        private int GetGraceDays()
+        {
+            var configuredDays = _configuration.GetValue("RefundPolicy:SubscriptionGraceDays", 7);
+            if (configuredDays < 3) return 3;
+            if (configuredDays > 7) return 7;
+            return configuredDays;
+        }
+
+        private static string NormalizeRefundMethod(string? refundMethod)
+        {
+            if (string.IsNullOrWhiteSpace(refundMethod))
+                return "Credit";
+
+            return refundMethod.Trim().Equals("Cash", StringComparison.OrdinalIgnoreCase)
+                ? "Cash"
+                : "Credit";
+        }
+
+        private static void UpdatePaymentStatusForRefund(Models.PaymentRecord paymentRecord, decimal refundAmount)
+        {
+            if (refundAmount < paymentRecord.Amount)
+            {
+                paymentRecord.Status = "PartialRefunded";
+                return;
+            }
+
+            paymentRecord.Status = "Refunded";
         }
     }
 }

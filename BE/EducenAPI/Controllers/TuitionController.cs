@@ -146,11 +146,11 @@ namespace EducenAPI.Controllers
             {
                 var invoices = await _invoiceService.GetInvoicesAsync(new InvoiceFilterRequest
                 {
-                    StudentId = filter.StudentId,
-                    ClassId = filter.ClassId,
-                    Month = filter.Month,
-                    Year = filter.Year,
-                    Status = filter.Status,
+                    StudentId = NormalizePositiveInt(filter.StudentId),
+                    ClassId = NormalizePositiveInt(filter.ClassId),
+                    Month = NormalizePositiveInt(filter.Month),
+                    Year = NormalizePositiveInt(filter.Year),
+                    Status = NormalizeString(filter.Status),
                     FromDate = filter.FromDate,
                     ToDate = filter.ToDate,
                     IsOverdue = filter.IsOverdue
@@ -231,6 +231,28 @@ namespace EducenAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin thu tiền học phí mặt
+        /// </summary>
+        [HttpPost("invoices/{invoiceId}/mark-as-paid")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> MarkInvoiceAsPaid(string invoiceId, [FromBody] MarkAsPaidRequest request)
+        {
+            try
+            {
+                var success = await _invoiceService.MarkInvoiceAsPaidAsync(invoiceId, request.PaymentMethod, request.Notes);
+                if (!success)
+                    return BadRequest(new { message = "Failed to mark invoice as paid" });
+
+                return Ok(new { message = "Invoice marked as paid successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking invoice as paid");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         #endregion
 
         #region Student/Parent Endpoints
@@ -301,6 +323,20 @@ namespace EducenAPI.Controllers
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
                 throw new Exception("Invalid user ID");
             return userId;
+        }
+
+        private static int? NormalizePositiveInt(int? value)
+        {
+            if (!value.HasValue || value.Value <= 0)
+                return null;
+            return value.Value;
+        }
+
+        private static string? NormalizeString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            return value.Trim();
         }
 
         /// <summary>
@@ -384,6 +420,12 @@ namespace EducenAPI.Controllers
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public bool? IsOverdue { get; set; }
+    }
+
+    public class MarkAsPaidRequest
+    {
+        public string PaymentMethod { get; set; } = "Cash";
+        public string? Notes { get; set; }
     }
 
     public class CancelInvoiceRequest

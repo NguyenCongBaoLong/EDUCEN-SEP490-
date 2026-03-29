@@ -39,12 +39,27 @@ const tuitionService = {
     // Lấy danh sách hóa đơn
     getInvoices: async (filters = {}) => {
         const params = new URLSearchParams();
-        Object.keys(filters).forEach(key => {
-            if (filters[key] !== undefined && filters[key] !== null) {
-                params.append(key, filters[key]);
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value === undefined || value === null) {
+                return;
             }
+
+            if (typeof value === 'string') {
+                const trimmed = value.trim();
+                if (trimmed === '') {
+                    return;
+                }
+                params.append(key, trimmed);
+                return;
+            }
+
+            params.append(key, value);
         });
-        const response = await api.get(`/tuition/invoices?${params.toString()}`);
+
+        const queryString = params.toString();
+        const response = await api.get(
+            queryString ? `/tuition/invoices?${queryString}` : '/tuition/invoices'
+        );
         return response.data;
     },
 
@@ -63,6 +78,15 @@ const tuitionService = {
     // Hủy hóa đơn
     cancelInvoice: async (invoiceId, reason) => {
         const response = await api.post(`/tuition/invoices/${invoiceId}/cancel`, { reason });
+        return response.data;
+    },
+
+    // Admin thu tiền học phí mặt
+    markAsPaid: async (invoiceId, paymentMethod = 'Cash', notes = '') => {
+        const response = await api.post(`/tuition/invoices/${invoiceId}/mark-as-paid`, {
+            paymentMethod,
+            notes
+        });
         return response.data;
     },
 

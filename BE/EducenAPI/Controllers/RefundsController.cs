@@ -35,7 +35,10 @@ namespace EducenAPI.Controllers
                     TenantId = request.TenantId,
                     RequestedBy = userId,
                     Reason = request.Reason,
-                    RefundAmount = request.RefundAmount
+                    RefundAmount = request.RefundAmount,
+                    RefundMethod = request.RefundMethod,
+                    GatewayRef = request.GatewayRef,
+                    IsServiceIssue = request.IsServiceIssue
                 });
 
                 return Ok(refund);
@@ -186,6 +189,9 @@ namespace EducenAPI.Controllers
         public string TenantId { get; set; } = string.Empty;
         public string Reason { get; set; } = string.Empty;
         public decimal RefundAmount { get; set; }
+        public string? RefundMethod { get; set; }
+        public string? GatewayRef { get; set; }
+        public bool IsServiceIssue { get; set; } = false;
     }
 
     public class ApproveRefundRequest

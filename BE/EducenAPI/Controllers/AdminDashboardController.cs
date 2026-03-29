@@ -6,7 +6,7 @@ namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/admin/dashboard")]
-    [Authorize(Roles = "Admin,TenantAdmin")]
+    [Authorize(Roles = "SystemAdmin")]
     public class AdminDashboardController : ControllerBase
     {
         private readonly IAdminDashboardService _dashboardService;

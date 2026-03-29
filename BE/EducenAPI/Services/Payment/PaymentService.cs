@@ -44,6 +44,9 @@ namespace EducenAPI.Services.Payment
             try
             {
                 var isTuition = dto.TransactionType == "Tuition";
+                var subscriptionMonths = dto.SubscriptionMonths.GetValueOrDefault(1);
+                if (subscriptionMonths <= 0)
+                    subscriptionMonths = 1;
 
                 //Nếu là Subscription → kiểm tra tenant trong Admin DB
                 if (!isTuition)
@@ -75,6 +78,26 @@ namespace EducenAPI.Services.Payment
                                 ErrorMessage = $"Tenant with ID '{dto.TenantId}' not found"
                             };
                         }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(dto.ReferenceId))
+                    {
+                        return new PaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = "PlanId is required for subscription payment"
+                        };
+                    }
+
+                    var plan = await _adminDbContext.Plans
+                        .FirstOrDefaultAsync(p => p.PlanId == dto.ReferenceId && p.IsActive);
+                    if (plan == null)
+                    {
+                        return new PaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = "Selected plan is not available"
+                        };
                     }
                 }
 
@@ -163,7 +186,8 @@ namespace EducenAPI.Services.Payment
                         ReferenceId = dto.ReferenceId,
                         PaymentMethod = dto.GatewayType,
                         Description = dto.Description,
-                        PaidBy = dto.PaidBy
+                        PaidBy = dto.PaidBy,
+                        SubscriptionMonths = subscriptionMonths
                     };
 
                     _adminDbContext.PaymentRecords.Add(paymentRecord);
@@ -421,6 +445,11 @@ namespace EducenAPI.Services.Payment
                 transaction.Status = "Success";
                 if (transaction.PaymentRecord != null)
                     transaction.PaymentRecord.Status = "Paid";
+
+                if (transaction.PaymentRecord?.TransactionType == "Subscription")
+                {
+                    await ActivateSubscriptionFromPaymentAsync(transaction.PaymentRecord);
+                }
             }
             else
             {
@@ -432,6 +461,67 @@ namespace EducenAPI.Services.Payment
 
             await _adminDbContext.SaveChangesAsync();
             return null;
+        }
+
+        private async Task ActivateSubscriptionFromPaymentAsync(PaymentRecord paymentRecord)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(paymentRecord.ReferenceId))
+                {
+                    _logger.LogWarning("Subscription payment {PaymentId} missing PlanId reference", paymentRecord.PaymentId);
+                    return;
+                }
+
+                var plan = await _adminDbContext.Plans
+                    .FirstOrDefaultAsync(p => p.PlanId == paymentRecord.ReferenceId && p.IsActive);
+
+                if (plan == null)
+                {
+                    _logger.LogWarning("Plan {PlanId} not found for payment {PaymentId}", paymentRecord.ReferenceId, paymentRecord.PaymentId);
+                    return;
+                }
+
+                var months = paymentRecord.SubscriptionMonths.GetValueOrDefault(1);
+                if (months <= 0)
+                    months = 1;
+
+                var now = DateTime.UtcNow;
+
+                var activeSubscription = await _adminDbContext.Subscriptions
+                    .Where(s => s.TenantId == paymentRecord.TenantId && s.Status == "Active" && s.EndDate > now)
+                    .OrderByDescending(s => s.EndDate)
+                    .FirstOrDefaultAsync();
+
+                if (activeSubscription != null && activeSubscription.PlanId == plan.PlanId)
+                {
+                    activeSubscription.EndDate = activeSubscription.EndDate.AddMonths(months);
+                    paymentRecord.ReferenceId = activeSubscription.Id;
+                    return;
+                }
+
+                if (activeSubscription != null)
+                {
+                    activeSubscription.Status = "Cancelled";
+                    activeSubscription.EndDate = now;
+                }
+
+                var newSubscription = new Subscription
+                {
+                    TenantId = paymentRecord.TenantId,
+                    PlanId = plan.PlanId,
+                    StartDate = now,
+                    EndDate = now.AddMonths(months),
+                    Status = "Active"
+                };
+
+                _adminDbContext.Subscriptions.Add(newSubscription);
+                paymentRecord.ReferenceId = newSubscription.Id;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to activate subscription for payment {PaymentId}", paymentRecord.PaymentId);
+            }
         }
 
         private static PaymentTransactionInfo MapTransaction(PaymentTransactionTenant transaction)
@@ -516,6 +606,7 @@ namespace EducenAPI.Services.Payment
         public string? CustomerEmail { get; set; }
         public string? CustomerPhone { get; set; }
         public string? PaidBy { get; set; }
+        public int? SubscriptionMonths { get; set; }
     }
 
     public class PaymentResult

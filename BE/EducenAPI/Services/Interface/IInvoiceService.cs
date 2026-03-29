@@ -30,6 +30,11 @@ namespace EducenAPI.Services.Interface
         Task<bool> MarkAsPaidAsync(string invoiceId, string paymentRecordId);
 
         /// <summary>
+        /// Admin thu tiền học phí mặt
+        /// </summary>
+        Task<bool> MarkInvoiceAsPaidAsync(string invoiceId, string paymentMethod, string? notes);
+
+        /// <summary>
         /// Hủy hóa đơn
         /// </summary>
         Task<bool> CancelInvoiceAsync(string invoiceId, string reason);

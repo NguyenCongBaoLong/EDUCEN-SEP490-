@@ -232,6 +232,13 @@ namespace EducenAPI.Services
                 {
                     return tenantHeader;
                 }
+
+                // Hoặc lấy từ query param ?tenant=
+                var tenantQuery = httpContext?.Request.Query["tenant"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(tenantQuery))
+                {
+                    return tenantQuery;
+                }
                 
                 return "default-tenant";
             }

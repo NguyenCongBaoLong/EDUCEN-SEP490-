@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.AdminDb
 {
     [DbContext(typeof(AdminDbContext))]
-    partial class AdminDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260328163700_AddTenantCreditLedgerAndRefundPolicy")]
+    partial class AddTenantCreditLedgerAndRefundPolicy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -166,17 +169,11 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("GatewayRef")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("GatewayRefundId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("GatewayResponse")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsServiceIssue")
-                        .HasColumnType("bit");
 
                     b.Property<decimal>("OriginalAmount")
                         .HasColumnType("decimal(18,2)");
@@ -194,11 +191,6 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
 
                     b.Property<decimal>("RefundAmount")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("RefundMethod")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("RejectionReason")
                         .HasColumnType("nvarchar(max)");

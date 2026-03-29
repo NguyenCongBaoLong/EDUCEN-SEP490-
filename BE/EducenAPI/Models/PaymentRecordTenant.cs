@@ -1,21 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EducenAPI.Models
 {
-    public class PaymentRecord
+    [Table("PaymentRecordTenant")]
+    public class PaymentRecordTenant
     {
         [Key]
         public string PaymentId { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
-        public string TenantId { get; set; }
-
-        [Required]
         public decimal Amount { get; set; }
 
         [MaxLength(50)]
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         public DateTime PaymentDate { get; set; }
 
@@ -36,12 +34,6 @@ namespace EducenAPI.Models
 
         public string? ProcessedBy { get; set; } // UserId ngưởi xử lý (nếu thanh toán thủ công)
 
-        public int? SubscriptionMonths { get; set; } // Số tháng đăng ký (chỉ áp dụng cho Subscription)
-
-        // Navigation
-        [ForeignKey(nameof(TenantId))]
-        public Tenant? Tenant { get; set; }
-
-        public ICollection<PaymentTransaction> Transactions { get; set; } = new List<PaymentTransaction>();
+        public ICollection<PaymentTransactionTenant> Transactions { get; set; } = new List<PaymentTransactionTenant>();
     }
 }

@@ -1,11 +1,13 @@
 using EducenAPI.DTOs.Subscription;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/admin/tenants")]
+    [Authorize(Roles = "SystemAdmin")]
     public class SubscriptionController : ControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;

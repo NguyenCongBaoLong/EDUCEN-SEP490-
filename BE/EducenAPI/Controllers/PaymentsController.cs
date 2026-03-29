@@ -44,7 +44,8 @@ namespace EducenAPI.Controllers
                     CustomerName = request.CustomerName,
                     CustomerEmail = request.CustomerEmail,
                     CustomerPhone = request.CustomerPhone,
-                    PaidBy = User.Identity?.Name
+                    PaidBy = User.Identity?.Name,
+                    SubscriptionMonths = request.SubscriptionMonths
                 };
 
                 var result = await _paymentService.CreatePaymentAsync(dto);
@@ -220,5 +221,6 @@ namespace EducenAPI.Controllers
         public string? CustomerName { get; set; }
         public string? CustomerEmail { get; set; }
         public string? CustomerPhone { get; set; }
+        public int? SubscriptionMonths { get; set; }
     }
 }
