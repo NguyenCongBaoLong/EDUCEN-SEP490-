@@ -146,7 +146,7 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
                     </div>
                     <div className="atm-summary-item absent">
                         <XCircle size={16} />
-                        <span>Vắng: <strong>{absentCount}</strong></span>
+                        <span>Vắng mặt: <strong>{absentCount}</strong></span>
                     </div>
                     <div className="atm-summary-item total">
                         <Users size={16} />
@@ -191,7 +191,7 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
                                             onClick={() => handleStatusChange(st.id, 'absent')}
                                         >
                                             <XCircle size={15} />
-                                            Vắng
+                                            Vắng mặt
                                         </button>
                                     </div>
                                 </div>

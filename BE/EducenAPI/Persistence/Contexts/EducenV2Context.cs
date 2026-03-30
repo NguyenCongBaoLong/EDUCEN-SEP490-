@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using EducenAPI.Services;
 using EducenAPI.Models;
 
@@ -46,7 +47,17 @@ public partial class EducenV2Context : DbContext
     public DbSet<ClassSession> ClassSessions { get; set; }
     public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; } // Enrollment feature
     public DbSet<SupportRequest> SupportRequests { get; set; }
+    public DbSet<ResourceFile> ResourceFiles { get; set; }
     public DbSet<CenterStaff> CenterStaffs { get; set; } = null!;
+
+    // === Payment & Tuition System ===
+    public DbSet<TuitionInvoice> TuitionInvoices { get; set; }
+    public DbSet<TuitionInvoiceItem> TuitionInvoiceItems { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+
+    // === Payment Records (Học phí - lưu trong Tenant DB) ===
+    public DbSet<PaymentRecordTenant> PaymentRecordTenants { get; set; }
+    public DbSet<PaymentTransactionTenant> PaymentTransactionTenants { get; set; }
 
     // ================================
     // MODEL CONFIGURATION
@@ -55,13 +66,19 @@ public partial class EducenV2Context : DbContext
     {
         if (!optionsBuilder.IsConfigured)
         {
-            optionsBuilder.UseSqlServer("...");
+            // Đọc connection string từ appsettings.json (chỉ dùng khi chạy migration, không qua DI)
+            var config = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            var connectionString = config.GetConnectionString("DefaultTenantConnection");
+            optionsBuilder.UseSqlServer(connectionString);
         }
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
 
         ConfigureEntities(modelBuilder);
         SeedRoles(modelBuilder);
@@ -282,16 +299,82 @@ public partial class EducenV2Context : DbContext
         .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Assignment>()
-        .HasOne(a => a.User)
-        .WithMany()
-        .HasForeignKey(a => a.UserId)
-        .OnDelete(DeleteBehavior.SetNull);
+            .HasOne(a => a.User)
+            .WithMany()
+            .HasForeignKey(a => a.UserId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<LessonMaterial>()
         .HasOne(m => m.User)
         .WithMany()
         .HasForeignKey(m => m.UserId)
         .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ResourceFile>()
+            .HasOne(rf => rf.Assignment)
+            .WithMany()
+            .HasForeignKey(rf => rf.AssignmentId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ResourceFile>()
+            .HasOne(rf => rf.LessonMaterial)
+            .WithMany()
+            .HasForeignKey(rf => rf.LessonMaterialId)
+            .OnDelete(DeleteBehavior.SetNull);
+        // === TuitionInvoice Configuration ===
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasOne(ti => ti.Student)
+            .WithMany()
+            .HasForeignKey(ti => ti.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasOne(ti => ti.Class)
+            .WithMany()
+            .HasForeignKey(ti => ti.ClassId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.InvoiceMonth, ti.InvoiceYear });
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.StudentId, ti.Status });
+
+        modelBuilder.Entity<TuitionInvoice>()
+            .HasIndex(ti => new { ti.Status, ti.DueDate }); // For overdue checking
+
+        // === TuitionInvoiceItem Configuration ===
+        modelBuilder.Entity<TuitionInvoiceItem>()
+            .HasOne(tii => tii.Invoice)
+            .WithMany(ti => ti.Items)
+            .HasForeignKey(tii => tii.InvoiceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TuitionInvoiceItem>()
+            .HasIndex(tii => new { tii.InvoiceId, tii.SessionId });
+
+        // === Notification Configuration ===
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Notification>()
+            .HasIndex(n => new { n.TenantId, n.UserId, n.IsRead });
+
+        modelBuilder.Entity<Notification>()
+            .HasIndex(n => new { n.TenantId, n.Category, n.CreatedAt });
+
+        // === PaymentTransactionTenant Configuration ===
+        modelBuilder.Entity<PaymentTransactionTenant>()
+            .HasOne(pt => pt.PaymentRecord)
+            .WithMany(pr => pr.Transactions)
+            .HasForeignKey(pt => pt.PaymentRecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PaymentTransactionTenant>()
+            .HasIndex(pt => pt.PaymentRecordId);
     }
 
     private void SeedRoles(ModelBuilder modelBuilder)

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Calendar, LogOut } from 'lucide-react';
+import { GraduationCap, Calendar, FileText, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/components/Sidebar.css';
 
@@ -16,6 +16,7 @@ const StudentSidebar = () => {
     const menuItems = [
         { path: '/student/classes', icon: GraduationCap, label: 'Lớp của tôi' },
         { path: '/student/schedules', icon: Calendar, label: 'Lịch học' },
+        { path: '/student/invoices', icon: FileText, label: 'Hóa đơn học phí' },
     ];
 
     return (

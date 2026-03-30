@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Calendar, MessageSquare, LogOut, ChevronDown, User } from 'lucide-react';
+import { GraduationCap, Calendar, MessageSquare, LogOut, ChevronDown, User, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChild } from '../context/ChildContext';
 import '../css/components/Sidebar.css';
@@ -18,6 +18,7 @@ const ParentSidebar = () => {
     const menuItems = [
         { path: '/parent/classes', icon: GraduationCap, label: 'Lớp học của con' },
         { path: '/parent/schedule', icon: Calendar, label: 'Lịch học của con' },
+        { path: '/parent/invoices', icon: FileText, label: 'Hóa đơn học phí' },
         { path: '/parent/feedback', icon: MessageSquare, label: 'Gửi phản hồi' },
     ];
 

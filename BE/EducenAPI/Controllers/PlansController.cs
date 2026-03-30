@@ -1,5 +1,6 @@
 ﻿using EducenAPI.DTOs.Plans;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace EducenAPI.Controllers
 {
     [Route("api/admin/plans")]
     [ApiController]
+    [Authorize(Roles = "Admin,SystemAdmin")]
     public class PlansController : ControllerBase
     {
         private readonly IPlanService _planService;

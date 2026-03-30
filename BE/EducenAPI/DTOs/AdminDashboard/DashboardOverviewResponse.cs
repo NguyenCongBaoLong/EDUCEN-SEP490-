@@ -47,6 +47,8 @@ namespace EducenAPI.DTOs.AdminDashboard
         public int TotalStudents { get; set; }
 
         public int TotalClasses { get; set; }
+
+        public double StorageMB { get; set; }
     }
     public class ExpiringSubscriptionResponse
     {

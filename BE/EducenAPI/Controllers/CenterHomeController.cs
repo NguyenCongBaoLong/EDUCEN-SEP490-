@@ -8,7 +8,7 @@ namespace EducenAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class CenterHomeController : ControllerBase
     {
         private readonly ICenterHomeService _centerHomeService;
@@ -45,6 +45,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("save")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> SaveCenterHome([FromForm] SaveCenterHomeDto dto) // Đổi sang [FromForm]
         {
             try

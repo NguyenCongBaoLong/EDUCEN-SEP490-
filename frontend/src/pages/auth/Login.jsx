@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, getRedirectPath } from '../../context/AuthContext';
@@ -10,6 +10,16 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
     const { login } = useAuth();
+
+    // Lưu tenantId từ URL query param vào localStorage khi trang login load
+    // Ví dụ: /login?tenant=center1
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const tenantParam = params.get('tenant');
+        if (tenantParam && tenantParam !== 'default-tenant') {
+            localStorage.setItem('tenantId', tenantParam);
+        }
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;

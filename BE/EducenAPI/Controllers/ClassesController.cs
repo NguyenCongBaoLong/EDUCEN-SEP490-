@@ -450,7 +450,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/Classes/teacher/my-classes
         [HttpGet("teacher/my-classes")]
-        [Authorize(Roles = "Teacher")]
+        [Authorize(Roles = "Teacher,Assistant")]
         public async Task<IActionResult> GetMyTeacherClasses()
         {
             try
@@ -458,8 +458,8 @@ namespace EducenAPI.Controllers
                 var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (userIdClaim == null) return Unauthorized();
 
-                int teacherId = int.Parse(userIdClaim.Value);
-                var classes = await _classService.GetClassesByTeacherIdAsync(teacherId);
+                int userId = int.Parse(userIdClaim.Value);
+                var classes = await _classService.GetClassesByTeacherIdAsync(userId);
                 return Ok(classes);
             }
             catch (Exception ex)

@@ -1,7 +1,7 @@
-﻿using System.Security.Cryptography;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace EducenAPI.Middleware
 {
@@ -67,6 +67,14 @@ namespace EducenAPI.Middleware
                 await context.Response.WriteAsync("Invalid API Key");
                 return;
             }
+
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.Name, "SystemAdmin"),
+                new Claim(ClaimTypes.Role, "SystemAdmin")
+            };
+            var identity = new ClaimsIdentity(claims, "SystemApiKey");
+            context.User = new ClaimsPrincipal(identity);
 
             await _next(context);
         }

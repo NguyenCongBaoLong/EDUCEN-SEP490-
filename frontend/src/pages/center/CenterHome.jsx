@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useSchedule } from '../../context/ScheduleContext';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import '../../css/pages/center/CenterHome.css';
 import axios from 'axios';
 import toast from 'react-hot-toast';

@@ -19,6 +19,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("Create-Assignments")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> CreateAssignment([FromForm] CreateAssignmentDto dto)
         {
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -27,6 +28,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> UpdateAssignment(int id, [FromForm] CreateAssignmentDto dto)
         {
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -35,6 +37,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Teacher,Assistant,Admin,Student")]
         public async Task<IActionResult> GetAssignments()
         {
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
@@ -43,6 +46,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("Get-By-Session/{sessionId}")]
+        [Authorize(Roles = "Teacher,Assistant,Admin,Student")]
         public async Task<IActionResult> GetAssignmentsBySession(int sessionId)
         {
           
@@ -59,12 +63,14 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("import")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> ImportAssignment([FromBody] EducenAPI.DTOs.Common.ImportDto dto)
         {
             var result = await _assignmentService.ImportAssignmentAsync(dto.SourceId, dto.TargetSessionId, dto.EndTime);
             return Ok(result);
         }
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> DeleteAssignment(int id)
         {
             var success = await _assignmentService.DeleteAssignmentAsync(id);
@@ -73,6 +79,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("{id:int}/grading")]
+        [Authorize(Roles = "Teacher,Assistant,Admin,Student")]
         public async Task<IActionResult> GetAssignmentGrading(int id)
         {
             try
@@ -88,6 +95,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("Assigned")]
+        [Authorize(Roles = "Teacher,Assistant,Admin,Student")]
         public async Task<IActionResult> GetAssignedAssignments(string type)
         {
             try

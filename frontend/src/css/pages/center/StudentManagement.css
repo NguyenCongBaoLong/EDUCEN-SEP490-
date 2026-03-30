@@ -34,9 +34,9 @@
 }
 
 .btn-add-student {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
     background: #3b82f6;
     /* Blue theme */
     color: white;
@@ -48,6 +48,8 @@
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
 }
 
 .btn-add-student:hover {
@@ -57,9 +59,9 @@
 }
 
 .btn-import-student {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
     background: white;
     color: #374151;
     padding: 0.75rem 1.25rem;
@@ -69,6 +71,8 @@
     border: 1.5px solid #d1d5db;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
 }
 
 .btn-import-student:hover {
@@ -115,6 +119,25 @@
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
     margin-left: 0.5rem;
+}
+
+/* Button container fixes */
+.header-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+}
+
+/* Send account button specific */
+.btn-add-student[style*="background: #f59e0b"] {
+    background: #f59e0b !important;
+    border-color: #f59e0b !important;
+}
+
+.btn-add-student[style*="background: #f59e0b"]:hover {
+    background: #d97706 !important;
+    border-color: #d97706 !important;
 }
 
 /* Responsive */

@@ -20,6 +20,11 @@ namespace EducenAPI.Persistence.Contexts
 
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
         public DbSet<TenantRegistration> TenantRegistrations { get; set; }
+        public DbSet<TenantCreditLedger> TenantCreditLedgers { get; set; }
+
+        // === Payment System ===
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+        public DbSet<RefundRequest> RefundRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -51,9 +56,45 @@ namespace EducenAPI.Persistence.Contexts
                 .HasForeignKey(p => p.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Tenant - Credit Ledger
+            builder.Entity<TenantCreditLedger>()
+                .HasOne(l => l.Tenant)
+                .WithMany(t => t.CreditLedgers)
+                .HasForeignKey(l => l.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TenantCreditLedger>()
+                .HasIndex(l => new { l.TenantId, l.CreatedAt });
+
             // Subscription index
             builder.Entity<Subscription>()
                 .HasIndex(s => new { s.TenantId, s.StartDate });
+
+            // === PaymentTransaction Configuration ===
+            builder.Entity<PaymentTransaction>()
+                .HasOne(pt => pt.PaymentRecord)
+                .WithMany(pr => pr.Transactions)
+                .HasForeignKey(pt => pt.PaymentRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PaymentTransaction>()
+                .HasIndex(pt => new { pt.PaymentRecordId, pt.Status });
+
+            builder.Entity<PaymentTransaction>()
+                .HasIndex(pt => pt.GatewayTransactionId);
+
+            // === RefundRequest Configuration ===
+            builder.Entity<RefundRequest>()
+                .HasOne(rr => rr.PaymentRecord)
+                .WithMany()
+                .HasForeignKey(rr => rr.PaymentRecordId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<RefundRequest>()
+                .HasIndex(rr => new { rr.TenantId, rr.Status });
+
+            builder.Entity<RefundRequest>()
+                .HasIndex(rr => rr.SubscriptionId);
         }
     }
 }

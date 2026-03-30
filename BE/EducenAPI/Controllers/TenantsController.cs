@@ -1,12 +1,14 @@
 ﻿using EducenAPI.DTOs;
 using EducenAPI.DTOs.Tenant;
 using EducenAPI.Services.TenantService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EducenAPI.Controllers
 {
     [Route("api/admin/[controller]")]
     [ApiController]
+    [Authorize(Roles = "SystemAdmin")]
     public class TenantsController : ControllerBase
     {
         private readonly ITenantService _tenantService;
