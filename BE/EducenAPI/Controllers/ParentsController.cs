@@ -94,6 +94,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("send-account/{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> SendAccount(int id)
         {
             try

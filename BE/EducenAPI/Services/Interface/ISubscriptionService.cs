@@ -10,5 +10,7 @@ namespace EducenAPI.Services.Interface
         Task<SubscriptionResponseDTO> RenewSubscription(RenewSubscriptionRequestDTO request);
 
         Task<SubscriptionResponseDTO> ChangePlan(ChangePlanRequestDTO request);
+
+        Task<SubscriptionResponseDTO?> GetActiveSubscriptionAsync(string tenantId);
     }
 }

@@ -19,6 +19,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
         public async Task<ActionResult<IEnumerable<RoomDto>>> GetRooms()
         {
             var rooms = await _roomService.GetAllRoomsAsync();
@@ -26,6 +27,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
         public async Task<ActionResult<RoomDto>> GetRoom(int id)
         {
             var room = await _roomService.GetRoomByIdAsync(id);
@@ -34,6 +36,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<ActionResult<RoomDto>> CreateRoom(CreateRoomDto dto)
         {
             var room = await _roomService.CreateRoomAsync(dto);
@@ -41,6 +44,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateRoom(int id, UpdateRoomDto dto)
         {
             var success = await _roomService.UpdateRoomAsync(id, dto);
@@ -49,6 +53,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteRoom(int id)
         {
             try
@@ -64,6 +69,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("{id}/schedule")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
         public async Task<ActionResult<IEnumerable<ScheduleDto>>> GetRoomSchedule(int id)
         {
             var schedule = await _roomService.GetRoomScheduleAsync(id);

@@ -1,18 +1,24 @@
 using EducenAPI.DTOs.Subscription;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/admin/tenants")]
+    [Authorize(Roles = "SystemAdmin")]
     public class SubscriptionController : ControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
+        private readonly AdminDbContext _adminDbContext;
 
-        public SubscriptionController(ISubscriptionService subscriptionService)
+        public SubscriptionController(ISubscriptionService subscriptionService, AdminDbContext adminDbContext)
         {
             _subscriptionService = subscriptionService;
+            _adminDbContext = adminDbContext;
         }
 
         [HttpPost("subscribe")]
@@ -44,6 +50,27 @@ namespace EducenAPI.Controllers
             var result = await _subscriptionService.ChangePlan(request);
 
             return Ok(result);
+        }
+
+        [HttpGet("{tenantId}/subscription-history")]
+        public async Task<IActionResult> GetSubscriptionHistory(string tenantId)
+        {
+            var payments = await _adminDbContext.PaymentRecords
+                .Where(p => p.TenantId == tenantId && p.TransactionType == "Subscription")
+                .OrderByDescending(p => p.PaymentDate)
+                .Select(p => new
+                {
+                    paymentId = p.PaymentId,
+                    amount = p.Amount,
+                    status = p.Status,
+                    paymentDate = p.PaymentDate,
+                    paymentMethod = p.PaymentMethod,
+                    description = p.Description,
+                    subscriptionMonths = p.SubscriptionMonths
+                })
+                .ToListAsync();
+
+            return Ok(payments);
         }
     }
 }

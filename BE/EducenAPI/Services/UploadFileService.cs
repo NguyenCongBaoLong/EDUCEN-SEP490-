@@ -33,7 +33,8 @@ namespace EducenAPI.Services
                     }
 
                     var id = Guid.NewGuid();
-                    var fileName = $"{id}_{Path.GetFileName(file.FileName)}";
+                    var safeFileName = Path.GetFileName(file.FileName).Replace(" ", "_");
+                    var fileName = $"{id}_{safeFileName}";
                     var filePath = Path.Combine(directoryPath, fileName);
                     
                     using (var stream = new FileStream(filePath, FileMode.Create))

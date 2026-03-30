@@ -65,6 +65,7 @@ namespace EducenAPI.Services
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
+                    PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
                         DayOfWeek = s.DayOfWeek,
@@ -118,6 +119,7 @@ namespace EducenAPI.Services
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
+                    PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
                         DayOfWeek = s.DayOfWeek,
@@ -218,8 +220,11 @@ namespace EducenAPI.Services
                 GradeId = dto.GradeId,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                Status = dto.Status ?? "Active"
+                Status = dto.Status ?? "Active",
+                PricePerSession = dto.PricePerSession
             };
+
+            Console.WriteLine($"[DEBUG] CreateClassAsync: PricePerSession = {dto.PricePerSession}");
 
             // Use transaction for creating class with schedules
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -677,6 +682,12 @@ namespace EducenAPI.Services
                     if (!validStatuses.Contains(dto.Status))
                         throw new Exception($"Status must be one of: {string.Join(", ", validStatuses)}");
                     existingClass.Status = dto.Status;
+                }
+
+                if (dto.PricePerSession.HasValue)
+                {
+                    Console.WriteLine($"[DEBUG] UpdateClassAsync: PricePerSession = {dto.PricePerSession}");
+                    existingClass.PricePerSession = dto.PricePerSession;
                 }
 
                 // Update schedules only if slots have actually changed
@@ -1145,6 +1156,7 @@ namespace EducenAPI.Services
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
+                    PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
                         DayOfWeek = s.DayOfWeek,

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using System;
@@ -20,8 +20,9 @@ namespace EducenAPI.Controllers
             _subjectService = subjectService;
         }
 
-        // GET: api/Subjects
+        // GET: api/Subjects (public - cho phép trang chủ lấy danh sách môn học)
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSubjects()
         {
             var subjects = await _subjectService.GetAllSubjectsAsync();

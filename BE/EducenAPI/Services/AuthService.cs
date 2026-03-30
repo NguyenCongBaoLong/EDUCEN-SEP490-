@@ -9,22 +9,28 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 
 namespace EducenAPI.Services
 {
     public class AuthService : IAuthService
     {
         private readonly EducenV2Context _context;
+        private readonly AdminDbContext _adminContext;
         private readonly IConfiguration _config;
         private readonly MailService _mailService;
         private readonly IMemoryCache _cache;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AuthService(EducenV2Context context, IConfiguration config, MailService mailService, IMemoryCache cache)
+        public AuthService(EducenV2Context context, AdminDbContext adminContext, IConfiguration config, MailService mailService, IMemoryCache cache, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
+            _adminContext = adminContext;
             _config = config;
             _mailService = mailService;
             _cache = cache;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task Register(RegisterDto dto)
@@ -50,9 +56,41 @@ namespace EducenAPI.Services
 
         public async Task<string> Login(LoginDto dto)
         {
-            var user = await _context.Users
-                .Include(x => x.Role)
-                .FirstOrDefaultAsync(x => x.Username == dto.Username);
+            // Luôn query user từ DB mặc định EducenV2, không phụ thuộc tenant header
+            // Vì user credentials được chia sẻ trên tất cả tenant
+            var defaultConnStr = _config.GetConnectionString("DefaultTenantConnection");
+
+            User? user = null;
+            string roleName = string.Empty;
+
+            using (var conn = new SqlConnection(defaultConnStr))
+            {
+                await conn.OpenAsync();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT u.UserId, u.Username, u.PasswordHash, u.AccountStatus,
+                           u.FullName, u.Email, u.RoleId, r.RoleName
+                    FROM Users u
+                    INNER JOIN Roles r ON u.RoleId = r.RoleId
+                    WHERE u.Username = @Username";
+                cmd.Parameters.AddWithValue("@Username", dto.Username);
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    user = new User
+                    {
+                        UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                        Username = reader.GetString(reader.GetOrdinal("Username")),
+                        PasswordHash = reader.GetString(reader.GetOrdinal("PasswordHash")),
+                        AccountStatus = reader.GetString(reader.GetOrdinal("AccountStatus")),
+                        FullName = reader.IsDBNull(reader.GetOrdinal("FullName")) ? null : reader.GetString(reader.GetOrdinal("FullName")),
+                        Email = reader.IsDBNull(reader.GetOrdinal("Email")) ? null : reader.GetString(reader.GetOrdinal("Email")),
+                        RoleId = reader.GetInt32(reader.GetOrdinal("RoleId")),
+                        Role = new Role { RoleName = reader.GetString(reader.GetOrdinal("RoleName")) }
+                    };
+                }
+            }
 
             // Unified error message to prevent username enumeration
             if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
@@ -61,7 +99,11 @@ namespace EducenAPI.Services
             if (user.AccountStatus != "Active")
                 throw new Exception("Tài khoản của bạn đã bị khóa");
 
-            return GenerateToken(user);
+            // Resolve tenant from JWT claim, header, or middleware
+            // Nếu không có tenant cụ thể → giữ "default-tenant" để dùng DB EducenV2 mặc định
+            var resolvedTenantId = GetCurrentTenantId();
+
+            return GenerateToken(user, resolvedTenantId);
         }
 
         public async Task<string> RequestResetPassword(ResetPasswordDto dto)
@@ -145,7 +187,7 @@ namespace EducenAPI.Services
             }
         }
 
-        private string GenerateToken(User user)
+        private string GenerateToken(User user, string? tenantIdOverride = null)
         {
             var jwt = _config.GetSection("Jwt");
 
@@ -154,7 +196,8 @@ namespace EducenAPI.Services
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
                 new Claim(ClaimTypes.Role, user.Role.RoleName),
-                new Claim("UserId", user.UserId.ToString())
+                new Claim("UserId", user.UserId.ToString()),
+                new Claim("TenantId", tenantIdOverride ?? GetCurrentTenantId())
             };
 
             var jwtKey = jwt["Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
@@ -170,6 +213,39 @@ namespace EducenAPI.Services
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private string GetCurrentTenantId()
+        {
+            try
+            {
+                // Lấy tenantId từ header của request (TenantResolver middleware đã set)
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext?.Items.ContainsKey("TenantId") == true)
+                {
+                    return httpContext.Items["TenantId"]?.ToString() ?? "default-tenant";
+                }
+                
+                // Hoặc lấy từ header
+                var tenantHeader = httpContext?.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(tenantHeader))
+                {
+                    return tenantHeader;
+                }
+
+                // Hoặc lấy từ query param ?tenant=
+                var tenantQuery = httpContext?.Request.Query["tenant"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(tenantQuery))
+                {
+                    return tenantQuery;
+                }
+                
+                return "default-tenant";
+            }
+            catch
+            {
+                return "default-tenant";
+            }
         }
 
         public async Task<GeneratedAccountDto> GenerateStudentAccount(int studentId)

@@ -46,8 +46,18 @@ namespace EducenAPI.Middleware
                 }
             }
 
-            // 3. Chuyển đổi Subdomain thành TenantId thực tế (GUID)
-            if (!string.IsNullOrEmpty(subDomain))
+            // 3. Nếu không lấy được từ header, thử query parameter (?tenant=xxx)
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                var tenantFromQuery = context.Request.Query["tenant"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(tenantFromQuery))
+                {
+                    tenantId = tenantFromQuery;
+                }
+            }
+
+            // 4. Set tenant only if we have a valid tenantId
+            if (!string.IsNullOrEmpty(tenantId))
             {
                 string cacheKey = $"tenant_id_map_{subDomain}";
 

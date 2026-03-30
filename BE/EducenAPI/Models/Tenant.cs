@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EducenAPI.Models
 {
@@ -36,9 +37,14 @@ namespace EducenAPI.Models
 
         public bool IsActive { get; set; } = true;
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CreditBalance { get; set; } = 0m;
+
         // Navigation
         public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
 
         public ICollection<PaymentRecord> PaymentRecords { get; set; } = new List<PaymentRecord>();
+
+        public ICollection<TenantCreditLedger> CreditLedgers { get; set; } = new List<TenantCreditLedger>();
     }
 }

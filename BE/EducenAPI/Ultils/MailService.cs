@@ -103,5 +103,23 @@ namespace EducenAPI.Ultils
 
             await smtp.SendMailAsync(mail);
         }
+
+        public async Task SendEmailAsync(string toEmail, string subject, string body)
+        {
+            var mail = new MailMessage();
+            mail.From = new MailAddress(_emailSettings.Email);
+            mail.To.Add(toEmail);
+            mail.Subject = subject;
+            mail.Body = body;
+            mail.IsBodyHtml = true;
+
+            var smtp = new SmtpClient(_emailSettings.Host, _emailSettings.Port)
+            {
+                Credentials = new NetworkCredential(_emailSettings.Email, _emailSettings.Password),
+                EnableSsl = true
+            };
+
+            await smtp.SendMailAsync(mail);
+        }
     }
 }

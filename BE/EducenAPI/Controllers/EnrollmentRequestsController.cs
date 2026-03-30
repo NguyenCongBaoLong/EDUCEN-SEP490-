@@ -29,6 +29,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/enrollment-requests
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetAllRequests()
         {
             var requests = await _service.GetAllRequestsAsync();
@@ -37,6 +38,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/enrollment-requests/pending
         [HttpGet("pending")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetPendingRequests()
         {
             var requests = await _service.GetPendingRequestsAsync();
@@ -45,6 +47,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/enrollment-requests/{id}
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetRequestById(int id)
         {
             var request = await _service.GetRequestByIdAsync(id);
@@ -81,6 +84,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/enrollment-requests/{id}/approve
         [HttpPut("{id:int}/approve")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> ApproveRequest(int id)
         {
             try
@@ -104,6 +108,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/enrollment-requests/{id}/reject
         [HttpPut("{id:int}/reject")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> RejectRequest(int id)
         {
             try
