@@ -67,6 +67,7 @@ namespace EducenAPI.Services
         }
         public async Task<MaterialResponseDto> SaveMaterials(SaveMaterialDto dto, string baseUrl)
         {
+            dto.Title = dto.Title.Trim();
             if (dto.SessionId.HasValue)
             {
                
@@ -126,6 +127,9 @@ namespace EducenAPI.Services
                     && e.Title == dto.Title);
             if (isTitleUnique)
                 throw new ConflictException("Title đang bị trùng");
+
+
+
             var material = new LessonMaterial
             {
                 SessionId = dto.SessionId,
