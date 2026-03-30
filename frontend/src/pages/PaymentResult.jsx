@@ -22,6 +22,14 @@ const PaymentResult = () => {
     const success = searchParams.get('success') === 'true';
     const orderId = searchParams.get('orderId');
     const transactionId = searchParams.get('transactionId');
+    const tenantHint = searchParams.get('tenantId')
+        || searchParams.get('tenant')
+        || searchParams.get('TenantId')
+        || searchParams.get('Tenant');
+
+    const isValidTenantId = (tenantId) => (
+        !!tenantId && tenantId !== 'undefined' && tenantId !== 'null'
+    );
 
     // Xác định trang điều hướng theo role
     const invoicesPath = user?.role === 'Parent'
@@ -33,6 +41,9 @@ const PaymentResult = () => {
     const invoicesLabel = user?.role === 'Admin' ? 'Quản lý gói dịch vụ' : 'Xem hóa đơn';
 
     useEffect(() => {
+        if (isValidTenantId(tenantHint)) {
+            localStorage.setItem('tenantId', tenantHint);
+        }
         verifyPayment();
     }, []);
 

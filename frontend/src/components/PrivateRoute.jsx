@@ -29,7 +29,7 @@ const PrivateRoute = ({ children, allowedRoles }) => {
         
         // Giữ lại tenant query param khi redirect để login biết tenant nào
         const tenantId = localStorage.getItem('tenantId');
-        const redirectUrl = tenantId && tenantId !== 'default-tenant'
+        const redirectUrl = tenantId
             ? `${loginPath}?tenant=${encodeURIComponent(tenantId)}`
             : loginPath;
         

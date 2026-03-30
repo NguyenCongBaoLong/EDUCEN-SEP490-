@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 // Kiểm tra tenantId hợp lệ (không phải giá trị fallback sai)
 function isValidTenantId(tenantId) {
-    return tenantId && tenantId !== 'default-tenant' && tenantId !== 'undefined' && tenantId !== 'null';
+    return tenantId && tenantId !== 'undefined' && tenantId !== 'null';
 }
 
 // Decode JWT payload (không cần thư viện bên ngoài)
@@ -116,7 +116,7 @@ export function AuthProvider({ children }) {
         if (isValidTenantId(decoded.tenantId)) {
             localStorage.setItem('tenantId', decoded.tenantId);
         } else if (!isValidTenantId(effectiveTenantId)) {
-            // Xóa tenantId sai (default-tenant, undefined, null)
+            // Xóa tenantId sai (undefined, null)
             localStorage.removeItem('tenantId');
         }
         

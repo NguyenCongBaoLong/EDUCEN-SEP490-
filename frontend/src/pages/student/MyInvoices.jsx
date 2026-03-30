@@ -29,14 +29,6 @@ const MyInvoices = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
 
-    // Lấy tenantId - chấp nhận cả default-tenant
-    const getValidTenantId = () => {
-        const stored = localStorage.getItem('tenantId');
-        if (stored) return stored;
-        if (user?.tenantId) return user.tenantId;
-        return 'default-tenant';
-    };
-
     useEffect(() => {
         fetchInvoices();
     }, []);
@@ -80,11 +72,10 @@ const MyInvoices = () => {
 
         setProcessingPayment(true);
         try {
-            const tenantId = getValidTenantId();
-            const returnUrl = `${window.location.origin}/payment/result`;
+            const tenantId = paymentService.resolveTenantId(user?.tenantId);
+            const returnUrl = paymentService.getVNPayReturnUrl(tenantId);
             
             const paymentData = {
-                tenantId,
                 amount: selectedInvoice.finalAmount,
                 gatewayType: 'VNPAY',
                 transactionType: 'Tuition',
@@ -92,6 +83,10 @@ const MyInvoices = () => {
                 description: `Thanh toán học phí tháng ${selectedInvoice.invoiceMonth}/${selectedInvoice.invoiceYear}`,
                 returnUrl
             };
+
+            if (tenantId) {
+                paymentData.tenantId = tenantId;
+            }
 
             const result = await paymentService.createPayment(paymentData);
             

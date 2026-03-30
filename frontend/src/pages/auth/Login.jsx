@@ -16,7 +16,7 @@ const Login = () => {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const tenantParam = params.get('tenant');
-        if (tenantParam && tenantParam !== 'default-tenant') {
+        if (tenantParam && tenantParam !== 'undefined' && tenantParam !== 'null') {
             localStorage.setItem('tenantId', tenantParam);
         }
     }, []);
