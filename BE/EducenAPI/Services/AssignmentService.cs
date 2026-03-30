@@ -67,12 +67,7 @@ namespace EducenAPI.Services
 
         public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
-            //if (dto.StartTime.HasValue && dto.StartTime.Value < DateTime.Now)
-            //{
-            //    // Có thể cho phép độ trễ vài phút (ví dụ < DateTime.Now.AddMinutes(-5)) nếu cần thiết,
-            //    // nhưng khắt khe nhất thì dùng < DateTime.Now
-            //    throw new BadRequestException("Thời gian bắt đầu không được ở trong quá khứ.");
-            //}
+            
             //  Validate StartTime > EndTime
             if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime > dto.EndTime)
             {
@@ -96,6 +91,10 @@ namespace EducenAPI.Services
             // Store uploaded file info for ResourceFile creation
             DTOs.FileUpload.FileUploadDto? uploadedFileDto = null;
 
+            if (!string.IsNullOrEmpty(dto.FileUrl))
+            {
+                fileUrl = dto.FileUrl.Trim();
+            }
             if (dto.File != null)
             {
                 // Validate File = 0MB
@@ -142,10 +141,7 @@ namespace EducenAPI.Services
                 if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại");
             }
 
-            if (!string.IsNullOrEmpty(dto.FileUrl))
-            {
-                fileUrl = dto.FileUrl.Trim();
-            }
+            
 
             var assignment = new Assignment
             {
