@@ -47,17 +47,17 @@ namespace EducenAPI.Middleware
             }
 
             // 3. Nếu không lấy được từ header, thử query parameter (?tenant=xxx)
-            if (string.IsNullOrEmpty(tenantId))
+            if (string.IsNullOrEmpty(subDomain))
             {
                 var tenantFromQuery = context.Request.Query["tenant"].FirstOrDefault();
                 if (!string.IsNullOrEmpty(tenantFromQuery))
                 {
-                    tenantId = tenantFromQuery;
+                    subDomain = tenantFromQuery;
                 }
             }
 
             // 4. Set tenant only if we have a valid tenantId
-            if (!string.IsNullOrEmpty(tenantId))
+            if (!string.IsNullOrEmpty(subDomain))
             {
                 string cacheKey = $"tenant_id_map_{subDomain}";
 

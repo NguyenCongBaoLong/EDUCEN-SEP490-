@@ -632,6 +632,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasIndex("LessonMaterialId");
 
                     b.ToTable("ResourceFiles");
+                });
+
             modelBuilder.Entity("EducenAPI.Models.PaymentRecordTenant", b =>
                 {
                     b.Property<string>("PaymentId")
@@ -1482,6 +1484,8 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Assignment");
 
                     b.Navigation("LessonMaterial");
+                    });
+
             modelBuilder.Entity("EducenAPI.Models.PaymentTransactionTenant", b =>
                 {
                     b.HasOne("EducenAPI.Models.PaymentRecordTenant", "PaymentRecord")
