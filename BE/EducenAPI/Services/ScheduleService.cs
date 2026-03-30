@@ -173,7 +173,7 @@ namespace EducenAPI.Services
                     {
                         if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
                         {
-                            throw new Exception($"Teacher is already assigned to class '{otherClass.ClassName}' at this time");
+                            throw new Exception($"Giáo viên đã được phân công cho lớp '{otherClass.ClassName}' trong khoảng thời gian này");
                         }
                     }
                 }
@@ -198,7 +198,7 @@ namespace EducenAPI.Services
                     {
                         if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
                         {
-                            throw new Exception($"Room is already occupied by class '{otherClass.ClassName}' at this time");
+                            throw new Exception($"Phòng đã được đặt bởi lớp '{otherClass.ClassName}' trong khoảng thời gian này");
                         }
                     }
                 }
@@ -262,7 +262,7 @@ namespace EducenAPI.Services
                 {
                     if (newStartTime < existing.EndTime && newEndTime > existing.StartTime)
                     {
-                        throw new Exception($"Schedule time overlaps with existing schedule on day {existing.DayOfWeek}");
+                        throw new Exception($"Thời gian học bị trùng với lịch học hiện có vào ngày thứ {existing.DayOfWeek}");
                     }
                 }
             }
@@ -285,7 +285,7 @@ namespace EducenAPI.Services
                         {
                             if (newStartTime < existingSlot.EndTime && newEndTime > existingSlot.StartTime)
                             {
-                                throw new Exception($"Teacher is already assigned to class '{otherClass.ClassName}' at this time");
+                                throw new Exception($"Giáo viên đã được phân công cho lớp '{otherClass.ClassName}' trong khoảng thời gian này");
                             }
                         }
                     }

@@ -39,13 +39,13 @@ namespace EducenAPI.Services
 
             // Get all sessions in the month for this class
             var startOfMonth = new DateTime(year, month, 1);
-            var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+            var startOfNextMonth = startOfMonth.AddMonths(1);
 
             var sessions = await _context.ClassSessions
                 .Include(s => s.Attendances)
                 .Where(s => s.Schedule.ClassId == classId &&
                             s.SessionDate >= startOfMonth &&
-                            s.SessionDate <= endOfMonth)
+                            s.SessionDate < startOfNextMonth)
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
 

@@ -82,7 +82,7 @@ namespace EducenAPI.Services
             var isUsed = await _context.Classes.AnyAsync(c => c.RoomId == id);
             if (isUsed)
             {
-                throw new InvalidOperationException("Cannot delete room as it is assigned to one or more classes.");
+                throw new InvalidOperationException("Không thể xóa phòng học vì đang được sử dụng cho một hoặc nhiều lớp học.");
             }
 
             _context.Rooms.Remove(room);

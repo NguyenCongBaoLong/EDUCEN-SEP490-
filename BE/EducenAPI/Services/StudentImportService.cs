@@ -126,7 +126,7 @@ public class StudentImportService : IStudentImportService
                 if (rowData == null || rowData.ItemArray == null)
                 {
                     importResults.Failed++;
-                    importResults.Errors.Add($"Row {row + 1}: Empty or invalid row data");
+                    importResults.Errors.Add($"Dòng {row + 1}: Dữ liệu dòng trống hoặc không hợp lệ");
                     continue;
                 }
 
@@ -277,7 +277,7 @@ public class StudentImportService : IStudentImportService
             catch (Exception ex)
             {
                 importResults.Failed++;
-                importResults.Errors.Add($"{sheetName} - Row {row + 1}: Error - {ex.Message}");
+                importResults.Errors.Add($"{sheetName} - Dòng {row + 1}: Lỗi - {ex.Message}");
             }
         }
     }
@@ -285,11 +285,11 @@ public class StudentImportService : IStudentImportService
     public async Task<object> ImportStudentsAsync(IFormFile file, int? classId = null)
     {
         if (file == null || file.Length == 0)
-            throw new ArgumentException("No file uploaded");
+            throw new ArgumentException("Chưa tải tệp lên");
 
         var extension = Path.GetExtension(file.FileName).ToLower();
         if (extension != ".xlsx" && extension != ".xls")
-            throw new ArgumentException("Only Excel files (.xlsx, .xls) are allowed");
+            throw new ArgumentException("Chỉ cho phép các tệp Excel (.xlsx, .xls)");
 
         var importResults = new ImportResults();
 
@@ -301,7 +301,7 @@ public class StudentImportService : IStudentImportService
         var dataSet = reader.AsDataSet();
 
         if (dataSet.Tables == null || dataSet.Tables.Count == 0)
-            throw new ArgumentException("Excel file contains no data");
+            throw new ArgumentException("Tệp Excel không chứa dữ liệu");
 
         // Find ALL worksheets with valid headers
         var validWorksheets = FindAllWorksheetsWithValidHeaders(dataSet);
@@ -309,8 +309,8 @@ public class StudentImportService : IStudentImportService
         if (validWorksheets.Count == 0)
         {
             throw new ArgumentException(
-                "No worksheet with valid template headers found. " +
-                "Please ensure your Excel file has a sheet with headers: Username, Full Name, Email, Phone Number, Grade, DateOfBirth, Gender");
+                "Không tìm thấy trang tính nào có tiêu đề hợp lệ. " +
+                "Vui lòng đảm bảo tệp Excel có các tiêu đề: Username, Full Name, Email, Phone Number, Grade, DateOfBirth, Gender");
         }
 
         // Shared HashSets across all sheets to detect duplicates in file
@@ -339,7 +339,7 @@ public class StudentImportService : IStudentImportService
 
         return new
         {
-            message = $"Import completed from {validWorksheets.Count} worksheet(s)",
+            message = $"Hoàn tất nhập dữ liệu từ {validWorksheets.Count} trang tính",
             importResults = new
             {
                 Total = importResults.Total,
@@ -349,7 +349,7 @@ public class StudentImportService : IStudentImportService
                 SuccessRecords = importResults.SuccessRecords,
                 Errors = importResults.Errors
             },
-            defaultPasswordNote = "Secure passwords generated only for students with username.",
+            defaultPasswordNote = "Mật khẩu bảo mật chỉ được tạo tự động cho các học sinh có tên đăng nhập.",
             templateInfo = new
             {
                 templateName = ImportTemplate.TEMPLATE_NAME,

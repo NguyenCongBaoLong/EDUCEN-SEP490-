@@ -76,7 +76,7 @@ namespace EducenAPI.Services
             var isUsed = await _context.Classes.AnyAsync(c => c.GradeId == id);
             if (isUsed)
             {
-                throw new InvalidOperationException("Cannot delete grade as it is assigned to one or more classes.");
+                throw new InvalidOperationException("Không thể xóa khối/lớp vì đang được sử dụng cho một hoặc nhiều lớp học.");
             }
 
             _context.Grades.Remove(grade);

@@ -255,15 +255,15 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(s => s.UserId == studentId);
 
             if (student == null)
-                throw new Exception("Student not found");
+                throw new Exception("Không tìm thấy học sinh");
 
             var user = student.StudentNavigation;
 
             if (user == null)
-                throw new Exception("Student does not have a linked user account");
+                throw new Exception("Học sinh chưa được liên kết với tài khoản hệ thống");
 
             if (!string.IsNullOrEmpty(user.Username))
-                throw new Exception("Student already has an account");
+                throw new Exception("Học sinh này đã có tài khoản");
 
             string username;
             bool exist;

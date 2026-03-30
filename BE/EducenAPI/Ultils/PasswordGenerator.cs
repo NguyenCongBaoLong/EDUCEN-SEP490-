@@ -16,10 +16,10 @@ namespace EducenAPI.Ultils
         public static string GenerateSecurePassword(int length = 12)
         {
             if (length < 8)
-                throw new ArgumentException("Password length must be at least 8 characters", nameof(length));
+                throw new ArgumentException("Mật khẩu phải có độ dài ít nhất 8 ký tự", nameof(length));
                 
             if (length < 4)
-                throw new ArgumentException("Password length must be at least 4 characters to include all character types", nameof(length));
+                throw new ArgumentException("Mật khẩu phải có độ dài ít nhất 4 ký tự để bao gồm đủ các loại ký tự", nameof(length));
 
             var allChars = Uppercase + Lowercase + Digits + Special;
             var password = new char[length];

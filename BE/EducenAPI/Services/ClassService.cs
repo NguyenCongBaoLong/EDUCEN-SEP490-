@@ -137,14 +137,14 @@ namespace EducenAPI.Services
             // Validate Subject exists
             var subject = await _context.Subjects.FindAsync(dto.SubjectId);
             if (subject == null)
-                throw new Exception("Subject not found");
+                throw new Exception("Không tìm thấy môn học");
 
             // Validate Teacher exists (if provided)
             if (dto.TeacherId.HasValue)
             {
                 var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
                 if (teacher == null)
-                    throw new Exception("Teacher not found");
+                    throw new Exception("Không tìm thấy giáo viên");
                 
                 // Check if teacher is already assigned to another active class at this time
                 if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
@@ -158,7 +158,7 @@ namespace EducenAPI.Services
             {
                 var assistant = await _context.Assistants.FindAsync(dto.AssistantId.Value);
                 if (assistant == null)
-                    throw new Exception("Assistant not found");
+                    throw new Exception("Không tìm thấy trợ giảng");
                 
                 // Check if assistant is already assigned to another active class at this time
                 if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
@@ -183,7 +183,7 @@ namespace EducenAPI.Services
             else if (dto.RoomId.HasValue)
             {
                 var room = await _context.Rooms.FindAsync(dto.RoomId.Value);
-                if (room == null) throw new Exception("Room not found");
+                if (room == null) throw new Exception("Không tìm thấy phòng học");
                 if (!room.Status) throw new Exception($"Phòng '{room.RoomName}' đang bảo trì, không thể sử dụng");
             }
 
@@ -191,16 +191,16 @@ namespace EducenAPI.Services
             if (dto.StartDate.HasValue && dto.EndDate.HasValue)
             {
                 if (dto.StartDate > dto.EndDate)
-                    throw new Exception("StartDate cannot be greater than EndDate");
+                    throw new Exception("Ngày bắt đầu không thể lớn hơn ngày kết thúc");
                 
                 if (dto.StartDate < DateTime.Today)
-                    throw new Exception("StartDate cannot be in the past");
+                    throw new Exception("Ngày bắt đầu không thể nằm trong quá khứ");
             }
 
             // Validate ClassStatus
             var validStatuses = new[] { "Active", "Inactive", "Completed", "Cancelled" };
             if (dto.Status != null && !validStatuses.Contains(dto.Status))
-                throw new Exception($"Status must be one of: {string.Join(", ", validStatuses)}");
+                throw new Exception($"Trạng thái phải là một trong: {string.Join(", ", validStatuses)}");
 
             // Validate and create schedules
             if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
@@ -247,7 +247,7 @@ namespace EducenAPI.Services
                 throw;
             }
 
-            return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Failed to retrieve created class");
+            return await GetClassByIdAsync(newClass.ClassId) ?? throw new Exception("Lỗi khi lấy thông tin lớp học vừa tạo");
         }
 
         private async Task ValidateTeacherAvailability(int teacherId, List<CreateScheduleSlotDto> scheduleSlots, DateTime? startDate, DateTime? endDate, int? excludeClassId = null)
@@ -276,7 +276,7 @@ namespace EducenAPI.Services
                     {
                         if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
                         {
-                            throw new Exception($"Teacher is already assigned to class '{existingClass.ClassName}' at this time");
+                            throw new Exception($"Giáo viên đã được phân công cho lớp '{existingClass.ClassName}' trong khoảng thời gian này");
                         }
                     }
                 }
@@ -309,7 +309,7 @@ namespace EducenAPI.Services
                     {
                         if (newStart < existingSlot.EndTime && newEnd > existingSlot.StartTime)
                         {
-                            throw new Exception($"Assistant is already assigned to class '{existingClass.ClassName}' at this time");
+                            throw new Exception($"Trợ giảng đã được phân công cho lớp '{existingClass.ClassName}' trong khoảng thời gian này");
                         }
                     }
                 }
@@ -387,7 +387,7 @@ namespace EducenAPI.Services
         private async Task ValidateRoomStatus(int roomId)
         {
             var room = await _context.Rooms.FindAsync(roomId);
-            if (room == null) throw new Exception("Room not found");
+            if (room == null) throw new Exception("Không tìm thấy phòng học");
             if (!room.Status) throw new Exception($"Phòng '{room.RoomName}' đang bảo trì, không thể sử dụng");
         }
 
@@ -397,22 +397,22 @@ namespace EducenAPI.Services
             {
                 // Validate DayOfWeek range
                 if (slot.DayOfWeek < 0 || slot.DayOfWeek > 6)
-                    throw new Exception("DayOfWeek must be between 0 and 6");
+                    throw new Exception("Ngày trong tuần phải từ 0 đến 6");
 
                 // Validate time format
                 if (!TimeOnly.TryParse(slot.StartTime, out var startTime))
-                    throw new Exception($"Invalid start time format: {slot.StartTime}");
+                    throw new Exception($"Định dạng thời gian bắt đầu không hợp lệ: {slot.StartTime}");
                 
                 if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
-                    throw new Exception($"Invalid end time format: {slot.EndTime}");
+                    throw new Exception($"Định dạng thời gian kết thúc không hợp lệ: {slot.EndTime}");
 
                 // Validate time order
                 if (startTime >= endTime)
-                    throw new Exception("EndTime must be greater than StartTime");
+                    throw new Exception("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
 
                 // Validate time doesn't cross midnight
                 if (startTime > endTime)
-                    throw new Exception("Schedule cannot cross midnight");
+                    throw new Exception("Lịch học không thể kéo dài qua nửa đêm");
             }
 
             // Check for duplicate slots
@@ -422,7 +422,7 @@ namespace EducenAPI.Services
                 .ToList();
 
             if (duplicateSlots.Any())
-                throw new Exception("Duplicate schedule slots found");
+                throw new Exception("Phát hiện các khung giờ học bị trùng lặp");
 
             // Check for overlapping slots on same day
             var slotsByDay = scheduleSlots.GroupBy(s => s.DayOfWeek);
@@ -442,7 +442,7 @@ namespace EducenAPI.Services
 
                         // Check for overlap
                         if ((slot1.StartTime < slot2.EndTime && slot1.EndTime > slot2.StartTime))
-                            throw new Exception("Schedule time overlaps with another schedule on the same day");
+                            throw new Exception("Thời gian học bị trùng lặp với một lịch học khác trong cùng ngày");
                     }
                 }
             }
@@ -569,7 +569,7 @@ namespace EducenAPI.Services
                 {
                     var subject = await _context.Subjects.FindAsync(dto.SubjectId.Value);
                     if (subject == null)
-                        throw new Exception("Subject not found");
+                        throw new Exception("Không tìm thấy môn học");
                     existingClass.SubjectId = dto.SubjectId.Value;
                 }
 
@@ -577,7 +577,7 @@ namespace EducenAPI.Services
                 {
                     var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
                     if (teacher == null)
-                        throw new Exception("Teacher not found");
+                        throw new Exception("Không tìm thấy giáo viên");
                     
                     // Validate teacher availability if changing teacher or updating schedules
                     if (existingClass.TeacherId != dto.TeacherId.Value || dto.ScheduleSlots != null)
@@ -602,7 +602,7 @@ namespace EducenAPI.Services
                 {
                     var assistant = await _context.Assistants.FindAsync(dto.AssistantId.Value);
                     if (assistant == null)
-                        throw new Exception("Assistant not found");
+                        throw new Exception("Không tìm thấy trợ giảng");
                     
                     // Validate assistant availability if changing assistant or updating schedules
                     if (existingClass.AssistantId != dto.AssistantId.Value || dto.ScheduleSlots != null)
@@ -662,7 +662,7 @@ namespace EducenAPI.Services
                 {
                     var grade = await _context.Grades.FindAsync(dto.GradeId.Value);
                     if (grade == null)
-                        throw new Exception("Grade not found");
+                        throw new Exception("Không tìm thấy khối/lớp");
                     existingClass.GradeId = dto.GradeId.Value;
                 }
                 else if (dto.GradeId == null)
@@ -680,7 +680,7 @@ namespace EducenAPI.Services
                 {
                     var validStatuses = new[] { "Active", "Inactive", "Completed", "Cancelled" };
                     if (!validStatuses.Contains(dto.Status))
-                        throw new Exception($"Status must be one of: {string.Join(", ", validStatuses)}");
+                        throw new Exception($"Trạng thái phải là một trong: {string.Join(", ", validStatuses)}");
                     existingClass.Status = dto.Status;
                 }
 
@@ -759,7 +759,7 @@ namespace EducenAPI.Services
                 return false;
 
             if (existingClass.Students.Any())
-                throw new Exception("Cannot delete class: class has students enrolled");
+                throw new Exception("Không thể xóa lớp học: lớp đang có học viên tham gia");
 
             // ✅ FIX: Xóa ClassSessions trước khi xóa Schedules
             foreach (var schedule in existingClass.Schedules)
@@ -787,7 +787,7 @@ namespace EducenAPI.Services
 
             var teacher = await _context.Teachers.FindAsync(teacherId);
             if (teacher == null)
-                throw new Exception("Teacher not found");
+                throw new Exception("Không tìm thấy giáo viên");
 
             existingClass.TeacherId = teacherId;
             await _context.SaveChangesAsync();
@@ -802,7 +802,7 @@ namespace EducenAPI.Services
 
             var assistant = await _context.Assistants.FindAsync(assistantId);
             if (assistant == null)
-                throw new Exception("Assistant not found");
+                throw new Exception("Không tìm thấy trợ giảng");
 
             existingClass.AssistantId = assistantId;
             await _context.SaveChangesAsync();
@@ -820,10 +820,10 @@ namespace EducenAPI.Services
 
             var student = await _context.Students.FindAsync(studentId);
             if (student == null)
-                throw new Exception("Student not found");
+                throw new Exception("Không tìm thấy học sinh");
 
             if (existingClass.Students.Any(s => s.UserId == studentId))
-                throw new Exception("Student already enrolled in this class");
+                throw new Exception("Học sinh này đã tham gia lớp học này");
 
             existingClass.Students.Add(student);
             await _context.SaveChangesAsync();
@@ -841,7 +841,7 @@ namespace EducenAPI.Services
 
             var student = existingClass.Students.FirstOrDefault(s => s.UserId == studentId);
             if (student == null)
-                throw new Exception("Student not enrolled in this class");
+                throw new Exception("Học sinh này không tham gia lớp học này");
 
             existingClass.Students.Remove(student);
             await _context.SaveChangesAsync();

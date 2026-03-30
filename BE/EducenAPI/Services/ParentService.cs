@@ -92,20 +92,20 @@ namespace EducenAPI.Services
                     .AnyAsync(u => u.Username == username);
 
                 if (existingUser)
-                    throw new Exception("Username already exists");
+                    throw new Exception("Tên đăng nhập đã tồn tại");
             }
 
             var existingEmail = await _context.Users
                 .AnyAsync(u => u.Email == dto.Email);
 
             if (existingEmail)
-                throw new Exception("Email already exists");
+                throw new Exception("Email đã tồn tại");
 
             var parentRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Parent");
 
             if (parentRole == null)
-                throw new Exception("Parent role not found");
+                throw new Exception("Không tìm thấy vai trò phụ huynh");
 
             var user = new User
             {
@@ -186,7 +186,7 @@ namespace EducenAPI.Services
                         .AnyAsync(u => u.Email == dto.Email && u.UserId != id);
 
                     if (emailExists)
-                        throw new Exception("Email already exists");
+                        throw new Exception("Email đã tồn tại");
 
                     existingParent.ParentNavigation.Email = dto.Email;
                 }
@@ -251,7 +251,7 @@ namespace EducenAPI.Services
             if (user == null) return false;
 
             if (string.IsNullOrEmpty(user.Email))
-                throw new Exception("Parent has no email address");
+                throw new Exception("Phụ huynh chưa có địa chỉ email");
 
             // Generate Username if not exists
             if (string.IsNullOrEmpty(user.Username))
