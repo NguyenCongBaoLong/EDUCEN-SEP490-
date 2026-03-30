@@ -3,12 +3,16 @@
   "WorkspaceRootPath": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\supportrequestsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\supportrequestsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\interface\\isupportrequestsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\interface\\isupportrequestsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\usercontextservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\usercontextservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\interface\\ifileuploadservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\interface\\ifileuploadservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\controllers\\supportrequestscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -19,32 +23,20 @@
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:controllers\\adminsupportrequestscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:controllers\\admincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\supportrequestsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\supportrequestsservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\admindashboardservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\admindashboardservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\assignmentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\assignmentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\controllers\\enrollmentrequestscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:controllers\\enrollmentrequestscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\lessonmaterialservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\lessonmaterialservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\dtos\\supportrequestdtos\\createsupportrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:dtos\\supportrequestdtos\\createsupportrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\dtos\\supportrequestdtos\\replysupportrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:dtos\\supportrequestdtos\\replysupportrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\dtos\\supportrequestdtos\\supportrequestresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:dtos\\supportrequestdtos\\supportrequestresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\models\\supportrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:models\\supportrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|d:\\documents\\sp_tuananh\\educen-sep490-\\be\\educenapi\\services\\submissionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\submissionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -54,138 +46,8 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 7,
           "Children": [
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "AdminSupportRequestsController.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminSupportRequestsController.cs",
-              "RelativeDocumentMoniker": "Controllers\\AdminSupportRequestsController.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminSupportRequestsController.cs",
-              "RelativeToolTip": "Controllers\\AdminSupportRequestsController.cs",
-              "ViewState": "AgIAAB0AAAAAAAAAAAAAACcAAAAzAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:43:26.006Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "AdminController.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminController.cs",
-              "RelativeDocumentMoniker": "Controllers\\AdminController.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminController.cs",
-              "RelativeToolTip": "Controllers\\AdminController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:42:34.474Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "AdminDashboardService.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AdminDashboardService.cs",
-              "RelativeDocumentMoniker": "Services\\AdminDashboardService.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AdminDashboardService.cs",
-              "RelativeToolTip": "Services\\AdminDashboardService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:42:14.944Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "EnrollmentRequestsController.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\EnrollmentRequestsController.cs",
-              "RelativeDocumentMoniker": "Controllers\\EnrollmentRequestsController.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\EnrollmentRequestsController.cs",
-              "RelativeToolTip": "Controllers\\EnrollmentRequestsController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAA+AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:41:15.06Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "SupportRequestsController.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\SupportRequestsController.cs",
-              "RelativeDocumentMoniker": "Controllers\\SupportRequestsController.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\SupportRequestsController.cs",
-              "RelativeToolTip": "Controllers\\SupportRequestsController.cs",
-              "ViewState": "AgIAAAcAAAAAAAAAAAAAABUAAAAzAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:39:13.82Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "SupportRequestsService.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SupportRequestsService.cs",
-              "RelativeDocumentMoniker": "Services\\SupportRequestsService.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SupportRequestsService.cs",
-              "RelativeToolTip": "Services\\SupportRequestsService.cs",
-              "ViewState": "AgIAAHgAAAAAAAAAAAAAABMAAAA1AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:34:02.261Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "SupportRequestResponseDto.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\SupportRequestDTOs\\SupportRequestResponseDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\SupportRequestDTOs\\SupportRequestResponseDto.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\SupportRequestDTOs\\SupportRequestResponseDto.cs",
-              "RelativeToolTip": "DTOs\\SupportRequestDTOs\\SupportRequestResponseDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:33:02.28Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "ReplySupportRequestDto.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\SupportRequestDTOs\\ReplySupportRequestDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\SupportRequestDTOs\\ReplySupportRequestDto.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\SupportRequestDTOs\\ReplySupportRequestDto.cs",
-              "RelativeToolTip": "DTOs\\SupportRequestDTOs\\ReplySupportRequestDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:32:42.991Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "CreateSupportRequestDto.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\SupportRequestDTOs\\CreateSupportRequestDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\SupportRequestDTOs\\CreateSupportRequestDto.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\DTOs\\SupportRequestDTOs\\CreateSupportRequestDto.cs",
-              "RelativeToolTip": "DTOs\\SupportRequestDTOs\\CreateSupportRequestDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:32:26.701Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "SupportRequest.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\SupportRequest.cs",
-              "RelativeDocumentMoniker": "Models\\SupportRequest.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Models\\SupportRequest.cs",
-              "RelativeToolTip": "Models\\SupportRequest.cs",
-              "ViewState": "AgIAABEAAAAAAAAAAAAowCoAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:24:37.401Z",
-              "EditorCaption": ""
-            },
             {
               "$type": "Bookmark",
               "Name": "ST:130:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
@@ -197,10 +59,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:128:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
             },
             {
               "$type": "Bookmark",
@@ -217,15 +75,112 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "ISupportRequestsService.cs",
-              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\ISupportRequestsService.cs",
-              "RelativeDocumentMoniker": "Services\\Interface\\ISupportRequestsService.cs",
-              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\ISupportRequestsService.cs",
-              "RelativeToolTip": "Services\\Interface\\ISupportRequestsService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAuwAcAAAAoAAAAAAAAAA==",
+              "Title": "UserContextService.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\UserContextService.cs",
+              "RelativeDocumentMoniker": "Services\\UserContextService.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\UserContextService.cs",
+              "RelativeToolTip": "Services\\UserContextService.cs",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAQwCcAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-28T08:23:11.708Z",
+              "WhenOpened": "2026-03-29T12:51:23.947Z",
               "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAMwAAAAAAAAAAAAAANUAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T07:42:02.586Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "IFileUploadService.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IFileUploadService.cs",
+              "RelativeDocumentMoniker": "Services\\Interface\\IFileUploadService.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\Interface\\IFileUploadService.cs",
+              "RelativeToolTip": "Services\\Interface\\IFileUploadService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAuwAYAAAAiAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T07:31:12.418Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "SupportRequestsController.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\SupportRequestsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\SupportRequestsController.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\SupportRequestsController.cs",
+              "RelativeToolTip": "Controllers\\SupportRequestsController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-28T13:58:40.548Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AdminSupportRequestsController.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminSupportRequestsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AdminSupportRequestsController.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\AdminSupportRequestsController.cs",
+              "RelativeToolTip": "Controllers\\AdminSupportRequestsController.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-28T13:58:35.726Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "SupportRequestsService.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SupportRequestsService.cs",
+              "RelativeDocumentMoniker": "Services\\SupportRequestsService.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SupportRequestsService.cs",
+              "RelativeToolTip": "Services\\SupportRequestsService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-28T13:58:25.677Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "AssignmentService.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AssignmentService.cs",
+              "RelativeDocumentMoniker": "Services\\AssignmentService.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AssignmentService.cs",
+              "RelativeToolTip": "Services\\AssignmentService.cs",
+              "ViewState": "AgIAANEBAAAAAAAAAAAAADMAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-28T13:57:18.868Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "SubmissionService.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SubmissionService.cs",
+              "RelativeDocumentMoniker": "Services\\SubmissionService.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SubmissionService.cs",
+              "RelativeToolTip": "Services\\SubmissionService.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAAAAACcAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-28T13:27:29.815Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "LessonMaterialService.cs",
+              "DocumentMoniker": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\LessonMaterialService.cs",
+              "RelativeDocumentMoniker": "Services\\LessonMaterialService.cs",
+              "ToolTip": "D:\\Documents\\SP_TuanAnh\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\LessonMaterialService.cs",
+              "RelativeToolTip": "Services\\LessonMaterialService.cs",
+              "ViewState": "AgIAAMIAAAAAAAAAAAAAAMgAAABLAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-28T13:25:59.442Z"
             }
           ]
         }
