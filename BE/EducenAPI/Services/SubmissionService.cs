@@ -40,10 +40,15 @@ namespace EducenAPI.Services
         public async Task<SubmissionResponseDto> CreateSubmissionAsync(CreateSubmissionRequest request, string baseUrl)
         {
             string fileUrl = string.Empty;
+
             var assignment = await _context.Assignments.FindAsync(request.AsmId);
             if (assignment == null)
                 throw new Exception("Không tìm thấy bài tập");
 
+            if (assignment.StartTime.HasValue && DateTime.Now < assignment.StartTime.Value)
+            {
+                throw new Exception("Bài tập này chưa mở");
+            }
             var student = await _context.Students.FindAsync(request.StudentId);
             if (student == null)
                 throw new Exception("Không tìm thấy học sinh");
