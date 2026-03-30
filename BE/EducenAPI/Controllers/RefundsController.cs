@@ -116,7 +116,7 @@ namespace EducenAPI.Controllers
             {
                 var refund = await _refundService.GetRefundRequestAsync(refundId);
                 if (refund == null)
-                    return NotFound(new { message = "Refund request not found" });
+                    return NotFound(new { message = "Không tìm thấy yêu cầu hoàn tiền." });
 
                 return Ok(refund);
             }
@@ -175,7 +175,7 @@ namespace EducenAPI.Controllers
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                throw new Exception("Invalid user ID");
+                throw new Exception("Mã người dùng không hợp lệ.");
             return userId;
         }
     }

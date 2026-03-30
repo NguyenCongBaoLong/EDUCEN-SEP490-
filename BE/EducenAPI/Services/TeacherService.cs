@@ -116,19 +116,19 @@ namespace EducenAPI.Services
                 .AnyAsync(u => u.Username == dto.Username);
 
             if (existingUser)
-                throw new Exception("Username already exists");
+                throw new Exception("Tên đăng nhập đã tồn tại.");
 
             var existingEmail = await _context.Users
                 .AnyAsync(u => u.Email == dto.Email);
 
             if (existingEmail)
-                throw new Exception("Email already exists");
+                throw new Exception("Email đã tồn tại.");
 
             var teacherRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Teacher");
 
             if (teacherRole == null)
-                throw new Exception("Teacher role not found");
+                throw new Exception("Không tìm thấy vai trò Giáo viên.");
 
             var user = new User
             {
@@ -189,7 +189,7 @@ namespace EducenAPI.Services
                     .AnyAsync(u => u.Email == dto.Email && u.UserId != teacher.UserId);
 
                 if (emailExists)
-                    throw new Exception("Email already exists");
+                    throw new Exception("Email đã tồn tại.");
 
                 teacher.TeacherNavigation.Email = dto.Email;
             }
@@ -223,7 +223,7 @@ namespace EducenAPI.Services
                 .AnyAsync(c => c.TeacherId == id);
 
             if (hasClasses)
-                throw new Exception("Cannot delete teacher: teacher has assigned classes");
+                throw new Exception("Không thể xóa giáo viên: giáo viên đã được phân công lớp học.");
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -250,7 +250,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(t => t.UserId == id);
 
             if (teacher == null)
-                return new { message = "Teacher not found" };
+                return new { message = "Không tìm thấy giáo viên" };
 
             var classes = await _context.Classes
                 .Where(c => c.TeacherId == id)

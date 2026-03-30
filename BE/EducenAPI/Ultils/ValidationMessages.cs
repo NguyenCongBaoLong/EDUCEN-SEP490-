@@ -3,23 +3,23 @@ namespace EducenAPI.Ultils
     public static class ValidationMessages
     {
         // Student validation messages - consistent across import and manual add
-        public const string RequiredFullName = "FullName is required";
-        public const string RequiredEmail = "Email is required";
-        public const string InvalidEmailFormat = "Invalid email format";
-        public const string InvalidPhoneFormat = "Invalid phone number format";
+        public const string RequiredFullName = "Họ và tên là bắt buộc.";
+        public const string RequiredEmail = "Email là bắt buộc.";
+        public const string InvalidEmailFormat = "Định dạng email không hợp lệ.";
+        public const string InvalidPhoneFormat = "Định dạng số điện thoại không hợp lệ.";
         
-        public const string DuplicateUsername = "Username already exists";
-        public const string DuplicateEmail = "Email already exists";
-        public const string EmailUsedByOtherRole = "Email is already used by another account (Teacher/Parent/Admin)";
+        public const string DuplicateUsername = "Tên đăng nhập đã tồn tại.";
+        public const string DuplicateEmail = "Email đã tồn tại.";
+        public const string EmailUsedByOtherRole = "Email này đã được sử dụng bởi một tài khoản khác (Giáo viên/Phụ huynh/Quản trị viên).";
         
-        public const string RequiredUsername = "Username is required for account creation";
-        public const string RequiredPassword = "Password is required for account creation";
+        public const string RequiredUsername = "Tên đăng nhập là bắt buộc khi tạo tài khoản.";
+        public const string RequiredPassword = "Mật khẩu là bắt buộc khi tạo tài khoản.";
         
-        public const string MissingRequiredData = "Missing required data (Full Name, Email)";
-        public const string UsernameExistsInFile = "Username already exists in import file";
-        public const string UsernameExistsInSystem = "Username already exists in system";
-        public const string InvalidDateFormat = "Invalid date format for DateOfBirth '{0}'. Use format: MM/DD/YYYY or DD/MM/YYYY";
-        public const string DateOfBirthInFuture = "Date of birth cannot be in the future";
+        public const string MissingRequiredData = "Thiếu dữ liệu bắt buộc (Họ tên, Email).";
+        public const string UsernameExistsInFile = "Tên đăng nhập đã tồn tại trong tệp nhập liệu.";
+        public const string UsernameExistsInSystem = "Tên đăng nhập đã tồn tại trong hệ thống.";
+        public const string InvalidDateFormat = "Định dạng ngày sinh không hợp lệ cho '{0}'. Vui lòng sử dụng định dạng: MM/DD/YYYY hoặc DD/MM/YYYY.";
+        public const string DateOfBirthInFuture = "Ngày sinh không thể ở trong tương lai.";
         
         // Format with parameter
         public static string FormatInvalidDate(string dateValue) => 

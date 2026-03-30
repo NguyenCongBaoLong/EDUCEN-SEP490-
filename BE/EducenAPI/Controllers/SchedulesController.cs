@@ -105,7 +105,7 @@ namespace EducenAPI.Controllers
             var schedule = await _scheduleService.GetScheduleByIdAsync(id);
 
             if (schedule == null)
-                return NotFound(new { message = "Schedule not found" });
+                return NotFound(new { message = "Không tìm thấy lịch học." });
 
             return Ok(schedule);
         }
@@ -140,7 +140,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _scheduleService.UpdateScheduleAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Schedule not found" });
+                    return NotFound(new { message = "Không tìm thấy lịch học." });
 
                 return NoContent();
             }
@@ -159,7 +159,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _scheduleService.DeleteScheduleAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Schedule not found" });
+                    return NotFound(new { message = "Không tìm thấy lịch học." });
 
                 return NoContent();
             }

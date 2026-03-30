@@ -1077,8 +1077,8 @@ namespace EducenAPI.Services
                 .Include(c => c.Students)
                 .Include(c => c.Subject)
                 .Include(c => c.Grade)
-                .Include(c => c.Teacher).ThenInclude(t => t.TeacherNavigation)
-                .Include(c => c.Assistant).ThenInclude(a => a.AssistantNavigation)
+                .Include(c => c.Teacher!).ThenInclude(t => t.TeacherNavigation)
+                .Include(c => c.Assistant!).ThenInclude(a => a.AssistantNavigation)
                 .Include(c => c.Schedules)
                 .Include(c => c.Sessions)
                 .Where(c => c.Students.Any(s => s.UserId == studentId))
@@ -1213,6 +1213,15 @@ namespace EducenAPI.Services
                     Console.WriteLine($"Error auto-completing classes: {ex.Message}");
                 }
             }
+        }
+        public async Task<bool> UpdateClassPriceAsync(int classId, decimal price)
+        {
+            var existingClass = await _context.Classes.FindAsync(classId);
+            if (existingClass == null) return false;
+
+            existingClass.PricePerSession = price;
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

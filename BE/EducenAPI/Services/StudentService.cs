@@ -114,7 +114,7 @@ namespace EducenAPI.Services
             var studentRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Student");
             if (studentRole == null)
-                throw new Exception("Student role not found");
+                throw new Exception("Không tìm thấy vai trò Học sinh.");
 
             // 3. Tạo User với null username/password (không có account)
             var user = new User
@@ -182,7 +182,7 @@ namespace EducenAPI.Services
             var studentRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Student");
             if (studentRole == null)
-                throw new Exception("Student role not found");
+                throw new Exception("Không tìm thấy vai trò Học sinh.");
 
             // 4. Create User account
             var user = new User
@@ -371,7 +371,7 @@ namespace EducenAPI.Services
                 return false;
 
             if (student.Classes.Count != 0)
-                throw new Exception("Cannot delete student: student is assigned to one or more classes");
+                throw new Exception("Không thể xóa học sinh: học sinh đang tham gia ít nhất một lớp học.");
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try

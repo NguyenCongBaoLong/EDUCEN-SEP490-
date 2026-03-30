@@ -113,7 +113,7 @@ namespace EducenAPI.Controllers
                     request?.ClassId, request?.Month, request?.Year);
 
                 if (request == null)
-                    return BadRequest(new { message = "Request body is null" });
+                    return BadRequest(new { message = "Dữ liệu yêu cầu trống." });
 
                 if (request.ClassId <= 0)
                     return BadRequest(new { message = "Vui lòng chọn lớp học" });
@@ -176,7 +176,7 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Invoice not found" });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 return Ok(invoice);
             }
@@ -198,9 +198,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceService.SendInvoiceAsync(invoiceId);
                 if (!success)
-                    return BadRequest(new { message = "Failed to send invoice" });
+                    return BadRequest(new { message = "Gửi hóa đơn thất bại." });
 
-                return Ok(new { message = "Invoice sent successfully" });
+                return Ok(new { message = "Đã gửi hóa đơn thành công." });
             }
             catch (Exception ex)
             {
@@ -220,9 +220,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceService.CancelInvoiceAsync(invoiceId, request.Reason);
                 if (!success)
-                    return BadRequest(new { message = "Failed to cancel invoice" });
+                    return BadRequest(new { message = "Hủy hóa đơn thất bại." });
 
-                return Ok(new { message = "Invoice cancelled successfully" });
+                return Ok(new { message = "Đã hủy hóa đơn thành công." });
             }
             catch (Exception ex)
             {
@@ -242,9 +242,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceService.MarkInvoiceAsPaidAsync(invoiceId, request.PaymentMethod, request.Notes);
                 if (!success)
-                    return BadRequest(new { message = "Failed to mark invoice as paid" });
+                    return BadRequest(new { message = "Xác nhận đã thanh toán thất bại." });
 
-                return Ok(new { message = "Invoice marked as paid successfully" });
+                return Ok(new { message = "Đã xác nhận thanh toán thành công." });
             }
             catch (Exception ex)
             {
@@ -321,7 +321,7 @@ namespace EducenAPI.Controllers
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                throw new Exception("Invalid user ID");
+                throw new Exception("ID người dùng không hợp lệ.");
             return userId;
         }
 
@@ -354,7 +354,7 @@ namespace EducenAPI.Controllers
                     .AnyAsync(s => s.UserId == userId);
 
                 if (!studentExists)
-                    throw new Exception($"Student not found for UserId {userId}");
+                    throw new Exception($"Không tìm thấy học sinh cho mã người dùng {userId}");
 
                 return new List<int> { userId };
             }
@@ -367,12 +367,12 @@ namespace EducenAPI.Controllers
                     .ToListAsync();
 
                 if (!studentIds.Any())
-                    throw new Exception("No students found for this parent account");
+                    throw new Exception("Không tìm thấy học sinh nào cho tài khoản phụ huynh này.");
 
                 return studentIds;
             }
 
-            throw new Exception($"Unsupported role '{role}' for tuition lookup");
+            throw new Exception($"Vai trò '{role}' không được hỗ trợ để tra cứu học phí.");
         }
     }
 

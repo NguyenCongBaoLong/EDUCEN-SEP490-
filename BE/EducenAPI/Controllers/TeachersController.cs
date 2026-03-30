@@ -34,7 +34,7 @@ namespace EducenAPI.Controllers
             var teacher = await _teacherService.GetTeacherByIdAsync(id);
 
             if (teacher == null)
-                return NotFound(new { message = "Teacher not found" });
+                return NotFound(new { message = "Không tìm thấy giáo viên." });
 
             return Ok(teacher);
         }
@@ -64,7 +64,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _teacherService.UpdateTeacherAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Teacher not found" });
+                    return NotFound(new { message = "Không tìm thấy giáo viên." });
 
                 return NoContent();
             }
@@ -83,7 +83,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _teacherService.DeleteTeacherAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Teacher not found" });
+                    return NotFound(new { message = "Không tìm thấy giáo viên." });
 
                 return NoContent();
             }

@@ -155,14 +155,12 @@ const MyInvoices = () => {
                 {/* Outstanding Summary */}
                 {outstandingInvoices.length > 0 && (
                     <div className="outstanding-alert">
-                        <AlertCircle size={24} />
+                        <AlertCircle />
                         <div>
-                            <h3>Bạn có {outstandingInvoices.length} hóa đơn chưa thanh toán</h3>
+                            <h3>Phải thanh toán: {formatCurrency(outstandingInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0))}</h3>
                             <p>
-                                Tổng số tiền cần thanh toán: {' '}
-                                <strong>
-                                    {formatCurrency(outstandingInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0))}
-                                </strong>
+                                Bạn hiện có <strong>{outstandingInvoices.length} hóa đơn</strong> đang chờ xử lý. 
+                                Vui lòng thanh toán sớm để đảm bảo quyền lợi học tập.
                             </p>
                         </div>
                     </div>
@@ -174,8 +172,8 @@ const MyInvoices = () => {
                     <div className="invoices-list">
                         {invoices.length === 0 ? (
                             <div className="empty-state">
-                                <FileText size={48} />
-                                <p>Chưa có hóa đơn nào</p>
+                                <FileText />
+                                <p>Hiện tại bạn không có hóa đơn nào</p>
                             </div>
                         ) : (
                             invoices.map((invoice) => (
@@ -185,45 +183,55 @@ const MyInvoices = () => {
                                 >
                                     <div className="invoice-header">
                                         <div className="invoice-title">
-                                            <FileText size={20} />
-                                            <span>Hóa đơn tháng {invoice.invoiceMonth}/{invoice.invoiceYear}</span>
+                                            <span>Tháng {invoice.invoiceMonth}/{invoice.invoiceYear}</span>
+                                            <div className="date-label">Hóa đơn học phí</div>
                                         </div>
                                         <div className="invoice-status">
                                             {getStatusIcon(invoice.status)}
-                                            <span>{getStatusText(invoice.status)}</span>
+                                            {getStatusText(invoice.status)}
                                         </div>
                                     </div>
                                     
                                     <div className="invoice-details">
                                         <div className="detail-item">
-                                            <Calendar size={16} />
-                                            <span>Lớp: {invoice.class?.className}</span>
+                                            <span className="detail-label">Lớp học</span>
+                                            <div className="detail-value">
+                                                <Calendar size={14} />
+                                                {invoice.class?.className || 'N/A'}
+                                            </div>
                                         </div>
                                         <div className="detail-item">
-                                            <DollarSign size={16} />
-                                            <span>Số buổi học: {invoice.attendedSessions}</span>
+                                            <span className="detail-label">Số buổi</span>
+                                            <div className="detail-value">
+                                                <Clock size={14} />
+                                                {invoice.attendedSessions} buổi
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="invoice-amount">
-                                        <span className="amount-label">Tổng tiền:</span>
-                                        <span className="amount-value">
-                                            {formatCurrency(invoice.finalAmount)}
-                                        </span>
-                                    </div>
+                                    <div className="invoice-footer">
+                                        <div className="invoice-amount">
+                                            <div className="amount-group">
+                                                <span className="amount-label">Số tiền cần trả</span>
+                                                <span className="amount-value">
+                                                    {formatCurrency(invoice.finalAmount)}
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                    {invoice.status !== 'Paid' && invoice.status !== 'Cancelled' && (
-                                        <button 
-                                            className="pay-button"
-                                            onClick={() => {
-                                                setSelectedInvoice(invoice);
-                                                setShowPaymentModal(true);
-                                            }}
-                                        >
-                                            <CreditCard size={18} />
-                                            Thanh toán ngay
-                                        </button>
-                                    )}
+                                        {invoice.status !== 'Paid' && invoice.status !== 'Cancelled' && (
+                                            <button 
+                                                className="pay-button"
+                                                onClick={() => {
+                                                    setSelectedInvoice(invoice);
+                                                    setShowPaymentModal(true);
+                                                }}
+                                            >
+                                                <CreditCard size={18} />
+                                                Thanh toán ngay
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}

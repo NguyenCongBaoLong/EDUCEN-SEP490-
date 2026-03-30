@@ -5,6 +5,7 @@ import Sidebar from '../../components/Sidebar';
 import ParentTable from '../../components/ParentTable';
 import AddParentModal from '../../components/AddParentModal';
 import ParentDetailModal from '../../components/ParentDetailModal';
+import ConfirmModal from '../../components/ConfirmModal';
 import api from '../../services/api';
 import '../../css/pages/center/ParentManagement.css';
 
@@ -17,6 +18,15 @@ const ParentManagement = () => {
     const [parentList, setParentList] = useState([]);
     const [studentList, setStudentList] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // State cho ConfirmModal
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+        type: 'warning'
+    });
 
     useEffect(() => {
         fetchData();
@@ -148,9 +158,19 @@ const ParentManagement = () => {
     const handleBulkSendAccount = async () => {
         if (selectedParentIds.length === 0) return;
         
-        const confirmBulk = window.confirm(`Bạn có chắc muốn gửi tài khoản cho ${selectedParentIds.length} phụ huynh đã chọn?`);
-        if (!confirmBulk) return;
+        setConfirmModal({
+            isOpen: true,
+            title: 'Gửi tài khoản hàng loạt',
+            message: `Bạn có chắc muốn gửi thông tin tài khoản cho <strong>${selectedParentIds.length}</strong> phụ huynh đã chọn?`,
+            onConfirm: () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                executeBulkSend();
+            },
+            type: 'info'
+        });
+    };
 
+    const executeBulkSend = async () => {
         const loadingToast = toast.loading(`Đang gửi ${selectedParentIds.length} tài khoản...`);
         try {
             await Promise.all(selectedParentIds.map(id => 
@@ -253,6 +273,15 @@ const ParentManagement = () => {
                 isOpen={!!viewingParent}
                 onClose={() => setViewingParent(null)}
                 parent={viewingParent}
+            />
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                type={confirmModal.type}
             />
         </div>
     );

@@ -49,6 +49,70 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
 
+/* ─── Tabs Navigation ─── */
+.dashboard-tabs {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    background: #e5e7eb;
+    border-radius: 12px;
+    width: fit-content;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-tab-btn svg {
+    transition: transform 0.2s;
+}
+
+.dashboard-tab-btn:hover {
+    color: #374151;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-tab-btn.active {
+    background: white;
+    color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-tab-btn.active svg {
+    transform: scale(1.1);
+}
+
+/* ─── Embedded States ─── */
+.revenue-report-embedded,
+.subscription-embedded {
+    width: 100%;
+}
+
+.revenue-report-embedded .report-content,
+.subscription-embedded .subscription-main {
+    padding: 0.5rem 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    background: transparent !important;
+}
+
+.revenue-report-embedded .page-header,
+.subscription-embedded .subscription-header {
+    margin-bottom: 2rem !important;
+}
+
 /* ─── KPI Grid ─────────────────────────────────────── */
 .kpi-grid {
     display: grid;

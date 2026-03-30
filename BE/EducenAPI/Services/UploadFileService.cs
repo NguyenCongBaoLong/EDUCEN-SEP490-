@@ -13,14 +13,14 @@ namespace EducenAPI.Services
                 var results = new List<FileUploadDto>();
                 if(files == null || files.Count == 0)
                 {
-                    throw new Exception("The selected file had been not found.");
+                    throw new Exception("Không tìm thấy tệp đã chọn.");
                 }
                 var date = DateTime.Now.ToString("yyyyMMdd");
                 foreach (var file in files)
                 {
-                    if(file == null && file.Length == 0)
+                    if(file == null || file.Length == 0)
                     {
-                        throw new Exception("Uploaded file is empty!");
+                        throw new Exception("Tệp tải lên trống!");
                     }
                     var extension = Path.GetExtension(file.FileName)
                                         .Replace(".", "")

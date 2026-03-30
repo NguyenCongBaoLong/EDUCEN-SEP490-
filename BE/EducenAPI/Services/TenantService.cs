@@ -32,20 +32,20 @@ namespace EducenAPI.Services.TenantService
 
             // 1. Check SubDomain chứa space
             if (request.SubDomain.Contains(" "))
-                throw new Exception("SubDomain cannot contain spaces");
+                throw new Exception("SubDomain không được chứa khoảng trắng.");
 
             // 2. Check ký tự hợp lệ
             var regex = new System.Text.RegularExpressions.Regex("^[a-z0-9-]+$");
             if (!regex.IsMatch(request.SubDomain))
-                throw new Exception("SubDomain can only contain lowercase letters, numbers, and '-'");
+                throw new Exception("SubDomain chỉ được chứa chữ cái thường, số và dấu '-'.");
 
             // 3. Check duplicate SubDomain
             if (_adminDbContext.Tenants.Any(t => t.SubDomain == request.SubDomain))
-                throw new Exception("SubDomain already exists");
+                throw new Exception("SubDomain đã tồn tại.");
 
             // 4. Check duplicate TenantName
             if (_adminDbContext.Tenants.Any(t => t.TenantName == request.TenantName))
-                throw new Exception("Tenant name already exists");
+                throw new Exception("Tên trung tâm đã tồn tại.");
 
             // create tenant (TenantId auto GUID)
             Tenant tenant = new Tenant

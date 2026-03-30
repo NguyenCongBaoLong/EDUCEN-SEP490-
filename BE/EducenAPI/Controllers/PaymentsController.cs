@@ -58,7 +58,7 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating payment");
-                return StatusCode(500, new { message = "Internal server error" });
+                return StatusCode(500, new { message = "Lỗi hệ thống nội bộ." });
             }
         }
 
@@ -101,9 +101,9 @@ namespace EducenAPI.Controllers
                     if (!result.IsValid)
                     {
                         _logger.LogWarning("VNPay IPN verification failed: {Message}", result.Message);
-                        return Ok(new { RspCode = "97", Message = "Invalid signature" });
+                        return Ok(new { RspCode = "97", Message = "Chữ ký không hợp lệ." });
                     }
-                    return Ok(new { RspCode = "00", Message = "Confirm Success" });
+                    return Ok(new { RspCode = "00", Message = "Xác nhận thành công." });
                 }
 
                 // Browser redirect — trả về frontend
@@ -120,7 +120,7 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing VNPay callback");
-                return Ok(new { RspCode = "99", Message = "Unknown error" });
+                return Ok(new { RspCode = "99", Message = "Lỗi không xác định." });
             }
         }
 
@@ -136,7 +136,7 @@ namespace EducenAPI.Controllers
                 var transactions = await _paymentService.GetTransactionsByPaymentIdAsync(paymentRecordId);
 
                 if (!transactions.Any())
-                    return NotFound(new { message = "Payment not found" });
+                    return NotFound(new { message = "Không tìm thấy thông tin thanh toán." });
 
                 var latestTransaction = transactions.OrderByDescending(t => t.CreatedAt).First();
 
@@ -153,7 +153,7 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error verifying payment");
-                return StatusCode(500, new { message = "Internal server error" });
+                return StatusCode(500, new { message = "Lỗi hệ thống nội bộ." });
             }
         }
 
@@ -168,7 +168,7 @@ namespace EducenAPI.Controllers
             try
             {
                 if (vnpayParams == null || !vnpayParams.ContainsKey("vnp_TxnRef"))
-                    return BadRequest(new { message = "Missing VNPay parameters" });
+                    return BadRequest(new { message = "Thiếu tham số VNPay." });
 
                 _logger.LogInformation("Frontend confirm payment received: {Params}",
                     System.Text.Json.JsonSerializer.Serialize(vnpayParams));
@@ -189,7 +189,7 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error confirming payment from frontend");
-                return StatusCode(500, new { message = "Internal server error" });
+                return StatusCode(500, new { message = "Lỗi hệ thống nội bộ." });
             }
         }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, BookOpen, Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import adminApi from '../../services/adminApi';
 import '../../css/pages/auth/Signup.css';
 
@@ -46,7 +47,7 @@ const Signup = () => {
             });
         } catch (error) {
             console.error('Lỗi khi gửi đăng ký:', error);
-            alert('Có lỗi xảy ra khi gửi đăng ký. Vui lòng thử lại sau.');
+            toast.error('Có lỗi xảy ra khi gửi đăng ký. Vui lòng thử lại sau.');
         } finally {
             setIsSubmitting(false);
         }

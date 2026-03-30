@@ -26,7 +26,7 @@ namespace EducenAPI.Controllers
                 ?? User.Claims.FirstOrDefault(c => c.Type == "TenantId")?.Value;
 
             if (string.IsNullOrWhiteSpace(tenantId))
-                return BadRequest(new { message = "Tenant not resolved." });
+                return BadRequest(new { message = "Không xác định được trung tâm." });
 
             var subscription = await _subscriptionService.GetActiveSubscriptionAsync(tenantId);
 

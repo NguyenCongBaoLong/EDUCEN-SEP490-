@@ -13,7 +13,11 @@ import {
     ChevronLeft,
     CreditCard,
     Send,
-    Globe
+    Eye,
+    Globe,
+    Edit3,
+    Save,
+    X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +25,7 @@ import Sidebar from '../../components/Sidebar';
 import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
 import api from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal';
 import '../../css/pages/center/TuitionManagement.css';
 
 const TuitionManagement = () => {
@@ -40,6 +45,12 @@ const TuitionManagement = () => {
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
     
+    // State cho quản lý đơn giá lớp học
+    const [currentClassPrice, setCurrentClassPrice] = useState(0);
+    const [isEditingPrice, setIsEditingPrice] = useState(false);
+    const [newPriceInput, setNewPriceInput] = useState('');
+    const [updatingPrice, setUpdatingPrice] = useState(false);
+    
     // State cho danh sách hóa đơn
     const [invoices, setInvoices] = useState([]);
     const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -56,6 +67,15 @@ const TuitionManagement = () => {
 
     // State cho gửi hóa đơn
     const [sendingInvoice, setSendingInvoice] = useState(null);
+
+    // State cho ConfirmModal
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+        type: 'warning'
+    });
 
     // Lấy tenantId - chấp nhận cả default-tenant
     const getValidTenantId = () => {
@@ -92,10 +112,62 @@ const TuitionManagement = () => {
         try {
             const response = await api.get('/Classes');
             setClasses(response.data);
+            
+            // Nếu có classId từ URL, tìm giá của nó
+            if (classId) {
+                const cls = response.data.find(c => c.classId === parseInt(classId));
+                if (cls) setCurrentClassPrice(cls.pricePerSession || 0);
+            }
         } catch (error) {
             toast.error('Không thể tải danh sách lớp');
         } finally {
             setLoadingClasses(false);
+        }
+    };
+
+    // Khi chọn lớp khác, cập nhật đơn giá của lớp đó
+    useEffect(() => {
+        if (selectedClass) {
+            const cls = classes.find(c => c.classId === parseInt(selectedClass));
+            if (cls) {
+                setCurrentClassPrice(cls.pricePerSession || 0);
+                setIsEditingPrice(false);
+            }
+        } else {
+            setCurrentClassPrice(0);
+            setIsEditingPrice(false);
+        }
+    }, [selectedClass, classes]);
+
+    const handleUpdatePrice = async () => {
+        const priceValue = parseFloat(newPriceInput);
+        if (isNaN(priceValue) || priceValue < 0) {
+            toast.error('Vui lòng nhập đơn giá hợp lệ');
+            return;
+        }
+
+        setUpdatingPrice(true);
+        try {
+            await tuitionService.updateClassPrice(parseInt(selectedClass), priceValue);
+            setCurrentClassPrice(priceValue);
+            setIsEditingPrice(false);
+            toast.success('Đã cập nhật đơn giá lớp học');
+            
+            // Cập nhật lại danh sách lớp để đồng bộ dữ liệu
+            setClasses(prev => prev.map(cls => 
+                cls.classId === parseInt(selectedClass) 
+                    ? { ...cls, pricePerSession: priceValue } 
+                    : cls
+            ));
+            
+            // Nếu đang có kết quả tính toán, tính lại để cập nhật số liệu
+            if (calculations.length > 0) {
+                handleCalculate();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Lỗi cập nhật đơn giá');
+        } finally {
+            setUpdatingPrice(false);
         }
     };
 
@@ -137,11 +209,19 @@ const TuitionManagement = () => {
             return;
         }
 
-        const confirmed = window.confirm(
-            `Bạn có chắc muốn tạo hóa đơn cho ${calculations.length} học sinh?`
-        );
-        if (!confirmed) return;
+        setConfirmModal({
+            isOpen: true,
+            title: 'Tạo hóa đơn hàng loạt',
+            message: `Bạn có muốn tạo hóa đơn cho <strong>${calculations.length}</strong> học sinh trong tháng này không?`,
+            onConfirm: () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                executeGenerateInvoices();
+            },
+            type: 'info'
+        });
+    };
 
+    const executeGenerateInvoices = async () => {
         setGenerating(true);
         try {
             const result = await tuitionService.createBatchInvoices({
@@ -258,11 +338,19 @@ const TuitionManagement = () => {
             return;
         }
 
-        const confirmed = window.confirm(
-            `Gửi ${draftInvoices.length} hóa đơn nháp cho học sinh?`
-        );
-        if (!confirmed) return;
+        setConfirmModal({
+            isOpen: true,
+            title: 'Gửi hóa đơn hàng loạt',
+            message: `Bạn đang chuẩn bị gửi <strong>${draftInvoices.length}</strong> hóa đơn nháp cho học sinh/phụ huynh. Tiếp tục?`,
+            onConfirm: () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                executeBatchSend(draftInvoices);
+            },
+            type: 'info'
+        });
+    };
 
+    const executeBatchSend = async (draftInvoices) => {
         let successCount = 0;
         let failCount = 0;
 
@@ -283,11 +371,19 @@ const TuitionManagement = () => {
 
     // Admin thu tiền học phí mặt
     const handleMarkAsPaid = async (invoiceId) => {
-        const confirmed = window.confirm(
-            'Xác nhận đã thu tiền từ học sinh? Hóa đơn sẽ được đánh dấu là đã thanh toán.'
-        );
-        if (!confirmed) return;
+        setConfirmModal({
+            isOpen: true,
+            title: 'Xác nhận thu tiền mặt',
+            message: 'Bạn đã thực nhận tiền mặt từ học sinh này? Hệ thống sẽ đánh dấu hóa đơn là đã thanh toán.',
+            onConfirm: () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                executeMarkAsPaid(invoiceId);
+            },
+            type: 'warning'
+        });
+    };
 
+    const executeMarkAsPaid = async (invoiceId) => {
         try {
             await tuitionService.markAsPaid(invoiceId, 'Cash', 'Học sinh nộp tiền mặt tại văn phòng');
             toast.success('Đã xác nhận thu tiền thành công');
@@ -385,6 +481,52 @@ const TuitionManagement = () => {
                                         ))}
                                     </select>
                                 </div>
+                                
+                                {selectedClass && (
+                                    <div className="filter-group class-price-group">
+                                        <label>Đơn giá/buổi</label>
+                                        {!isEditingPrice ? (
+                                            <div className="price-display">
+                                                <span className="price-value">{formatCurrency(currentClassPrice)}</span>
+                                                <button 
+                                                    className="edit-price-btn"
+                                                    onClick={() => {
+                                                        setNewPriceInput(currentClassPrice.toString());
+                                                        setIsEditingPrice(true);
+                                                    }}
+                                                    title="Chỉnh sửa đơn giá"
+                                                >
+                                                    <Edit3 size={16} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="price-edit">
+                                                <input 
+                                                    type="number"
+                                                    value={newPriceInput}
+                                                    onChange={(e) => setNewPriceInput(e.target.value)}
+                                                    placeholder="Nhập giá..."
+                                                    className="price-input"
+                                                    autoFocus
+                                                />
+                                                <button 
+                                                    className="save-price-btn"
+                                                    onClick={handleUpdatePrice}
+                                                    disabled={updatingPrice}
+                                                >
+                                                    <Save size={16} />
+                                                </button>
+                                                <button 
+                                                    className="cancel-price-btn"
+                                                    onClick={() => setIsEditingPrice(false)}
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 <div className="filter-group">
                                     <label>Năm</label>
                                     <select 
@@ -526,12 +668,6 @@ const TuitionManagement = () => {
                                                 <td>{new Date(invoice.dueDate).toLocaleDateString('vi-VN')}</td>
                                                 <td>{getStatusBadge(invoice.status)}</td>
                                                 <td className="actions">
-                                                    <button 
-                                                        className="view-btn"
-                                                        onClick={() => {/* TODO: View invoice */}}
-                                                    >
-                                                        Xem
-                                                    </button>
                                                     {invoice.status === 'Draft' && (
                                                         <button 
                                                             className="send-btn"
@@ -611,6 +747,15 @@ const TuitionManagement = () => {
                         </div>
                     </div>
                 )}
+                {/* Confirm Modal */}
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    onConfirm={confirmModal.onConfirm}
+                    onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                    type={confirmModal.type}
+                />
             </div>
         </div>
     );

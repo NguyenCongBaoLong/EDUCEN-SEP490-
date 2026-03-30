@@ -49,9 +49,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _notificationService.MarkNotificationAsReadAsync(notificationId);
                 if (!success)
-                    return NotFound(new { message = "Notification not found" });
+                    return NotFound(new { message = "Không tìm thấy thông báo." });
 
-                return Ok(new { message = "Notification marked as read" });
+                return Ok(new { message = "Đã đánh dấu thông báo là đã đọc." });
             }
             catch (Exception ex)
             {
@@ -76,7 +76,7 @@ namespace EducenAPI.Controllers
                     await _notificationService.MarkNotificationAsReadAsync(notification.NotificationId);
                 }
 
-                return Ok(new { message = $"Marked {notifications.Count} notifications as read" });
+                return Ok(new { message = $"Đã đánh dấu {notifications.Count} thông báo là đã đọc." });
             }
             catch (Exception ex)
             {
@@ -95,9 +95,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _notificationService.DeleteNotificationAsync(notificationId);
                 if (!success)
-                    return NotFound(new { message = "Notification not found" });
+                    return NotFound(new { message = "Không tìm thấy thông báo." });
 
-                return Ok(new { message = "Notification deleted" });
+                return Ok(new { message = "Đã xóa thông báo." });
             }
             catch (Exception ex)
             {
@@ -117,9 +117,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _notificationService.SendReminderAsync(invoiceId);
                 if (!success)
-                    return BadRequest(new { message = "Failed to send reminder" });
+                    return BadRequest(new { message = "Gửi nhắc nhở thất bại." });
 
-                return Ok(new { message = "Reminder sent successfully" });
+                return Ok(new { message = "Đã gửi nhắc nhở thành công." });
             }
             catch (Exception ex)
             {
@@ -181,7 +181,7 @@ namespace EducenAPI.Controllers
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                throw new Exception("Invalid user ID");
+                throw new Exception("Mã người dùng không hợp lệ.");
             return userId;
         }
     }

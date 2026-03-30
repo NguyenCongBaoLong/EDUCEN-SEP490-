@@ -34,7 +34,7 @@ namespace EducenAPI.Controllers
             var parent = await _parentService.GetParentByIdAsync(id);
 
             if (parent == null)
-                return NotFound(new { message = "Parent not found" });
+                return NotFound(new { message = "Không tìm thấy phụ huynh." });
 
             return Ok(parent);
         }
@@ -64,7 +64,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _parentService.UpdateParentAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Parent not found" });
+                    return NotFound(new { message = "Không tìm thấy phụ huynh." });
 
                 return NoContent();
             }
@@ -83,7 +83,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _parentService.DeleteParentAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Parent not found" });
+                    return NotFound(new { message = "Không tìm thấy phụ huynh." });
 
                 return NoContent();
             }
@@ -101,9 +101,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _parentService.SendAccountAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Parent not found" });
+                    return NotFound(new { message = "Không tìm thấy phụ huynh." });
 
-                return Ok(new { message = "Account sent successfully" });
+                return Ok(new { message = "Đã gửi tài khoản thành công." });
             }
             catch (Exception ex)
             {

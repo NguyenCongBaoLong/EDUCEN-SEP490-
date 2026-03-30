@@ -134,4 +134,9 @@ namespace EducenAPI.DTOs.Classes
         public decimal? PricePerSession { get; set; }
         public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
     }
+    public class UpdateClassPriceDto
+    {
+        [Range(0, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 0")]
+        public decimal Price { get; set; }
+    }
 }

@@ -24,5 +24,6 @@ namespace EducenAPI.Services.Interface
         Task<StudentClassDetailDto?> GetStudentClassDetailAsync(int studentId, int classId, string baseUrl);
         Task<IEnumerable<StudentClassListItemDto>> GetStudentClassesAsync(int studentId);
         Task<IEnumerable<ClassDto>> GetClassesByTeacherIdAsync(int teacherId);
+        Task<bool> UpdateClassPriceAsync(int classId, decimal price);
     }
 }

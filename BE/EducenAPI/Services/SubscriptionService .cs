@@ -21,13 +21,13 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
 
             if (tenant == null)
-                throw new Exception("Tenant not found");
+                throw new Exception("Không tìm thấy trung tâm.");
 
             var plan = await _context.Plans
                 .FirstOrDefaultAsync(p => p.PlanId == request.PlanId && p.IsActive);
 
             if (plan == null)
-                throw new Exception("Plan not found or is no longer active.");
+                throw new Exception("Không tìm thấy gói dịch vụ hoặc gói không còn hoạt động.");
 
             // 1. Kiểm tra xem tenant đã có gói này đang active chưa
             var existing = await _context.Subscriptions
@@ -176,13 +176,13 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
 
             if (tenant == null)
-                throw new Exception("Tenant not found");
+                throw new Exception("Không tìm thấy trung tâm.");
 
             var newPlan = await _context.Plans
                 .FirstOrDefaultAsync(p => p.PlanId == request.NewPlanId);
 
             if (newPlan == null)
-                throw new Exception("Plan not found");
+                throw new Exception("Không tìm thấy gói dịch vụ.");
 
             var currentSub = await _context.Subscriptions
                 .Where(s => s.TenantId == request.TenantId && s.Status == "Active")

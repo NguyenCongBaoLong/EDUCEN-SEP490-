@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,17 +11,17 @@ namespace EducenAPI.Persistence.Migrations.AdminDb
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Subscriptions_Plans_PlanId1",
-                table: "Subscriptions");
+            // migrationBuilder.DropForeignKey(
+            //     name: "FK_Subscriptions_Plans_PlanId1",
+            //     table: "Subscriptions");
 
-            migrationBuilder.DropIndex(
-                name: "IX_Subscriptions_PlanId1",
-                table: "Subscriptions");
+            // migrationBuilder.DropIndex(
+            //     name: "IX_Subscriptions_PlanId1",
+            //     table: "Subscriptions");
 
-            migrationBuilder.DropColumn(
-                name: "PlanId1",
-                table: "Subscriptions");
+            // migrationBuilder.DropColumn(
+            //     name: "PlanId1",
+            //     table: "Subscriptions");
 
             migrationBuilder.AddColumn<string>(
                 name: "Description",

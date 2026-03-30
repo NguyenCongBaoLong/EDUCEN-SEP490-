@@ -43,7 +43,7 @@ namespace EducenAPI.Controllers
             var classItem = await _classService.GetClassByIdAsync(id);
 
             if (classItem == null)
-                return NotFound(new { message = "Class not found" });
+                return NotFound(new { message = "Không tìm thấy lớp học." });
 
             return Ok(classItem);
         }
@@ -61,7 +61,7 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 // Return 409 for conflicts
-                if (ex.Message.Contains("already exists") || ex.Message.Contains("conflict"))
+                if (ex.Message.Contains("đã tồn tại") || ex.Message.Contains("xung đột"))
                     return Conflict(new { message = ex.Message });
                 
                 // Return 400 for validation errors
@@ -78,13 +78,31 @@ namespace EducenAPI.Controllers
             {
                 var success = await _classService.UpdateClassAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
                 return NoContent();
             }
             catch (Exception ex)
             {
                 return Conflict(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id:int}/price")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> UpdateClassPrice(int id, [FromBody] UpdateClassPriceDto dto)
+        {
+            try
+            {
+                var success = await _classService.UpdateClassPriceAsync(id, dto.Price);
+                if (!success)
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
+
+                return Ok(new { message = "Cập nhật đơn giá thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -97,7 +115,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _classService.DeleteClassAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
                 return NoContent();
             }
@@ -115,9 +133,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _classService.AssignTeacherAsync(id, teacherId);
                 if (!success)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
-                return Ok(new { message = "Teacher assigned successfully" });
+                return Ok(new { message = "Đã phân công giáo viên thành công." });
             }
             catch (Exception ex)
             {
@@ -133,9 +151,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _classService.AssignAssistantAsync(id, assistantId);
                 if (!success)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
-                return Ok(new { message = "Assistant assigned successfully" });
+                return Ok(new { message = "Đã phân công trợ giảng thành công." });
             }
             catch (Exception ex)
             {
@@ -151,9 +169,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _classService.AddStudentToClassAsync(id, studentId);
                 if (!success)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
-                return Ok(new { message = "Student added to class successfully" });
+                return Ok(new { message = "Đã thêm học sinh vào lớp thành công." });
             }
             catch (Exception ex)
             {
@@ -169,9 +187,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _classService.RemoveStudentFromClassAsync(id, studentId);
                 if (!success)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
-                return Ok(new { message = "Student removed from class successfully" });
+                return Ok(new { message = "Đã xóa học sinh khỏi lớp thành công." });
             }
             catch (Exception ex)
             {
@@ -186,16 +204,16 @@ namespace EducenAPI.Controllers
             try
             {
                 if (file == null || file.Length == 0)
-                    return BadRequest(new { message = "No file uploaded" });
+                    return BadRequest(new { message = "Chưa tải tệp lên." });
 
                 var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
                 if (extension != ".xlsx" && extension != ".xls")
-                    return BadRequest(new { message = "Only Excel files (.xlsx, .xls) are allowed" });
+                    return BadRequest(new { message = "Chỉ cho phép các tệp Excel (.xlsx, .xls)." });
 
                 // Validate class exists
                 var classExists = await _classService.ClassExistsAsync(id);
                 if (!classExists)
-                    return NotFound(new { message = "Class not found" });
+                    return NotFound(new { message = "Không tìm thấy lớp học." });
 
                 var importResults = new ImportResults();
 
@@ -208,7 +226,7 @@ namespace EducenAPI.Controllers
                 var worksheet = dataSet.Tables[0];
                 
                 if (worksheet == null)
-                    return BadRequest(new { message = "No worksheet found in Excel file" });
+                    return BadRequest(new { message = "Không tìm thấy trang tính trong tệp Excel." });
 
                 // Validate template headers
                 var headerRow = worksheet.Rows[0];
@@ -222,11 +240,11 @@ namespace EducenAPI.Controllers
                 if (!validationResult.IsValid)
                 {
                     return BadRequest(new { 
-                        message = $"Invalid template format: {validationResult.ErrorMessage}",
+                        message = $"Định dạng mẫu không hợp lệ: {validationResult.ErrorMessage}",
                         templateInfo = new {
                             templateName = ImportTemplate.TEMPLATE_NAME,
                             requiredHeaders = ImportTemplate.REQUIRED_HEADERS,
-                            example = "Please use the correct template with headers: Username, Full Name, Email, Phone Number"
+                            example = "Vui lòng sử dụng đúng mẫu với các tiêu đề: Tên đăng nhập, Họ và tên, Email, Số điện thoại"
                         }
                     });
                 }
@@ -291,7 +309,7 @@ namespace EducenAPI.Controllers
                             else
                             {
                                 importResults.Failed++;
-                                importResults.Errors.Add($"Row {row + 1}: Invalid date format for DateOfBirth '{dateOfBirth}'. Use format: MM/DD/YYYY or DD/MM/YYYY");
+                                importResults.Errors.Add($"Dòng {row + 1}: Định dạng ngày sinh '{dateOfBirth}' không hợp lệ. Vui lòng sử dụng định dạng: MM/DD/YYYY hoặc DD/MM/YYYY");
                                 continue;
                             }
                         }
@@ -302,7 +320,7 @@ namespace EducenAPI.Controllers
                             string.IsNullOrWhiteSpace(email))
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Missing required data (Username, Full Name, Email)");
+                            importResults.Errors.Add($"Dòng {row + 1}: Thiếu dữ liệu bắt buộc (Tên đăng nhập, Họ và tên, Email)");
                             continue;
                         }
 
@@ -313,7 +331,7 @@ namespace EducenAPI.Controllers
                         if (existingUser == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: User with email '{email}' does not exist. Please create Student with User account first.");
+                            importResults.Errors.Add($"Dòng {row + 1}: Người dùng có email '{email}' không tồn tại. Vui lòng tạo tài khoản Học sinh trước.");
                             continue;
                         }
 
@@ -324,7 +342,7 @@ namespace EducenAPI.Controllers
                         if (existingStudent == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: User with email '{email}' is not a Student. Please create Student first.");
+                            importResults.Errors.Add($"Dòng {row + 1}: Người dùng có email '{email}' không phải là Học sinh. Vui lòng tạo Học sinh trước.");
                             continue;
                         }
 
@@ -358,10 +376,10 @@ namespace EducenAPI.Controllers
 
                 return Ok(new
                 {
-                    message = "Import to class completed",
+                    message = "Quá trình nhập vào lớp đã hoàn tất.",
                     classId = id,
                     importResults,
-                    defaultPasswordNote = "Students must already exist in system. Use Send Account function to generate passwords.",
+                    defaultPasswordNote = "Học sinh phải đã tồn tại trong hệ thống. Sử dụng chức năng Gửi tài khoản để tạo mật khẩu.",
                     templateInfo = new {
                         templateName = ImportTemplate.TEMPLATE_NAME,
                         mappedHeaders = columnMapping.Keys.ToList()
@@ -370,7 +388,7 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = $"Import failed: {ex.Message}" });
+                return BadRequest(new { message = $"Nhập dữ liệu thất bại: {ex.Message}" });
             }
         }
 
@@ -419,7 +437,7 @@ namespace EducenAPI.Controllers
                 string baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
 
                 var detail = await _classService.GetStudentClassDetailAsync(studentId, id, baseUrl);
-                if (detail == null) return NotFound(new { message = "Class not found" });
+                if (detail == null) return NotFound(new { message = "Không tìm thấy lớp học." });
 
                 return Ok(detail);
             }
@@ -516,7 +534,7 @@ namespace EducenAPI.Controllers
 
                 string baseUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}";
                 var detail = await _classService.GetStudentClassDetailAsync(childId, classId, baseUrl);
-                if (detail == null) return NotFound(new { message = "Class not found" });
+                if (detail == null) return NotFound(new { message = "Không tìm thấy lớp học." });
 
                 return Ok(detail);
             }

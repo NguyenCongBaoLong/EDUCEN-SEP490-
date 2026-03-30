@@ -28,7 +28,7 @@ namespace EducenAPI.Services
         public async Task<Subject> CreateSubjectAsync(CreateSubjectRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.SubjectName))
-                throw new Exception("Subject name cannot be empty.");
+                throw new Exception("Tên môn học không được để trống.");
 
             var name = request.SubjectName.Trim();
 
@@ -36,7 +36,7 @@ namespace EducenAPI.Services
                 .AnyAsync(s => s.SubjectName == name);
 
             if (exists)
-                throw new Exception("Subject name already exists.");
+                throw new Exception("Tên môn học đã tồn tại.");
 
             var subject = new Subject
             {
@@ -58,7 +58,7 @@ namespace EducenAPI.Services
 
             // Validate name
             if (string.IsNullOrWhiteSpace(request.SubjectName))
-                throw new Exception("Subject name cannot be empty.");
+                throw new Exception("Tên môn học không được để trống.");
 
             var name = request.SubjectName.Trim();
             var description = request.Description?.Trim();
@@ -68,7 +68,7 @@ namespace EducenAPI.Services
                 .AnyAsync(s => s.SubjectName == name && s.SubjectId != id);
 
             if (isDuplicate)
-                throw new Exception("Subject name already exists.");
+                throw new Exception("Tên môn học đã tồn tại.");
 
             // Update fields
             existingSubject.SubjectName = name;
@@ -86,7 +86,7 @@ namespace EducenAPI.Services
 
             var isUsed = await IsSubjectUsedInClassesAsync(id);
             if (isUsed)
-                throw new Exception("Cannot delete subject: subject is used in classes");
+                throw new Exception("Không thể xóa môn học: môn học đang được sử dụng trong các lớp học.");
 
             _context.Subjects.Remove(subject);
             await _context.SaveChangesAsync();

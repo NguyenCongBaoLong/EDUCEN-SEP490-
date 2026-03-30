@@ -33,7 +33,7 @@ namespace EducenAPI.Services
             if (user.AccountStatus == "Locked")
             {
                 _logger.LogWarning($"[LockUser] User account is already locked: {user.Username}");
-                throw new Exception("User account is already locked");
+                throw new Exception("Tài khoản người dùng đã bị khóa.");
             }
 
             user.AccountStatus = "Locked";
@@ -61,7 +61,7 @@ namespace EducenAPI.Services
             if (user.AccountStatus == "Active")
             {
                 _logger.LogWarning($"[UnlockUser] User account is already active: {user.Username}");
-                throw new Exception("User account is already active");
+                throw new Exception("Tài khoản người dùng đang hoạt động.");
             }
 
             user.AccountStatus = "Active";

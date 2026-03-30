@@ -32,7 +32,7 @@ namespace EducenAPI.Services
                     i.InvoiceYear == request.Year);
 
             if (existingInvoice != null)
-                throw new Exception("Invoice already exists for this student, class and month");
+                throw new Exception("Hóa đơn đã tồn tại cho học sinh, lớp học và tháng này.");
 
             // Calculate tuition
             var calculation = await _tuitionService.CalculateTuitionAsync(
@@ -97,7 +97,7 @@ namespace EducenAPI.Services
                     // Skip if no sessions attended
                     if (calc.AttendedSessions == 0)
                     {
-                        result.Errors.Add($"Student {calc.StudentName} has no attended sessions");
+                        result.Errors.Add($"Học sinh {calc.StudentName} chưa tham gia buổi học nào.");
                         result.FailedCount++;
                         continue;
                     }
@@ -112,7 +112,7 @@ namespace EducenAPI.Services
 
                     if (existing != null)
                     {
-                        result.Errors.Add($"Invoice already exists for student {calc.StudentName}");
+                        result.Errors.Add($"Hóa đơn đã tồn tại cho học sinh {calc.StudentName}.");
                         result.FailedCount++;
                         continue;
                     }
@@ -133,7 +133,7 @@ namespace EducenAPI.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error creating invoice for student {StudentId}", calc.StudentId);
-                    result.Errors.Add($"Error for {calc.StudentName}: {ex.Message}");
+                    result.Errors.Add($"Lỗi cho {calc.StudentName}: {ex.Message}");
                     result.FailedCount++;
                 }
             }
@@ -244,13 +244,13 @@ namespace EducenAPI.Services
             if (invoice == null) return false;
 
             if (invoice.Status == "Paid")
-                throw new Exception("Cannot cancel a paid invoice");
+                throw new Exception("Không thể hủy hóa đơn đã thanh toán.");
 
             invoice.Status = "Cancelled";
             invoice.UpdatedAt = DateTime.UtcNow;
             invoice.Notes = string.IsNullOrEmpty(invoice.Notes)
-                ? $"Cancelled: {reason}"
-                : $"{invoice.Notes}\nCancelled: {reason}";
+                ? $"Đã hủy: {reason}"
+                : $"{invoice.Notes}\nĐã hủy: {reason}";
 
             await _context.SaveChangesAsync();
             return true;

@@ -435,3 +435,136 @@
         width: 100%;
     }
 }
+
+/* Class Price Management */
+.class-price-group {
+    min-width: 180px;
+}
+
+.price-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    height: 42px;
+    transition: all 0.2s ease;
+}
+
+.price-display:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.price-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.edit-price-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background: #eff6ff;
+    color: #3b82f6;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.edit-price-btn:hover {
+    background: #dbeafe;
+}
+
+.price-edit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 52px;
+    background: #ffffff;
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    padding: 0 10px;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1), 0 2px 4px -1px rgba(59, 130, 246, 0.06);
+}
+
+.price-input {
+    width: 120px;
+    height: 36px;
+    padding: 0 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.price-input:focus {
+    border-color: #3b82f6;
+    background: #f8fafc;
+}
+
+/* Hide Spinners */
+.price-input::-webkit-outer-spin-button,
+.price-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
+.price-input[type=number] {
+    -moz-appearance: textfield;
+    appearance: none;
+}
+
+.save-price-btn, .cancel-price-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.save-price-btn {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.save-price-btn:hover {
+    background: #059669;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.cancel-price-btn {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.cancel-price-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: scale(1.05);
+}
+
+.save-price-btn svg {
+    stroke-width: 3px;
+    color: white !important;
+}
+
+.cancel-price-btn svg {
+    stroke-width: 2.5px;
+}

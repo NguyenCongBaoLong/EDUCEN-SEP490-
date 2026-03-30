@@ -14,8 +14,6 @@ const Sidebar = () => {
         { path: '/center/parents', icon: Heart, label: 'Phụ huynh' },
         { path: '/center/schedules', icon: Calendar, label: 'Lịch học' },
         { path: '/center/tuition', icon: DollarSign, label: 'Quản lý học phí' },
-        { path: '/center/revenue', icon: TrendingUp, label: 'Doanh thu' },
-        { path: '/center/subscription', icon: CreditCard, label: 'Gói dịch vụ' },
     ];
 
     const navigate = useNavigate();

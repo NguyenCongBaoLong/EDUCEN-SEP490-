@@ -7,7 +7,7 @@ import paymentService from '../../services/paymentService';
 import { useAuth } from '../../context/AuthContext';
 import '../../css/pages/center/SubscriptionPlans.css';
 
-const SubscriptionPlans = () => {
+const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [payingPlanId, setPayingPlanId] = useState(null);
@@ -87,8 +87,8 @@ const SubscriptionPlans = () => {
     const formatDate = (value) => new Date(value).toLocaleDateString('vi-VN');
 
     return (
-        <div className="subscription-page">
-            <Sidebar />
+        <div className={hideSidebar ? "subscription-embedded" : "subscription-page"}>
+            {!hideSidebar && <Sidebar />}
             <main className="subscription-main">
                 <header className="subscription-header">
                     <div>
@@ -115,14 +115,9 @@ const SubscriptionPlans = () => {
                             const disablePay = isPaying || !plan.isActive;
 
                             return (
-                                <div key={plan.planId} className="subscription-card">
+                                <div key={plan.planId} className={`subscription-card ${isActivePlan ? 'is-active-plan' : ''}`}>
                                     <div className="subscription-card-header">
-                                        <div className="subscription-card-title">
-                                            <h3>{plan.planName}</h3>
-                                            {isActivePlan && (
-                                                <span className="subscription-status-badge">Đang sử dụng</span>
-                                            )}
-                                        </div>
+                                        <h3>{plan.planName}</h3>
                                         <div className="subscription-price">
                                             <span className="amount">{formatPrice(plan.price)}</span>
                                             <span className="unit">VNĐ / tháng</span>
@@ -136,11 +131,11 @@ const SubscriptionPlans = () => {
                                     </div>
 
                                     <div className="subscription-metrics">
-                                        <div>
+                                        <div className="metric-item">
                                             <span className="metric-label">Người dùng</span>
                                             <span className="metric-value">{plan.limitUsers}</span>
                                         </div>
-                                        <div>
+                                        <div className="metric-item">
                                             <span className="metric-label">Lưu trữ</span>
                                             <span className="metric-value">{plan.storageLimit} MB</span>
                                         </div>
@@ -163,7 +158,7 @@ const SubscriptionPlans = () => {
                                         <ul className="subscription-features">
                                             {features.map((feature, idx) => (
                                                 <li key={idx}>
-                                                    <Check size={16} />
+                                                    <Check size={16} className="feature-icon-check" />
                                                     {feature}
                                                 </li>
                                             ))}

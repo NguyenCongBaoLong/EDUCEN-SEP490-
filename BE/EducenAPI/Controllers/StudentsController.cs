@@ -55,7 +55,7 @@ namespace EducenAPI.Controllers
             var student = await _studentService.GetStudentByIdAsync(id);
 
             if (student == null)
-                return NotFound(new { message = "Student not found" });
+                return NotFound(new { message = "Không tìm thấy học sinh." });
 
             return Ok(student);
         }
@@ -73,7 +73,7 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 // Return 409 for conflicts (duplicate username/email)
-                if (ex.Message.Contains("already exists"))
+                if (ex.Message.Contains("đã tồn tại"))
                     return Conflict(new { message = ex.Message });
                 
                 // Return 400 for other errors
@@ -90,7 +90,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _studentService.UpdateStudentAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Student not found" });
+                    return NotFound(new { message = "Không tìm thấy học sinh." });
 
                 return NoContent();
             }
@@ -109,7 +109,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _studentService.DeleteStudentAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Student not found" });
+                    return NotFound(new { message = "Không tìm thấy học sinh." });
 
                 return NoContent();
             }
@@ -127,18 +127,18 @@ namespace EducenAPI.Controllers
             try
             {
                 if (file == null || file.Length == 0)
-                    return BadRequest(new { message = "No file uploaded" });
+                    return BadRequest(new { message = "Chưa tải tệp lên." });
 
                 var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
                 if (extension != ".xlsx" && extension != ".xls")
-                    return BadRequest(new { message = "Only Excel files (.xlsx, .xls) are allowed" });
+                    return BadRequest(new { message = "Chỉ cho phép các tệp Excel (.xlsx, .xls)." });
 
                 // Validate classId if provided
                 if (classId.HasValue)
                 {
                     var classExists = await _context.Classes.FindAsync(classId.Value);
                     if (classExists == null)
-                        return BadRequest(new { message = $"Class with ID {classId} not found" });
+                        return BadRequest(new { message = $"Không tìm thấy lớp học với mã {classId}" });
                 }
 
                 // Use StudentImportService to handle import logic (pass classId)
@@ -151,7 +151,7 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = $"Import failed: {ex.Message}" });
+                return BadRequest(new { message = $"Nhập dữ liệu thất bại: {ex.Message}" });
             }
         }
         [HttpPost("send-account/{studentId}")]
@@ -200,31 +200,31 @@ namespace EducenAPI.Controllers
             {
                 var student = await _context.Students.FindAsync(studentId);
                 if (student == null)
-                    return NotFound("Student not found");
+                    return NotFound("Không tìm thấy học sinh.");
 
                 // Since UserId is now non-nullable and always created with User, check if User exists
                 var userExists = await _context.Users.AnyAsync(u => u.UserId == student.UserId);
                 if (userExists)
-                    return BadRequest("Student already has an account");
+                    return BadRequest("Học sinh này đã có tài khoản.");
 
                 // Validate request
                 if (string.IsNullOrWhiteSpace(request.Username))
-                    return BadRequest("Username is required");
+                    return BadRequest("Tên đăng nhập là bắt buộc.");
 
                 if (string.IsNullOrWhiteSpace(request.Password))
-                    return BadRequest("Password is required");
+                    return BadRequest("Mật khẩu là bắt buộc.");
 
                 // Check duplicate username
                 var existingUsername = await _context.Users
                     .AnyAsync(u => u.Username == request.Username);
                 if (existingUsername)
-                    return Conflict("Username already exists");
+                    return Conflict("Tên đăng nhập đã tồn tại.");
 
                 // Create user account
                 var studentRole = await _context.Roles
                     .FirstOrDefaultAsync(r => r.RoleName == "Student");
                 if (studentRole == null)
-                    return BadRequest("Student role not found");
+                    return BadRequest("Không tìm thấy vai trò Học sinh.");
 
                 // Lấy email từ User nếu đã có, hoặc từ Student nếu chưa có User
                 var userEmail = student.StudentNavigation?.Email ?? student.Email;
@@ -251,7 +251,7 @@ namespace EducenAPI.Controllers
                 // Send account email
                 await _mailService.SendStudentAccount(userEmail ?? "", request.Username, request.Password);
 
-                return Ok(new { message = "Account created and sent successfully" });
+                return Ok(new { message = "Tài khoản đã được tạo và gửi thành công." });
             }
             catch (Exception ex)
             {

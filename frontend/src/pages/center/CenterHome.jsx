@@ -13,10 +13,9 @@ import { useSchedule } from '../../context/ScheduleContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import '../../css/pages/center/CenterHome.css';
-import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5106/api';
+
 
 /* ─── Initial data ──────────────────────────────────── */
 const INIT = {
@@ -250,7 +249,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
     const fetchCenterData = async () => {
         try {
-            const response = await axios.get(`${API_URL}/CenterHome`);
+            const response = await api.get('/CenterHome');
             if (response.data) {
                 const data = response.data;
                 // Đảm bảo các mảng không bị null
@@ -296,7 +295,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
     const fetchUpcomingClasses = async () => {
         try {
-            const resp = await axios.get(`${API_URL}/CenterHome/classes`);
+            const resp = await api.get('/CenterHome/classes');
             setUpcomingClasses(resp.data || []);
         } catch (err) {
             console.error("Failed to fetch upcoming classes:", err);
@@ -310,7 +309,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     useEffect(() => {
         const fetchSubjects = async () => {
             try {
-                const res = await axios.get(`${API_URL}/tenantadmin/Subjects`);
+                const res = await api.get('/tenantadmin/Subjects');
                 setAvailableSubjects(res.data || []);
             } catch (err) {
                 console.error('Cannot fetch subjects:', err);
@@ -328,7 +327,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
         try {
             const payload = { ...form };
 
-            const response = await axios.post(`${API_URL}/enrollment-requests`, payload);
+            const response = await api.post('/enrollment-requests', payload);
 
             if (response.status === 200 || response.status === 201) {
                 toast.success(response.data.message || 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
@@ -499,7 +498,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                 if (f) formData.append('ImageFiles', f);
             });
 
-            const res = await axios.post(`${API_URL}/CenterHome/save`, formData, {
+            const res = await api.post('/CenterHome/save', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 

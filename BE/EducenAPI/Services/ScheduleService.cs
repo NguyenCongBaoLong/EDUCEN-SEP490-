@@ -120,23 +120,23 @@ namespace EducenAPI.Services
                 .Include(c => c.Teacher)
                 .FirstOrDefaultAsync(c => c.ClassId == dto.ClassId);
             if (classExists == null)
-                throw new Exception("Class does not exist");
+                throw new Exception("Lớp học không tồn tại.");
 
             // Validate class is active
             if (classExists.Status != "Active")
-                throw new Exception("Class is inactive");
+                throw new Exception("Lớp học không hoạt động.");
 
             // Validate schedule date is not in the past
             if (dto.ScheduleDate.Date < DateTime.Today)
-                throw new Exception("Schedule cannot be in the past");
+                throw new Exception("Lịch học không thể ở quá khứ.");
 
             // Validate start time is not in the past for today
             if (dto.ScheduleDate.Date == DateTime.Today && dto.StartTime < DateTime.Now.TimeOfDay)
-                throw new Exception("Schedule cannot start in the past");
+                throw new Exception("Thời gian bắt đầu không thể ở quá khứ.");
 
             // Validate time order
             if (dto.StartTime >= dto.EndTime)
-                throw new Exception("EndTime must be greater than StartTime");
+                throw new Exception("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
             // Check for time overlap with existing schedules for same class
             var dayOfWeek = (int)dto.ScheduleDate.DayOfWeek;
@@ -151,7 +151,7 @@ namespace EducenAPI.Services
 
                 // Check for overlap
                 if ((dto.StartTime < existingEnd && dto.EndTime > existingStart))
-                    throw new Exception("Schedule time overlaps with existing schedule");
+                    throw new Exception("Thời gian học bị trùng với lịch học đã có.");
             }
 
             // Check for teacher conflict with other classes
@@ -215,7 +215,7 @@ namespace EducenAPI.Services
             _context.Schedules.Add(schedule);
             await _context.SaveChangesAsync();
 
-            return await GetScheduleByIdAsync(schedule.ScheduleId) ?? throw new Exception("Failed to retrieve created schedule");
+            return await GetScheduleByIdAsync(schedule.ScheduleId) ?? throw new Exception("Không thể lấy thông tin lịch học vừa tạo.");
         }
 
         public async Task<bool> UpdateScheduleAsync(int id, UpdateScheduleDto dto)
@@ -244,7 +244,7 @@ namespace EducenAPI.Services
 
             // ✅ FIX: Validate time order
             if (schedule.StartTime >= schedule.EndTime)
-                throw new Exception("Start time must be before end time");
+                throw new Exception("Thời gian bắt đầu phải trước thời gian kết thúc.");
 
             // ✅ FIX: Validate overlap with other schedules in same class
             var newDayOfWeek = schedule.DayOfWeek;
@@ -458,13 +458,13 @@ namespace EducenAPI.Services
         {
             return dayOfWeek switch
             {
-                0 => "Sunday",
-                1 => "Monday",
-                2 => "Tuesday",
-                3 => "Wednesday",
-                4 => "Thursday",
-                5 => "Friday",
-                6 => "Saturday",
+                0 => "Chủ Nhật",
+                1 => "Thứ Hai",
+                2 => "Thứ Ba",
+                3 => "Thứ Tư",
+                4 => "Thứ Năm",
+                5 => "Thứ Sáu",
+                6 => "Thứ Bảy",
                 _ => ""
             };
         }

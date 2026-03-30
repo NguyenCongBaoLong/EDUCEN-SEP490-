@@ -102,7 +102,12 @@ const tuitionService = {
     getOutstandingInvoices: async () => {
         const response = await api.get('/tuition/outstanding');
         return response.data;
-    }
+    },
+    // Cập nhật đơn giá buổi học của lớp
+    updateClassPrice: async (classId, price) => {
+        const response = await api.put(`/classes/${classId}/price`, { price });
+        return response.data;
+    },
 };
 
 export default tuitionService;

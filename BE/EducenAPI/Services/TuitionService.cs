@@ -24,10 +24,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(c => c.ClassId == classId);
 
             if (classEntity == null)
-                throw new Exception("Class not found");
+                throw new Exception("Không tìm thấy lớp học.");
 
             if (!classEntity.PricePerSession.HasValue || classEntity.PricePerSession.Value <= 0)
-                throw new Exception("Class price per session is not set");
+                throw new Exception("Chưa thiết lập đơn giá mỗi buổi học cho lớp này. Vui lòng thiết lập đơn giá trong trang Quản lý học phí.");
 
             // Get student
             var student = await _context.Students
@@ -35,7 +35,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(s => s.UserId == studentId);
 
             if (student == null)
-                throw new Exception("Student not found");
+                throw new Exception("Không tìm thấy học sinh.");
 
             // Get all sessions in the month for this class
             var startOfMonth = new DateTime(year, month, 1);
@@ -107,7 +107,7 @@ namespace EducenAPI.Services
                 .Select(c => c.PricePerSession)
                 .FirstOrDefaultAsync();
             if (!classPrice.HasValue || classPrice.Value <= 0)
-                throw new Exception("Lớp học chưa có đơn giá mỗi buổi. Vui lòng cập nhật đơn giá trong trang Quản lý lớp học trước khi tính học phí.");
+                throw new Exception("Lớp học chưa có đơn giá mỗi buổi. Vui lòng cập nhật đơn giá trong trang Quản lý học phí trước khi tính học phí.");
 
             // Get all students in class
             var students = await _context.Students

@@ -6,12 +6,16 @@ import {
     MessageCircle, ArrowLeft, Mail, MailOpen, HardDrive
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
+import RevenueReport from './RevenueReport';
+import SubscriptionPlans from './SubscriptionPlans';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
 /* ─── Mock Data ─────────────────────────────────────── */
@@ -152,6 +156,8 @@ const AdminDashboard = () => {
     const [inboxOpen, setInboxOpen] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState(null);
 
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'revenue' | 'subscription'
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -188,8 +194,7 @@ const AdminDashboard = () => {
             setNotifications([newNotif, ...notifications]);
             setForm({ title: '', content: '', target: 'all' });
             setSending(false);
-            setSendSuccess(true);
-            setTimeout(() => setSendSuccess(false), 3000);
+            toast.success('Gửi thông báo thành công!');
         }, 1500);
     };
 
@@ -251,7 +256,34 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* ── KPI Cards ── */}
+                {/* ── Tabs Navigation ── */}
+                <div className="dashboard-tabs">
+                    <button 
+                        className={`dashboard-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('overview')}
+                    >
+                        <LayoutDashboard size={18} />
+                        Tổng quan
+                    </button>
+                    <button 
+                        className={`dashboard-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('revenue')}
+                    >
+                        <DollarIcon size={18} />
+                        Doanh thu
+                    </button>
+                    <button 
+                        className={`dashboard-tab-btn ${activeTab === 'subscription' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('subscription')}
+                    >
+                        <CreditCard size={18} />
+                        Gói dịch vụ
+                    </button>
+                </div>
+
+                {activeTab === 'overview' && (
+                    <>
+                        {/* ── KPI Cards ── */}
                 <div className="kpi-grid">
                     {kpiData.map((kpi) => {
                         const Icon = kpi.icon;
@@ -436,13 +468,6 @@ const AdminDashboard = () => {
                                     />
                                 </div>
 
-                                {sendSuccess && (
-                                    <div className="zalo-success-banner">
-                                        <CheckCircle size={16} />
-                                        Thông báo đã được gửi thành công!
-                                    </div>
-                                )}
-
                                 <button
                                     className="zalo-send-btn"
                                     onClick={handleSend}
@@ -489,8 +514,11 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
+            </>
+        )}
 
-
+                {activeTab === 'revenue' && <RevenueReport hideSidebar={true} />}
+                {activeTab === 'subscription' && <SubscriptionPlans hideSidebar={true} />}
 
             </main>
 

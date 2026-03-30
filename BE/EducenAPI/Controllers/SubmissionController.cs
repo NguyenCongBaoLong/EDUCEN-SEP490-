@@ -106,9 +106,9 @@ namespace EducenAPI.Controllers
             {
                 var result = await _submissionService.PublishAllGradesAsync(assignmentId, request.IsPublished);
                 if (!result)
-                    return NotFound(new { message = "No graded submissions found for this assignment." });
+                    return NotFound(new { message = "Không tìm thấy bài nộp đã chấm điểm nào cho bài tập này." });
 
-                return Ok(new { message = request.IsPublished ? "All grades published successfully." : "All grades unpublished successfully." });
+                return Ok(new { message = request.IsPublished ? "Đã công bố tất cả điểm thành công." : "Đã hủy công bố tất cả điểm thành công." });
             }
             catch (Exception ex)
             {
@@ -123,7 +123,7 @@ namespace EducenAPI.Controllers
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
             var result = await _submissionService.GetByIdAsync(subId, baseUrl);
             if (result == null)
-                return NotFound(new { message = "Submission not found" });
+                return NotFound(new { message = "Không tìm thấy bài nộp." });
 
             return Ok(result);
         }

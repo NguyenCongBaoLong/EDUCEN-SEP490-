@@ -42,7 +42,7 @@ namespace EducenAPI.Controllers
                 .FirstOrDefault(u => u.UserId == userId);
 
             if (user == null)
-                return NotFound(new { message = "User not found" });
+                return NotFound(new { message = "Không tìm thấy người dùng." });
 
             // Build response with role-specific data
             var result = new
@@ -90,7 +90,7 @@ namespace EducenAPI.Controllers
                 .FirstOrDefault(u => u.UserId == userId);
 
             if (user == null)
-                return NotFound(new { message = "User not found" });
+                return NotFound(new { message = "Không tìm thấy người dùng." });
 
             // 1. Cập nhật Username (nếu thay đổi)
             if (request.Username != null && request.Username != user.Username)
@@ -158,7 +158,7 @@ namespace EducenAPI.Controllers
                 .FirstOrDefault(u => u.UserId.ToString() == userId);
 
             if (user == null)
-                return NotFound(new { message = "User not found" });
+                return NotFound(new { message = "Không tìm thấy người dùng." });
 
             if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
                 return BadRequest(new { message = "Mật khẩu hiện tại không đúng" });

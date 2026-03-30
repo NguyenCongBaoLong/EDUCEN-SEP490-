@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.DTOs.Classes;
+using EducenAPI.Ultils;
 
 namespace EducenAPI.Services
 {
@@ -115,19 +116,19 @@ namespace EducenAPI.Services
                 .AnyAsync(u => u.Username == dto.Username);
 
             if (existingUser)
-                throw new Exception("Username already exists");
+                throw new Exception(ValidationMessages.DuplicateUsername);
 
             var existingEmail = await _context.Users
                 .AnyAsync(u => u.Email == dto.Email);
 
             if (existingEmail)
-                throw new Exception("Email already exists");
+                throw new Exception(ValidationMessages.DuplicateEmail);
 
             var assistantRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Assistant");
 
             if (assistantRole == null)
-                throw new Exception("Assistant role not found");
+                throw new Exception("Không tìm thấy vai trò trợ giảng.");
 
             var user = new User
             {
@@ -186,7 +187,7 @@ namespace EducenAPI.Services
                     .AnyAsync(u => u.Email == dto.Email && u.UserId != assistant.UserId);
 
                 if (emailExists)
-                    throw new Exception("Email already exists");
+                    throw new Exception(ValidationMessages.DuplicateEmail);
 
                 assistant.AssistantNavigation.Email = dto.Email;
             }
@@ -217,7 +218,7 @@ namespace EducenAPI.Services
                 .AnyAsync(c => c.AssistantId == id);
 
             if (hasAssignedClasses)
-                throw new Exception("Cannot delete assistant: assistant has assigned classes");
+                throw new Exception("Không thể xóa trợ giảng: trợ giảng đang được phân công vào lớp học.");
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -244,7 +245,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(a => a.UserId == id);
 
             if (assistant == null)
-                return new { message = "Assistant not found" };
+                return new { message = "Không tìm thấy trợ giảng." };
 
             var classes = await _context.Classes
                 .Include(c => c.Subject)

@@ -22,8 +22,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         scheduleSlots: [{ day: '', startTime: '', endTime: '' }], // Array of time slots
         startDate: '', // Ngày bắt đầu lớp
         endDate: '', // Ngày kết thúc lớp
-        status: 'active',
-        pricePerSession: '' // Đơn giá mỗi buổi học
+        status: 'active'
     });
 
     const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
@@ -97,8 +96,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 scheduleSlots,
                 startDate: editingClass.startDate || '',
                 endDate: editingClass.endDate || '',
-                status: editingClass.status || 'active',
-                pricePerSession: editingClass.pricePerSession || ''
+                status: editingClass.status || 'active'
             });
         } else {
             setFormData({
@@ -115,8 +113,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 scheduleSlots: [{ day: '', startTime: '', endTime: '', roomId: null }],
                 startDate: '',
                 endDate: '',
-                status: 'active',
-                pricePerSession: ''
+                status: 'active'
             });
         }
     }, [editingClass, isOpen]);
@@ -261,11 +258,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             }
         }
 
-        // Validation: Check price per session
-        if (!formData.pricePerSession || formData.pricePerSession <= 0) {
-            toast.error('❌ Vui lòng nhập đơn giá mỗi buổi học!');
-            return;
-        }
+
 
         // Format schedule for display (backward compatibility)
         const schedule = formatScheduleForDisplay(formData.scheduleSlots);
@@ -278,7 +271,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         });
 
         if (isDuplicate) {
-            alert(`❌ Không thể tạo lớp!\n\nĐã tồn tại lớp học với:\n- Tên: "${formData.name}"\n- Môn: ${formData.subject}\n\nVui lòng thay đổi thông tin lớp học.`);
+            toast.error(`❌ Không thể tạo lớp! Đã tồn tại lớp "${formData.name}" cho môn ${formData.subject}.`);
             return;
         }
 
@@ -290,18 +283,12 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         );
 
         if (teacherConflicts.mainTeacherConflicts.length > 0) {
-            const conflictDetails = teacherConflicts.mainTeacherConflicts
-                .map(c => `  • ${c.day} ${c.startTime}-${c.endTime}`)
-                .join('\n');
-            alert(`❌ Không thể tạo lớp!\n\nGiáo viên chính "${formData.mainTeacher}" đã có lịch dạy trùng:\n\n${conflictDetails}\n\nVui lòng chọn giáo viên khác hoặc thay đổi thời gian.`);
+            toast.error(`❌ Giáo viên "${formData.mainTeacher}" đã có lịch dạy trùng!`);
             return;
         }
 
         if (teacherConflicts.assistantConflicts.length > 0) {
-            const conflictDetails = teacherConflicts.assistantConflicts
-                .map(c => `  • ${c.day} ${c.startTime}-${c.endTime}`)
-                .join('\n');
-            alert(`❌ Không thể tạo lớp!\n\nTrợ giảng "${formData.assistant}" đã có lịch dạy trùng:\n\n${conflictDetails}\n\nVui lòng chọn trợ giảng khác hoặc thay đổi thời gian.`);
+            toast.error(`❌ Trợ giảng "${formData.assistant}" đã có lịch dạy trùng!`);
             return;
         }
 
@@ -709,21 +696,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                         </small>
                     </div>
 
-                    {/* Price Per Session */}
-                    <div className="form-group">
-                        <label>Đơn giá mỗi buổi (VNĐ) *</label>
-                        <input
-                            type="number"
-                            name="pricePerSession"
-                            value={formData.pricePerSession}
-                            onChange={handleChange}
-                            placeholder="VD: 200000"
-                            min="0"
-                            step="1000"
-                            required
-                        />
-                        <small className="field-hint">Số tiền học phí cho mỗi buổi học. Dùng để tính hóa đơn hàng tháng.</small>
-                    </div>
+
 
                     {/* Start Date and End Date Section */}
                     <div className="form-row">

@@ -71,7 +71,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _subjectService.UpdateSubjectAsync(id, request);
                 if (!success)
-                    return NotFound(new { message = "Subject not found" });
+                    return NotFound(new { message = "Không tìm thấy môn học." });
 
                 return NoContent();
             }
@@ -90,7 +90,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _subjectService.DeleteSubjectAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Subject not found" });
+                    return NotFound(new { message = "Không tìm thấy môn học." });
 
                 return NoContent();
             }

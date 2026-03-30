@@ -17,7 +17,7 @@ import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
 import '../../css/pages/center/RevenueReport.css';
 
-const RevenueReport = () => {
+const RevenueReport = ({ hideSidebar = false }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'monthly' | 'by-class' | 'outstanding'
     const [loading, setLoading] = useState(false);
@@ -152,8 +152,8 @@ const RevenueReport = () => {
     };
 
     return (
-        <div className="revenue-report-container">
-            <Sidebar />
+        <div className={hideSidebar ? "revenue-report-embedded" : "revenue-report-container"}>
+            {!hideSidebar && <Sidebar />}
             <div className="report-content">
                 <div className="page-header">
                     <h1>Báo cáo doanh thu</h1>
@@ -163,52 +163,58 @@ const RevenueReport = () => {
                     </button>
                 </div>
 
-                <div className="tab-navigation">
-                    <button 
-                        className={activeTab === 'summary' ? 'active' : ''}
-                        onClick={() => setActiveTab('summary')}
-                    >
-                        <PieChart size={18} />
-                        Tổng quan
-                    </button>
-                    <button 
-                        className={activeTab === 'monthly' ? 'active' : ''}
-                        onClick={() => setActiveTab('monthly')}
-                    >
-                        <BarChart3 size={18} />
-                        Theo tháng
-                    </button>
-                    <button 
-                        className={activeTab === 'by-class' ? 'active' : ''}
-                        onClick={() => setActiveTab('by-class')}
-                    >
-                        <Users size={18} />
-                        Theo lớp
-                    </button>
-                    <button 
-                        className={activeTab === 'outstanding' ? 'active' : ''}
-                        onClick={() => setActiveTab('outstanding')}
-                    >
-                        <FileText size={18} />
-                        Công nợ
-                    </button>
-                </div>
-
-                <div className="filter-bar">
-                    <div className="filter-group">
-                        <Calendar size={16} />
-                        <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-                            {years.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
+                <div className="report-actions-row">
+                    <div className="tab-navigation">
+                        <button 
+                            className={activeTab === 'summary' ? 'active' : ''}
+                            onClick={() => setActiveTab('summary')}
+                        >
+                            <PieChart size={18} />
+                            Tổng quan
+                        </button>
+                        <button 
+                            className={activeTab === 'monthly' ? 'active' : ''}
+                            onClick={() => setActiveTab('monthly')}
+                        >
+                            <BarChart3 size={18} />
+                            Theo tháng
+                        </button>
+                        <button 
+                            className={activeTab === 'by-class' ? 'active' : ''}
+                            onClick={() => setActiveTab('by-class')}
+                        >
+                            <Users size={18} />
+                            Theo lớp
+                        </button>
+                        <button 
+                            className={activeTab === 'outstanding' ? 'active' : ''}
+                            onClick={() => setActiveTab('outstanding')}
+                        >
+                            <FileText size={18} />
+                            Công nợ
+                        </button>
                     </div>
-                    {activeTab === 'by-class' && (
+
+                    <div className="action-filters">
                         <div className="filter-group">
-                            <Filter size={16} />
-                            <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))}>
-                                {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                            <Calendar size={16} />
+                            <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
+                                {years.map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
-                    )}
+                        {activeTab === 'by-class' && (
+                            <div className="filter-group">
+                                <Filter size={16} />
+                                <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))}>
+                                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        <button className="export-btn" onClick={handleExport}>
+                            <Download size={18} />
+                            Xuất báo cáo
+                        </button>
+                    </div>
                 </div>
 
                 {loading ? (
@@ -216,11 +222,11 @@ const RevenueReport = () => {
                 ) : (
                     <>
                         {activeTab === 'summary' && summary && (
-                            <div className="summary-section">
+                            <div className="summary-content-grid">
                                 <div className="stats-grid">
                                     <div className="stat-card primary">
-                                        <div className="stat-icon">
-                                            <DollarSign size={24} />
+                                        <div className="stat-icon-box">
+                                            <DollarSign size={22} />
                                         </div>
                                         <div className="stat-info">
                                             <span className="stat-label">Tổng doanh thu</span>
@@ -228,8 +234,8 @@ const RevenueReport = () => {
                                         </div>
                                     </div>
                                     <div className="stat-card success">
-                                        <div className="stat-icon">
-                                            <TrendingUp size={24} />
+                                        <div className="stat-icon-box">
+                                            <TrendingUp size={22} />
                                         </div>
                                         <div className="stat-info">
                                             <span className="stat-label">Đã thu</span>
@@ -237,8 +243,8 @@ const RevenueReport = () => {
                                         </div>
                                     </div>
                                     <div className="stat-card warning">
-                                        <div className="stat-icon">
-                                            <TrendingDown size={24} />
+                                        <div className="stat-icon-box">
+                                            <TrendingDown size={22} />
                                         </div>
                                         <div className="stat-info">
                                             <span className="stat-label">Chưa thu</span>
@@ -246,8 +252,8 @@ const RevenueReport = () => {
                                         </div>
                                     </div>
                                     <div className="stat-card info">
-                                        <div className="stat-icon">
-                                            <FileText size={24} />
+                                        <div className="stat-icon-box">
+                                            <FileText size={22} />
                                         </div>
                                         <div className="stat-info">
                                             <span className="stat-label">Tổng hóa đơn</span>
@@ -260,19 +266,19 @@ const RevenueReport = () => {
                                     <h3>Trạng thái hóa đơn</h3>
                                     <div className="status-items">
                                         <div className="status-item">
-                                            <span className="status-dot paid"></span>
+                                            <span className="status-circle paid"></span>
                                             <span className="status-label">Đã thanh toán</span>
-                                            <span className="status-value">{summary.paidInvoices}</span>
+                                            <span className="status-count">{summary.paidInvoices}</span>
                                         </div>
                                         <div className="status-item">
-                                            <span className="status-dot unpaid"></span>
+                                            <span className="status-circle unpaid"></span>
                                             <span className="status-label">Chưa thanh toán</span>
-                                            <span className="status-value">{summary.unpaidInvoices}</span>
+                                            <span className="status-count">{summary.unpaidInvoices}</span>
                                         </div>
                                         <div className="status-item">
-                                            <span className="status-dot overdue"></span>
+                                            <span className="status-circle overdue"></span>
                                             <span className="status-label">Quá hạn</span>
-                                            <span className="status-value">{summary.overdueInvoices}</span>
+                                            <span className="status-count">{summary.overdueInvoices}</span>
                                         </div>
                                     </div>
                                 </div>

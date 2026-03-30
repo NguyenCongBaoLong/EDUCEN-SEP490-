@@ -51,8 +51,8 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
         const fetchClasses = async () => {
             try {
                 // Đảm bảo đường dẫn này đúng với cấu hình api của bạn (không trùng lặp /api)
-                const response = await api.get('/Classes/teacher/my-classes'); 
-                
+                const response = await api.get('/Classes/teacher/my-classes');
+
                 if (response.data && response.data.length > 0) {
                     setClasses(response.data);
                     // Dùng classId theo đúng JSON bạn gửi
@@ -119,7 +119,7 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                         <label>CHỌN LỚP CỦA TÔI</label>
                         <select value={filterClass} onChange={e => setFilterClass(e.target.value)}>
                             {classes.map((cls) => (
-                                <option key={cls.id} value={cls.id}>
+                                <option key={cls.classId} value={cls.classId}>
                                     {cls.className} ({cls.classCode})
                                 </option>
                             ))}
@@ -257,7 +257,7 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                             <tr>
                                 <th>XẾP HẠNG</th>
                                 <th>HỌC SINH</th>
-                                <th>TỔNG ĐIỂM</th>
+                                <th>ĐIỂM TRUNG BÌNH</th>
                                 <th>CHUYÊN CẦN</th>
                                 <th>TRẠNG THÁI</th>
                             </tr>
@@ -278,17 +278,19 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                                         </div>
                                     </td>
                                     <td>
-                                        <div className="score-cell">
-                                            <span className="score-value">{student.score}%</span>
+                                        <span className="score-value">{student.score}</span>
+                                    </td>
+                                    <td className="attendance-cell">
+                                        <div className="attendance-info">
+                                            <span className="attendance-value">{student.attendance}%</span>
                                             <div className="progress-bar-wrap">
                                                 <div
                                                     className="progress-bar-fill"
-                                                    style={{ width: `${student.score}%`, backgroundColor: '#10B981' }}
+                                                    style={{ width: `${student.attendance}%`, backgroundColor: '#10B981' }}
                                                 ></div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="attendance-cell">{student.attendance}%</td>
                                     <td>
                                         <span className={`status-badge ${student.statusColor}`}>
                                             {student.status}
