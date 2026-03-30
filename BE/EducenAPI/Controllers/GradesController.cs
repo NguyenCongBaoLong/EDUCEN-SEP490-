@@ -18,6 +18,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
         public async Task<ActionResult<IEnumerable<GradeDto>>> GetGrades()
         {
             var grades = await _gradeService.GetAllGradesAsync();
@@ -25,6 +26,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
         public async Task<ActionResult<GradeDto>> GetGrade(int id)
         {
             var grade = await _gradeService.GetGradeByIdAsync(id);
@@ -33,6 +35,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<ActionResult<GradeDto>> CreateGrade(CreateGradeDto dto)
         {
             var grade = await _gradeService.CreateGradeAsync(dto);
@@ -40,6 +43,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateGrade(int id, UpdateGradeDto dto)
         {
             var success = await _gradeService.UpdateGradeAsync(id, dto);
@@ -48,6 +52,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteGrade(int id)
         {
             try

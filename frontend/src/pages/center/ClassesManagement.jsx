@@ -277,8 +277,11 @@ const ClassesManagement = () => {
                 status: classData.status === 'active' ? 'Active' : classData.status === 'completed' ? 'Completed' : 'Inactive',
                 scheduleSlots: scheduleSlots,
                 roomId: classData.roomId || null,
-                gradeId: classData.gradeId || null
+                gradeId: classData.gradeId || null,
+                pricePerSession: classData.pricePerSession ? parseFloat(classData.pricePerSession) : null
             };
+
+            console.log('[DEBUG] handleSubmitClass payload:', JSON.stringify(payload, null, 2));
 
             if (editingClass) {
                 await api.put(`/Classes/${editingClass.id}`, payload);

@@ -8,10 +8,17 @@ namespace EducenAPI.Services
     public class CenterDashboardService : ICenterDashboardService
     {
         private readonly EducenV2Context _db;
+        private readonly AdminDbContext _adminDb;
+        private readonly ICurrentTenantService _tenantService;
 
-        public CenterDashboardService(EducenV2Context db)
+        public CenterDashboardService(
+            EducenV2Context db,
+            AdminDbContext adminDb,
+            ICurrentTenantService tenantService)
         {
             _db = db;
+            _adminDb = adminDb;
+            _tenantService = tenantService;
         }
 
         public async Task<CenterDashboardResponse> GetDashboardAsync()
@@ -63,6 +70,50 @@ namespace EducenAPI.Services
                             u.CreatedAt < endOfMonth)
                 .CountAsync();
 
+            // Current usage
+            var currentUsers = await _db.Users.CountAsync();
+
+            long totalKB = 0;
+            try
+            {
+                totalKB = await _db.ResourceFiles
+                    .Where(rf => rf.FileSize.HasValue)
+                    .SumAsync(rf => rf.FileSize ?? 0);
+            }
+            catch
+            {
+                // ResourceFile table may not exist yet
+            }
+            var currentStorageMB = Math.Round(totalKB / 1024.0, 2);
+
+            // Plan limits from Admin DB
+            int maxUsers = 0;
+            double maxStorageMB = 0;
+            try
+            {
+                var tenantId = _tenantService.TenantId;
+                if (!string.IsNullOrEmpty(tenantId))
+                {
+                    var subscription = await _adminDb.Subscriptions
+                        .Include(s => s.Plan)
+                        .Where(s => s.TenantId == tenantId
+                                 && s.Status == "Active"
+                                 && s.EndDate > now)
+                        .OrderByDescending(s => s.EndDate)
+                        .FirstOrDefaultAsync();
+
+                    if (subscription?.Plan != null)
+                    {
+                        maxUsers = subscription.Plan.LimitUsers;
+                        maxStorageMB = subscription.Plan.StorageLimit * 1024.0; // GB → MB
+                    }
+                }
+            }
+            catch
+            {
+                // Admin DB may not be available
+            }
+
             return new OverviewDto
             {
                 TotalStudents = totalStudents,
@@ -70,7 +121,11 @@ namespace EducenAPI.Services
                 UpcomingClasses = upcomingClasses,
                 TotalStaff = totalStaff,
                 ActiveStaff = activeStaff,
-                NewStudentsThisMonth = newStudentsThisMonth
+                NewStudentsThisMonth = newStudentsThisMonth,
+                CurrentUsers = currentUsers,
+                MaxUsers = maxUsers,
+                CurrentStorageMB = currentStorageMB,
+                MaxStorageMB = maxStorageMB
             };
         }
 

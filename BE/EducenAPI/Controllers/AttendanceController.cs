@@ -43,6 +43,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/attendance/session/{sessionId}
         [HttpGet("session/{sessionId:int}")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetAttendanceBySession(int sessionId)
         {
             try
@@ -67,6 +68,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/attendance/student/{studentId}
         [HttpGet("student/{studentId:int}")]
+        [Authorize(Roles = "Admin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetAttendanceByStudent(int studentId)
         {
             try
@@ -91,6 +93,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/attendance/class/{classId}/report
         [HttpGet("class/{classId:int}/report")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetClassAttendanceReport(int classId)
         {
             try
@@ -106,6 +109,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/attendance/class/{classId}/sessions-summary
         [HttpGet("class/{classId:int}/sessions-summary")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetClassAttendanceSessionSummary(int classId)
         {
             try
@@ -121,6 +125,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/attendance/session/{sessionId}/bulk
         [HttpPost("session/{sessionId:int}/bulk")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> BulkSaveAttendance(int sessionId, [FromBody] List<AttendanceRecordDto> records)
         {
             if (!IsTeacherOrAssistant())
@@ -149,6 +154,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/attendance/session/{sessionId}/quick
         [HttpPost("session/{sessionId:int}/quick")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> QuickAttendance(int sessionId, [FromBody] QuickAttendanceDto dto)
         {
             if (!IsTeacherOrAssistant())
@@ -177,6 +183,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/attendance/{attendanceId}
         [HttpPut("{attendanceId:int}")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> UpdateAttendance(int attendanceId, [FromBody] UpdateAttendanceDto dto)
         {
             if (!IsTeacherOrAssistant())
@@ -200,6 +207,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/attendance/session/{sessionId}/can-attend
         [HttpGet("session/{sessionId:int}/can-attend")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> CanAttendSession(int sessionId)
         {
             try

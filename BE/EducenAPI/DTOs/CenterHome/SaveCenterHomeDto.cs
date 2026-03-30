@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.DTOs.CenterHome
 {
@@ -18,6 +20,16 @@ namespace EducenAPI.DTOs.CenterHome
         public string? QuoteText { get; set; }
         public string? Copyright { get; set; }
 
+        // Branding
+        public string? PrimaryColor { get; set; }
+        public string? BackgroundColor { get; set; }
+        public string? FacebookUrl { get; set; }
+        public string? InstagramUrl { get; set; }
+        public string? YoutubeUrl { get; set; }
+        
+        // Layout Config (JSON)
+        public string? DisplayConfig { get; set; }
+
         // --- CÁC TRƯỜNG UPLOAD ẢNH ---
 
         // 1. Logo
@@ -25,14 +37,39 @@ namespace EducenAPI.DTOs.CenterHome
         public string? ExistingLogoUrl { get; set; } // Link Logo cũ (nếu không upload file mới)
 
         // 2. Ảnh slide (Hero Images)
-        public List<IFormFile>? HeroImageFiles { get; set; } // Danh sách file ảnh Hero mới
-        public List<string>? ExistingHeroImageUrls { get; set; } // Danh sách link ảnh Hero cũ muốn giữ lại
+        public List<IFormFile>? HeroImageFiles { get; set; } 
+        public List<SaveHeroImageDto>? HeroImages { get; set; } 
 
         // 3. Ảnh thư viện (Center Images)
         public List<IFormFile>? ImageFiles { get; set; }
         public List<string>? ExistingImageUrls { get; set; }
 
-        // Danh sách Highlight (Khi dùng form-data, FE sẽ gửi dưới dạng Highlights[0].Icon, Highlights[0].Text...)
+        // Danh sách Highlight
         public List<HighlightDto> Highlights { get; set; } = new List<HighlightDto>();
+        public List<CourseDropdownDto>? Courses { get; set; } = new List<CourseDropdownDto>();
+
+        // 4. Đội ngũ giáo viên
+        public List<IFormFile>? StaffAvatarFiles { get; set; }
+        public List<SaveStaffDto>? Staffs { get; set; }
+    }
+
+    public class SaveHeroImageDto
+    {
+        public string? Title { get; set; }
+        public string? SubTitle { get; set; }
+        public string? ButtonText { get; set; }
+        public string? ButtonLink { get; set; }
+        public string? ExistingImageUrl { get; set; } // Nếu giữ ảnh cũ hoặc thay đổi meta
+        public int? FileIndex { get; set; } // Nếu upload ảnh mới cho slide này
+    }
+
+    public class SaveStaffDto
+    {
+        public int? Id { get; set; }
+        public string Name { get; set; } = null!;
+        public string? Role { get; set; }
+        public string? Bio { get; set; }
+        public string? ExistingAvatarUrl { get; set; }
+        public int? FileIndex { get; set; }
     }
 }

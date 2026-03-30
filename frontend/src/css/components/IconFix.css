@@ -1,0 +1,120 @@
+/* Fix Lucide React Icon Sizing - Comprehensive Fix */
+
+/* Base lucide icon sizing */
+.lucide {
+  width: 1em !important;
+  height: 1em !important;
+  flex-shrink: 0 !important;
+}
+
+/* Button icons - CRITICAL FIX */
+button .lucide,
+.btn .lucide,
+.action-btn .lucide {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Specific button fixes */
+.btn-add-student .lucide,
+.btn-import-student .lucide,
+.btn-send-account .lucide {
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Table action buttons */
+table .action-btn .lucide,
+table button .lucide {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Search and filter icons */
+.filter-search .lucide,
+.search-box .lucide {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Sidebar icons */
+.sidebar-nav .lucide {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Status badges */
+.status-badge .lucide,
+.enrollment-status-badge .lucide {
+  width: 12px !important;
+  height: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Filter controls */
+.filter-select .lucide,
+.filter-button .lucide {
+  width: 14px !important;
+  height: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Modal icons */
+.modal-header .lucide,
+.modal-title .lucide {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Tab icons */
+.tab-btn .lucide {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Override any conflicting SVG styles */
+svg.lucide {
+  width: 1em !important;
+  height: 1em !important;
+  flex-shrink: 0 !important;
+}
+
+/* Button layout fixes */
+.btn-add-student,
+.btn-import-student,
+.btn-send-account {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Action button container fixes */
+.action-buttons {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+}
+
+.button-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+}
+
+/* Table action cell fixes */
+td .status-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  justify-content: flex-end !important;
+}

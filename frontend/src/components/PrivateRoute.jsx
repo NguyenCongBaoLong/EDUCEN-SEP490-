@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
  * Ví dụ: <PrivateRoute allowedRoles={['Admin']}><CenterHome /></PrivateRoute>
  *
  * Logic:
- * - Chưa login → redirect về /login
+ * - Chưa login → redirect về /login (giữ tenant query param)
  * - Đã login nhưng sai role → redirect về trang của role đó
  * - Đúng role → render component
  */
@@ -25,7 +25,15 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     // Chưa đăng nhập → về đúng trang login tương ứng
     if (!user) {
         const isSysAdminPath = window.location.pathname.startsWith('/sysadmin');
-        return <Navigate to={isSysAdminPath ? "/sysadmin/login" : "/login"} replace />;
+        const loginPath = isSysAdminPath ? '/sysadmin/login' : '/login';
+        
+        // Giữ lại tenant query param khi redirect để login biết tenant nào
+        const tenantId = localStorage.getItem('tenantId');
+        const redirectUrl = tenantId && tenantId !== 'default-tenant'
+            ? `${loginPath}?tenant=${encodeURIComponent(tenantId)}`
+            : loginPath;
+        
+        return <Navigate to={redirectUrl} replace />;
     }
 
     // Đã login nhưng role không được phép → redirect về trang đúng role

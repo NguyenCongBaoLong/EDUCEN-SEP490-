@@ -1,13 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.Models
 {
-    public class CenterProfile : IMustHaveTenant
+    public class CenterProfile
     {
         [Key]
         public int CenterProfileId { get; set; }
-
-        public string TenantId { get; set; } = string.Empty;
 
         public string Name { get; set; } = null!;
         public string? LogoUrl { get; set; }
@@ -26,8 +24,19 @@ namespace EducenAPI.Models
         public string? QuoteText { get; set; }
         public string? Copyright { get; set; }
 
+        // Branding
+        public string? PrimaryColor { get; set; }
+        public string? BackgroundColor { get; set; }
+        public string? FacebookUrl { get; set; }
+        public string? InstagramUrl { get; set; }
+        public string? YoutubeUrl { get; set; }
+
+        // Layout Config (JSON)
+        public string? DisplayConfig { get; set; }
+
         public ICollection<CenterImage>? Images { get; set; }
         public ICollection<CenterHeroImage>? HeroImages { get; set; }
         public ICollection<CenterHighlight>? Highlights { get; set; }
+        public ICollection<CenterStaff>? Staffs { get; set; }
     }
 }

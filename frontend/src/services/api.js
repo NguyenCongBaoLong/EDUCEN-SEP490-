@@ -9,6 +9,23 @@ const api = axios.create({
     },
 });
 
+// Helper: lấy tenantId từ nhiều nguồn (ưu tiên localStorage → URL query param)
+function resolveTenantId() {
+    // 1. Ưu tiên localStorage
+    const stored = localStorage.getItem('tenantId');
+    if (stored && stored !== 'default-tenant') return stored;
+
+    // 2. Nếu localStorage trống, thử lấy từ URL query param (?tenant=xxx)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tenantFromUrl = urlParams.get('tenant');
+    if (tenantFromUrl && tenantFromUrl !== 'default-tenant') {
+        localStorage.setItem('tenantId', tenantFromUrl);
+        return tenantFromUrl;
+    }
+
+    return null;
+}
+
 // Tự động gắn JWT token vào mỗi request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
@@ -16,8 +33,8 @@ api.interceptors.request.use((config) => {
         config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Tự động gửi tenantId nếu có trong localStorage (quan trọng cho multi-tenancy trên localhost)
-    const tenantId = localStorage.getItem('tenantId');
+    // Tự động gửi tenantId nếu có (từ localStorage hoặc URL query param)
+    const tenantId = resolveTenantId();
     if (tenantId) {
         config.headers['tenant'] = tenantId;
     }
@@ -25,7 +42,7 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Xử lý lỗi 401 (token hết hạn) → redirect về login
+// Xử lý lỗi 401 (token hết hạn) → redirect về đúng trang login theo role
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -33,10 +50,25 @@ api.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('user');
 
-            // Tránh infinite loop nếu đã ở trang login hoặc center hoặc sysadmin
+            // Tránh infinite loop nếu đã ở trang login/public
             const currentPath = window.location.pathname;
-            if (currentPath !== '/center' && currentPath !== '/login' && currentPath !== '/' && !currentPath.startsWith('/sysadmin')) {
-                window.location.href = '/center';
+            const isPublicPath = currentPath === '/' || currentPath === '/login' || currentPath === '/signup'
+                || currentPath === '/forgot-password' || currentPath === '/reset-password'
+                || currentPath.startsWith('/sysadmin');
+
+            if (!isPublicPath) {
+                // Redirect về đúng trang login theo role hiện tại
+                if (currentPath.startsWith('/student')) {
+                    window.location.href = '/login';
+                } else if (currentPath.startsWith('/teacher') || currentPath.startsWith('/ta')) {
+                    window.location.href = '/login';
+                } else if (currentPath.startsWith('/parent')) {
+                    window.location.href = '/login';
+                } else if (currentPath.startsWith('/center')) {
+                    window.location.href = '/login';
+                } else {
+                    window.location.href = '/login';
+                }
             }
         }
         return Promise.reject(error);

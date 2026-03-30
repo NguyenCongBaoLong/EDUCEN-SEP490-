@@ -18,6 +18,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/admin/users/{id}/lock
         [HttpPut("users/{id:int}/lock")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> LockUserAccount(int id)
         {
             try
@@ -36,6 +37,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/admin/users/{id}/unlock
         [HttpPut("users/{id:int}/unlock")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UnlockUserAccount(int id)
         {
             try
@@ -54,6 +56,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/admin/users
         [HttpGet("users")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetAllUsers()
         {
             var users = await _userManagementService.GetAllUsersAsync();
@@ -62,6 +65,7 @@ namespace EducenAPI.Controllers
 
         // GET: api/admin/users/{id}
         [HttpGet("users/{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetUserById(int id)
         {
             var user = await _userManagementService.GetUserByIdAsync(id);

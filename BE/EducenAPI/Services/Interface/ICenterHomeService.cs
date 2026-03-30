@@ -1,10 +1,12 @@
-﻿using EducenAPI.DTOs.CenterHome;
+using System.Threading.Tasks;
+using EducenAPI.DTOs.CenterHome;
 
 namespace EducenAPI.Services.Interface
 {
     public interface ICenterHomeService
     {
-        Task<bool> SaveCenterHomeAsync(string tenantId, SaveCenterHomeDto dto);
-        Task<CenterHomeResponseDto?> GetCenterHomeAsync(string tenantId, string baseUrl);
+        Task<CenterHomeResponseDto?> SaveCenterHomeAsync(SaveCenterHomeDto dto, string baseUrl);
+        Task<CenterHomeResponseDto?> GetCenterHomeAsync(string baseUrl);
+        Task<IEnumerable<HomeClassDto>> GetUpcomingClassesAsync();
     }
 }

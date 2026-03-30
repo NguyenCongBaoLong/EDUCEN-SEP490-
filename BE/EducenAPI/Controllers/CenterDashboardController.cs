@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using EducenAPI.Services.Interface;
 
 namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CenterDashboardController : ControllerBase
     {
         private readonly ICenterDashboardService _dashboardService;
@@ -15,6 +17,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetDashboard()
         {
             var result = await _dashboardService.GetDashboardAsync();

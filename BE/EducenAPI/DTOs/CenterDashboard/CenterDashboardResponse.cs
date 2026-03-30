@@ -15,6 +15,10 @@
         public int TotalStaff { get; set; }
         public int ActiveStaff { get; set; }
         public int NewStudentsThisMonth { get; set; }
+        public int CurrentUsers { get; set; }
+        public int MaxUsers { get; set; }
+        public double CurrentStorageMB { get; set; }
+        public double MaxStorageMB { get; set; }
     }
 
     public class StudentRegistrationDto

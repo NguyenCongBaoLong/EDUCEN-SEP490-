@@ -300,26 +300,27 @@ const ClassDetail = () => {
             const assistantId = modalData.assistant?.id;
 
             const updateDto = {
-                className: modalData.name,
-                description: modalData.description || null,
-                syllabusContent: modalData.syllabusContent || null,
-                subjectId: subject?.subjectId || classData.subjectId,
-                teacherId: teacherId || null,
-                assistantId: assistantId || null,
-                roomId: modalData.roomId || null,
-                gradeId: modalData.gradeId || null,
-                startDate: modalData.startDate || null,
-                endDate: modalData.endDate || null,
-                status: modalData.status === 'active' ? 'Active' : modalData.status === 'completed' ? 'Completed' : 'Inactive',
-                scheduleSlots: (modalData.scheduleSlots || [])
-                    .filter(s => s.day && s.startTime && s.endTime)
-                    .map(s => ({
-                        dayOfWeek: DAY_NAME_TO_NUMBER[s.day] ?? 1,
-                        startTime: s.startTime,
-                        endTime: s.endTime,
-                        roomId: s.roomId
-                    }))
-            };
+    className: modalData.name,
+    description: modalData.description || null,
+    syllabusContent: modalData.syllabusContent || null,
+    subjectId: subject?.subjectId || classData.subjectId,
+    teacherId: teacherId || null,
+    assistantId: assistantId || null,
+    roomId: modalData.roomId || null,
+    gradeId: modalData.gradeId || null,
+    startDate: modalData.startDate || null,
+    endDate: modalData.endDate || null,
+    status: modalData.status === 'active' ? 'Active' : modalData.status === 'completed' ? 'Completed' : 'Inactive',
+    pricePerSession: modalData.pricePerSession ? Number(modalData.pricePerSession) : null, // <-- THÊM DÒNG NÀY
+    scheduleSlots: (modalData.scheduleSlots || [])
+        .filter(s => s.day && s.startTime && s.endTime)
+        .map(s => ({
+            dayOfWeek: DAY_NAME_TO_NUMBER[s.day] ?? 1,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            roomId: s.roomId
+        }))
+};
             await api.put(`/Classes/${classId}`, updateDto);
             await fetchClassData();
             await fetchTeachersAndAssistants();

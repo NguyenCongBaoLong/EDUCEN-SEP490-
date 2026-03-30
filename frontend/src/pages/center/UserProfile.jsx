@@ -23,6 +23,7 @@ const UserProfile = () => {
     // Profile data from API
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     // Edit states
     const [isEditingAccount, setIsEditingAccount] = useState(false);
@@ -297,6 +298,12 @@ const UserProfile = () => {
                             <p>Chào mừng quay trở lại, {displayName}</p>
                         </div>
                     </div>
+
+                    {error && (
+                        <div className="profile-error-banner" style={{ padding: '10px 16px', marginBottom: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626', fontSize: '14px' }}>
+                            {error}
+                        </div>
+                    )}
 
 
                     <div className="profile-grid">
