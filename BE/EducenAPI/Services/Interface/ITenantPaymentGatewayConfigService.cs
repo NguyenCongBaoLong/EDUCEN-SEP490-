@@ -3,6 +3,12 @@ namespace EducenAPI.Services.Interface
     public interface ITenantPaymentGatewayConfigService
     {
         Task<EffectivePaymentGatewayConfig> GetEffectiveConfigAsync(string tenantId, string gatewayType = "VNPay");
+
+        /// <summary>
+        /// Lấy global config từ appsettings.json (bỏ qua per-tenant config)
+        /// Dùng cho subscription payment (SystemAdmin's VNPay)
+        /// </summary>
+        EffectivePaymentGatewayConfig GetGlobalConfig(string gatewayType = "VNPay");
     }
 
     public class EffectivePaymentGatewayConfig

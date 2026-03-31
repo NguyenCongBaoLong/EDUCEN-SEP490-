@@ -25,6 +25,7 @@ namespace EducenAPI.Services.Interface
 
     public class CreatePaymentRequest
     {
+        public string? TenantId { get; set; }
         public string OrderId { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public string Description { get; set; } = string.Empty;
@@ -61,6 +62,7 @@ namespace EducenAPI.Services.Interface
 
     public class RefundRequest
     {
+        public string? TenantId { get; set; }
         public string OriginalTransactionId { get; set; } = string.Empty;
         public string OrderId { get; set; } = string.Empty;
         public decimal Amount { get; set; }

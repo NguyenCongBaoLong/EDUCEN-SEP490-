@@ -95,7 +95,19 @@ const PaymentResult = () => {
                     toast.success('Thanh toán thành công!');
                 }
             } else if (isDirectVNPayRedirect) {
-                // VNPay redirect nhưng không thành công
+                // VNPay redirect nhưng không thành công (hủy/giả mạo)
+                // Gửi params lên backend để cập nhật DB (Failed)
+                try {
+                    const vnpParams = {};
+                    searchParams.forEach((value, key) => {
+                        if (key.startsWith('vnp_')) {
+                            vnpParams[key] = value;
+                        }
+                    });
+                    await paymentService.confirmPayment(vnpParams);
+                } catch {
+                    // Backend confirm fail cũng không sao - đã là hủy rồi
+                }
                 setStatus('failed');
                 toast.error('Thanh toán thất bại');
             } else {

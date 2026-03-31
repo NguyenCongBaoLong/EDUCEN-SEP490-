@@ -212,18 +212,25 @@ namespace EducenAPI.Controllers
                     });
                 }
 
-                _logger.LogInformation("Frontend confirm payment received: {Params}",
+                _logger.LogInformation("Frontend confirm payment received. OrderId: {OrderId}, ResponseCode: {RespCode}, TxnStatus: {TxnStatus}, Params: {Params}",
+                    callbackOrderId,
+                    vnpayParams.GetValueOrDefault("vnp_ResponseCode") ?? "N/A",
+                    vnpayParams.GetValueOrDefault("vnp_TransactionStatus") ?? "N/A",
                     System.Text.Json.JsonSerializer.Serialize(vnpayParams));
 
                 var result = await _paymentService.ProcessCallbackAsync("VNPay", vnpayParams);
 
+                _logger.LogInformation("Frontend confirm result. IsValid: {IsValid}, IsSuccessful: {IsSuccessful}, Message: {Message}",
+                    result.IsValid, result.IsSuccessful, result.Message);
+
                 if (!result.IsSuccessful)
                 {
-                    // If verification failed but VNPay reports success, confirm directly
                     var respCode = vnpayParams.GetValueOrDefault("vnp_ResponseCode");
                     var txnStatus = vnpayParams.GetValueOrDefault("vnp_TransactionStatus");
+
                     if (respCode == "00" && txnStatus == "00")
                     {
+                        // Hash verify fail nhưng VNPay báo thành công → confirm trực tiếp
                         _logger.LogWarning("VNPay hash verification failed but response code is 00. Confirming directly.");
                         await _paymentService.ConfirmPaymentDirectlyAsync(callbackOrderId);
                         return Ok(new
@@ -234,7 +241,16 @@ namespace EducenAPI.Controllers
                             message = "Confirmed directly (hash verify bypassed)"
                         });
                     }
-                    return Ok(new { success = false, message = result.Message });
+
+                    // Hash verify fail VÀ VNPay KHÔNG báo thành công → đánh dấu Failed/Cancelled
+                    var isCancellation = respCode == "24";
+                    var status = isCancellation ? "Cancelled" : "Failed";
+                    var failReason = isCancellation
+                        ? $"Người dùng hủy thanh toán (ResponseCode=24)"
+                        : $"Giao dịch thất bại (ResponseCode={respCode}, TxnStatus={txnStatus})";
+                    _logger.LogWarning("Payment {Status}. OrderId: {OrderId}, Reason: {Reason}", status, callbackOrderId, failReason);
+                    await _paymentService.MarkPaymentAsFailedAsync(callbackOrderId, failReason, status);
+                    return Ok(new { success = false, orderId = callbackOrderId, status, message = failReason });
                 }
 
                 return Ok(new

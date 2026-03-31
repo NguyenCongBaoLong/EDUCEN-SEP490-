@@ -59,6 +59,14 @@ namespace EducenAPI.Services.Payment
                 $"No active payment gateway config found for tenant '{tenantId}' and gateway '{normalizedGatewayType}'. Global fallback is disabled.");
         }
 
+        public EffectivePaymentGatewayConfig GetGlobalConfig(string gatewayType = "VNPay")
+        {
+            var normalizedGatewayType = NormalizeGatewayType(gatewayType);
+            var config = BuildGlobalFallbackConfig(normalizedGatewayType);
+            ValidateRequiredFields(config, "global", normalizedGatewayType, PaymentConfigSources.GlobalFallback);
+            return config;
+        }
+
         private EffectivePaymentGatewayConfig ParseTenantConfig(string configData, string tenantId, string gatewayType)
         {
             if (string.IsNullOrWhiteSpace(configData))

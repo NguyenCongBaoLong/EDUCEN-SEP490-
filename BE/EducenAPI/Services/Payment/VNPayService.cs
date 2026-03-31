@@ -32,7 +32,10 @@ namespace EducenAPI.Services.Payment
                 var vnp_TmnCode = config.TmnCode;
                 var vnp_HashSecret = config.HashSecret;
                 var vnp_Url = config.BaseUrl;
-                var vnp_ReturnUrl = config.ReturnUrl;
+                // Ưu tiên ReturnUrl từ request (frontend gửi kèm tenant params), fallback về config
+                var vnp_ReturnUrl = !string.IsNullOrWhiteSpace(request.ReturnUrl)
+                    ? request.ReturnUrl
+                    : config.ReturnUrl;
 
                 // Convert amount to VND (VNPay uses smallest currency unit)
                 var vnp_Amount = (long)(request.Amount * 100);
@@ -83,17 +86,21 @@ namespace EducenAPI.Services.Payment
 
                 foreach (var param in sortedParams)
                 {
-                    // URL-encode cả key và value (uppercase hex) cho signing data
-                    var encodedKey = UrlEncode(param.Key);
-                    var encodedValue = UrlEncode(param.Value ?? "");
+                    var rawKey = param.Key;
+                    var rawValue = param.Value ?? "";
 
-                    if (hashData.Length > 0)
-                        hashData.Append('&');
-                    hashData.Append($"{encodedKey}={encodedValue}");
+                    // URL-encoded cho query URL
+                    var encodedKey = UrlEncode(rawKey);
+                    var encodedValue = UrlEncode(rawValue);
 
                     if (query.Length > 0)
                         query.Append('&');
                     query.Append($"{encodedKey}={encodedValue}");
+
+                    // Signing data: URL-encoded (VNPay verify payment URL bằng URL-encoded data)
+                    if (hashData.Length > 0)
+                        hashData.Append('&');
+                    hashData.Append($"{encodedKey}={encodedValue}");
                 }
 
                 var signData = hashData.ToString();
@@ -103,7 +110,9 @@ namespace EducenAPI.Services.Payment
                 var paymentUrl = $"{vnp_Url}?{query}&vnp_SecureHash={vnp_SecureHash}";
 
                 _logger.LogDebug("VNPay CreatePayment - SignData: {SignData}, SecureHash: {Hash}", signData, vnp_SecureHash);
-                _logger.LogInformation("VNPay payment URL created for Order {OrderId}", request.OrderId);
+                _logger.LogInformation(
+                    "VNPay payment URL created. OrderId: {OrderId}, TmnCode: {TmnCode}, ConfigSource: {Source}",
+                    request.OrderId, vnp_TmnCode, config.Source);
 
                 return new PaymentGatewayResponse
                 {
@@ -148,8 +157,9 @@ namespace EducenAPI.Services.Payment
                 }
 
                 // Remove hash from data for verification — only include vnp_ keys
+                // KHÔNG exclude vnp_ReturnUrl - VNPay include trong callback signing
                 var dataToVerify = callbackData
-    .Where(x => x.Key.StartsWith("vnp_") && x.Key != "vnp_SecureHash" && x.Key != "vnp_SecureHashType" && x.Key != "vnp_ReturnUrl")
+    .Where(x => x.Key.StartsWith("vnp_") && x.Key != "vnp_SecureHash" && x.Key != "vnp_SecureHashType")
     .OrderBy(x => x.Key, StringComparer.Ordinal)
     .ToList();
 
@@ -157,7 +167,7 @@ namespace EducenAPI.Services.Payment
 
                 foreach (var param in dataToVerify)
                 {
-                    // URL-encode cả key và value (uppercase hex) cho signing data
+                    // URL-encoded signing - đồng bộ với CreatePaymentAsync
                     var encodedKey = UrlEncode(param.Key);
                     var encodedValue = UrlEncode(param.Value ?? "");
 
@@ -169,12 +179,13 @@ namespace EducenAPI.Services.Payment
                 var signData = queryBuilder.ToString();
                 var calculatedHash = HmacSHA512(vnp_HashSecret, signData);
 
-                _logger.LogDebug("VNPay VerifyCallback - SignData: {SignData}, CalculatedHash: {Hash}, ReceivedHash: {ReceivedHash}",
-                    signData, calculatedHash, vnp_SecureHash);
+                _logger.LogInformation("VNPay VerifyCallback. CalculatedHash: {CalcHash}, ReceivedHash: {RecvHash}",
+                    calculatedHash[..16], vnp_SecureHash[..16]);
 
                 if (!calculatedHash.Equals(vnp_SecureHash, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    _logger.LogWarning("VNPay callback hash mismatch");
+                    _logger.LogWarning("VNPay callback hash mismatch. SignData preview: [{SignData}]",
+                        string.Join(", ", dataToVerify.Select(p => $"{p.Key}={p.Value}")));
                     return new PaymentVerificationResult
                     {
                         IsValid = false,
@@ -329,21 +340,32 @@ namespace EducenAPI.Services.Payment
             string operation,
             string? orderId = null)
         {
-            var resolvedTenantId = string.IsNullOrWhiteSpace(tenantId)
-                ? DefaultTenantId
-                : tenantId.Trim();
+            // TenantId rỗng/null → Subscription payment → dùng global config (SystemAdmin's VNPay)
+            // TenantId có giá trị → Tuition payment → ưu tiên per-tenant config, fallback global
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                var globalConfig = _tenantPaymentGatewayConfigService.GetGlobalConfig(GatewayType);
 
-            var config = await _tenantPaymentGatewayConfigService
-                .GetEffectiveConfigAsync(resolvedTenantId, GatewayType);
+                _logger.LogInformation(
+                    "Resolved VNPay GLOBAL config for {Operation}. TmnCode: {TmnCode}, OrderId: {OrderId}",
+                    operation,
+                    globalConfig.TmnCode,
+                    orderId ?? "N/A");
+
+                return globalConfig;
+            }
+
+            var tenantConfig = await _tenantPaymentGatewayConfigService
+                .GetEffectiveConfigAsync(tenantId.Trim(), GatewayType);
 
             _logger.LogDebug(
                 "Resolved VNPay config for {Operation}. Tenant: {TenantId}, Source: {Source}, OrderId: {OrderId}",
                 operation,
-                resolvedTenantId,
-                config.Source,
+                tenantId.Trim(),
+                tenantConfig.Source,
                 orderId ?? "N/A");
 
-            return config;
+            return tenantConfig;
         }
 
         private static string? ExtractTenantId(IReadOnlyDictionary<string, string> callbackData)
