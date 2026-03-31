@@ -120,7 +120,7 @@ namespace EducenAPI.Persistence.Contexts
             builder.Entity<TenantPaymentConfigAudit>()
                 .HasOne(a => a.TenantPaymentGatewayConfig)
                 .WithMany(c => c.AuditLogs)
-                .HasForeignKey(a => a.TenantPaymentGatewayConfigId)
+                .HasForeignKey(a => a.TenantPaymentGatewayConfigId);
             // === TenantZaloOAConfig Configuration ===
             builder.Entity<TenantZaloOAConfig>()
                 .HasIndex(z => z.TenantId)

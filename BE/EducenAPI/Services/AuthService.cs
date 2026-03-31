@@ -22,8 +22,9 @@ namespace EducenAPI.Services
         private readonly MailService _mailService;
         private readonly IMemoryCache _cache;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ICurrentTenantService _currentTenantService;
 
-        public AuthService(EducenV2Context context, AdminDbContext adminContext, IConfiguration config, MailService mailService, IMemoryCache cache, IHttpContextAccessor httpContextAccessor)
+        public AuthService(EducenV2Context context, AdminDbContext adminContext, IConfiguration config, MailService mailService, IMemoryCache cache, IHttpContextAccessor httpContextAccessor, ICurrentTenantService currentTenantService)
         {
             _context = context;
             _adminContext = adminContext;
@@ -31,6 +32,7 @@ namespace EducenAPI.Services
             _mailService = mailService;
             _cache = cache;
             _httpContextAccessor = httpContextAccessor;
+            _currentTenantService = currentTenantService;
         }
 
         public async Task Register(RegisterDto dto)
@@ -56,14 +58,14 @@ namespace EducenAPI.Services
 
         public async Task<string> Login(LoginDto dto)
         {
-            // Luôn query user từ DB mặc định EducenV2, không phụ thuộc tenant header
-            // Vì user credentials được chia sẻ trên tất cả tenant
-            var defaultConnStr = _config.GetConnectionString("DefaultTenantConnection");
+            // Sử dụng ConnectionString của trung tâm hiện tại để kiểm tra tài khoản
+            var currentConnStr = _currentTenantService.ConnectionString 
+                ?? _config.GetConnectionString("DefaultTenantConnection");
 
             User? user = null;
             string roleName = string.Empty;
 
-            using (var conn = new SqlConnection(defaultConnStr))
+            using (var conn = new SqlConnection(currentConnStr))
             {
                 await conn.OpenAsync();
                 using var cmd = conn.CreateCommand();
@@ -227,7 +229,8 @@ namespace EducenAPI.Services
                 }
                 
                 // Hoặc lấy từ header
-                var tenantHeader = httpContext?.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+                var tenantHeader = httpContext?.Request.Headers["tenant"].FirstOrDefault()
+                    ?? httpContext?.Request.Headers["X-Tenant-Id"].FirstOrDefault();
                 if (!string.IsNullOrEmpty(tenantHeader))
                 {
                     return tenantHeader;

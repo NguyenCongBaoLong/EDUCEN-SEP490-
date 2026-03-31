@@ -16,17 +16,19 @@ function resolveTenantId() {
         !!tenantId && tenantId !== 'undefined' && tenantId !== 'null'
     );
 
-    // 1. Ưu tiên localStorage
-    const stored = localStorage.getItem('tenantId');
-    if (isValidTenantId(stored)) return stored;
-
-    // 2. Nếu localStorage trống, thử lấy từ URL query param (?tenant=xxx hoặc ?tenantId=xxx)
+    // 1. Ưu tiên URL query param (?tenant=xxx hoặc ?tenantId=xxx) 
+    // Nếu người dùng gõ trực tiếp URL, họ muốn truy cập chính xác trung tâm đó
     const urlParams = new URLSearchParams(window.location.search);
     const tenantFromUrl = urlParams.get('tenantId') || urlParams.get('tenant');
+    
     if (isValidTenantId(tenantFromUrl)) {
         localStorage.setItem('tenantId', tenantFromUrl);
         return tenantFromUrl;
     }
+
+    // 2. Nếu URL không có, mới lấy từ localStorage (giá trị đã "ghi nhớ" trước đó)
+    const stored = localStorage.getItem('tenantId');
+    if (isValidTenantId(stored)) return stored;
 
     return null;
 }
@@ -41,7 +43,10 @@ api.interceptors.request.use((config) => {
     // Tự động gửi tenantId nếu có (từ localStorage hoặc URL query param)
     const tenantId = resolveTenantId();
     if (tenantId) {
+        console.log(`[API Interceptor] Using TenantId: ${tenantId}`);
         config.headers['tenant'] = tenantId;
+    } else {
+        console.log('[API Interceptor] No TenantId found');
     }
 
     return config;
