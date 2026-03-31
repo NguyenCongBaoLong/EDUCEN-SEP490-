@@ -1292,25 +1292,52 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                         <h2>Lịch Học Các Lớp</h2>
                                         <div className="center-schedule reveal fade-in">
                                             <div className="center-schedule-grid">
-                                                {DAY_LABELS.map((dayLabel, colIdx) => (
-                                                    <div key={colIdx} className={`center-schedule-day reveal slide-up stagger-${colIdx + 1}`}>
-                                                        <div className="center-schedule-day-header">
-                                                            <Clock size={14} /><span>{dayLabel}</span>
-                                                        </div>
-                                                        <div className="center-schedule-slots">
-                                                            {scheduledClasses.filter(c => dayToColumnIndex(c.day) === colIdx).length > 0 ? (
-                                                                scheduledClasses.filter(c => dayToColumnIndex(c.day) === colIdx).map((cls) => (
-                                                                    <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
-                                                                        <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
-                                                                        <span className="center-slot-subject">{cls.name}</span>
-                                                                    </div>
-                                                                ))
-                                                            ) : (
-                                                                <div className="center-schedule-closed">NGHỈ</div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                {(() => {
+                                                    // Calculate dates for current week (Mon-Sun)
+                                                    const today = new Date();
+                                                    const currentDay = today.getDay(); // 0=Sun, 1=Mon...
+                                                    const mondayDiff = currentDay === 0 ? -6 : 1 - currentDay;
+                                                    const monday = new Date(today);
+                                                    monday.setDate(today.getDate() + mondayDiff);
+                                                    monday.setHours(0, 0, 0, 0);
+
+                                                    return DAY_LABELS.map((dayLabel, colIdx) => {
+                                                        const targetDate = new Date(monday);
+                                                        targetDate.setDate(monday.getDate() + colIdx);
+                                                        const check = targetDate.getTime();
+
+                                                        const dayClasses = scheduledClasses.filter(c => {
+                                                            const isSameDay = dayToColumnIndex(c.day) === colIdx;
+                                                            if (!isSameDay) return false;
+
+                                                            // Filter by date range
+                                                            const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                                            const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                                            return check >= start && check <= end;
+                                                        });
+
+                                                        return (
+                                                            <div key={colIdx} className={`center-schedule-day reveal slide-up stagger-${colIdx + 1}`}>
+                                                                <div className="center-schedule-day-header">
+                                                                    <Clock size={14} /><span>{dayLabel}</span>
+                                                                </div>
+                                                                <div className="center-schedule-slots">
+                                                                    {dayClasses.length > 0 ? (
+                                                                        dayClasses.map((cls) => (
+                                                                            <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
+                                                                                <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
+                                                                                <span className="center-slot-subject">{cls.name}</span>
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <div className="center-schedule-closed">NGHỈ</div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         </div>
                                     </section>

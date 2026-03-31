@@ -230,7 +230,7 @@
 
 .ps-day-grid {
     position: relative;
-    height: calc(14 * 70px);
+    height: calc(16 * 70px);
 }
 
 .ps-grid-cell {

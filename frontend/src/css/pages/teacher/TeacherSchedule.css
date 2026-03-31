@@ -246,8 +246,8 @@
 
 .ts-day-grid {
     position: relative;
-    height: calc(15 * 70px);
-    /* 15 slots from 08:00 to 22:00 */
+    height: calc(16 * 70px);
+    /* 16 slots from 08:00 to 23:00 */
 }
 
 .ts-grid-cell {
