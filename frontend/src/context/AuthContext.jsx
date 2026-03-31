@@ -105,9 +105,11 @@ export function AuthProvider({ children }) {
         const urlParams = new URLSearchParams(window.location.search);
         const tenantFromUrl = urlParams.get('tenant');
         const storedTenantId = localStorage.getItem('tenantId');
-        const effectiveTenantId = isValidTenantId(storedTenantId)
-            ? storedTenantId
-            : (isValidTenantId(tenantFromUrl) ? tenantFromUrl : null);
+        
+        // Luôn ưu tiên tham số từ URL nếu có
+        const effectiveTenantId = isValidTenantId(tenantFromUrl)
+            ? tenantFromUrl
+            : (isValidTenantId(storedTenantId) ? storedTenantId : null);
 
         if (isValidTenantId(effectiveTenantId)) {
             localStorage.setItem('tenantId', effectiveTenantId);
@@ -152,7 +154,7 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('systemApiKey');
-        localStorage.removeItem('tenantId'); // Xóa cả tenantId
+        // Không xóa tenantId để trình duyệt "nhớ" trung tâm hiện tại cho lần đăng nhập sau
         setUser(null);
 
         // Nếu là SystemAdmin thì mặc định về trang chủ tổng (/)

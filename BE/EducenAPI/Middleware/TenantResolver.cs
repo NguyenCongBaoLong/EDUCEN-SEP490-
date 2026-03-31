@@ -1,4 +1,4 @@
-﻿using EducenAPI.Persistence.Contexts;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -64,10 +64,10 @@ namespace EducenAPI.Middleware
                 // Kiểm tra trong Cache trước để tránh truy vấn Database liên tục
                 if (!_cache.TryGetValue(cacheKey, out string actualTenantId))
                 {
-                    // Truy vấn AdminDbContext để tìm TenantId dựa trên SubDomain
+                    // Truy vấn AdminDbContext để tìm TenantId dựa trên SubDomain hoặc TenantId (GUID)
                     var tenant = await adminDbContext.Tenants
                         .AsNoTracking()
-                        .Where(t => t.SubDomain == subDomain && t.IsActive)
+                        .Where(t => (t.SubDomain == subDomain || t.TenantId == subDomain) && t.IsActive)
                         .Select(t => t.TenantId)
                         .FirstOrDefaultAsync();
 
