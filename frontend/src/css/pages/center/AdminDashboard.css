@@ -354,6 +354,29 @@
     animation: adminFadeIn 0.3s ease;
 }
 
+.zalo-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 0.625rem 0.875rem;
+    border-radius: 10px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    animation: adminFadeIn 0.3s ease;
+}
+
+.zalo-status-info {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #059669;
+    font-weight: 500;
+    padding: 0.375rem 0;
+}
+
 @keyframes adminFadeIn {
     from {
         opacity: 0;

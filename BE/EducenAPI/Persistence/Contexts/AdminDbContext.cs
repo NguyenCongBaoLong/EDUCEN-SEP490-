@@ -26,6 +26,9 @@ namespace EducenAPI.Persistence.Contexts
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<RefundRequest> RefundRequests { get; set; }
 
+        // === Zalo OA ===
+        public DbSet<TenantZaloOAConfig> TenantZaloOAConfigs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -95,6 +98,20 @@ namespace EducenAPI.Persistence.Contexts
 
             builder.Entity<RefundRequest>()
                 .HasIndex(rr => rr.SubscriptionId);
+
+            // === TenantZaloOAConfig Configuration ===
+            builder.Entity<TenantZaloOAConfig>()
+                .HasIndex(z => z.TenantId)
+                .IsUnique();
+
+            builder.Entity<TenantZaloOAConfig>()
+                .HasIndex(z => z.OAId);
+
+            builder.Entity<TenantZaloOAConfig>()
+                .HasOne(z => z.Tenant)
+                .WithMany()
+                .HasForeignKey(z => z.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

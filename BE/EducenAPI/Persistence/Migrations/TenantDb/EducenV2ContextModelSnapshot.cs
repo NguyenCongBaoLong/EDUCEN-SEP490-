@@ -1244,6 +1244,41 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("EducenAPI.Models.ZaloOARecipient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("FollowedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsFollowing")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UnfollowedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ZaloUserId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("ZaloUserId");
+
+                    b.ToTable("ZaloOARecipients");
+                });
+
             modelBuilder.Entity("ParentStudent", b =>
                 {
                     b.Property<int>("ParentsUserId")
@@ -1637,6 +1672,17 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("EducenAPI.Models.ZaloOARecipient", b =>
+                {
+                    b.HasOne("EducenAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ParentStudent", b =>

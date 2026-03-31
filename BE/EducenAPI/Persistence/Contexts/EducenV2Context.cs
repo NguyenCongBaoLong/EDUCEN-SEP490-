@@ -59,6 +59,9 @@ public partial class EducenV2Context : DbContext
     public DbSet<PaymentRecordTenant> PaymentRecordTenants { get; set; }
     public DbSet<PaymentTransactionTenant> PaymentTransactionTenants { get; set; }
 
+    // === Zalo OA ===
+    public DbSet<ZaloOARecipient> ZaloOARecipients { get; set; }
+
     // ================================
     // MODEL CONFIGURATION
     // ================================
@@ -375,6 +378,7 @@ public partial class EducenV2Context : DbContext
 
         modelBuilder.Entity<PaymentTransactionTenant>()
             .HasIndex(pt => pt.PaymentRecordId);
+
         modelBuilder.Entity<SupportRequest>(enttiy =>
         {
             enttiy.HasOne(e => e.Sender)
@@ -387,6 +391,22 @@ public partial class EducenV2Context : DbContext
                 .HasForeignKey(e => e.ReceiverId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
+
+
+
+        // === ZaloOARecipient Configuration ===
+        modelBuilder.Entity<ZaloOARecipient>()
+            .HasOne(z => z.User)
+            .WithMany()
+            .HasForeignKey(z => z.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ZaloOARecipient>()
+            .HasIndex(z => z.UserId)
+            .IsUnique();
+
+        modelBuilder.Entity<ZaloOARecipient>()
+            .HasIndex(z => z.ZaloUserId);
 
     }
 

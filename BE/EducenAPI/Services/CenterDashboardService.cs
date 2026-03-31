@@ -188,18 +188,5 @@ namespace EducenAPI.Services
                     : Math.Round((double)x.Total / totalStudents * 100, 2)
             }).ToList();
         }
-
-        // ==============================
-        // TODO: SEND ZALO NOTIFICATION
-        // ==============================
-
-        /*
-        public async Task SendNotificationAsync(...)
-        {
-            // TODO:
-            // - Save notification
-            // - Send to Zalo OA
-        }
-        */
     }
 }

@@ -1,30 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Send, CheckCircle, Star, AlertCircle, Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
 import ParentSidebar from '../../components/ParentSidebar';
+import api from '../../services/api';
 import '../../css/pages/parent/ParentFeedback.css';
-
-/* ── Mock: feedback đã gửi trước đó ── */
-const SENT_FEEDBACKS = [
-    {
-        id: 1,
-        category: 'Chất lượng giảng dạy',
-        subject: 'Góp ý về phương pháp dạy Toán',
-        content: 'Thầy dạy rất nhiệt tình và dễ hiểu. Con tôi tiến bộ rõ rệt sau 2 tháng học. Tuy nhiên mong thầy có thêm bài tập về nhà sau mỗi buổi để con ôn tập thêm.',
-        rating: 5,
-        sentAt: '15/02/2026 09:30',
-        status: 'read',
-    },
-    {
-        id: 2,
-        category: 'Cơ sở vật chất',
-        subject: 'Phòng học tầng 3 thiếu điều hòa',
-        content: 'Những ngày nóng phòng học tầng 3 rất nóng, ảnh hưởng đến việc tập trung của các em. Mong trung tâm xem xét lắp thêm điều hòa.',
-        rating: 3,
-        sentAt: '20/01/2026 14:15',
-        status: 'replied',
-        reply: 'Cảm ơn phụ huynh đã phản hồi! Trung tâm đã lên kế hoạch lắp thêm 2 điều hòa cho phòng học tầng 3 vào tháng 3. Xin lỗi vì sự bất tiện!',
-    },
-];
 
 const CATEGORIES = [
     'Chất lượng giảng dạy',
@@ -55,18 +34,54 @@ const StarRating = ({ value, onChange }) => (
 );
 
 const StatusBadge = ({ status }) => {
-    if (status === 'read')
-        return <span className="pf-status-badge read"><CheckCircle size={13} /> Đã xem</span>;
-    if (status === 'replied')
+    if (status === 'Answered')
         return <span className="pf-status-badge replied"><MessageSquare size={13} /> Đã trả lời</span>;
-    return <span className="pf-status-badge pending"><Clock size={13} /> Chờ xem</span>;
+    if (status === 'Read' || status === 'Pending')
+        return <span className="pf-status-badge read"><CheckCircle size={13} /> Đã xem</span>;
+    return <span className="pf-status-badge pending"><Clock size={13} /> Chờ xử lý</span>;
+};
+
+const formatDate = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const parseTitle = (title) => {
+    const match = title.match(/^\[(.+?)\]\s*(.*)$/);
+    if (match) return { category: match[1], subject: match[2] };
+    return { category: 'Khác', subject: title };
+};
+
+const parseContent = (content) => {
+    const match = content.match(/^Đánh giá:\s*(\d+)\/5\s*\n---\n([\s\S]*)$/);
+    if (match) return { rating: parseInt(match[1]), body: match[2] };
+    return { rating: 0, body: content };
 };
 
 const ParentFeedback = () => {
     const [form, setForm] = useState({ category: '', subject: '', content: '', rating: 0 });
-    const [feedbacks, setFeedbacks] = useState(SENT_FEEDBACKS);
+    const [feedbacks, setFeedbacks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [errors, setErrors] = useState({});
+
+    const fetchFeedbacks = async () => {
+        try {
+            const res = await api.get('/support-requests/my');
+            setFeedbacks(res.data);
+        } catch (error) {
+            console.error('Error fetching feedbacks:', error);
+            toast.error('Không thể tải danh sách phản hồi.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFeedbacks();
+    }, []);
 
     const validate = () => {
         const e = {};
@@ -77,26 +92,30 @@ const ParentFeedback = () => {
         return e;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const errs = validate();
         if (Object.keys(errs).length) { setErrors(errs); return; }
 
-        const now = new Date();
-        const pad = (n) => n.toString().padStart(2, '0');
-        const sentAt = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        setSubmitting(true);
+        try {
+            const title = `[${form.category}] ${form.subject}`;
+            const content = `Đánh giá: ${form.rating}/5\n---\n${form.content}`;
 
-        setFeedbacks(prev => [{
-            id: Date.now(),
-            ...form,
-            sentAt,
-            status: 'pending',
-        }, ...prev]);
+            await api.post('/support-requests', { Title: title, Content: content });
 
-        setForm({ category: '', subject: '', content: '', rating: 0 });
-        setErrors({});
-        setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 4000);
+            setForm({ category: '', subject: '', content: '', rating: 0 });
+            setErrors({});
+            setSubmitted(true);
+            setTimeout(() => setSubmitted(false), 4000);
+            toast.success('Phản hồi đã được gửi thành công!');
+            await fetchFeedbacks();
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+            toast.error(error.response?.data?.message || 'Gửi phản hồi thất bại.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleChange = (field, val) => {
@@ -183,8 +202,8 @@ const ParentFeedback = () => {
                                     {errors.content && <span className="pf-error"><AlertCircle size={13} /> {errors.content}</span>}
                                 </div>
 
-                                <button type="submit" className="pf-btn-submit">
-                                    <Send size={16} /> Gửi phản hồi
+                                <button type="submit" className="pf-btn-submit" disabled={submitting}>
+                                    <Send size={16} /> {submitting ? 'Đang gửi...' : 'Gửi phản hồi'}
                                 </button>
                             </form>
                         </div>
@@ -199,45 +218,53 @@ const ParentFeedback = () => {
                                 <span className="pf-count-badge">{feedbacks.length}</span>
                             </div>
 
-                            {feedbacks.length === 0 ? (
+                            {loading ? (
+                                <div className="pf-empty">
+                                    <p>Đang tải...</p>
+                                </div>
+                            ) : feedbacks.length === 0 ? (
                                 <div className="pf-empty">
                                     <MessageSquare size={40} />
                                     <p>Chưa có phản hồi nào được gửi.</p>
                                 </div>
                             ) : (
                                 <div className="pf-history-list">
-                                    {feedbacks.map(fb => (
-                                        <div key={fb.id} className={`pf-history-item ${fb.status}`}>
-                                            <div className="pf-history-top">
-                                                <div className="pf-history-meta">
-                                                    <span className="pf-history-category">{fb.category}</span>
-                                                    <StatusBadge status={fb.status} />
-                                                </div>
-                                                <div className="pf-history-stars">
-                                                    {Array.from({ length: 5 }).map((_, i) => (
-                                                        <Star
-                                                            key={i}
-                                                            size={12}
-                                                            fill={i < fb.rating ? '#f59e0b' : 'none'}
-                                                            color={i < fb.rating ? '#f59e0b' : '#e2e8f0'}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="pf-history-subject">{fb.subject}</div>
-                                            <div className="pf-history-content">{fb.content}</div>
-                                            <div className="pf-history-date">{fb.sentAt}</div>
-
-                                            {fb.reply && (
-                                                <div className="pf-history-reply">
-                                                    <div className="pf-reply-label">
-                                                        <MessageSquare size={13} /> Phản hồi từ trung tâm:
+                                    {feedbacks.map(fb => {
+                                        const { category, subject } = parseTitle(fb.title);
+                                        const { rating, body } = parseContent(fb.content);
+                                        return (
+                                            <div key={fb.id} className={`pf-history-item ${fb.status === 'Answered' ? 'replied' : fb.isRead ? 'read' : 'pending'}`}>
+                                                <div className="pf-history-top">
+                                                    <div className="pf-history-meta">
+                                                        <span className="pf-history-category">{category}</span>
+                                                        <StatusBadge status={fb.status} />
                                                     </div>
-                                                    <p>{fb.reply}</p>
+                                                    <div className="pf-history-stars">
+                                                        {Array.from({ length: 5 }).map((_, i) => (
+                                                            <Star
+                                                                key={i}
+                                                                size={12}
+                                                                fill={i < rating ? '#f59e0b' : 'none'}
+                                                                color={i < rating ? '#f59e0b' : '#e2e8f0'}
+                                                            />
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                                <div className="pf-history-subject">{subject}</div>
+                                                <div className="pf-history-content">{body}</div>
+                                                <div className="pf-history-date">{formatDate(fb.createdAt)}</div>
+
+                                                {fb.adminResponse && (
+                                                    <div className="pf-history-reply">
+                                                        <div className="pf-reply-label">
+                                                            <MessageSquare size={13} /> Phản hồi từ trung tâm:
+                                                        </div>
+                                                        <p>{fb.adminResponse}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

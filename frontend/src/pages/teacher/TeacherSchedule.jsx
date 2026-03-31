@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
+import api from '../../services/api';
 
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
 import '../../css/pages/teacher/TeacherSchedule.css';
@@ -387,10 +388,25 @@ const TeacherSchedule = ({ isTA = false }) => {
                 <ScheduleRequestModal
                     isOpen={requestOpen}
                     onClose={() => setRequestOpen(false)}
-                    onSend={(payload) => {
-                        console.log("Schedule Request Sent:", payload);
-                        // Ở đây có thể thêm toast thông báo thành công
-                        setRequestOpen(false);
+                    onSend={async (payload) => {
+                        try {
+                            const typeLabels = {
+                                reschedule: 'Đổi lịch dạy',
+                                teacher_swap: 'Đổi giáo viên',
+                                absence: 'Xin nghỉ / Hủy buổi',
+                                other: 'Thay đổi khác',
+                            };
+                            const classInfo = payload.classInfo ? ` [${payload.classInfo.code} - ${payload.classInfo.name}]` : '';
+                            const Title = `[${typeLabels[payload.type] || 'Yêu cầu'}]${classInfo}`;
+                            const Content = `Loại yêu cầu: ${typeLabels[payload.type] || payload.type}\nLý do: ${payload.reason || 'Không có'}`;
+
+                            await api.post('/support-requests', { Title, Content });
+                            toast.success('Yêu cầu đã được gửi đến admin!');
+                            setRequestOpen(false);
+                        } catch (error) {
+                            console.error('Error sending request:', error);
+                            toast.error(error.response?.data?.message || 'Gửi yêu cầu thất bại.');
+                        }
                     }}
                     initialData={requestInitialData}
                 />

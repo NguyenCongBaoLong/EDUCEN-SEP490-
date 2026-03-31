@@ -22,7 +22,7 @@ namespace EducenAPI.Models
         public string Content { get; set; }
 
         [MaxLength(50)]
-        public string Status { get; set; } = "Chờ xử lý";
+        public string Status { get; set; } = "Pending";
 
         public bool IsRead { get; set; } = false;
 

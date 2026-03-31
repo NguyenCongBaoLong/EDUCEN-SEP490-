@@ -1,12 +1,16 @@
 ﻿using EducenAPI.DTOs.SupportRequestDTOs;
 using EducenAPI.Models;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace EducenAPI.Controllers
 {
+    [Route("api/support-requests")]
+    [ApiController]
+    [Authorize]
     public class SupportRequestsController : ControllerBase
     {
         private readonly ISupportRequestsService _service;
