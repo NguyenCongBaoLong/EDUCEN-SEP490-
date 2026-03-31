@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Building2, Package, LogOut, Globe } from 'lucide-react';
+import { LayoutDashboard, Building2, Package, LogOut, Globe, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/components/SystemAdminSidebar.css';
 
@@ -12,6 +12,7 @@ const SystemAdminSidebar = () => {
         { path: '/sysadmin/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
         { path: '/sysadmin/tenants', icon: Building2, label: 'Trung Tâm' },
         { path: '/sysadmin/plans', icon: Package, label: 'Gói Dịch Vụ' },
+        { path: '/sysadmin/zalo-oa', icon: MessageSquare, label: 'Zalo OA' },
     ];
 
     const handleLogout = () => {

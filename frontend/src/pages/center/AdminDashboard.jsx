@@ -3,7 +3,7 @@ import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
     CheckCircle, AlertCircle, Info, ChevronRight, BookOpen,
     TrendingUp, MessageSquare, X, Inbox, Star, ShieldAlert,
-    MessageCircle, ArrowLeft, Mail, MailOpen, HardDrive
+    MessageCircle, ArrowLeft, Mail, MailOpen, HardDrive, Reply
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import RevenueReport from './RevenueReport';
@@ -15,46 +15,16 @@ import {
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText } from 'lucide-react';
+import zaloOAService from '../../services/zaloOAService';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
-/* ─── Mock Data ─────────────────────────────────────── */
+/* ─── Mock Data (admin messages only) ────────────────── */
 
 
-const initialNotifications = [
+const adminMessages = [
     {
-        id: 1,
-        title: 'Thông báo nghỉ Tết Nguyên Đán 2025',
-        content: 'Trung tâm sẽ nghỉ từ 26/01 đến 03/02. Lịch học sẽ tiếp tục từ 04/02.',
-        sentAt: '2025-01-20T08:30:00',
-        recipients: 312,
-        status: 'sent',
-        target: 'all',
-    },
-    {
-        id: 2,
-        title: 'Thay đổi lịch học lớp Toán 12A',
-        content: 'Lớp Toán 12A chuyển từ thứ 3 sang thứ 4 hàng tuần kể từ 10/02.',
-        sentAt: '2025-02-08T14:00:00',
-        recipients: 28,
-        status: 'sent',
-        target: 'Toán 12A',
-    },
-    {
-        id: 3,
-        title: 'Khai giảng lớp Tiếng Anh IELTS',
-        content: 'Lớp IELTS mới khai giảng ngày 15/02. Đăng ký trước 12/02 để nhận ưu đãi.',
-        sentAt: '2025-02-10T09:00:00',
-        recipients: 185,
-        status: 'sent',
-        target: 'all',
-    },
-];
-
-
-const initialInboxMessages = [
-    {
-        id: 1,
+        id: 'sys-1',
         type: 'admin',
         senderName: 'Admin Tổng Hệ Thống',
         senderRole: 'Quản trị viên',
@@ -66,7 +36,7 @@ const initialInboxMessages = [
         priority: 'high',
     },
     {
-        id: 2,
+        id: 'sys-2',
         type: 'admin',
         senderName: 'Admin Tổng Hệ Thống',
         senderRole: 'Quản trị viên',
@@ -74,30 +44,6 @@ const initialInboxMessages = [
         preview: 'Hệ thống sẽ tạm ngưng hoạt động từ 23:00 ngày 22/02 đến 02:00 ngày 23/02...',
         content: 'Kính gửi các trung tâm,\n\nHệ thống sẽ tạm ngưng hoạt động để bảo trì theo lịch:\n\n- Thời gian: 23:00 ngày 22/02 đến 02:00 ngày 23/02/2025\n- Ảnh hưởng: Không thể đăng nhập, xem lịch học, hoặc nhắn tin trong thời gian này.\n\nXin lỗi vì sự bất tiện này. Chúng tôi sẽ cố gắng hoàn thành sớm nhất có thể.\n\nTrân trọng,\nPhòng Kỹ Thuật',
         sentAt: '2025-02-17T14:30:00',
-        isRead: true,
-        priority: 'normal',
-    },
-    {
-        id: 3,
-        type: 'feedback',
-        senderName: 'Nguyễn Thị Hoa',
-        senderRole: 'Phụ huynh – Lớp Toán 12A',
-        subject: 'Góp ý về lịch học buổi tối',
-        preview: 'Cho em hỏi lớp Toán 12A tối thứ 3 có thể dời sang 19h30 thay vì 19h không ạ...',
-        content: 'Kính gửi Ban Giám Đốc Trung Tâm,\n\nCon tôi đang học lớp Toán 12A. Tôi muốn góp ý nhỏ: buổi học tối thứ 3 hiện bắt đầu lúc 19h, nhưng nhiều bé tan học ở trường lúc 18h30 và cần về ăn cơm, đi xa khá vất vả.\n\nNếu được, nhờ trung tâm xem xét dời sang 19h30 sẽ thuận tiện hơn cho các bé.\n\nCảm ơn trung tâm đã lắng nghe!\n\nTrân trọng,\nNguyễn Thị Hoa',
-        sentAt: '2025-02-19T20:15:00',
-        isRead: false,
-        priority: 'normal',
-    },
-    {
-        id: 4,
-        type: 'feedback',
-        senderName: 'Trần Văn Minh',
-        senderRole: 'Học sinh – Lớp IELTS',
-        subject: 'Phản hồi về tài liệu học tập',
-        preview: 'Em muốn góp ý là tài liệu đọc hiểu của lớp IELTS tuần trước có một số lỗi đánh máy...',
-        content: 'Kính gửi thầy/cô,\n\nEm là Trần Văn Minh, học lớp IELTS 6.5+. Em muốn phản hồi rằng tài liệu phần Reading tuần 3 (trang 12-13) có một số lỗi đánh máy nhỏ ở phần câu hỏi số 4 và 7, làm em hơi nhầm khi làm bài.\n\nNgoài ra em rất hài lòng với cách dạy của thầy. Cảm ơn trung tâm!\n\nEm,\nTrần Văn Minh',
-        sentAt: '2025-02-15T16:00:00',
         isRead: true,
         priority: 'normal',
     },
@@ -127,34 +73,107 @@ const CustomTooltip = ({ active, payload, label }) => {
 const AdminDashboard = () => {
     const { user, centerBranding } = useAuth();
     const [dashboardData, setDashboardData] = useState({
-    overview: {
-        totalStudents: 0,
-        newStudentsThisMonth: 0,
-        totalClasses: 0,
-        upcomingClasses: 0,
-        totalStaff: 0,
-        activeStaff: 0,
-        currentUsers: 0,
-        maxUsers: 0,
-        currentStorageMB: 0,
-        maxStorageMB: 0
-    },
-    studentRegistrationChart: [],
-    studentsBySubject: [],
-});
+        overview: {
+            totalStudents: 0,
+            newStudentsThisMonth: 0,
+            totalClasses: 0,
+            upcomingClasses: 0,
+            totalStaff: 0,
+            activeStaff: 0,
+            currentUsers: 0,
+            maxUsers: 0,
+            currentStorageMB: 0,
+            maxStorageMB: 0
+        },
+        studentRegistrationChart: [],
+        studentsBySubject: [],
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const [notifications, setNotifications] = useState(initialNotifications);
+    const [notifications, setNotifications] = useState([]);
     const [form, setForm] = useState({ title: '', content: '', target: 'all' });
     const [sending, setSending] = useState(false);
     const [sendSuccess, setSendSuccess] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [oaStatus, setOaStatus] = useState(null);
+    const [classes, setClasses] = useState([]);
+    const [sendError, setSendError] = useState('');
 
     // Inbox state
-    const [inboxMessages, setInboxMessages] = useState(initialInboxMessages);
+    const [supportRequests, setSupportRequests] = useState([]);
     const [inboxOpen, setInboxOpen] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [replying, setReplying] = useState(false);
+
+    const inboxMessages = [
+        ...adminMessages,
+        ...supportRequests.map(sr => ({
+            id: `sr-${sr.id}`,
+            srId: sr.id,
+            type: 'feedback',
+            senderName: sr.senderName || 'Người dùng',
+            senderRole: 'Yêu cầu hỗ trợ',
+            subject: sr.title,
+            preview: sr.content?.substring(0, 80) + (sr.content?.length > 80 ? '...' : ''),
+            content: sr.content,
+            sentAt: sr.createdAt,
+            isRead: sr.isRead,
+            priority: 'normal',
+            adminResponse: sr.adminResponse,
+            status: sr.status,
+            receiverName: sr.receiverName,
+        })),
+    ].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+    const unreadCount = inboxMessages.filter(m => !m.isRead).length;
+
+    const fetchSupportRequests = async () => {
+        try {
+            const res = await api.get('/admin/support-requests');
+            setSupportRequests(res.data);
+        } catch (error) {
+            console.error('Error fetching support requests:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchSupportRequests();
+    }, []);
+
+    const handleMarkAsRead = async (msg) => {
+        if (msg.type !== 'feedback' || !msg.srId || msg.isRead) return;
+        try {
+            await api.put(`/admin/support-requests/${msg.srId}/read`);
+            setSupportRequests(prev =>
+                prev.map(sr => sr.id === msg.srId ? { ...sr, isRead: true } : sr)
+            );
+        } catch (error) {
+            console.error('Error marking as read:', error);
+        }
+    };
+
+    const handleReply = async (msg) => {
+        if (!replyText.trim() || !msg.srId) return;
+        setReplying(true);
+        try {
+            await api.put(`/admin/support-requests/${msg.srId}/reply`, { AdminResponse: replyText });
+            toast.success('Đã trả lời phản hồi!');
+            setReplyText('');
+            await fetchSupportRequests();
+            // Refresh selected message
+            const updated = supportRequests.find(sr => sr.id === msg.srId);
+            if (updated) {
+                setSelectedMessage(prev => prev ? { ...prev, adminResponse: replyText, status: 'Answered' } : null);
+            }
+        } catch (error) {
+            console.error('Error replying:', error);
+            toast.error(error.response?.data?.message || 'Gửi trả lời thất bại.');
+        } finally {
+            setReplying(false);
+        }
+    };
 
     const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'revenue' | 'subscription'
 
@@ -163,39 +182,81 @@ const AdminDashboard = () => {
             setLoading(true);
             try {
                 const res = await api.get('/CenterDashboard');
-        // Cập nhật toàn bộ object vào state
-        if (res.data) {
-            setDashboardData(res.data);
-        }
+                // Cập nhật toàn bộ object vào state
+                if (res.data) {
+                    setDashboardData(res.data);
+                }
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
                 setLoading(false);
             }
         };
+
+        const fetchZaloData = async () => {
+            try {
+                const [statusRes, historyRes, classesRes] = await Promise.allSettled([
+                    zaloOAService.getStatus(),
+                    zaloOAService.getMessageHistory(),
+                    api.get('/Classes'),
+                ]);
+
+                if (statusRes.status === 'fulfilled') {
+                    setOaStatus(statusRes.value.data);
+                }
+                if (historyRes.status === 'fulfilled') {
+                    const historyData = historyRes.value.data || [];
+                    setNotifications(historyData.map(h => ({
+                        id: h.notificationId,
+                        title: h.title,
+                        content: h.message,
+                        sentAt: h.createdAt,
+                        recipients: 0,
+                        status: 'sent',
+                        target: 'all',
+                    })));
+                }
+                if (classesRes.status === 'fulfilled') {
+                    setClasses(classesRes.value.data || []);
+                }
+            } catch (error) {
+                console.error('Error fetching Zalo OA data:', error);
+            }
+        };
+
         fetchData();
+        fetchZaloData();
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!form.title.trim() || !form.content.trim()) return;
         setSending(true);
-        setTimeout(() => {
+        setSendError('');
+        try {
+            const res = await zaloOAService.sendBatch(form.title, form.content, form.target);
+            const result = res.data;
+
             const newNotif = {
-                id: notifications.length + 1,
+                id: Date.now(),
                 title: form.title,
                 content: form.content,
                 sentAt: new Date().toISOString(),
-                recipients: form.target === 'all' ? 312 : Math.floor(Math.random() * 30 + 10),
-                status: 'sent',
-                target: form.target === 'all' ? 'all' : form.target,
+                recipients: result.sent,
+                status: result.failed > 0 ? 'partial' : 'sent',
+                target: form.target,
             };
             setNotifications([newNotif, ...notifications]);
             setForm({ title: '', content: '', target: 'all' });
+            setSendSuccess(true);
+            setTimeout(() => setSendSuccess(false), 3000);
+        } catch (error) {
+            const msg = error.response?.data?.message || 'Gửi thông báo thất bại.';
+            setSendError(msg);
+        } finally {
             setSending(false);
-            toast.success('Gửi thông báo thành công!');
-        }, 1500);
+        }
     };
 
     const formattedDate = currentTime.toLocaleDateString('vi-VN', {
@@ -243,9 +304,9 @@ const AdminDashboard = () => {
                         >
                             <Inbox size={18} />
                             Hộp Thư
-                            {inboxMessages.filter(m => !m.isRead).length > 0 && (
+                            {unreadCount > 0 && (
                                 <span className="inbox-trigger-badge">
-                                    {inboxMessages.filter(m => !m.isRead).length}
+                                    {unreadCount}
                                 </span>
                             )}
                         </button>
@@ -258,21 +319,21 @@ const AdminDashboard = () => {
 
                 {/* ── Tabs Navigation ── */}
                 <div className="dashboard-tabs">
-                    <button 
+                    <button
                         className={`dashboard-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
                         onClick={() => setActiveTab('overview')}
                     >
                         <LayoutDashboard size={18} />
                         Tổng quan
                     </button>
-                    <button 
+                    <button
                         className={`dashboard-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
                         onClick={() => setActiveTab('revenue')}
                     >
                         <DollarIcon size={18} />
                         Doanh thu
                     </button>
-                    <button 
+                    <button
                         className={`dashboard-tab-btn ${activeTab === 'subscription' ? 'active' : ''}`}
                         onClick={() => setActiveTab('subscription')}
                     >
@@ -284,238 +345,272 @@ const AdminDashboard = () => {
                 {activeTab === 'overview' && (
                     <>
                         {/* ── KPI Cards ── */}
-                <div className="kpi-grid">
-                    {kpiData.map((kpi) => {
-                        const Icon = kpi.icon;
-                        return (
-                            <div key={kpi.label} className={`kpi-card kpi-${kpi.color}`}>
-                                <div className="kpi-icon-wrap">
-                                    <Icon size={22} />
-                                </div>
-                                <div className="kpi-info">
-                                    <div className="kpi-value">{kpi.value}</div>
-                                    <div className="kpi-label">{kpi.label}</div>
-                                    <div className="kpi-change">{kpi.change}</div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* ── Resource Usage ── */}
-                <div className="kpi-grid" style={{ marginTop: '1rem' }}>
-                    {/* Users Usage */}
-                    <div className="kpi-card kpi-blue" style={{ flex: 1 }}>
-                        <div className="kpi-icon-wrap"><Users size={22} /></div>
-                        <div className="kpi-info" style={{ flex: 1 }}>
-                            <div className="kpi-value">{loading ? '...' : `${overview.currentUsers || 0} / ${overview.maxUsers || 0}`}</div>
-                            <div className="kpi-label">Người Dùng</div>
-                            <div style={{
-                                marginTop: '8px', height: '8px', borderRadius: '4px',
-                                background: '#e5e7eb', overflow: 'hidden'
-                            }}>
-                                <div style={{
-                                    height: '100%', borderRadius: '4px', transition: 'width 0.5s',
-                                    width: `${loading ? 0 : Math.min(((overview.currentUsers || 0) / (overview.maxUsers || 1)) * 100, 100)}%`,
-                                    background: ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.9 ? '#ef4444' :
-                                        ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.7 ? '#f59e0b' : '#3b82f6'
-                                }} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Storage Usage */}
-                    <div className="kpi-card kpi-purple" style={{ flex: 1 }}>
-                        <div className="kpi-icon-wrap"><HardDrive size={22} /></div>
-                        <div className="kpi-info" style={{ flex: 1 }}>
-                            <div className="kpi-value">{loading ? '...' : `${(overview.currentStorageMB || 0).toFixed(1)} / ${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}</div>
-                            <div className="kpi-label">Dung Lượng</div>
-                            <div style={{
-                                marginTop: '8px', height: '8px', borderRadius: '4px',
-                                background: '#e5e7eb', overflow: 'hidden'
-                            }}>
-                                <div style={{
-                                    height: '100%', borderRadius: '4px', transition: 'width 0.5s',
-                                    width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / ((overview.maxStorageMB || 1))) * 100, 100)}%`,
-                                    background: ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.9 ? '#ef4444' :
-                                        ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.7 ? '#f59e0b' : '#8b5cf6'
-                                }} />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Content Grid ── */}
-                <div className="dashboard-content-grid">
-
-                    {/* Left column – Charts */}
-                    <div className="dashboard-charts-col">
-
-                        {/* Line Chart */}
-                        <div className="chart-card">
-                            <div className="chart-card-header">
-                                <h2 className="chart-card-title">
-                                    <TrendingUp size={18} />
-                                    Học Sinh Đăng Ký Theo Tháng
-                                </h2>
-                                <span className="chart-card-badge">7 tháng gần đây</span>
-                            </div>
-                            <ResponsiveContainer width="100%" height={220}>
-                                <LineChart data={enrollmentData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="month" tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="students"
-                                        stroke="#3b82f6"
-                                        strokeWidth={2.5}
-                                        dot={{ fill: '#3b82f6', r: 4 }}
-                                        activeDot={{ r: 6 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        {/* Pie Chart */}
-                        <div className="chart-card">
-                            <div className="chart-card-header">
-                                <h2 className="chart-card-title">
-                                    <BookOpen size={18} />
-                                    Phân Bố Học Sinh Theo Môn
-                                </h2>
-                            </div>
-                            <div className="pie-chart-wrap">
-                                <ResponsiveContainer width="55%" height={200}>
-                                    <PieChart>
-                                        <Pie
-                                            data={subjectData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={85}
-                                            paddingAngle={3}
-                                            dataKey="value"
-                                        >
-                                            {subjectData.map((entry) => (
-                                                <Cell key={entry.name} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip formatter={(v) => `${v}%`} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="pie-legend">
-                                    {subjectData.map((item) => (
-                                        <div key={item.name} className="pie-legend-item">
-                                            <span className="pie-legend-dot" style={{ background: item.color }} />
-                                            <span className="pie-legend-name">{item.name}</span>
-                                            <span className="pie-legend-pct">{item.value}%</span>
+                        <div className="kpi-grid">
+                            {kpiData.map((kpi) => {
+                                const Icon = kpi.icon;
+                                return (
+                                    <div key={kpi.label} className={`kpi-card kpi-${kpi.color}`}>
+                                        <div className="kpi-icon-wrap">
+                                            <Icon size={22} />
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right column – Zalo OA */}
-                    <div className="zalo-col">
-                        <div className="zalo-card">
-                            {/* Header */}
-                            <div className="zalo-card-header">
-                                <div className="zalo-title-row">
-                                    <div className="zalo-icon">
-                                        <MessageSquare size={18} />
+                                        <div className="kpi-info">
+                                            <div className="kpi-value">{kpi.value}</div>
+                                            <div className="kpi-label">{kpi.label}</div>
+                                            <div className="kpi-change">{kpi.change}</div>
+                                        </div>
                                     </div>
-                                    <h2 className="zalo-title">Gửi Thông Báo</h2>
+                                );
+                            })}
+                        </div>
+
+                        {/* ── Resource Usage ── */}
+                        <div className="kpi-grid" style={{ marginTop: '1rem' }}>
+                            {/* Users Usage */}
+                            <div className="kpi-card kpi-blue" style={{ flex: 1 }}>
+                                <div className="kpi-icon-wrap"><Users size={22} /></div>
+                                <div className="kpi-info" style={{ flex: 1 }}>
+                                    <div className="kpi-value">{loading ? '...' : `${overview.currentUsers || 0} / ${overview.maxUsers || 0}`}</div>
+                                    <div className="kpi-label">Người Dùng</div>
+                                    <div style={{
+                                        marginTop: '8px', height: '8px', borderRadius: '4px',
+                                        background: '#e5e7eb', overflow: 'hidden'
+                                    }}>
+                                        <div style={{
+                                            height: '100%', borderRadius: '4px', transition: 'width 0.5s',
+                                            width: `${loading ? 0 : Math.min(((overview.currentUsers || 0) / (overview.maxUsers || 1)) * 100, 100)}%`,
+                                            background: ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.9 ? '#ef4444' :
+                                                ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.7 ? '#f59e0b' : '#3b82f6'
+                                        }} />
+                                    </div>
                                 </div>
-                                <span className="zalo-oa-badge">Zalo OA</span>
                             </div>
 
-                            {/* Form */}
-                            <div className="zalo-form">
-                                <div className="zalo-field">
-                                    <label className="zalo-label">Tiêu đề</label>
-                                    <input
-                                        className="zalo-input"
-                                        type="text"
-                                        placeholder="Nhập tiêu đề thông báo..."
-                                        value={form.title}
-                                        onChange={(e) => setForm({ ...form, title: e.target.value })}
-                                    />
-                                </div>
-                                <div className="zalo-field">
-                                    <label className="zalo-label">Đối tượng nhận</label>
-                                    <select
-                                        className="zalo-select"
-                                        value={form.target}
-                                        onChange={(e) => setForm({ ...form, target: e.target.value })}
-                                    >
-                                        <option value="all">Tất cả học sinh &amp; phụ huynh</option>
-                                        <option value="Toán 12A">Lớp Toán 12A</option>
-                                        <option value="Tiếng Anh IELTS">Lớp IELTS</option>
-                                        <option value="Lý 11">Lớp Vật Lý 11</option>
-                                    </select>
-                                </div>
-                                <div className="zalo-field">
-                                    <label className="zalo-label">Nội dung</label>
-                                    <textarea
-                                        className="zalo-textarea"
-                                        placeholder="Nhập nội dung thông báo..."
-                                        rows={4}
-                                        value={form.content}
-                                        onChange={(e) => setForm({ ...form, content: e.target.value })}
-                                    />
-                                </div>
-
-                                <button
-                                    className="zalo-send-btn"
-                                    onClick={handleSend}
-                                    disabled={sending || !form.title.trim() || !form.content.trim()}
-                                >
-                                    {sending ? (
-                                        <span className="zalo-sending-dot" />
-                                    ) : (
-                                        <Send size={16} />
-                                    )}
-                                    {sending ? 'Đang gửi...' : 'Gửi qua Zalo OA'}
-                                </button>
-                            </div>
-
-                            {/* History */}
-                            <div className="zalo-history">
-                                <h3 className="zalo-history-title">Lịch Sử Đã Gửi</h3>
-                                <div className="zalo-history-list">
-                                    {notifications.map((n) => (
-                                        <div key={n.id} className="zalo-history-item">
-                                            <div className="zalo-history-item-header">
-                                                <span className="zalo-history-title-text">{n.title}</span>
-                                                <span className="zalo-status-badge sent">
-                                                    <CheckCircle size={11} /> Đã gửi
-                                                </span>
-                                            </div>
-                                            <div className="zalo-history-meta">
-                                                <span className="zalo-meta-time">
-                                                    <Clock size={12} />
-                                                    {formatDateTime(n.sentAt)}
-                                                </span>
-                                                <span className="zalo-meta-recipients">
-                                                    <Users size={12} />
-                                                    {n.recipients} người
-                                                </span>
-                                                {n.target !== 'all' && (
-                                                    <span className="zalo-meta-target">{n.target}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                            {/* Storage Usage */}
+                            <div className="kpi-card kpi-purple" style={{ flex: 1 }}>
+                                <div className="kpi-icon-wrap"><HardDrive size={22} /></div>
+                                <div className="kpi-info" style={{ flex: 1 }}>
+                                    <div className="kpi-value">{loading ? '...' : `${(overview.currentStorageMB || 0).toFixed(1)} / ${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}</div>
+                                    <div className="kpi-label">Dung Lượng</div>
+                                    <div style={{
+                                        marginTop: '8px', height: '8px', borderRadius: '4px',
+                                        background: '#e5e7eb', overflow: 'hidden'
+                                    }}>
+                                        <div style={{
+                                            height: '100%', borderRadius: '4px', transition: 'width 0.5s',
+                                            width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / ((overview.maxStorageMB || 1))) * 100, 100)}%`,
+                                            background: ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.9 ? '#ef4444' :
+                                                ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.7 ? '#f59e0b' : '#8b5cf6'
+                                        }} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </>
-        )}
+
+                        {/* ── Content Grid ── */}
+                        <div className="dashboard-content-grid">
+
+                            {/* Left column – Charts */}
+                            <div className="dashboard-charts-col">
+
+                                {/* Line Chart */}
+                                <div className="chart-card">
+                                    <div className="chart-card-header">
+                                        <h2 className="chart-card-title">
+                                            <TrendingUp size={18} />
+                                            Học Sinh Đăng Ký Theo Tháng
+                                        </h2>
+                                        <span className="chart-card-badge">7 tháng gần đây</span>
+                                    </div>
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <LineChart data={enrollmentData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="month" tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                            <YAxis tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="students"
+                                                stroke="#3b82f6"
+                                                strokeWidth={2.5}
+                                                dot={{ fill: '#3b82f6', r: 4 }}
+                                                activeDot={{ r: 6 }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* Pie Chart */}
+                                <div className="chart-card">
+                                    <div className="chart-card-header">
+                                        <h2 className="chart-card-title">
+                                            <BookOpen size={18} />
+                                            Phân Bố Học Sinh Theo Môn
+                                        </h2>
+                                    </div>
+                                    <div className="pie-chart-wrap">
+                                        <ResponsiveContainer width="55%" height={200}>
+                                            <PieChart>
+                                                <Pie
+                                                    data={subjectData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={50}
+                                                    outerRadius={85}
+                                                    paddingAngle={3}
+                                                    dataKey="value"
+                                                >
+                                                    {subjectData.map((entry) => (
+                                                        <Cell key={entry.name} fill={entry.color} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip formatter={(v) => `${v}%`} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                        <div className="pie-legend">
+                                            {subjectData.map((item) => (
+                                                <div key={item.name} className="pie-legend-item">
+                                                    <span className="pie-legend-dot" style={{ background: item.color }} />
+                                                    <span className="pie-legend-name">{item.name}</span>
+                                                    <span className="pie-legend-pct">{item.value}%</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right column – Zalo OA */}
+                            <div className="zalo-col">
+                                <div className="zalo-card">
+                                    {/* Header */}
+                                    <div className="zalo-card-header">
+                                        <div className="zalo-title-row">
+                                            <div className="zalo-icon">
+                                                <MessageSquare size={18} />
+                                            </div>
+                                            <h2 className="zalo-title">Gửi Thông Báo</h2>
+                                        </div>
+                                        <span className="zalo-oa-badge">Zalo OA</span>
+                                    </div>
+
+                                    {/* Form */}
+                                    <div className="zalo-form">
+                                        {oaStatus && !oaStatus.isConfigured && (
+                                            <div className="zalo-error-banner">
+                                                <AlertCircle size={16} />
+                                                Zalo OA chưa được cấu hình. Vui lòng liên hệ quản trị hệ thống.
+                                            </div>
+                                        )}
+                                        {oaStatus && oaStatus.isConfigured && !oaStatus.isActive && (
+                                            <div className="zalo-error-banner">
+                                                <AlertCircle size={16} />
+                                                Zalo OA chưa được kích hoạt. Vui lòng kiểm tra kết nối.
+                                            </div>
+                                        )}
+                                        {oaStatus && oaStatus.isActive && (
+                                            <div className="zalo-status-info">
+                                                <CheckCircle size={14} />
+                                                <span>{oaStatus.followerCount} người theo dõi</span>
+                                            </div>
+                                        )}
+                                        <div className="zalo-field">
+                                            <label className="zalo-label">Tiêu đề</label>
+                                            <input
+                                                className="zalo-input"
+                                                type="text"
+                                                placeholder="Nhập tiêu đề thông báo..."
+                                                value={form.title}
+                                                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="zalo-field">
+                                            <label className="zalo-label">Đối tượng nhận</label>
+                                            <select
+                                                className="zalo-select"
+                                                value={form.target}
+                                                onChange={(e) => setForm({ ...form, target: e.target.value })}
+                                            >
+                                                <option value="all">Tất cả học sinh &amp; phụ huynh</option>
+                                                {classes.map((c) => (
+                                                    <option key={c.classId || c.ClassId} value={c.className || c.ClassName}>
+                                                        {c.className || c.ClassName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="zalo-field">
+                                            <label className="zalo-label">Nội dung</label>
+                                            <textarea
+                                                className="zalo-textarea"
+                                                placeholder="Nhập nội dung thông báo..."
+                                                rows={4}
+                                                value={form.content}
+                                                onChange={(e) => setForm({ ...form, content: e.target.value })}
+                                            />
+                                        </div>
+
+                                        {sendSuccess && (
+                                            <div className="zalo-success-banner">
+                                                <CheckCircle size={16} />
+                                                Thông báo đã được gửi thành công!
+                                            </div>
+                                        )}
+
+                                        {sendError && (
+                                            <div className="zalo-error-banner">
+                                                <AlertCircle size={16} />
+                                                {sendError}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            className="zalo-send-btn"
+                                            onClick={handleSend}
+                                            disabled={sending || !form.title.trim() || !form.content.trim() || !oaStatus?.isActive}
+                                        >
+                                            {sending ? (
+                                                <span className="zalo-sending-dot" />
+                                            ) : (
+                                                <Send size={16} />
+                                            )}
+                                            {sending ? 'Đang gửi...' : 'Gửi qua Zalo OA'}
+                                        </button>
+                                    </div>
+
+                                    {/* History */}
+                                    <div className="zalo-history">
+                                        <h3 className="zalo-history-title">Lịch Sử Đã Gửi</h3>
+                                        <div className="zalo-history-list">
+                                            {notifications.map((n) => (
+                                                <div key={n.id} className="zalo-history-item">
+                                                    <div className="zalo-history-item-header">
+                                                        <span className="zalo-history-title-text">{n.title}</span>
+                                                        <span className="zalo-status-badge sent">
+                                                            <CheckCircle size={11} /> Đã gửi
+                                                        </span>
+                                                    </div>
+                                                    <div className="zalo-history-meta">
+                                                        <span className="zalo-meta-time">
+                                                            <Clock size={12} />
+                                                            {formatDateTime(n.sentAt)}
+                                                        </span>
+                                                        <span className="zalo-meta-recipients">
+                                                            <Users size={12} />
+                                                            {n.recipients} người
+                                                        </span>
+                                                        {n.target !== 'all' && (
+                                                            <span className="zalo-meta-target">{n.target}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 {activeTab === 'revenue' && <RevenueReport hideSidebar={true} />}
                 {activeTab === 'subscription' && <SubscriptionPlans hideSidebar={true} />}
@@ -526,7 +621,7 @@ const AdminDashboard = () => {
             {inboxOpen && (
                 <div
                     className="inbox-overlay"
-                    onClick={() => { setInboxOpen(false); setSelectedMessage(null); }}
+                    onClick={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
                 />
             )}
 
@@ -535,23 +630,23 @@ const AdminDashboard = () => {
                 {/* Header */}
                 <div className="inbox-drawer-header">
                     {selectedMessage ? (
-                        <button className="inbox-back-btn" onClick={() => setSelectedMessage(null)}>
+                        <button className="inbox-back-btn" onClick={() => { setSelectedMessage(null); setReplyText(''); }}>
                             <ArrowLeft size={16} /> Tất cả thông báo
                         </button>
                     ) : (
                         <div className="inbox-drawer-title">
                             <Inbox size={18} />
                             <span>Hộp Thư</span>
-                            {inboxMessages.filter(m => !m.isRead).length > 0 && (
+                            {unreadCount > 0 && (
                                 <span className="drawer-unread-badge">
-                                    {inboxMessages.filter(m => !m.isRead).length}
+                                    {unreadCount}
                                 </span>
                             )}
                         </div>
                     )}
                     <button
                         className="inbox-drawer-close"
-                        onClick={() => { setInboxOpen(false); setSelectedMessage(null); }}
+                        onClick={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
                     >
                         <X size={20} />
                     </button>
@@ -579,6 +674,82 @@ const AdminDashboard = () => {
                                 <p key={i}>{line || '\u00a0'}</p>
                             ))}
                         </div>
+
+                        {/* Admin response (if already replied) */}
+                        {selectedMessage.adminResponse && (
+                            <div style={{
+                                marginTop: '16px',
+                                padding: '12px',
+                                background: '#f0fdf4',
+                                borderRadius: '8px',
+                                border: '1px solid #bbf7d0'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
+                                    <CheckCircle size={14} /> Đã trả lời
+                                </div>
+                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1e293b' }}>
+                                    {selectedMessage.adminResponse}
+                                </p>
+                                {selectedMessage.receiverName && (
+                                    <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                                        Bởi: {selectedMessage.receiverName}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Reply input (only for feedback/support requests) */}
+                        {selectedMessage.type === 'feedback' && !selectedMessage.adminResponse && (
+                            <div style={{
+                                marginTop: '16px',
+                                padding: '12px',
+                                background: '#f8fafc',
+                                borderRadius: '8px',
+                                border: '1px solid #e2e8f0'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 600, fontSize: '0.85rem', color: '#475569' }}>
+                                    <Reply size={14} /> Trả lời
+                                </div>
+                                <textarea
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #cbd5e1',
+                                        fontSize: '0.9rem',
+                                        resize: 'vertical',
+                                        minHeight: '80px',
+                                        boxSizing: 'border-box',
+                                        outline: 'none',
+                                    }}
+                                    placeholder="Nhập phản hồi của bạn..."
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                />
+                                <button
+                                    style={{
+                                        marginTop: '8px',
+                                        padding: '8px 16px',
+                                        background: '#3b82f6',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        fontSize: '0.85rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        opacity: !replyText.trim() || replying ? 0.5 : 1,
+                                    }}
+                                    disabled={!replyText.trim() || replying}
+                                    onClick={() => handleReply(selectedMessage)}
+                                >
+                                    <Send size={14} />
+                                    {replying ? 'Đang gửi...' : 'Gửi trả lời'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <div className="inbox-drawer-list">
@@ -593,9 +764,9 @@ const AdminDashboard = () => {
                                 className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''}`}
                                 onClick={() => {
                                     setSelectedMessage(msg);
-                                    setInboxMessages(prev =>
-                                        prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m)
-                                    );
+                                    if (msg.srId) {
+                                        handleMarkAsRead(msg);
+                                    }
                                 }}
                             >
                                 <div className={`inbox-avatar ${msg.type}`}>

@@ -175,6 +175,7 @@ builder.Services.AddScoped<ICenterHomeService, CenterHomeService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(); // Enrollment feature
+builder.Services.AddScoped<ISupportRequestsService, SupportRequestsService>();
 builder.Services.AddScoped<ITeacherReportService, TeacherReportService>();
 
 // ── Payment Services ───────────────────────────────────────────────────────
@@ -189,6 +190,14 @@ builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
 builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
+
+// === Zalo OA ===
+builder.Services.AddHttpClient("ZaloAPI", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+builder.Services.AddScoped<IZaloOANotificationService, ZaloOANotificationService>();
 
 // ── CORS: cho phép FE gọi API ──────────────────────────────────────────────
 builder.Services.AddCors(options =>

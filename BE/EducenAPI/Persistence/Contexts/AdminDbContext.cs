@@ -28,6 +28,9 @@ namespace EducenAPI.Persistence.Contexts
         public DbSet<TenantPaymentGatewayConfig> TenantPaymentGatewayConfigs { get; set; }
         public DbSet<TenantPaymentConfigAudit> TenantPaymentConfigAudits { get; set; }
 
+        // === Zalo OA ===
+        public DbSet<TenantZaloOAConfig> TenantZaloOAConfigs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -118,6 +121,18 @@ namespace EducenAPI.Persistence.Contexts
                 .HasOne(a => a.TenantPaymentGatewayConfig)
                 .WithMany(c => c.AuditLogs)
                 .HasForeignKey(a => a.TenantPaymentGatewayConfigId)
+            // === TenantZaloOAConfig Configuration ===
+            builder.Entity<TenantZaloOAConfig>()
+                .HasIndex(z => z.TenantId)
+                .IsUnique();
+
+            builder.Entity<TenantZaloOAConfig>()
+                .HasIndex(z => z.OAId);
+
+            builder.Entity<TenantZaloOAConfig>()
+                .HasOne(z => z.Tenant)
+                .WithMany()
+                .HasForeignKey(z => z.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

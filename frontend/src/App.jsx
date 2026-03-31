@@ -35,6 +35,7 @@ import PaymentResult from './pages/PaymentResult';
 import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
 import TenantManagement from './pages/sysadmin/TenantManagement';
 import PlansManagement from './pages/sysadmin/PlansManagement';
+import ZaloOAConfig from './pages/sysadmin/ZaloOAConfig';
 import SystemAdminLogin from './pages/auth/SystemAdminLogin';
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
@@ -110,6 +111,7 @@ function App() {
               <Route path="/sysadmin/dashboard" element={<PrivateRoute allowedRoles={['SystemAdmin']}><SystemAdminDashboard /></PrivateRoute>} />
               <Route path="/sysadmin/tenants" element={<PrivateRoute allowedRoles={['SystemAdmin']}><TenantManagement /></PrivateRoute>} />
               <Route path="/sysadmin/plans" element={<PrivateRoute allowedRoles={['SystemAdmin']}><PlansManagement /></PrivateRoute>} />
+              <Route path="/sysadmin/zalo-oa" element={<PrivateRoute allowedRoles={['SystemAdmin']}><ZaloOAConfig /></PrivateRoute>} />
 
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
