@@ -141,7 +141,7 @@ namespace EducenAPI.Services
         {
             return await _context.TuitionInvoices
                 .Include(i => i.Class)
-                .Where(i => i.StudentId == studentId)
+                .Where(i => i.StudentId == studentId && i.Status != "Draft")
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
         }

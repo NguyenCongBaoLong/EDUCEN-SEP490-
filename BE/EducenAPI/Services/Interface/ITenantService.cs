@@ -15,5 +15,7 @@ namespace EducenAPI.Services.TenantService
         IEnumerable<TenantWithSubscriptionRequest> GetAllTenantDetails();
 
         TenantWithSubscriptionRequest? GetTenantDetails(string tenantId);
+        Task<object> CreateAdminForTenantAsync(string tenantId, CreateTenantAdminDto dto);
+        Task<List<object>> GetTenantAdminsAsync(string tenantId);
     }
 }

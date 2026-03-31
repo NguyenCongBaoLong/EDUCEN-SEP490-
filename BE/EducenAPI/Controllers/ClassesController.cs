@@ -314,24 +314,23 @@ namespace EducenAPI.Controllers
                             }
                         }
 
-                        // Validate required fields
-                        if (string.IsNullOrWhiteSpace(username) || 
-                            string.IsNullOrWhiteSpace(fullName) || 
+                        // Validate required: chỉ cần FullName và Email (không bắt buộc Username)
+                        if (string.IsNullOrWhiteSpace(fullName) || 
                             string.IsNullOrWhiteSpace(email))
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Dòng {row + 1}: Thiếu dữ liệu bắt buộc (Tên đăng nhập, Họ và tên, Email)");
+                            importResults.Errors.Add($"Dòng {row + 1}: Thiếu dữ liệu bắt buộc (Họ và tên, Email)");
                             continue;
                         }
 
-                        // Check if user exists (student must have User account)
+                        // Check user bằng EMAIL
                         var existingUser = await _context.Users
                             .FirstOrDefaultAsync(u => u.Email == email);
                         
                         if (existingUser == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Dòng {row + 1}: Người dùng có email '{email}' không tồn tại. Vui lòng tạo tài khoản Học sinh trước.");
+                            importResults.Errors.Add($"Dòng {row + 1}: Không tìm thấy tài khoản với email '{email}'. Vui lòng tạo tài khoản Học sinh trước.");
                             continue;
                         }
 
@@ -342,7 +341,7 @@ namespace EducenAPI.Controllers
                         if (existingStudent == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Dòng {row + 1}: Người dùng có email '{email}' không phải là Học sinh. Vui lòng tạo Học sinh trước.");
+                            importResults.Errors.Add($"Dòng {row + 1}: Tài khoản email '{email}' không phải là Học sinh. Vui lòng tạo Học sinh trước.");
                             continue;
                         }
 

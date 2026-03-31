@@ -247,5 +247,89 @@ namespace EducenAPI.Services.TenantService
 
             return (users, students, classes, storage);
         }
+
+        public async Task<object> CreateAdminForTenantAsync(string tenantId, CreateTenantAdminDto dto)
+        {
+            // 1. Tìm tenant trong AdminDB
+            var tenant = _adminDbContext.Tenants.FirstOrDefault(t => t.TenantId == tenantId);
+            if (tenant == null)
+                throw new Exception($"Không tìm thấy tenant với ID: {tenantId}");
+
+            if (!tenant.IsActive)
+                throw new Exception("Tenant này đã bị vô hiệu hóa.");
+
+            // 2. Tạo scope mới với connection string của tenant
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+            var baseConnStr = _configuration.GetConnectionString("DefaultTenantConnection");
+            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr);
+            var tenantBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(tenant.ConnectionString);
+            baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;
+            dbContext.Database.SetConnectionString(baseBuilder.ConnectionString);
+
+            // 3. Check username đã tồn tại chưa
+            var exist = await dbContext.Users.AnyAsync(u => u.Username == dto.Username);
+            if (exist)
+                throw new Exception($"Username '{dto.Username}' đã tồn tại trong tenant này.");
+
+            // 4. Tạo User Admin (RoleId = 1 = Admin)
+            var user = new Models.User
+            {
+                Username = dto.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                FullName = dto.FullName,
+                Email = dto.Email,
+                RoleId = 1, // Admin
+                AccountStatus = "Active",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            dbContext.Users.Add(user);
+            await dbContext.SaveChangesAsync();
+
+            return new
+            {
+                userId = user.UserId,
+                username = user.Username,
+                fullName = user.FullName,
+                email = user.Email,
+                role = "Admin",
+                tenantId = tenantId
+            };
+        }
+
+        public async Task<List<object>> GetTenantAdminsAsync(string tenantId)
+        {
+            var tenant = _adminDbContext.Tenants.FirstOrDefault(t => t.TenantId == tenantId);
+            if (tenant == null)
+                throw new Exception($"Không tìm thấy tenant với ID: {tenantId}");
+
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+            var baseConnStr = _configuration.GetConnectionString("DefaultTenantConnection");
+            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr);
+            var tenantBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(tenant.ConnectionString);
+            baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;
+            dbContext.Database.SetConnectionString(baseBuilder.ConnectionString);
+
+            // RoleId = 1 = Admin
+            var admins = await dbContext.Users
+                .Include(u => u.Role)
+                .Where(u => u.RoleId == 1)
+                .Select(u => new
+                {
+                    userId = u.UserId,
+                    username = u.Username,
+                    fullName = u.FullName,
+                    email = u.Email,
+                    accountStatus = u.AccountStatus,
+                    createdAt = u.CreatedAt
+                })
+                .ToListAsync();
+
+            return admins.Cast<object>().ToList();
+        }
     }
 }

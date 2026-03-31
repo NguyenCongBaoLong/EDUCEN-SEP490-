@@ -503,7 +503,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
             await refreshSessionMaterials(targetSession);
         } catch (err) {
             console.error('Import error:', err);
-            toast.error('Lỗi khi import từ thư viện.');
+            const msg = err.response?.data?.message || 'Lỗi khi import từ thư viện.';
+            toast.error(msg);
         }
         setImportModal({ isOpen: false, type: 'material', targetSession: null });
     };

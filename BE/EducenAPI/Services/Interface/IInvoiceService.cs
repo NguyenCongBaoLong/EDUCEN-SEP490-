@@ -67,6 +67,7 @@ namespace EducenAPI.Services.Interface
         public int Month { get; set; }
         public int Year { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
+        public List<int>? StudentIds { get; set; }
     }
 
     public class BatchInvoiceResult

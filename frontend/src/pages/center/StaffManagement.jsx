@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -15,6 +15,7 @@ const StaffManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [selectedStaffIds, setSelectedStaffIds] = useState([]);
 
     const [staffList, setStaffList] = useState([]);
 
@@ -41,7 +42,8 @@ const StaffManagement = () => {
                 dateOfBirth: '', 
                 address: t.address || '',
                 notes: t.degree || '',
-                status: t.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive'
+                status: t.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive',
+                accountSent: t.isAccountSent ?? false
             }));
 
             const assistants = assistantsRes.data.map(a => ({
@@ -56,7 +58,8 @@ const StaffManagement = () => {
                 dateOfBirth: '',
                 address: a.address || '',
                 notes: '',
-                status: a.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive'
+                status: a.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive',
+                accountSent: a.isAccountSent ?? false
             }));
 
             setStaffList([...teachers, ...assistants]);
@@ -100,6 +103,44 @@ const StaffManagement = () => {
             console.error("Lỗi khi đổi trạng thái:", error);
             toast.error(error.response?.data?.message || "Không thể đổi trạng thái");
         }
+    };
+
+    const handleSendAccount = async (staffId) => {
+        // Optimistic update: cập nhật UI ngay, gửi API sau
+        setStaffList(prev => prev.map(s =>
+            s.id === staffId
+                ? { ...s, accountSent: true, status: 'active' }
+                : s
+        ));
+        toast.success('Đã gửi tài khoản cho giáo viên!');
+        try {
+            await api.post(`/Teachers/send-account/${staffId}`);
+        } catch (error) {
+            // Rollback nếu gửi thất bại
+            setStaffList(prev => prev.map(s =>
+                s.id === staffId
+                    ? { ...s, accountSent: false, status: 'inactive' }
+                    : s
+            ));
+            toast.error(error.response?.data?.message || error.response?.data || 'Gửi tài khoản thất bại');
+        }
+    };
+
+    const handleBulkSendAccount = async () => {
+        if (selectedStaffIds.length === 0) return;
+        let successCount = 0;
+        let failCount = 0;
+        await Promise.allSettled(
+            selectedStaffIds.map(id =>
+                api.post(`/Teachers/send-account/${id}`)
+                    .then(() => { successCount++; })
+                    .catch(() => { failCount++; })
+            )
+        );
+        fetchStaff(); // refresh để lấy trạng thái mới nhất
+        setSelectedStaffIds([]);
+        if (successCount > 0) toast.success(`Đã gửi tài khoản cho ${successCount} giáo viên!`);
+        if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (giáo viên chưa có email?)`);
     };
 
     const handleSubmitStaff = async (staffData) => {
@@ -179,10 +220,22 @@ const StaffManagement = () => {
                                 Quản lý và giám sát {staffList.length} nhân viên tại trung tâm
                             </p>
                         </div>
-                        <button className="btn-add-staff" onClick={handleAddStaff}>
-                            <Plus size={20} />
-                            Thêm Giáo Viên
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            {selectedStaffIds.length > 0 && (
+                                <button
+                                    className="btn-add-staff"
+                                    style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                    onClick={handleBulkSendAccount}
+                                >
+                                    <Mail size={18} />
+                                    Gửi TK ({selectedStaffIds.length})
+                                </button>
+                            )}
+                            <button className="btn-add-staff" onClick={handleAddStaff}>
+                                <Plus size={20} />
+                                Thêm Giáo Viên
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -191,9 +244,16 @@ const StaffManagement = () => {
                     staffData={filteredStaff}
                     searchQuery={searchQuery}
                     setSearchQuery={setSearchQuery}
+                    roleFilter={roleFilter}
+                    setRoleFilter={setRoleFilter}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
                     onView={handleViewStaff}
                     onEdit={handleEditStaff}
                     onToggleLock={handleToggleLockStaff}
+                    onSendAccount={handleSendAccount}
+                    selectedIds={selectedStaffIds}
+                    setSelectedIds={setSelectedStaffIds}
                 />
             </main>
 

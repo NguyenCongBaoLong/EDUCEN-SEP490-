@@ -66,8 +66,15 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> ImportAssignment([FromBody] EducenAPI.DTOs.Common.ImportDto dto)
         {
-            var result = await _assignmentService.ImportAssignmentAsync(dto.SourceId, dto.TargetSessionId, dto.EndTime);
-            return Ok(result);
+            try
+            {
+                var result = await _assignmentService.ImportAssignmentAsync(dto.SourceId, dto.TargetSessionId, dto.EndTime);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
         [HttpDelete("{id:int}")]
         [Authorize(Roles = "Teacher,Assistant,Admin")]

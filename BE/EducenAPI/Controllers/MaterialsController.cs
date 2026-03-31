@@ -73,8 +73,15 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> ImportMaterial([FromBody] EducenAPI.DTOs.Common.ImportDto dto)
         {
-            var result = await _lessonMaterialService.ImportMaterialAsync(dto.SourceId, dto.TargetSessionId);
-            return Ok(result);
+            try
+            {
+                var result = await _lessonMaterialService.ImportMaterialAsync(dto.SourceId, dto.TargetSessionId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
         [HttpDelete("{id:int}")]
         [Authorize(Roles = "Teacher,Assistant,Admin")]

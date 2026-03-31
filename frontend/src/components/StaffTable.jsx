@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Eye, Edit2, Lock, Unlock, X, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Edit2, Lock, Unlock, X, AlertTriangle, Mail, CheckCircle } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/StaffTable.css';
 import '../css/components/DeleteModal.css';
@@ -14,11 +14,15 @@ const StaffTable = ({
     setStatusFilter,
     onView,
     onEdit,
-    onToggleLock
+    onToggleLock,
+    onSendAccount,
+    selectedIds = [],
+    setSelectedIds = () => { }
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, staff: null });
-    const itemsPerPage = 4;
+    const [sendModal, setSendModal] = useState({ show: false, staff: null });
+    const itemsPerPage = 6;
 
     // Pagination
     const totalPages = Math.ceil(staffData.length / itemsPerPage);
@@ -49,6 +53,38 @@ const StaffTable = ({
         setLockModal({ show: false, staff: null });
     };
 
+    const handleSendAccountClick = (staff) => {
+        setSendModal({ show: true, staff });
+    };
+
+    const confirmSendAccount = () => {
+        if (sendModal.staff && onSendAccount) {
+            onSendAccount(sendModal.staff.id);
+        }
+        setSendModal({ show: false, staff: null });
+    };
+
+    const cancelSendAccount = () => {
+        setSendModal({ show: false, staff: null });
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const allUnsent = staffData.filter(s => s.role === 'teacher' && !s.accountSent).map(s => s.id);
+            setSelectedIds(allUnsent);
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelect = (id, checked) => {
+        if (checked) {
+            setSelectedIds(prev => [...prev, id]);
+        } else {
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        }
+    };
+
     const getInitials = (name) => {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
@@ -69,7 +105,6 @@ const StaffTable = ({
                     </div>
 
                     <div className="filter-controls">
-
                         <select
                             className="filter-select"
                             value={roleFilter}
@@ -97,16 +132,36 @@ const StaffTable = ({
                     <table className="staff-table">
                         <thead>
                             <tr>
+                                <th style={{ width: '40px', paddingLeft: '1.25rem' }}>
+                                    <input
+                                        type="checkbox"
+                                        className="bulk-checkbox"
+                                        checked={staffData.length > 0 && staffData.filter(s => s.role === 'teacher' && !s.accountSent).length > 0 && selectedIds.length === staffData.filter(s => s.role === 'teacher' && !s.accountSent).length}
+                                        onChange={handleSelectAll}
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                    />
+                                </th>
                                 <th>TÊN</th>
                                 <th>VAI TRÒ</th>
                                 <th>LIÊN HỆ</th>
                                 <th>TRẠNG THÁI</th>
-                                <th>HÀNH ĐỘNG</th>
+                                <th>TÀI KHOẢN</th>
+                                <th className="text-right">HÀNH ĐỘNG</th>
                             </tr>
                         </thead>
                         <tbody>
                             {currentItems.map((staff) => (
                                 <tr key={staff.id}>
+                                    <td style={{ paddingLeft: '1.25rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            className="bulk-checkbox"
+                                            disabled={staff.role !== 'teacher' || staff.accountSent}
+                                            checked={selectedIds.includes(staff.id)}
+                                            onChange={(e) => handleSelect(staff.id, e.target.checked)}
+                                            style={{ width: '16px', height: '16px', cursor: (staff.role !== 'teacher' || staff.accountSent) ? 'not-allowed' : 'pointer', accentColor: '#3b82f6' }}
+                                        />
+                                    </td>
                                     <td>
                                         <div className="staff-name-cell">
                                             <div className="staff-avatar">
@@ -140,6 +195,12 @@ const StaffTable = ({
                                         </span>
                                     </td>
                                     <td>
+                                        {staff.accountSent
+                                            ? <span className="account-badge sent"><CheckCircle size={13} /> Đã gửi</span>
+                                            : <span className="account-badge pending">Chưa gửi</span>
+                                        }
+                                    </td>
+                                    <td>
                                         <div className="action-buttons">
                                             <button
                                                 className="action-btn view"
@@ -150,15 +211,25 @@ const StaffTable = ({
                                             </button>
                                             <button
                                                 className="action-btn edit"
-                                                title="Chỉnh sửa thông tin công việc"
+                                                title="Sửa thông tin"
                                                 onClick={() => onEdit(staff)}
                                             >
                                                 <Edit2 size={18} />
                                             </button>
+                                            {staff.role === 'teacher' && !staff.accountSent && (
+                                                <button
+                                                    className="action-btn send-account"
+                                                    title="Gửi tài khoản qua email"
+                                                    onClick={() => handleSendAccountClick(staff)}
+                                                >
+                                                    <Mail size={18} />
+                                                </button>
+                                            )}
                                             <button
-                                                className={`action-btn ${staff.status === 'active' ? 'lock' : 'unlock'}`}
-                                                title={staff.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                                                onClick={() => handleLockClick(staff)}
+                                                className={`action-btn ${staff.status === 'active' ? 'lock' : 'unlock'} ${!staff.accountSent ? 'disabled' : ''}`}
+                                                title={!staff.accountSent ? 'Cần gửi tài khoản để kích hoạt' : (staff.status === 'active' ? 'Tạm ngưng' : 'Kích hoạt lại')}
+                                                onClick={() => staff.accountSent && handleLockClick(staff)}
+                                                disabled={!staff.accountSent}
                                             >
                                                 {staff.status === 'active' ? <Lock size={18} /> : <Unlock size={18} />}
                                             </button>
@@ -247,6 +318,50 @@ const StaffTable = ({
                     </div>
                 </div>
             )}
+
+            {/* Send Account Modal */}
+            {sendModal.show && (
+                <div className="delete-modal-overlay" onClick={cancelSendAccount}>
+                    <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="delete-modal-header">
+                            <h3>Gửi Tài Khoản</h3>
+                            <button className="delete-modal-close" onClick={cancelSendAccount}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="delete-modal-body">
+                            <div className="delete-modal-warning">
+                                <div className="delete-modal-warning-icon">
+                                    <Mail size={20} />
+                                </div>
+                                <div className="delete-modal-warning-content">
+                                    <h4>Gửi tài khoản qua email</h4>
+                                    <p>
+                                        Tài khoản <strong>{sendModal.staff?.name}</strong> (ID: {sendModal.staff?.id}) sẽ được gửi qua email <strong>{sendModal.staff?.email}</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="delete-modal-footer">
+                            <button className="btn-delete-cancel" onClick={cancelSendAccount}>
+                                Hủy
+                            </button>
+                            <button
+                                className="btn-delete-confirm"
+                                onClick={confirmSendAccount}
+                                style={{ backgroundColor: '#3b82f6' }}
+                            >
+                                Gửi Tài Khoản
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };
@@ -261,7 +376,10 @@ StaffTable.propTypes = {
     setStatusFilter: PropTypes.func.isRequired,
     onView: PropTypes.func.isRequired,
     onEdit: PropTypes.func.isRequired,
-    onToggleLock: PropTypes.func.isRequired
+    onToggleLock: PropTypes.func.isRequired,
+    onSendAccount: PropTypes.func,
+    selectedIds: PropTypes.array,
+    setSelectedIds: PropTypes.func
 };
 
 export default StaffTable;

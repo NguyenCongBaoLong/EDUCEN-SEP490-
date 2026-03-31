@@ -55,5 +55,35 @@ namespace EducenAPI.Controllers
 
             return Ok(updatedTenant);
         }
+
+        // Tạo admin cho tenant
+        [HttpPost("{tenantId}/admin")]
+        public async Task<IActionResult> CreateAdmin(string tenantId, CreateTenantAdminDto dto)
+        {
+            try
+            {
+                var result = await _tenantService.CreateAdminForTenantAsync(tenantId, dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Lấy danh sách admin của tenant
+        [HttpGet("{tenantId}/admins")]
+        public async Task<IActionResult> GetAdmins(string tenantId)
+        {
+            try
+            {
+                var admins = await _tenantService.GetTenantAdminsAsync(tenantId);
+                return Ok(admins);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

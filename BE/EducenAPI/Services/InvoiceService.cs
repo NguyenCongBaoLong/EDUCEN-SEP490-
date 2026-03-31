@@ -88,6 +88,12 @@ namespace EducenAPI.Services
             var calculations = await _tuitionService.CalculateClassTuitionAsync(
                 request.ClassId, request.Month, request.Year);
 
+            // Lọc theo StudentIds nếu có
+            if (request.StudentIds != null && request.StudentIds.Any())
+            {
+                calculations = calculations.Where(c => request.StudentIds.Contains(c.StudentId)).ToList();
+            }
+
             result.TotalStudents = calculations.Count;
 
             foreach (var calc in calculations)

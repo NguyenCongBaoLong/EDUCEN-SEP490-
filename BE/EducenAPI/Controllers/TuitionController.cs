@@ -123,7 +123,8 @@ namespace EducenAPI.Controllers
                     ClassId = request.ClassId,
                     Month = request.Month,
                     Year = request.Year,
-                    CreatedBy = User.Identity?.Name ?? "System"
+                    CreatedBy = User.Identity?.Name ?? "System",
+                    StudentIds = request.StudentIds
                 });
 
                 return Ok(result);
@@ -176,6 +177,11 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
+
+                // Không cho Student/Parent xem hoá đơn nháp
+                var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                if (userRole != "Admin" && invoice.Status == "Draft")
                     return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 return Ok(invoice);
@@ -408,6 +414,7 @@ namespace EducenAPI.Controllers
         public int ClassId { get; set; }
         public int Month { get; set; }
         public int Year { get; set; }
+        public List<int>? StudentIds { get; set; }
     }
 
     public class InvoiceFilterApiRequest

@@ -73,6 +73,37 @@ namespace EducenAPI.Ultils
             await smtp.SendMailAsync(mail);
         }
 
+        public async Task SendTeacherAccount(string toEmail, string username, string password)
+        {
+            var mail = new MailMessage();
+            mail.From = new MailAddress(_emailSettings.Email);
+            mail.To.Add(toEmail);
+            mail.Subject = "Thông tin tài khoản giáo viên - Educen";
+
+            mail.Body = $@"
+            Xin chào,
+
+            Chào mừng bạn đến với hệ thống Educen. Đây là thông tin tài khoản truy cập dành cho giáo viên:
+
+            Tài khoản (Username): {username}
+            Mật khẩu (Password): {password}
+
+            Bạn có thể sử dụng tài khoản này để quản lý lớp học và bài giảng.
+            Vui lòng đăng nhập và đổi mật khẩu ngay trong lần đầu sử dụng.
+
+            Trân trọng,
+            Đội ngũ Educen.
+        ";
+
+            var smtp = new SmtpClient(_emailSettings.Host, _emailSettings.Port)
+            {
+                Credentials = new NetworkCredential(_emailSettings.Email, _emailSettings.Password),
+                EnableSsl = true
+            };
+
+            await smtp.SendMailAsync(mail);
+        }
+
         public async Task SendResetPasswordEmail(string toEmail, string resetCode)
         {
             var mail = new MailMessage();
