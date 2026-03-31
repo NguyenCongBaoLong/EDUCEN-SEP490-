@@ -250,6 +250,18 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             return;
         }
 
+        // Validation: Check each slot is at least 1 hour 30 mins (90 mins)
+        const shortSlots = formData.scheduleSlots.filter(slot => {
+            if (!slot.startTime || !slot.endTime) return false;
+            const duration = timeToMinutes(slot.endTime) - timeToMinutes(slot.startTime);
+            return duration < 90;
+        });
+
+        if (shortSlots.length > 0) {
+            toast.error('❌ Mỗi buổi học phải kéo dài ít nhất 1 tiếng 30 phút (90 phút)!');
+            return;
+        }
+
         // Validation: Check start date < end date
         if (formData.startDate && formData.endDate) {
             if (new Date(formData.startDate) > new Date(formData.endDate)) {

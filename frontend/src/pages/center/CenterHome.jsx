@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
     Users, Award, Star, TrendingUp, BookOpen,
     Pencil, Eye, Check, X, LayoutDashboard,
-    ChevronLeft, ChevronRight, Upload, Phone,
+    ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Upload, Phone,
     Mail, MapPin, Globe, ArrowRight, Quote,
     Clock, Calendar, LogOut, Plus, Trash2,
     Facebook, Youtube, Instagram,
@@ -231,17 +231,46 @@ function hexToRgb(hex) {
 
 /* ─── Component ─────────────────────────────────────── */
 const CenterHome = ({ isAdmin: isAdminProp = false }) => {
+    // 1. Core Hooks
     const navigate = useNavigate();
+    const location = useLocation();
     const { scheduledClasses = [], refreshSchedules } = useSchedule() || {};
     const { user, logout } = useAuth();
     const logoInputRef = useRef(null);
 
-    // Chỉ Admin mới thấy thanh quản lý
+    // 2. Base State
+    const [saved, setSaved] = useState({ ...INIT });
+    const [draft, setDraft] = useState({ ...INIT });
+    const [editMode, setEditMode] = useState(false);
+    const [showCmsHub, setShowCmsHub] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [activeAdminTab, setActiveAdminTab] = useState('branding');
+    const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+    const [scrolled, setScrolled] = useState(false);
+
+    // 3. Enrollment Form State
+    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
+    const [isSubmittingEnrollment, setIsSubmittingEnrollment] = useState(false);
+    const [availableSubjects, setAvailableSubjects] = useState([]);
+    const [upcomingClasses, setUpcomingClasses] = useState([]);
+    const [showAllClasses, setShowAllClasses] = useState(false);
+
+    // 4. File State
+    const [logoFile, setLogoFile] = useState(null);
+    const [fileBuffer, setFileBuffer] = useState({
+        hero: {},   // {index: File}
+        staff: {},  // {index: File}
+        gallery: {}, // {index: File}
+        intro: null,
+        quote: null
+    });
+
+    // 5. Helpers & Derived State
     const isAdmin = isAdminProp && user?.role === 'Admin';
+    const set = (field, value) => setDraft(p => ({ ...p, [field]: value }));
 
-    const location = useLocation();
+    /* --- Effects & Actions --- */
 
-    // Hỗ trợ nhận diện tenant từ URL (ví dụ: ?tenant=center1)
     useEffect(() => {
         fetchCenterData();
         if (refreshSchedules) refreshSchedules();
@@ -252,18 +281,15 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             const response = await api.get('/CenterHome');
             if (response.data) {
                 const data = response.data;
-                // Đảm bảo các mảng không bị null
                 data.highlights = data.highlights || [];
                 data.courses = data.courses || [];
                 data.images = data.images || [];
                 data.heroImages = data.heroImages || [];
                 data.staffs = data.staffs || [];
 
-                // Merge displayConfig if needed
                 let config = data.displayConfig ? JSON.parse(data.displayConfig) : JSON.parse(INIT.displayConfig);
                 const defaultConfig = JSON.parse(INIT.displayConfig);
 
-                // Add missing sections from defaultConfig
                 const existingIds = config.sections.map(s => s.id);
                 const missingSections = defaultConfig.sections.filter(s => !existingIds.includes(s.id));
                 
@@ -277,7 +303,6 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             }
         } catch (error) {
             console.error('Error fetching center data:', error);
-            // Nếu không tìm thấy (404), dùng dữ liệu mặc định INIT
             if (error.response?.status === 404) {
                 setSaved({ ...INIT });
                 setDraft({ ...INIT });
@@ -285,18 +310,30 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
         }
     };
 
-
-    /* Enrollment form */
-    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
-    const [isSubmittingEnrollment, setIsSubmittingEnrollment] = useState(false);
-    const [availableSubjects, setAvailableSubjects] = useState([]);
-    const [upcomingClasses, setUpcomingClasses] = useState([]);
-    const [showAllClasses, setShowAllClasses] = useState(false);
-
     const fetchUpcomingClasses = async () => {
         try {
             const resp = await api.get('/CenterHome/classes');
-            setUpcomingClasses(resp.data || []);
+            let classes = resp.data || [];
+            
+            // Sắp xếp: Ưu tiên lớp sắp khai giảng (ngày bắt đầu học lớn hơn ngày hiện tại)
+            // Hoặc đơn giản là sắp xếp theo ngày bắt đầu tăng dần
+            const now = new Date();
+            classes.sort((a, b) => {
+                const dateA = new Date(a.startDate || 0);
+                const dateB = new Date(b.startDate || 0);
+                
+                // Đưa các lớp chưa khai giảng (tương lai) lên trước
+                const isUpcomingA = dateA > now;
+                const isUpcomingB = dateB > now;
+                
+                if (isUpcomingA && !isUpcomingB) return -1;
+                if (!isUpcomingA && isUpcomingB) return 1;
+                
+                // Nếu cùng tương lai hoặc cùng quá khứ, sắp xếp theo ngày gần nhất
+                return dateA - dateB;
+            });
+
+            setUpcomingClasses(classes);
         } catch (err) {
             console.error("Failed to fetch upcoming classes:", err);
         }
@@ -317,6 +354,35 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
         };
         fetchSubjects();
     }, []);
+
+    /* --- Scroll & Sticky Header Animations --- */
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 50);
+        };
+        window.addEventListener('scroll', handleScroll);
+        
+        const observerOptions = {
+            threshold: 0.12,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        const elements = document.querySelectorAll('.reveal');
+        elements.forEach(el => observer.observe(el));
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            observer.disconnect();
+        };
+    }, [saved, draft, upcomingClasses, availableSubjects, scheduledClasses, showAllClasses, currentHeroSlide]); // Re-run when content, view state, or slide changes
 
     const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
@@ -340,26 +406,6 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             setIsSubmittingEnrollment(false);
         }
     };
-
-    /* Edit state */
-    const [editMode, setEditMode] = useState(false);
-    const [showCmsHub, setShowCmsHub] = useState(false); // <--- Added
-    const [isSaving, setIsSaving] = useState(false);
-    const [saved, setSaved] = useState({ ...INIT });
-    const [draft, setDraft] = useState({ ...INIT });
-    const [activeAdminTab, setActiveAdminTab] = useState('branding'); // branding, sections, staff
-
-    const set = (field, value) => setDraft(p => ({ ...p, [field]: value }));
-
-    /* --- File Management --- */
-    const [logoFile, setLogoFile] = useState(null);
-    const [fileBuffer, setFileBuffer] = useState({
-        hero: {},   // {index: File}
-        staff: {},  // {index: File}
-        gallery: {}, // {index: File}
-        intro: null,
-        quote: null
-    });
 
     const triggerImageUpload = (callback) => {
         const input = document.createElement('input');
@@ -489,7 +535,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             });
 
             // 7. Gallery (Images)
-            (draft.images || []).forEach((img, i) => {
+            (draft.images || []).forEach((img) => {
                 if (img && !img.startsWith('blob:') && !img.startsWith('data:')) {
                     formData.append('ExistingImageUrls', img);
                 }
@@ -539,7 +585,6 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     const config = JSON.parse(d.displayConfig || INIT.displayConfig);
 
     /* Hero Slider Auto-play */
-    const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentHeroSlide(prev => (prev + 1) % (d.heroImages?.length || 1));
@@ -837,7 +882,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
 
             {/* ── Header ── */}
-            <header className="center-header">
+            <header className={`center-header ${scrolled ? 'scrolled' : ''} header-entrance`}>
                 <div className="center-header-content">
                     <div className="center-logo">
                         {editMode ? (
@@ -905,32 +950,80 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                             return (
                                 <section key="hero" className={`center-hero ${sectionClass}`}>
                                     {d.heroImages?.map((hero, idx) => {
-                                        const imgUrl = typeof hero === 'string' ? hero : hero.imageUrl;
+                                        const imgUrl = typeof hero === 'string' ? hero : (hero?.imageUrl || '');
+                                        const isActive = idx === currentHeroSlide;
+                                        
+                                        // Kiểm tra nếu slide có nội dung chữ
+                                        const hasTitle = hero?.title?.trim();
+                                        const hasSub = hero?.subTitle?.trim();
+                                        const hasBtn = hero?.buttonText?.trim();
+                                        const hasAnyContent = hasTitle || hasSub || hasBtn;
+
                                         return (
-                                            <div
-                                                key={idx}
-                                                className={`hero-slide-bg ${idx === currentHeroSlide ? 'active' : ''}`}
-                                                style={{ backgroundImage: `url("${imgUrl}")` }}
-                                            />
+                                            <React.Fragment key={idx}>
+                                                <div
+                                                    className={`hero-slide-bg ${isActive ? 'active' : ''}`}
+                                                    style={{ backgroundImage: `url("${imgUrl}")` }}
+                                                />
+                                                {isActive && (
+                                                    <div className="center-hero-content reveal slide-up" style={{ transition: 'all 0.6s ease' }}>
+                                                        {editMode ? (
+                                                            <input 
+                                                                type="text" 
+                                                                className="hero-name-field"
+                                                                placeholder="Tiêu đề Slide (Để trống dùng tên trung tâm)"
+                                                                value={draft.heroImages[idx]?.title || ''}
+                                                                onChange={e => {
+                                                                    const newImg = [...draft.heroImages];
+                                                                    newImg[idx] = { ...newImg[idx], title: e.target.value };
+                                                                    set('heroImages', newImg);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <h1>{hero.title?.trim() || d.name}</h1>
+                                                        )}
+                                                        
+                                                        {editMode ? (
+                                                            <textarea 
+                                                                className="hero-tagline-field"
+                                                                placeholder="Mô tả phụ (Để trống dùng khẩu hiệu trung tâm)"
+                                                                value={draft.heroImages[idx]?.subTitle || ''}
+                                                                onChange={e => {
+                                                                    const newImg = [...draft.heroImages];
+                                                                    newImg[idx] = { ...newImg[idx], subTitle: e.target.value };
+                                                                    set('heroImages', newImg);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <p>{hero.subTitle?.trim() || d.tagline}</p>
+                                                        )}
+
+                                                        <div className="center-hero-buttons">
+                                                            {editMode ? (
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="center-btn-hero"
+                                                                    placeholder="Text Nút (Mặc định: Tham gia)"
+                                                                    value={draft.heroImages[idx]?.buttonText || ''}
+                                                                    onChange={e => {
+                                                                        const newImg = [...draft.heroImages];
+                                                                        newImg[idx] = { ...newImg[idx], buttonText: e.target.value };
+                                                                        set('heroImages', newImg);
+                                                                    }}
+                                                                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px dashed' }}
+                                                                />
+                                                            ) : (
+                                                                <a href={hero.buttonLink?.trim() || '#enrollment'} className="center-btn-hero">
+                                                                    {hero.buttonText?.trim() || "Tham Gia Khóa Học Của Chúng Tôi Ngay"}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                     <div className="center-hero-overlay"></div>
-
-                                    <div className="center-hero-content">
-                                        {editMode ? (
-                                            <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="hero-name-field" />
-                                        ) : (
-                                            <h1>{d.name}</h1>
-                                        )}
-                                        {editMode ? (
-                                            <InlineEditField draft={draft} set={set} field="tagline" multiline rows={3} placeholder="Tagline / mô tả ngắn" className="hero-tagline-field" />
-                                        ) : (
-                                            <p>{d.tagline}</p>
-                                        )}
-                                        <div className="center-hero-buttons">
-                                            <a href="#enrollment" className="center-btn-hero">Tham Gia Khóa Học Của Chúng Tôi Ngay</a>
-                                        </div>
-                                    </div>
 
                                     <div className="hero-slide-indicators">
                                         {d.heroImages?.map((_, idx) => (
@@ -948,14 +1041,14 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                             return (
                                 <div key="about" className="center-container">
                                     <section className={`center-our-center ${sectionClass}`}>
-                                        <div className="center-about-split">
+                                        <div className="center-about-split reveal fade-in">
                                             {/* LEFT: text + highlights */}
-                                            <div className="center-about-content">
-                                                <div className="center-section-badge"><BookOpen size={16} /> VỀ CHÚNG TÔI</div>
+                                            <div className="center-about-content reveal slide-left-fade stagger-1">
+                                                <div className="center-section-badge reveal fade-in stagger-2"><BookOpen size={16} /> VỀ CHÚNG TÔI</div>
                                                 {editMode ? (
                                                     <InlineEditField draft={draft} set={set} field="introTitle" placeholder="Tiêu đề giới thiệu" className="intro-title-field" />
                                                 ) : (
-                                                    <h2>{d.introTitle}</h2>
+                                                    <h2 className="reveal slide-up stagger-3">{d.introTitle}</h2>
                                                 )}
                                                 {editMode ? (
                                                     <InlineEditField draft={draft} set={set} field="introDescription" multiline rows={5} placeholder="Mô tả giới thiệu" className="intro-desc-field" />
@@ -1020,7 +1113,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
                                             {/* RIGHT: image grid */}
                                             <div className="center-about-images">
-                                                <div className={`center-image-grid ${editMode ? 'image-grid-edit-mode' : ''}`}>
+                                                <div className={`center-image-grid reveal zoom-in stagger-2 ${editMode ? 'image-grid-edit-mode' : ''}`}>
                                                     {(editMode ? draft.images : (d.images && d.images.length > 0 ? d.images : [
                                                         'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=500&fit=crop',
                                                         'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&h=500&fit=crop',
@@ -1079,9 +1172,9 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         case 'teachers':
                             return (
                                 <div key="teachers" className="center-container">
-                                    <section className={`center-teachers-section ${sectionClass}`}>
+                                    <section className={`center-teachers-section reveal slide-up ${sectionClass}`}>
                                         <div className="teachers-section-header">
-                                            <div>
+                                            <div className="reveal slide-left">
                                                 <div className="center-section-badge"><Users size={16} /> ĐỘI NGŨ GIÁO VIÊN</div>
                                                 <h2 className="teachers-title">Đội ngũ giáo viên chuyên nghiệp</h2>
                                                 <div className="teachers-title-underline"></div>
@@ -1095,7 +1188,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
                                         <div className="teachers-grid-new">
                                             {(editMode ? draft.staffs : d.staffs).map((staff, i) => (
-                                                <div key={i} className={`teacher-card-new ${editMode ? 'editable' : ''}`}>
+                                                <div key={i} className={`teacher-card-new reveal slide-up stagger-${(i % 6) + 1} ${editMode ? 'editable' : ''}`}>
                                                     {editMode && (
                                                         <button
                                                             className="teacher-inline-delete"
@@ -1195,12 +1288,12 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         case 'schedule':
                             return (
                                 <div key="schedule" className="center-container">
-                                    <section className={`center-operating-hours ${sectionClass}`}>
+                                    <section className={`center-operating-hours reveal slide-up ${sectionClass}`}>
                                         <h2>Lịch Học Các Lớp</h2>
-                                        <div className="center-schedule">
+                                        <div className="center-schedule reveal fade-in">
                                             <div className="center-schedule-grid">
                                                 {DAY_LABELS.map((dayLabel, colIdx) => (
-                                                    <div key={colIdx} className="center-schedule-day">
+                                                    <div key={colIdx} className={`center-schedule-day reveal slide-up stagger-${colIdx + 1}`}>
                                                         <div className="center-schedule-day-header">
                                                             <Clock size={14} /><span>{dayLabel}</span>
                                                         </div>
@@ -1228,17 +1321,17 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                             if (upcomingClasses.length === 0 && !editMode) return null;
                             return (
                                 <div key="upcoming-classes" className="center-container">
-                                    <section className={`center-upcoming-classes ${sectionClass}`}>
-                                        <div className="center-section-badge"><Calendar size={16} /> LỚP HỌC SẮP KHAI GIẢNG</div>
-                                        <h2 className="section-title">Cơ hội học tập mới dành cho bạn</h2>
-                                        <div className="section-title-underline"></div>
+                                    <section className={`center-upcoming-classes reveal slide-up ${sectionClass}`}>
+                                        <div className="center-section-badge reveal fade-in"><Calendar size={16} /> LỚP HỌC SẮP KHAI GIẢNG</div>
+                                        <h2 className="section-title reveal slide-up stagger-1">Cơ hội học tập mới dành cho bạn</h2>
+                                        <div className="section-title-underline reveal slide-up stagger-2"></div>
                                         
                                         <div className="classes-grid">
-                                            {(showAllClasses ? upcomingClasses : upcomingClasses.slice(0, 6)).concat(editMode && upcomingClasses.length === 0 ? [
+                                            {(showAllClasses ? upcomingClasses : upcomingClasses.slice(0, 4)).concat(editMode && upcomingClasses.length === 0 ? [
                                                 { classId: -1, className: 'Lớp học mẫu 1', subjectName: 'Toán học', teacherName: 'Nguyễn Văn A', startDate: new Date().toISOString(), scheduleSummary: 'Thứ 2, 4, 6 (18:00 - 20:00)' },
                                                 { classId: -2, className: 'Lớp học mẫu 2', subjectName: 'Tiếng Anh', teacherName: 'Trần Thị B', startDate: new Date().toISOString(), scheduleSummary: 'Thứ 3, 5, 7 (17:30 - 19:30)' }
-                                            ] : []).map((cls) => (
-                                                <div key={cls.classId} className="class-card-home">
+                                            ] : []).map((cls, i) => (
+                                                <div key={cls.classId} className={`class-card-home reveal slide-up stagger-${(i % 3) + 1}`}>
                                                     <div className="class-card-header">
                                                         <span className="class-subject-tag">{cls.subjectName || 'Khóa học'}</span>
                                                         <div className="class-status-dot"></div>
@@ -1264,7 +1357,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                             ))}
                                         </div>
 
-                                        {upcomingClasses.length > 6 && (
+                                        {upcomingClasses.length > 4 && (
                                             <div className="classes-view-more">
                                                 <button 
                                                     className="center-btn-view-all"
@@ -1282,11 +1375,11 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         case 'enrollment':
                             return (
                                 <div key="enrollment" className="center-container">
-                                    <section id="enrollment" className={`center-journey-section ${sectionClass}`}>
-                                        <div className="center-journey-badge"><BookOpen size={16} /> BẮT ĐẦU ĐĂNG KÝ</div>
-                                        <h2>Bắt Đầu Hành Trình Của Bạn</h2>
+                                    <section id="enrollment" className={`center-journey-section reveal slide-up ${sectionClass}`}>
+                                        <div className="center-journey-badge reveal fade-in"><BookOpen size={16} /> BẮT ĐẦU ĐĂNG KÝ</div>
+                                        <h2 className="reveal slide-up stagger-1">Bắt Đầu Hành Trình Của Bạn</h2>
                                         <div className="center-journey-content">
-                                            <div className="center-enrollment-form-wrapper">
+                                            <div className="center-enrollment-form-wrapper reveal slide-left">
                                                 <form onSubmit={handleSubmitEnrollment} className="center-enrollment-form">
                                                     <div className="center-form-row">
                                                         <div className="center-form-group">
@@ -1326,7 +1419,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                     </button>
                                                 </form>
                                             </div>
-                                            <div className="center-testimonial-card">
+                                            <div className="center-testimonial-card reveal slide-right stagger-2">
                                                 <div className="center-quote-icon"><Quote size={48} /></div>
                                                 {editMode ? (
                                                     <InlineEditField draft={draft} set={set} field="quoteText" multiline rows={6} placeholder="Câu châm ngôn truyền cảm hứng" className="quote-textarea-edit" />
@@ -1346,9 +1439,9 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             </div>
 
             {/* ── Footer ── */}
-            <footer className="center-footer">
+            <footer className="center-footer reveal slide-up">
                 <div className="center-footer-main">
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-1">
                         <h3>
                             {d.logo ? <img src={d.logo} alt="logo" className="center-logo-img footer-logo" /> : <BookOpen size={20} />}
                             {editMode ? (
@@ -1364,7 +1457,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         )}
                     </div>
 
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-2">
                         <h4><MapPin size={18} /> Địa chỉ</h4>
                         {editMode ? (
                             <>
@@ -1379,7 +1472,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         )}
                     </div>
 
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-3">
                         <h4><Phone size={18} /> Liên hệ</h4>
                         {editMode ? (
                             <div className="footer-contact-edit">
@@ -1405,7 +1498,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         )}
                     </div>
 
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-4">
                         <div className="center-footer-links">
                             <a href="#privacy">Chính sách bảo mật</a>
                             <a href="#terms">Điều khoản dịch vụ</a>
@@ -1413,21 +1506,21 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                         </div>
                     </div>
 
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-5">
                         <h4>Mạng xã hội</h4>
                         <div className="center-footer-social">
                             {d.facebookUrl && (
-                                <a href={d.facebookUrl} target="_blank" rel="noopener noreferrer" className="social-icon facebook" title="Facebook">
+                                <a href={d.facebookUrl} target="_blank" rel="noopener noreferrer" className="social-icon facebook hover-lift" title="Facebook">
                                     <Facebook size={20} />
                                 </a>
                             )}
                             {d.youtubeUrl && (
-                                <a href={d.youtubeUrl} target="_blank" rel="noopener noreferrer" className="social-icon youtube" title="Youtube">
+                                <a href={d.youtubeUrl} target="_blank" rel="noopener noreferrer" className="social-icon youtube hover-lift" title="Youtube">
                                     <Youtube size={20} />
                                 </a>
                             )}
                             {d.instagramUrl && (
-                                <a href={d.instagramUrl} target="_blank" rel="noopener noreferrer" className="social-icon instagram" title="Instagram">
+                                <a href={d.instagramUrl} target="_blank" rel="noopener noreferrer" className="social-icon instagram hover-lift" title="Instagram">
                                     <Instagram size={20} />
                                 </a>
                             )}
@@ -1438,7 +1531,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                     </div>
                 </div>
 
-                <div className="center-footer-bottom">
+                <div className="center-footer-bottom reveal fade-in stagger-2">
                     {editMode ? (
                         <InlineEditField draft={draft} set={set} field="copyright" placeholder="Bản quyền" className="footer-copyright-field" />
                     ) : (

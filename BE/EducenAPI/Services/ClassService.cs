@@ -406,13 +406,12 @@ namespace EducenAPI.Services
                 if (!TimeOnly.TryParse(slot.EndTime, out var endTime))
                     throw new Exception($"Định dạng thời gian kết thúc không hợp lệ: {slot.EndTime}");
 
-                // Validate time order
+                // Validate time order and minimum duration (1.5 hours)
                 if (startTime >= endTime)
                     throw new Exception("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
 
-                // Validate time doesn't cross midnight
-                if (startTime > endTime)
-                    throw new Exception("Lịch học không thể kéo dài qua nửa đêm");
+                if ((endTime - startTime).TotalMinutes < 90)
+                    throw new Exception("Mỗi buổi học phải kéo dài ít nhất 1 tiếng 30 phút (90 phút)");
             }
 
             // Check for duplicate slots

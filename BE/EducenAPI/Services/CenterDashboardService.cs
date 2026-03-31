@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.CenterDashboard;
+using EducenAPI.DTOs.CenterDashboard;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -43,15 +43,15 @@ namespace EducenAPI.Services
 
         private async Task<OverviewDto> GetOverview()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
 
             var totalStudents = await _db.Students.CountAsync();
 
             var totalClasses = await _db.Classes
-                .CountAsync(c => c.Status == "Active");
+                .CountAsync(c => c.Status == "Active" && (!c.StartDate.HasValue || c.StartDate.Value.Date <= now.Date));
 
             var upcomingClasses = await _db.Classes
-                .CountAsync(c => c.Status == "Upcoming");
+                .CountAsync(c => (c.Status == "Active" && c.StartDate.HasValue && c.StartDate.Value.Date > now.Date) || c.Status == "Upcoming");
 
             var totalStaff = await _db.Users
                 .CountAsync(u =>
