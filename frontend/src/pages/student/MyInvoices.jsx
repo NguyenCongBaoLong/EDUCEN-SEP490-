@@ -16,10 +16,12 @@ import ParentSidebar from '../../components/ParentSidebar';
 import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
 import { useAuth } from '../../context/AuthContext';
+import { useChild } from '../../context/ChildContext';
 import '../../css/pages/student/MyInvoices.css';
 
 const MyInvoices = () => {
     const { user } = useAuth();
+    const { selectedChild } = useChild();
     const isParent = user?.role === 'Parent';
     
     const [invoices, setInvoices] = useState([]);
@@ -39,17 +41,23 @@ const MyInvoices = () => {
 
     useEffect(() => {
         fetchInvoices();
-    }, []);
+    }, [selectedChild]);
 
     const fetchInvoices = async () => {
         setLoading(true);
         try {
             // Lấy tất cả hóa đơn
-            const allInvoices = await tuitionService.getMyInvoices();
-            setInvoices(allInvoices);
-
+            let allInvoices = await tuitionService.getMyInvoices();
             // Lấy hóa đơn chưa thanh toán
-            const outstanding = await tuitionService.getOutstandingInvoices();
+            let outstanding = await tuitionService.getOutstandingInvoices();
+
+            // Nếu là phụ huynh, lọc theo người con đang được chọn
+            if (isParent && selectedChild) {
+                allInvoices = allInvoices.filter(inv => inv.studentId === selectedChild.studentId);
+                outstanding = outstanding.filter(inv => inv.studentId === selectedChild.studentId);
+            }
+
+            setInvoices(allInvoices);
             setOutstandingInvoices(outstanding);
         } catch (error) {
             toast.error('Không thể tải danh sách hóa đơn');
@@ -149,7 +157,11 @@ const MyInvoices = () => {
             {isParent ? <ParentSidebar /> : <StudentSidebar />}
             <div className="invoices-content">
                 <div className="page-header">
-                    <h1>Hóa đơn học phí của tôi</h1>
+                    <h1>
+                        {isParent && selectedChild 
+                            ? `Hóa đơn học phí của ${selectedChild.fullName}` 
+                            : 'Hóa đơn học phí của tôi'}
+                    </h1>
                 </div>
 
                 {/* Outstanding Summary */}

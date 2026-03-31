@@ -118,7 +118,7 @@ const ClassDetailModal = ({ cls, onClose }) => {
                                         return (
                                             <div key={session.sessionNum} className="pc-asm-session-group" style={{ marginBottom: 16 }}>
                                                 <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#64748b', marginBottom: 8, textTransform: 'uppercase' }}>
-                                                    Buổi {session.sessionNum}: {session.title}
+                                                    {session.title || `Buổi ${session.sessionNum}`}
                                                 </div>
                                                 {session.assignments.map(asm => (
                                                     <div key={asm.asmId} className={`pc-asm-row ${asm.currentSubmission ? 'submitted' : 'pending'}`} style={{ marginBottom: 8 }}>

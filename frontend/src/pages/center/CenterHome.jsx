@@ -1499,14 +1499,6 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                     </div>
 
                     <div className="center-footer-section reveal slide-up stagger-4">
-                        <div className="center-footer-links">
-                            <a href="#privacy">Chính sách bảo mật</a>
-                            <a href="#terms">Điều khoản dịch vụ</a>
-                            <a href="#support">Hỗ trợ</a>
-                        </div>
-                    </div>
-
-                    <div className="center-footer-section reveal slide-up stagger-5">
                         <h4>Mạng xã hội</h4>
                         <div className="center-footer-social">
                             {d.facebookUrl && (
