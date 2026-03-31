@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260330134519_RemoveLegacyTenantSubscriptionPlan")]
+    partial class RemoveLegacyTenantSubscriptionPlan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -590,48 +593,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasKey("UserId");
 
                     b.ToTable("Parents");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.ResourceFile", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AssignmentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Extension")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long?>("FileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<int?>("LessonMaterialId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssignmentId");
-
-                    b.HasIndex("LessonMaterialId");
-
-                    b.ToTable("ResourceFiles");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.PaymentRecordTenant", b =>
@@ -1356,21 +1317,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Navigation("ParentNavigation");
                 });
-
-            modelBuilder.Entity("EducenAPI.Models.ResourceFile", b =>
-                {
-                    b.HasOne("EducenAPI.Models.Assignment", "Assignment")
-                        .WithMany()
-                        .HasForeignKey("AssignmentId");
-
-                    b.HasOne("EducenAPI.Models.LessonMaterial", "LessonMaterial")
-                        .WithMany()
-                        .HasForeignKey("LessonMaterialId");
-
-                    b.Navigation("Assignment");
-
-                    b.Navigation("LessonMaterial");
-                    });
 
             modelBuilder.Entity("EducenAPI.Models.PaymentTransactionTenant", b =>
                 {

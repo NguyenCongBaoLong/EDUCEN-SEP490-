@@ -6,19 +6,24 @@ const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
     },
 });
 
 // Helper: lấy tenantId từ nhiều nguồn (ưu tiên localStorage → URL query param)
 function resolveTenantId() {
+    const isValidTenantId = (tenantId) => (
+        !!tenantId && tenantId !== 'undefined' && tenantId !== 'null'
+    );
+
     // 1. Ưu tiên localStorage
     const stored = localStorage.getItem('tenantId');
-    if (stored && stored !== 'default-tenant') return stored;
+    if (isValidTenantId(stored)) return stored;
 
-    // 2. Nếu localStorage trống, thử lấy từ URL query param (?tenant=xxx)
+    // 2. Nếu localStorage trống, thử lấy từ URL query param (?tenant=xxx hoặc ?tenantId=xxx)
     const urlParams = new URLSearchParams(window.location.search);
-    const tenantFromUrl = urlParams.get('tenant');
-    if (tenantFromUrl && tenantFromUrl !== 'default-tenant') {
+    const tenantFromUrl = urlParams.get('tenantId') || urlParams.get('tenant');
+    if (isValidTenantId(tenantFromUrl)) {
         localStorage.setItem('tenantId', tenantFromUrl);
         return tenantFromUrl;
     }

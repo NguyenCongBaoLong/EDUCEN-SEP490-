@@ -11,28 +11,35 @@ namespace EducenAPI.Services.Payment
         Task<PaymentVerificationResult> ProcessCallbackAsync(string gatewayType, Dictionary<string, string> callbackData);
         Task<PaymentTransactionInfo?> GetTransactionAsync(string transactionId);
         Task<List<PaymentTransactionInfo>> GetTransactionsByPaymentIdAsync(string paymentRecordId);
+        Task ConfirmPaymentDirectlyAsync(string? orderId);
+        Task MarkPaymentAsFailedAsync(string? orderId, string reason, string status = "Failed");
     }
 
     public class PaymentService : IPaymentService
     {
+        private const string DefaultTenantId = "default-tenant";
+
         private readonly AdminDbContext _adminDbContext;
         private readonly EducenV2Context _tenantDbContext;
         private readonly PaymentGatewayFactory _gatewayFactory;
         private readonly ILogger<PaymentService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         public PaymentService(
             AdminDbContext adminDbContext,
             EducenV2Context tenantDbContext,
             PaymentGatewayFactory gatewayFactory,
             ILogger<PaymentService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IHttpContextAccessor httpContextAccessor)
         {
             _adminDbContext = adminDbContext;
             _tenantDbContext = tenantDbContext;
             _gatewayFactory = gatewayFactory;
             _logger = logger;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <summary>
@@ -44,6 +51,23 @@ namespace EducenAPI.Services.Payment
             try
             {
                 var isTuition = dto.TransactionType == "Tuition";
+                var tenantContext = await ResolveCreateTenantContextAsync(dto, isTuition);
+                if (string.IsNullOrWhiteSpace(tenantContext.TenantId))
+                {
+                    return new PaymentResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Tenant context could not be resolved"
+                    };
+                }
+
+                _logger.LogInformation(
+                    "Create payment tenant context resolved. TransactionType: {TransactionType}, TenantId: {TenantId}, Source: {Source}, ReferenceId: {ReferenceId}",
+                    dto.TransactionType,
+                    tenantContext.TenantId,
+                    tenantContext.Source,
+                    dto.ReferenceId ?? "N/A");
+
                 var subscriptionMonths = dto.SubscriptionMonths.GetValueOrDefault(1);
                 if (subscriptionMonths <= 0)
                     subscriptionMonths = 1;
@@ -51,14 +75,14 @@ namespace EducenAPI.Services.Payment
                 //Nếu là Subscription → kiểm tra tenant trong Admin DB
                 if (!isTuition)
                 {
-                    var tenant = await _adminDbContext.Tenants.FindAsync(dto.TenantId);
+                    var tenant = await _adminDbContext.Tenants.FindAsync(tenantContext.TenantId);
                     if (tenant == null)
                     {
-                        if (dto.TenantId == "default-tenant")
+                        if (tenantContext.TenantId == DefaultTenantId)
                         {
                             tenant = new Tenant
                             {
-                                TenantId = "default-tenant",
+                                TenantId = DefaultTenantId,
                                 TenantName = "Default Center",
                                 Username = "default",
                                 Password = "N/A",
@@ -75,7 +99,7 @@ namespace EducenAPI.Services.Payment
                             return new PaymentResult
                             {
                                 Success = false,
-                                ErrorMessage = $"Tenant with ID '{dto.TenantId}' not found"
+                                ErrorMessage = $"Tenant with ID '{tenantContext.TenantId}' not found"
                             };
                         }
                     }
@@ -103,6 +127,62 @@ namespace EducenAPI.Services.Payment
 
                 if (isTuition)
                 {
+                    // Kiểm tra invoice đã có payment Pending chưa
+                    if (!string.IsNullOrWhiteSpace(dto.ReferenceId))
+                    {
+                        var existingPending = await _tenantDbContext.PaymentRecordTenants
+                            .Include(p => p.Transactions)
+                            .Where(p => p.ReferenceId == dto.ReferenceId
+                                     && p.Status == "Pending"
+                                     && p.Transactions.Any(t => t.Status == "Pending"))
+                            .OrderByDescending(p => p.PaymentDate)
+                            .FirstOrDefaultAsync();
+
+                        if (existingPending != null)
+                        {
+                            var existingTxn = existingPending.Transactions
+                                .FirstOrDefault(t => t.Status == "Pending");
+                            if (existingTxn != null)
+                            {
+                                _logger.LogInformation(
+                                    "Existing pending payment found for ReferenceId: {RefId}, PaymentId: {PaymentId}. Reusing.",
+                                    dto.ReferenceId, existingPending.PaymentId);
+
+                                // Tạo lại payment URL cho payment cũ
+                                var reuseGateway = _gatewayFactory.GetGateway(dto.GatewayType);
+                                var reuseRequest = new CreatePaymentRequest
+                                {
+                                    TenantId = tenantContext.TenantId,
+                                    OrderId = existingPending.PaymentId,
+                                    Amount = existingPending.Amount,
+                                    Description = existingPending.Description,
+                                    ReturnUrl = dto.ReturnUrl,
+                                    IpAddress = dto.IpAddress,
+                                    CustomerName = dto.CustomerName,
+                                    CustomerEmail = dto.CustomerEmail,
+                                    CustomerPhone = dto.CustomerPhone
+                                };
+
+                                var reuseResponse = await reuseGateway.CreatePaymentAsync(reuseRequest);
+                                if (reuseResponse.Success)
+                                {
+                                    return new PaymentResult
+                                    {
+                                        Success = true,
+                                        PaymentRecordId = existingPending.PaymentId,
+                                        TransactionId = existingTxn.TransactionId,
+                                        PaymentUrl = reuseResponse.PaymentUrl
+                                    };
+                                }
+                                // Nếu tạo URL fail → đánh dấu cũ Failed, tạo mới
+                                existingTxn.Status = "Failed";
+                                existingTxn.ErrorMessage = "Reused payment URL creation failed";
+                                existingPending.Status = "Failed";
+                                await _tenantDbContext.SaveChangesAsync();
+                            }
+                        }
+                    }
+
                     var paymentRecord = new PaymentRecordTenant
                     {
                         PaymentId = Guid.NewGuid().ToString(),
@@ -134,6 +214,7 @@ namespace EducenAPI.Services.Payment
                     var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
                     var gatewayRequest = new CreatePaymentRequest
                     {
+                        TenantId = tenantContext.TenantId,
                         OrderId = paymentRecord.PaymentId,
                         Amount = dto.Amount,
                         Description = dto.Description,
@@ -175,10 +256,65 @@ namespace EducenAPI.Services.Payment
                 }
                 else
                 {
+                    // Kiểm tra subscription đã có payment Pending chưa
+                    if (!string.IsNullOrWhiteSpace(dto.ReferenceId))
+                    {
+                        var existingSubPending = await _adminDbContext.PaymentRecords
+                            .Include(p => p.Transactions)
+                            .Where(p => p.TenantId == tenantContext.TenantId
+                                     && p.ReferenceId == dto.ReferenceId
+                                     && p.Status == "Pending"
+                                     && p.Transactions.Any(t => t.Status == "Pending"))
+                            .OrderByDescending(p => p.PaymentDate)
+                            .FirstOrDefaultAsync();
+
+                        if (existingSubPending != null)
+                        {
+                            var existingSubTxn = existingSubPending.Transactions
+                                .FirstOrDefault(t => t.Status == "Pending");
+                            if (existingSubTxn != null)
+                            {
+                                _logger.LogInformation(
+                                    "Existing pending subscription found for TenantId: {TenantId}, PlanId: {PlanId}. Reusing.",
+                                    tenantContext.TenantId, dto.ReferenceId);
+
+                                var reuseGateway = _gatewayFactory.GetGateway(dto.GatewayType);
+                                var reuseRequest = new CreatePaymentRequest
+                                {
+                                    TenantId = null,
+                                    OrderId = existingSubPending.PaymentId,
+                                    Amount = existingSubPending.Amount,
+                                    Description = existingSubPending.Description,
+                                    ReturnUrl = dto.ReturnUrl,
+                                    IpAddress = dto.IpAddress,
+                                    CustomerName = dto.CustomerName,
+                                    CustomerEmail = dto.CustomerEmail,
+                                    CustomerPhone = dto.CustomerPhone
+                                };
+
+                                var reuseResponse = await reuseGateway.CreatePaymentAsync(reuseRequest);
+                                if (reuseResponse.Success)
+                                {
+                                    return new PaymentResult
+                                    {
+                                        Success = true,
+                                        PaymentRecordId = existingSubPending.PaymentId,
+                                        TransactionId = existingSubTxn.TransactionId,
+                                        PaymentUrl = reuseResponse.PaymentUrl
+                                    };
+                                }
+                                existingSubTxn.Status = "Failed";
+                                existingSubTxn.ErrorMessage = "Reused payment URL creation failed";
+                                existingSubPending.Status = "Failed";
+                                await _adminDbContext.SaveChangesAsync();
+                            }
+                        }
+                    }
+
                     var paymentRecord = new PaymentRecord
                     {
                         PaymentId = Guid.NewGuid().ToString(),
-                        TenantId = dto.TenantId,
+                        TenantId = tenantContext.TenantId,
                         Amount = dto.Amount,
                         Status = "Pending",
                         PaymentDate = DateTime.UtcNow,
@@ -208,6 +344,9 @@ namespace EducenAPI.Services.Payment
                     var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
                     var gatewayRequest = new CreatePaymentRequest
                     {
+                        // Subscription: tiền về SystemAdmin → dùng global config (appsettings.json)
+                        // TenantId = null → VNPayService.ResolveEffectiveConfigAsync dùng global config
+                        TenantId = null,
                         OrderId = paymentRecord.PaymentId,
                         Amount = dto.Amount,
                         Description = dto.Description,
@@ -263,6 +402,57 @@ namespace EducenAPI.Services.Payment
         {
             try
             {
+                var orderId = ExtractOrderId(callbackData);
+
+                // Tìm transaction TRƯỚC để xác định loại payment và config cần dùng
+                PaymentTransactionTenant? tenantTransaction = null;
+                PaymentTransaction? adminTransaction = null;
+
+                if (!string.IsNullOrWhiteSpace(orderId))
+                {
+                    tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
+                        .Include(t => t.PaymentRecord)
+                        .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+
+                    if (tenantTransaction == null)
+                    {
+                        adminTransaction = await _adminDbContext.PaymentTransactions
+                            .Include(t => t.PaymentRecord)
+                            .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+                    }
+                }
+
+                // Xác định tenantId cho config resolution
+                // Subscription (AdminDB) → dùng global config (default-tenant)
+                // Tuition (TenantDB) → dùng per-tenant config của center
+                string? configTenantId;
+                if (adminTransaction != null)
+                {
+                    // Subscription payment → tiền về SystemAdmin → dùng global config
+                    configTenantId = null;
+                }
+                else if (tenantTransaction != null)
+                {
+                    // Tuition payment → dùng config của tenant
+                    configTenantId = (await ResolveCallbackTenantContextAsync(callbackData)).TenantId;
+                }
+                else
+                {
+                    configTenantId = (await ResolveCallbackTenantContextAsync(callbackData)).TenantId;
+                }
+
+                if (!string.IsNullOrWhiteSpace(configTenantId))
+                {
+                    callbackData["tenantId"] = configTenantId;
+                }
+
+                _logger.LogInformation(
+                    "Callback config resolved. Gateway: {Gateway}, TenantId: {TenantId}, OrderId: {OrderId}, IsSubscription: {IsSubscription}",
+                    gatewayType,
+                    configTenantId,
+                    orderId ?? "N/A",
+                    adminTransaction != null);
+
                 var gateway = _gatewayFactory.GetGateway(gatewayType);
                 var verification = await gateway.VerifyCallbackAsync(callbackData);
 
@@ -272,20 +462,19 @@ namespace EducenAPI.Services.Payment
                     return verification;
                 }
 
-                // Tìm transaction trong CẢ 2 DB (vì không biết TransactionType từ callback)
-                PaymentTransactionTenant? tenantTransaction = null;
-                PaymentTransaction? adminTransaction = null;
-
-                // Thử Tenant DB trước (Tuition - phổ biến hơn)
-                tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
-                    .Include(t => t.PaymentRecord)
-                    .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
-
-                if (tenantTransaction == null)
+                // Tìm transaction nếu chưa tìm được
+                if (tenantTransaction == null && adminTransaction == null)
                 {
-                    adminTransaction = await _adminDbContext.PaymentTransactions
+                    tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
                         .Include(t => t.PaymentRecord)
                         .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
+
+                    if (tenantTransaction == null)
+                    {
+                        adminTransaction = await _adminDbContext.PaymentTransactions
+                            .Include(t => t.PaymentRecord)
+                            .FirstOrDefaultAsync(t => t.PaymentRecordId == verification.OrderId);
+                    }
                 }
 
                 if (tenantTransaction == null && adminTransaction == null)
@@ -363,8 +552,219 @@ namespace EducenAPI.Services.Payment
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
-            return adminTransactions.Select(MapTransaction).ToList();
+                return adminTransactions.Select(MapTransaction).ToList();
         }
+
+        /// <summary>
+        /// Directly confirm payment without gateway verification (used when hash verify fails but VNPay reports success)
+        /// </summary>
+        public async Task ConfirmPaymentDirectlyAsync(string? orderId)
+        {
+            if (string.IsNullOrWhiteSpace(orderId)) return;
+
+            // Try Admin DB first
+            var adminTransaction = await _adminDbContext.PaymentTransactions
+                .Include(t => t.PaymentRecord)
+                .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+
+            if (adminTransaction != null && adminTransaction.Status != "Success")
+            {
+                adminTransaction.Status = "Success";
+                adminTransaction.CompletedAt = DateTime.UtcNow;
+                if (adminTransaction.PaymentRecord != null)
+                {
+                    adminTransaction.PaymentRecord.Status = "Paid";
+                    adminTransaction.PaymentRecord.PaymentDate = DateTime.UtcNow;
+
+                    if (adminTransaction.PaymentRecord.TransactionType == "Subscription")
+                    {
+                        await ActivateSubscriptionFromPaymentAsync(adminTransaction.PaymentRecord);
+                    }
+                }
+                await _adminDbContext.SaveChangesAsync();
+                _logger.LogInformation("Payment {OrderId} confirmed directly in AdminDB", orderId);
+                return;
+            }
+
+            // Try Tenant DB
+            var tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
+                .Include(t => t.PaymentRecord)
+                .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+
+            if (tenantTransaction != null && tenantTransaction.Status != "Success")
+            {
+                tenantTransaction.Status = "Success";
+                tenantTransaction.CompletedAt = DateTime.UtcNow;
+                if (tenantTransaction.PaymentRecord != null)
+                {
+                    tenantTransaction.PaymentRecord.Status = "Paid";
+                    tenantTransaction.PaymentRecord.PaymentDate = DateTime.UtcNow;
+
+                    if (tenantTransaction.PaymentRecord.TransactionType == "Tuition"
+                        && !string.IsNullOrWhiteSpace(tenantTransaction.PaymentRecord.ReferenceId))
+                    {
+                        await UpdateTuitionInvoiceAsync(
+                            tenantTransaction.PaymentRecord.ReferenceId,
+                            tenantTransaction.PaymentRecord.PaymentId);
+                    }
+                }
+                await _tenantDbContext.SaveChangesAsync();
+                _logger.LogInformation("Payment {OrderId} confirmed directly in TenantDB", orderId);
+            }
+        }
+
+        /// <summary>
+        /// Đánh dấu payment thất bại/hủy bỏ (khi hash verify fail nhưng VNPay báo hủy/thất bại)
+        /// </summary>
+        public async Task MarkPaymentAsFailedAsync(string? orderId, string reason, string status = "Failed")
+        {
+            if (string.IsNullOrWhiteSpace(orderId)) return;
+
+            // Try Admin DB first (Subscription)
+            var adminTransaction = await _adminDbContext.PaymentTransactions
+                .Include(t => t.PaymentRecord)
+                .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+
+            if (adminTransaction != null && adminTransaction.Status != "Success" && adminTransaction.Status != "Failed" && adminTransaction.Status != "Cancelled")
+            {
+                adminTransaction.Status = status;
+                adminTransaction.CompletedAt = DateTime.UtcNow;
+                adminTransaction.ErrorMessage = reason;
+                if (adminTransaction.PaymentRecord != null)
+                {
+                    adminTransaction.PaymentRecord.Status = status;
+                }
+                await _adminDbContext.SaveChangesAsync();
+                _logger.LogInformation("Payment {OrderId} marked as {Status} in AdminDB. Reason: {Reason}", orderId, status, reason);
+                return;
+            }
+
+            // Try Tenant DB (Tuition)
+            var tenantTransaction = await _tenantDbContext.PaymentTransactionTenants
+                .Include(t => t.PaymentRecord)
+                .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+
+            if (tenantTransaction != null && tenantTransaction.Status != "Success" && tenantTransaction.Status != "Failed" && tenantTransaction.Status != "Cancelled")
+            {
+                tenantTransaction.Status = status;
+                tenantTransaction.CompletedAt = DateTime.UtcNow;
+                tenantTransaction.ErrorMessage = reason;
+                if (tenantTransaction.PaymentRecord != null)
+                {
+                    tenantTransaction.PaymentRecord.Status = status;
+                }
+                await _tenantDbContext.SaveChangesAsync();
+                _logger.LogInformation("Payment {OrderId} marked as {Status} in TenantDB. Reason: {Reason}", orderId, status, reason);
+            }
+        }
+
+        private Task<TenantResolutionContext> ResolveCreateTenantContextAsync(CreatePaymentDto dto, bool isTuition)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.TenantId))
+            {
+                return Task.FromResult(new TenantResolutionContext(dto.TenantId.Trim(), "explicit", null));
+            }
+
+            if (isTuition && !string.IsNullOrWhiteSpace(_tenantDbContext.CurrentTenantId))
+            {
+                return Task.FromResult(new TenantResolutionContext(_tenantDbContext.CurrentTenantId.Trim(), "current-tenant-db", null));
+            }
+
+            // Thử lấy tenantId từ HTTP header (frontend gửi qua api.js interceptor)
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                var tenantFromHeader = httpContext.Request.Headers["tenant"].FirstOrDefault()
+                    ?? httpContext.Request.Headers["Tenant"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(tenantFromHeader) 
+                    && tenantFromHeader != DefaultTenantId)
+                {
+                    return Task.FromResult(new TenantResolutionContext(tenantFromHeader.Trim(), "http-header", null));
+                }
+
+                // Thử từ JWT claim
+                var tenantFromClaim = httpContext.User?.Claims
+                    ?.FirstOrDefault(c => c.Type == "TenantId")?.Value;
+                if (!string.IsNullOrWhiteSpace(tenantFromClaim) 
+                    && tenantFromClaim != DefaultTenantId)
+                {
+                    return Task.FromResult(new TenantResolutionContext(tenantFromClaim.Trim(), "jwt-claim", null));
+                }
+            }
+
+            return Task.FromResult(new TenantResolutionContext(DefaultTenantId, "fallback", null));
+        }
+
+        private async Task<TenantResolutionContext> ResolveCallbackTenantContextAsync(
+            Dictionary<string, string> callbackData)
+        {
+            var orderId = ExtractOrderId(callbackData);
+
+            var explicitTenant = ExtractTenantId(callbackData);
+            if (!string.IsNullOrWhiteSpace(explicitTenant))
+            {
+                return new TenantResolutionContext(explicitTenant.Trim(), "explicit", orderId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(orderId))
+            {
+                var adminTransaction = await _adminDbContext.PaymentTransactions
+                    .Include(t => t.PaymentRecord)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.PaymentRecordId == orderId);
+
+                if (!string.IsNullOrWhiteSpace(adminTransaction?.PaymentRecord?.TenantId))
+                {
+                    return new TenantResolutionContext(adminTransaction.PaymentRecord.TenantId, "record-derived", orderId);
+                }
+
+                var adminPaymentRecord = await _adminDbContext.PaymentRecords
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.PaymentId == orderId);
+
+                if (!string.IsNullOrWhiteSpace(adminPaymentRecord?.TenantId))
+                {
+                    return new TenantResolutionContext(adminPaymentRecord.TenantId, "record-derived", orderId);
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_tenantDbContext.CurrentTenantId))
+            {
+                return new TenantResolutionContext(_tenantDbContext.CurrentTenantId.Trim(), "current-tenant-db", orderId);
+            }
+
+            return new TenantResolutionContext(DefaultTenantId, "fallback", orderId);
+        }
+
+        private static string? ExtractTenantId(IReadOnlyDictionary<string, string> callbackData)
+        {
+            if (callbackData.TryGetValue("tenantId", out var tenantId) && !string.IsNullOrWhiteSpace(tenantId))
+                return tenantId;
+
+            if (callbackData.TryGetValue("TenantId", out tenantId) && !string.IsNullOrWhiteSpace(tenantId))
+                return tenantId;
+
+            if (callbackData.TryGetValue("vnp_TenantId", out tenantId) && !string.IsNullOrWhiteSpace(tenantId))
+                return tenantId;
+
+            return null;
+        }
+
+        private static string? ExtractOrderId(IReadOnlyDictionary<string, string> callbackData)
+        {
+            if (callbackData.TryGetValue("vnp_TxnRef", out var orderId) && !string.IsNullOrWhiteSpace(orderId))
+                return orderId;
+
+            if (callbackData.TryGetValue("orderId", out orderId) && !string.IsNullOrWhiteSpace(orderId))
+                return orderId;
+
+            if (callbackData.TryGetValue("OrderId", out orderId) && !string.IsNullOrWhiteSpace(orderId))
+                return orderId;
+
+            return null;
+        }
+
+        private sealed record TenantResolutionContext(string TenantId, string Source, string? OrderId);
 
         private async Task<PaymentVerificationResult?> ApplyVerificationToTenantAsync(
             PaymentTransactionTenant transaction,
@@ -579,6 +979,7 @@ namespace EducenAPI.Services.Payment
                 invoice.PaidAt = DateTime.UtcNow;
                 invoice.PaymentRecordId = paymentRecordId;
                 invoice.UpdatedAt = DateTime.UtcNow;
+                invoice.Notes = "Học sinh nộp tiền online";
 
                 await _tenantDbContext.SaveChangesAsync();
 

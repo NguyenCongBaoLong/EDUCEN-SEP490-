@@ -8,27 +8,34 @@ namespace EducenAPI.Services.Payment
 {
     public class VNPayService : IPaymentGateway
     {
-        private readonly IConfiguration _configuration;
+        private const string GatewayType = "VNPay";
+        private const string DefaultTenantId = "default-tenant";
+
+        private readonly ITenantPaymentGatewayConfigService _tenantPaymentGatewayConfigService;
         private readonly ILogger<VNPayService> _logger;
 
         public string GatewayName => "VNPay";
 
-        public VNPayService(IConfiguration configuration, ILogger<VNPayService> logger)
+        public VNPayService(
+            ITenantPaymentGatewayConfigService tenantPaymentGatewayConfigService,
+            ILogger<VNPayService> logger)
         {
-            _configuration = configuration;
+            _tenantPaymentGatewayConfigService = tenantPaymentGatewayConfigService;
             _logger = logger;
         }
 
-        public Task<PaymentGatewayResponse> CreatePaymentAsync(CreatePaymentRequest request)
+        public async Task<PaymentGatewayResponse> CreatePaymentAsync(CreatePaymentRequest request)
         {
             try
             {
-                var vnp_TmnCode = _configuration["PaymentGateways:VNPay:TmnCode"]!;
-                var vnp_HashSecret = _configuration["PaymentGateways:VNPay:HashSecret"]!;
-                var vnp_Url = _configuration["PaymentGateways:VNPay:BaseUrl"]!;
-                
-                var vnp_ReturnUrl = _configuration["PaymentGateways:VNPay:FrontendReturnUrl"]
-                    ?? "http://localhost:5173/payment/result";
+                var config = await ResolveEffectiveConfigAsync(request.TenantId, "create payment", request.OrderId);
+                var vnp_TmnCode = config.TmnCode;
+                var vnp_HashSecret = config.HashSecret;
+                var vnp_Url = config.BaseUrl;
+                // Ưu tiên ReturnUrl từ request (frontend gửi kèm tenant params), fallback về config
+                var vnp_ReturnUrl = !string.IsNullOrWhiteSpace(request.ReturnUrl)
+                    ? request.ReturnUrl
+                    : config.ReturnUrl;
 
                 // Convert amount to VND (VNPay uses smallest currency unit)
                 var vnp_Amount = (long)(request.Amount * 100);
@@ -79,17 +86,21 @@ namespace EducenAPI.Services.Payment
 
                 foreach (var param in sortedParams)
                 {
-                    // URL-encode cả key và value (uppercase hex) cho signing data
-                    var encodedKey = UrlEncode(param.Key);
-                    var encodedValue = UrlEncode(param.Value ?? "");
+                    var rawKey = param.Key;
+                    var rawValue = param.Value ?? "";
 
-                    if (hashData.Length > 0)
-                        hashData.Append('&');
-                    hashData.Append($"{encodedKey}={encodedValue}");
+                    // URL-encoded cho query URL
+                    var encodedKey = UrlEncode(rawKey);
+                    var encodedValue = UrlEncode(rawValue);
 
                     if (query.Length > 0)
                         query.Append('&');
                     query.Append($"{encodedKey}={encodedValue}");
+
+                    // Signing data: URL-encoded (VNPay verify payment URL bằng URL-encoded data)
+                    if (hashData.Length > 0)
+                        hashData.Append('&');
+                    hashData.Append($"{encodedKey}={encodedValue}");
                 }
 
                 var signData = hashData.ToString();
@@ -99,9 +110,11 @@ namespace EducenAPI.Services.Payment
                 var paymentUrl = $"{vnp_Url}?{query}&vnp_SecureHash={vnp_SecureHash}";
 
                 _logger.LogDebug("VNPay CreatePayment - SignData: {SignData}, SecureHash: {Hash}", signData, vnp_SecureHash);
-                _logger.LogInformation("VNPay payment URL created for Order {OrderId}", request.OrderId);
+                _logger.LogInformation(
+                    "VNPay payment URL created. OrderId: {OrderId}, TmnCode: {TmnCode}, ConfigSource: {Source}",
+                    request.OrderId, vnp_TmnCode, config.Source);
 
-                return Task.FromResult(new PaymentGatewayResponse
+                return new PaymentGatewayResponse
                 {
                     Success = true,
                     PaymentUrl = paymentUrl,
@@ -109,41 +122,44 @@ namespace EducenAPI.Services.Payment
                     AdditionalData = new Dictionary<string, object>
                     {
                         { "vnp_CreateDate", vnp_CreateDate },
-                        { "vnp_TmnCode", vnp_TmnCode }
+                        { "vnp_TmnCode", vnp_TmnCode },
+                        { "configSource", config.Source }
                     }
-                });
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating VNPay payment for Order {OrderId}", request.OrderId);
-                return Task.FromResult(new PaymentGatewayResponse
+                return new PaymentGatewayResponse
                 {
                     Success = false,
                     ErrorMessage = $"Failed to create VNPay payment: {ex.Message}"
-                });
+                };
             }
         }
 
-        public Task<PaymentVerificationResult> VerifyCallbackAsync(Dictionary<string, string> callbackData)
+        public async Task<PaymentVerificationResult> VerifyCallbackAsync(Dictionary<string, string> callbackData)
         {
             try
             {
-                var vnp_HashSecret = _configuration["PaymentGateways:VNPay:HashSecret"]!;
+                var config = await ResolveEffectiveConfigAsync(ExtractTenantId(callbackData), "verify callback");
+                var vnp_HashSecret = config.HashSecret;
 
                 // Extract secure hash from callback
                 var vnp_SecureHash = callbackData.GetValueOrDefault("vnp_SecureHash");
                 if (string.IsNullOrEmpty(vnp_SecureHash))
                 {
-                    return Task.FromResult(new PaymentVerificationResult
+                    return new PaymentVerificationResult
                     {
                         IsValid = false,
                         Message = "Missing secure hash"
-                    });
+                    };
                 }
 
-                // Remove hash from data for verification
+                // Remove hash from data for verification — only include vnp_ keys
+                // KHÔNG exclude vnp_ReturnUrl - VNPay include trong callback signing
                 var dataToVerify = callbackData
-    .Where(x => x.Key != "vnp_SecureHash" && x.Key != "vnp_SecureHashType")
+    .Where(x => x.Key.StartsWith("vnp_") && x.Key != "vnp_SecureHash" && x.Key != "vnp_SecureHashType")
     .OrderBy(x => x.Key, StringComparer.Ordinal)
     .ToList();
 
@@ -151,7 +167,7 @@ namespace EducenAPI.Services.Payment
 
                 foreach (var param in dataToVerify)
                 {
-                    // URL-encode cả key và value (uppercase hex) cho signing data
+                    // URL-encoded signing - đồng bộ với CreatePaymentAsync
                     var encodedKey = UrlEncode(param.Key);
                     var encodedValue = UrlEncode(param.Value ?? "");
 
@@ -163,17 +179,18 @@ namespace EducenAPI.Services.Payment
                 var signData = queryBuilder.ToString();
                 var calculatedHash = HmacSHA512(vnp_HashSecret, signData);
 
-                _logger.LogDebug("VNPay VerifyCallback - SignData: {SignData}, CalculatedHash: {Hash}, ReceivedHash: {ReceivedHash}",
-                    signData, calculatedHash, vnp_SecureHash);
+                _logger.LogInformation("VNPay VerifyCallback. CalculatedHash: {CalcHash}, ReceivedHash: {RecvHash}",
+                    calculatedHash[..16], vnp_SecureHash[..16]);
 
                 if (!calculatedHash.Equals(vnp_SecureHash, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    _logger.LogWarning("VNPay callback hash mismatch");
-                    return Task.FromResult(new PaymentVerificationResult
+                    _logger.LogWarning("VNPay callback hash mismatch. SignData preview: [{SignData}]",
+                        string.Join(", ", dataToVerify.Select(p => $"{p.Key}={p.Value}")));
+                    return new PaymentVerificationResult
                     {
                         IsValid = false,
                         Message = "Invalid secure hash"
-                    });
+                    };
                 }
 
                 // Parse response
@@ -190,7 +207,7 @@ namespace EducenAPI.Services.Payment
                 _logger.LogInformation("VNPay callback verified for Order {OrderId}, Success: {Success}",
                     callbackData.GetValueOrDefault("vnp_TxnRef"), isSuccessful);
 
-                return Task.FromResult(new PaymentVerificationResult
+                return new PaymentVerificationResult
                 {
                     IsValid = true,
                     IsSuccessful = isSuccessful,
@@ -201,16 +218,16 @@ namespace EducenAPI.Services.Payment
                     ResponseCode = responseCode,
                     Message = isSuccessful ? "Payment successful" : $"Payment failed with code: {responseCode}",
                     AdditionalData = callbackData.ToDictionary(x => x.Key, x => (object)x.Value)
-                });
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error verifying VNPay callback");
-                return Task.FromResult(new PaymentVerificationResult
+                return new PaymentVerificationResult
                 {
                     IsValid = false,
                     Message = $"Verification error: {ex.Message}"
-                });
+                };
             }
         }
 
@@ -218,9 +235,10 @@ namespace EducenAPI.Services.Payment
         {
             try
             {
-                var vnp_TmnCode = _configuration["PaymentGateways:VNPay:TmnCode"]!;
-                var vnp_HashSecret = _configuration["PaymentGateways:VNPay:HashSecret"]!;
-                var vnp_ApiUrl = _configuration["PaymentGateways:VNPay:ApiUrl"]!;
+                var config = await ResolveEffectiveConfigAsync(request.TenantId, "process refund", request.OrderId);
+                var vnp_TmnCode = config.TmnCode;
+                var vnp_HashSecret = config.HashSecret;
+                var vnp_ApiUrl = config.ApiUrl;
 
                 var vnp_RequestId = Guid.NewGuid().ToString();
                 var vnp_Version = "2.1.0";
@@ -274,7 +292,11 @@ namespace EducenAPI.Services.Payment
                 {
                     Success = refundSuccess,
                     RefundTransactionId = vnp_RequestId,
-                    AdditionalData = new Dictionary<string, object> { { "response", responseBody } }
+                    AdditionalData = new Dictionary<string, object>
+                    {
+                        { "response", responseBody },
+                        { "configSource", config.Source }
+                    }
                 };
             }
             catch (Exception ex)
@@ -311,6 +333,59 @@ namespace EducenAPI.Services.Payment
             return System.Text.RegularExpressions.Regex.Replace(
                 encoded, @"%([0-9a-f]{2})",
                 m => "%" + m.Groups[1].Value.ToUpper());
+        }
+
+        private async Task<EffectivePaymentGatewayConfig> ResolveEffectiveConfigAsync(
+            string? tenantId,
+            string operation,
+            string? orderId = null)
+        {
+            // TenantId rỗng/null → Subscription payment → dùng global config (SystemAdmin's VNPay)
+            // TenantId có giá trị → Tuition payment → ưu tiên per-tenant config, fallback global
+            if (string.IsNullOrWhiteSpace(tenantId))
+            {
+                var globalConfig = _tenantPaymentGatewayConfigService.GetGlobalConfig(GatewayType);
+
+                _logger.LogInformation(
+                    "Resolved VNPay GLOBAL config for {Operation}. TmnCode: {TmnCode}, OrderId: {OrderId}",
+                    operation,
+                    globalConfig.TmnCode,
+                    orderId ?? "N/A");
+
+                return globalConfig;
+            }
+
+            var tenantConfig = await _tenantPaymentGatewayConfigService
+                .GetEffectiveConfigAsync(tenantId.Trim(), GatewayType);
+
+            _logger.LogDebug(
+                "Resolved VNPay config for {Operation}. Tenant: {TenantId}, Source: {Source}, OrderId: {OrderId}",
+                operation,
+                tenantId.Trim(),
+                tenantConfig.Source,
+                orderId ?? "N/A");
+
+            return tenantConfig;
+        }
+
+        private static string? ExtractTenantId(IReadOnlyDictionary<string, string> callbackData)
+        {
+            if (callbackData.TryGetValue("tenantId", out var tenantId) && !string.IsNullOrWhiteSpace(tenantId))
+            {
+                return tenantId;
+            }
+
+            if (callbackData.TryGetValue("TenantId", out tenantId) && !string.IsNullOrWhiteSpace(tenantId))
+            {
+                return tenantId;
+            }
+
+            if (callbackData.TryGetValue("vnp_TenantId", out tenantId) && !string.IsNullOrWhiteSpace(tenantId))
+            {
+                return tenantId;
+            }
+
+            return null;
         }
     }
 }

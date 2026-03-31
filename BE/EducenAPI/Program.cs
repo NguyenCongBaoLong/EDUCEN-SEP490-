@@ -178,7 +178,10 @@ builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(
 builder.Services.AddScoped<ITeacherReportService, TeacherReportService>();
 
 // ── Payment Services ───────────────────────────────────────────────────────
+builder.Services.Configure<PaymentConfigResolutionOptions>(
+    builder.Configuration.GetSection(PaymentConfigResolutionOptions.SectionName));
 builder.Services.AddScoped<VNPayService>();
+builder.Services.AddScoped<ITenantPaymentGatewayConfigService, TenantPaymentGatewayConfigService>();
 builder.Services.AddScoped<PaymentGatewayFactory>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ITuitionService, TuitionService>();

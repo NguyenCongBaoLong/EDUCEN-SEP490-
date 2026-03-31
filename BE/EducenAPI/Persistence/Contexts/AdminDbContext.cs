@@ -25,6 +25,8 @@ namespace EducenAPI.Persistence.Contexts
         // === Payment System ===
         public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<RefundRequest> RefundRequests { get; set; }
+        public DbSet<TenantPaymentGatewayConfig> TenantPaymentGatewayConfigs { get; set; }
+        public DbSet<TenantPaymentConfigAudit> TenantPaymentConfigAudits { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -95,6 +97,28 @@ namespace EducenAPI.Persistence.Contexts
 
             builder.Entity<RefundRequest>()
                 .HasIndex(rr => rr.SubscriptionId);
+
+            // === TenantPaymentGatewayConfig Configuration ===
+            builder.Entity<TenantPaymentGatewayConfig>()
+                .HasOne(c => c.Tenant)
+                .WithMany()
+                .HasForeignKey(c => c.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<TenantPaymentGatewayConfig>()
+                .HasIndex(c => new { c.TenantId, c.GatewayType })
+                .IsUnique()
+                .HasFilter("[IsDeleted] = 0");
+
+            builder.Entity<TenantPaymentGatewayConfig>()
+                .HasIndex(c => c.Status);
+
+            // === TenantPaymentConfigAudit Configuration ===
+            builder.Entity<TenantPaymentConfigAudit>()
+                .HasOne(a => a.TenantPaymentGatewayConfig)
+                .WithMany(c => c.AuditLogs)
+                .HasForeignKey(a => a.TenantPaymentGatewayConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

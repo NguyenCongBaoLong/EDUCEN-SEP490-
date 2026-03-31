@@ -22,6 +22,14 @@ const PaymentResult = () => {
     const success = searchParams.get('success') === 'true';
     const orderId = searchParams.get('orderId');
     const transactionId = searchParams.get('transactionId');
+    const tenantHint = searchParams.get('tenantId')
+        || searchParams.get('tenant')
+        || searchParams.get('TenantId')
+        || searchParams.get('Tenant');
+
+    const isValidTenantId = (tenantId) => (
+        !!tenantId && tenantId !== 'undefined' && tenantId !== 'null'
+    );
 
     // Xác định trang điều hướng theo role
     const invoicesPath = user?.role === 'Parent'
@@ -33,6 +41,9 @@ const PaymentResult = () => {
     const invoicesLabel = user?.role === 'Admin' ? 'Quản lý gói dịch vụ' : 'Xem hóa đơn';
 
     useEffect(() => {
+        if (isValidTenantId(tenantHint)) {
+            localStorage.setItem('tenantId', tenantHint);
+        }
         verifyPayment();
     }, []);
 
@@ -84,7 +95,19 @@ const PaymentResult = () => {
                     toast.success('Thanh toán thành công!');
                 }
             } else if (isDirectVNPayRedirect) {
-                // VNPay redirect nhưng không thành công
+                // VNPay redirect nhưng không thành công (hủy/giả mạo)
+                // Gửi params lên backend để cập nhật DB (Failed)
+                try {
+                    const vnpParams = {};
+                    searchParams.forEach((value, key) => {
+                        if (key.startsWith('vnp_')) {
+                            vnpParams[key] = value;
+                        }
+                    });
+                    await paymentService.confirmPayment(vnpParams);
+                } catch {
+                    // Backend confirm fail cũng không sao - đã là hủy rồi
+                }
                 setStatus('failed');
                 toast.error('Thanh toán thất bại');
             } else {
