@@ -40,6 +40,12 @@ namespace EducenAPI.Services
 
         public async Task<GradeDto> CreateGradeAsync(CreateGradeDto dto)
         {
+            dto.GradeName = dto.GradeName?.Trim();
+
+            var exists = await _context.Grades.AnyAsync(g => g.GradeName == dto.GradeName);
+            if (exists)
+                throw new InvalidOperationException("Tên khối đã tồn tại.");
+
             var grade = new Grade
             {
                 GradeName = dto.GradeName

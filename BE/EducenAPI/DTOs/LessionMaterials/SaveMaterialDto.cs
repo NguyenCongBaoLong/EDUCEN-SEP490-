@@ -9,6 +9,7 @@ namespace EducenAPI.DTOs.LessionMaterials
         public int? GradeId { get; set; }
 
         [Required]
+        [StringLength(200, ErrorMessage = "Title cannot exceed 200 characters")]
         public string Title { get; set; } = null!;
 
         public bool SaveToLibrary { get; set; }

@@ -73,6 +73,11 @@ namespace EducenAPI.Services
         {
             try
             {
+                dto.FullName = dto.FullName?.Trim();
+                dto.Email = dto.Email?.Trim()?.ToLower();
+                dto.PhoneNumber = dto.PhoneNumber?.Trim();
+                dto.Username = dto.Username?.Trim();
+
                 // 1. Validate base required fields
                 ValidateBaseStudentData(dto);
 

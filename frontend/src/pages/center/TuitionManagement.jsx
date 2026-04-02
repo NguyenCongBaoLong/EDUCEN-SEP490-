@@ -45,11 +45,8 @@ const TuitionManagement = () => {
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
     
-    // State cho quản lý đơn giá lớp học
-    const [currentClassPrice, setCurrentClassPrice] = useState(0);
-    const [isEditingPrice, setIsEditingPrice] = useState(false);
-    const [newPriceInput, setNewPriceInput] = useState('');
-    const [updatingPrice, setUpdatingPrice] = useState(false);
+    // State cho tick chọn học sinh
+    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     
     // State cho danh sách hóa đơn
     const [invoices, setInvoices] = useState([]);
@@ -112,62 +109,10 @@ const TuitionManagement = () => {
         try {
             const response = await api.get('/Classes');
             setClasses(response.data);
-            
-            // Nếu có classId từ URL, tìm giá của nó
-            if (classId) {
-                const cls = response.data.find(c => c.classId === parseInt(classId));
-                if (cls) setCurrentClassPrice(cls.pricePerSession || 0);
-            }
         } catch (error) {
             toast.error('Không thể tải danh sách lớp');
         } finally {
             setLoadingClasses(false);
-        }
-    };
-
-    // Khi chọn lớp khác, cập nhật đơn giá của lớp đó
-    useEffect(() => {
-        if (selectedClass) {
-            const cls = classes.find(c => c.classId === parseInt(selectedClass));
-            if (cls) {
-                setCurrentClassPrice(cls.pricePerSession || 0);
-                setIsEditingPrice(false);
-            }
-        } else {
-            setCurrentClassPrice(0);
-            setIsEditingPrice(false);
-        }
-    }, [selectedClass, classes]);
-
-    const handleUpdatePrice = async () => {
-        const priceValue = parseFloat(newPriceInput);
-        if (isNaN(priceValue) || priceValue < 0) {
-            toast.error('Vui lòng nhập đơn giá hợp lệ');
-            return;
-        }
-
-        setUpdatingPrice(true);
-        try {
-            await tuitionService.updateClassPrice(parseInt(selectedClass), priceValue);
-            setCurrentClassPrice(priceValue);
-            setIsEditingPrice(false);
-            toast.success('Đã cập nhật đơn giá lớp học');
-            
-            // Cập nhật lại danh sách lớp để đồng bộ dữ liệu
-            setClasses(prev => prev.map(cls => 
-                cls.classId === parseInt(selectedClass) 
-                    ? { ...cls, pricePerSession: priceValue } 
-                    : cls
-            ));
-            
-            // Nếu đang có kết quả tính toán, tính lại để cập nhật số liệu
-            if (calculations.length > 0) {
-                handleCalculate();
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi cập nhật đơn giá');
-        } finally {
-            setUpdatingPrice(false);
         }
     };
 
@@ -186,6 +131,7 @@ const TuitionManagement = () => {
                 selectedYear
             );
             setCalculations(data);
+            setSelectedStudentIds([]);
             toast.success(`Đã tính toán học phí cho ${data.length} học sinh`);
         } catch (error) {
             const data = error.response?.data;
@@ -204,35 +150,48 @@ const TuitionManagement = () => {
 
     // Tạo hóa đơn hàng loạt
     const handleGenerateInvoices = async () => {
-        if (calculations.length === 0) {
-            toast.error('Vui lòng tính toán học phí trước');
+        // Lọc học sinh đã chọn
+        const selected = calculations.filter(c => selectedStudentIds.includes(c.studentId));
+        
+        // Chỉ giữ học sinh có buổi học > 0
+        const validStudents = selected.filter(c => c.attendedSessions > 0);
+        const noSessionStudents = selected.filter(c => c.attendedSessions === 0);
+
+        if (validStudents.length === 0) {
+            toast.error('Vui lòng chọn ít nhất một học sinh có buổi học.');
             return;
+        }
+
+        let warningMsg = '';
+        if (noSessionStudents.length > 0) {
+            warningMsg = `<br/><span style="color:#f59e0b">⚠ ${noSessionStudents.length} học sinh không có buổi học sẽ bị bỏ qua.</span>`;
         }
 
         setConfirmModal({
             isOpen: true,
-            title: 'Tạo hóa đơn hàng loạt',
-            message: `Bạn có muốn tạo hóa đơn cho <strong>${calculations.length}</strong> học sinh trong tháng này không?`,
+            title: 'Tạo hóa đơn',
+            message: `Tạo hóa đơn cho <strong>${validStudents.length}</strong> học sinh?${warningMsg}`,
             onConfirm: () => {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                executeGenerateInvoices();
+                executeGenerateInvoices(validStudents.map(c => c.studentId));
             },
             type: 'info'
         });
     };
 
-    const executeGenerateInvoices = async () => {
+    const executeGenerateInvoices = async (studentIds) => {
         setGenerating(true);
         try {
             const result = await tuitionService.createBatchInvoices({
                 classId: parseInt(selectedClass),
                 month: selectedMonth,
-                year: selectedYear
+                year: selectedYear,
+                studentIds
             });
 
             if (result.successCount > 0) {
                 toast.success(`Đã tạo ${result.successCount} hóa đơn thành công`);
-                setCalculations([]);
+                setSelectedStudentIds([]);
                 fetchInvoices();
             }
             if (result.failedCount > 0) {
@@ -481,51 +440,6 @@ const TuitionManagement = () => {
                                         ))}
                                     </select>
                                 </div>
-                                
-                                {selectedClass && (
-                                    <div className="filter-group class-price-group">
-                                        <label>Đơn giá/buổi</label>
-                                        {!isEditingPrice ? (
-                                            <div className="price-display">
-                                                <span className="price-value">{formatCurrency(currentClassPrice)}</span>
-                                                <button 
-                                                    className="edit-price-btn"
-                                                    onClick={() => {
-                                                        setNewPriceInput(currentClassPrice.toString());
-                                                        setIsEditingPrice(true);
-                                                    }}
-                                                    title="Chỉnh sửa đơn giá"
-                                                >
-                                                    <Edit3 size={16} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="price-edit">
-                                                <input 
-                                                    type="number"
-                                                    value={newPriceInput}
-                                                    onChange={(e) => setNewPriceInput(e.target.value)}
-                                                    placeholder="Nhập giá..."
-                                                    className="price-input"
-                                                    autoFocus
-                                                />
-                                                <button 
-                                                    className="save-price-btn"
-                                                    onClick={handleUpdatePrice}
-                                                    disabled={updatingPrice}
-                                                >
-                                                    <Save size={16} />
-                                                </button>
-                                                <button 
-                                                    className="cancel-price-btn"
-                                                    onClick={() => setIsEditingPrice(false)}
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
 
                                 <div className="filter-group">
                                     <label>Năm</label>
@@ -552,19 +466,38 @@ const TuitionManagement = () => {
                             <div className="calculation-results">
                                 <div className="results-header">
                                     <h3>Kết quả tính toán ({calculations.length} học sinh)</h3>
-                                    <button 
-                                        className="generate-btn"
-                                        onClick={handleGenerateInvoices}
-                                        disabled={generating}
-                                    >
-                                        <FileText size={18} />
-                                        {generating ? 'Đang tạo...' : 'Tạo hóa đơn'}
-                                    </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                            Đã chọn: <strong>{selectedStudentIds.length}</strong>
+                                        </span>
+                                        <button 
+                                            className="generate-btn"
+                                            onClick={handleGenerateInvoices}
+                                            disabled={generating || selectedStudentIds.length === 0}
+                                        >
+                                            <FileText size={18} />
+                                            {generating ? 'Đang tạo...' : `Tạo hóa đơn (${selectedStudentIds.length})`}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="calculation-table">
                                     <table>
                                         <thead>
                                             <tr>
+                                                <th style={{ width: 40 }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedStudentIds.length === calculations.length && calculations.length > 0}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedStudentIds(calculations.map(c => c.studentId));
+                                                            } else {
+                                                                setSelectedStudentIds([]);
+                                                            }
+                                                        }}
+                                                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                    />
+                                                </th>
                                                 <th>Học sinh</th>
                                                 <th>Số buổi học</th>
                                                 <th>Đã học</th>
@@ -574,16 +507,37 @@ const TuitionManagement = () => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {calculations.map((calc, index) => (
-                                                <tr key={index}>
-                                                    <td>{calc.studentName}</td>
+                                            {calculations.map((calc, index) => {
+                                                const isSelected = selectedStudentIds.includes(calc.studentId);
+                                                const hasNoSessions = calc.attendedSessions === 0;
+                                                return (
+                                                <tr key={index} style={hasNoSessions ? { opacity: 0.5, background: '#fef2f2' } : {}}>
+                                                    <td>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedStudentIds(prev => [...prev, calc.studentId]);
+                                                                } else {
+                                                                    setSelectedStudentIds(prev => prev.filter(id => id !== calc.studentId));
+                                                                }
+                                                            }}
+                                                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        {calc.studentName}
+                                                        {hasNoSessions && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#ef4444' }}>(0 buổi)</span>}
+                                                    </td>
                                                     <td>{calc.totalSessions}</td>
                                                     <td className="attended">{calc.attendedSessions}</td>
                                                     <td className="absent">{calc.absentSessions}</td>
                                                     <td>{formatCurrency(calc.pricePerSession)}</td>
                                                     <td className="total">{formatCurrency(calc.finalAmount)}</td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

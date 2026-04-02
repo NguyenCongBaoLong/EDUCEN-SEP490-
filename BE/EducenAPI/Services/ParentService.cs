@@ -75,6 +75,10 @@ namespace EducenAPI.Services
 
         public async Task<ParentDto> CreateParentAsync(CreateParentDto dto)
         {
+            dto.Username = dto.Username?.Trim();
+            dto.Email = dto.Email?.Trim()?.ToLower();
+            dto.FullName = dto.FullName?.Trim();
+
             string? username = dto.Username;
             string? password = dto.Password;
             string accountStatus = "Active";

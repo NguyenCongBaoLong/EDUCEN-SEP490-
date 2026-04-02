@@ -27,5 +27,11 @@ namespace EducenAPI.DTOs
         public string SubDomain { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
+
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username phải từ 3 đến 50 ký tự.")]
+        public string? AdminUsername { get; set; }
+
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 đến 100 ký tự.")]
+        public string? AdminPassword { get; set; }
     }
 }

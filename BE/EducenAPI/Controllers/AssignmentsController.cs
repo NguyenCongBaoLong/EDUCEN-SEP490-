@@ -22,18 +22,32 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> CreateAssignment([FromForm] CreateAssignmentDto dto)
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var result = await _assignmentService.CreateAssignmentAsync(dto, baseUrl);
-            return StatusCode(StatusCodes.Status201Created, result);
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _assignmentService.CreateAssignmentAsync(dto, baseUrl);
+                return StatusCode(StatusCodes.Status201Created, result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> UpdateAssignment(int id, [FromForm] CreateAssignmentDto dto)
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var result = await _assignmentService.UpdateAssignmentAsync(id, dto, baseUrl);
-            return Ok(result);
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _assignmentService.UpdateAssignmentAsync(id, dto, baseUrl);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet]
@@ -66,8 +80,15 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> ImportAssignment([FromBody] EducenAPI.DTOs.Common.ImportDto dto)
         {
-            var result = await _assignmentService.ImportAssignmentAsync(dto.SourceId, dto.TargetSessionId, dto.EndTime);
-            return Ok(result);
+            try
+            {
+                var result = await _assignmentService.ImportAssignmentAsync(dto.SourceId, dto.TargetSessionId, dto.EndTime);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
         [HttpDelete("{id:int}")]
         [Authorize(Roles = "Teacher,Assistant,Admin")]

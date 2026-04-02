@@ -24,8 +24,15 @@ namespace EducenAPI.Controllers
         [HttpPost("subscribe")]
         public async Task<IActionResult> RegisterSubscription(RegisterSubscriptionRequestDTO request)
         {
-            var result = await _subscriptionService.RegisterSubscription(request);
-            return Ok(result);
+            try
+            {
+                var result = await _subscriptionService.RegisterSubscription(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("{tenantId}/cancel")]
@@ -39,17 +46,31 @@ namespace EducenAPI.Controllers
         [HttpPost("renew")]
         public async Task<IActionResult> RenewSubscription(RenewSubscriptionRequestDTO request)
         {
-            var result = await _subscriptionService.RenewSubscription(request);
+            try
+            {
+                var result = await _subscriptionService.RenewSubscription(request);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("change-plan")]
         public async Task<IActionResult> ChangePlan(ChangePlanRequestDTO request)
         {
-            var result = await _subscriptionService.ChangePlan(request);
+            try
+            {
+                var result = await _subscriptionService.ChangePlan(request);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("{tenantId}/subscription-history")]

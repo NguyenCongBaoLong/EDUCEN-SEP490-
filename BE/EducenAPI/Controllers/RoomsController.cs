@@ -39,17 +39,31 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<ActionResult<RoomDto>> CreateRoom(CreateRoomDto dto)
         {
-            var room = await _roomService.CreateRoomAsync(dto);
-            return CreatedAtAction(nameof(GetRoom), new { id = room.RoomId }, room);
+            try
+            {
+                var room = await _roomService.CreateRoomAsync(dto);
+                return CreatedAtAction(nameof(GetRoom), new { id = room.RoomId }, room);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateRoom(int id, UpdateRoomDto dto)
         {
-            var success = await _roomService.UpdateRoomAsync(id, dto);
-            if (!success) return NotFound();
-            return NoContent();
+            try
+            {
+                var success = await _roomService.UpdateRoomAsync(id, dto);
+                if (!success) return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]

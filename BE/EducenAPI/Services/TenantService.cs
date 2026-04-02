@@ -4,6 +4,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace EducenAPI.Services.TenantService
 {
@@ -21,7 +22,7 @@ namespace EducenAPI.Services.TenantService
             _serviceProvider = serviceProvider;
         }
 
-        public Tenant CreateTenant(CreateTenantRequest request)
+        public async Task<Tenant> CreateTenant(CreateTenantRequest request)
         {
             request.TenantName = request.TenantName?.Trim();
             request.ContactPerson = request.ContactPerson?.Trim();
@@ -56,8 +57,6 @@ namespace EducenAPI.Services.TenantService
                 PhoneNumber = request.PhoneNumber,
                 Address = request.Address,
                 SubDomain = request.SubDomain,
-                Username = "admin",
-                Password = "Admin@123",
                 IsActive = true
             };
 
@@ -92,6 +91,31 @@ namespace EducenAPI.Services.TenantService
                     dbContext.Database.Migrate();
                 }
 
+                // Tạo admin cho tenant nếu có nhập Username và Password
+                if (!string.IsNullOrWhiteSpace(request.AdminUsername) && !string.IsNullOrWhiteSpace(request.AdminPassword))
+                {
+                    var username = request.AdminUsername.Trim();
+
+                    // Check username trùng trong DB của tenant
+                    var usernameExists = await dbContext.Users.AnyAsync(u => u.Username == username);
+                    if (usernameExists)
+                        throw new Exception($"Username '{username}' đã tồn tại trong tenant này.");
+
+                    var adminUser = new Models.User
+                    {
+                        Username = username,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.AdminPassword),
+                        FullName = request.TenantName,
+                        Email = request.Email,
+                        RoleId = 1, // Admin
+                        AccountStatus = "Active",
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    dbContext.Users.Add(adminUser);
+                    await dbContext.SaveChangesAsync();
+                }
+
                 _adminDbContext.Add(tenant);
                 _adminDbContext.SaveChanges();
             }
@@ -122,12 +146,30 @@ namespace EducenAPI.Services.TenantService
             if (tenant == null)
                 return null;
 
-            tenant.TenantName = request.TenantName;
-            tenant.ContactPerson = request.ContactPerson;
-            tenant.Email = request.Email;
-            tenant.PhoneNumber = request.PhoneNumber;
-            tenant.Address = request.Address;
-            tenant.SubDomain = request.SubDomain;
+            // Trim input
+            var tenantName = request.TenantName?.Trim();
+            var subDomain = request.SubDomain?.Trim().ToLower();
+
+            // Check duplicate SubDomain (trừ chính nó)
+            if (!string.IsNullOrWhiteSpace(subDomain) && subDomain != tenant.SubDomain)
+            {
+                if (_adminDbContext.Tenants.Any(t => t.SubDomain == subDomain && t.TenantId != tenantId))
+                    throw new Exception("SubDomain đã tồn tại.");
+            }
+
+            // Check duplicate TenantName (trừ chính nó)
+            if (!string.IsNullOrWhiteSpace(tenantName) && tenantName != tenant.TenantName)
+            {
+                if (_adminDbContext.Tenants.Any(t => t.TenantName == tenantName && t.TenantId != tenantId))
+                    throw new Exception("Tên trung tâm đã tồn tại.");
+            }
+
+            tenant.TenantName = tenantName ?? tenant.TenantName;
+            tenant.ContactPerson = request.ContactPerson?.Trim() ?? tenant.ContactPerson;
+            tenant.Email = request.Email?.Trim() ?? tenant.Email;
+            tenant.PhoneNumber = request.PhoneNumber?.Trim() ?? tenant.PhoneNumber;
+            tenant.Address = request.Address?.Trim() ?? tenant.Address;
+            tenant.SubDomain = subDomain ?? tenant.SubDomain;
             tenant.IsActive = request.IsActive;
 
             _adminDbContext.SaveChanges();
@@ -246,6 +288,90 @@ namespace EducenAPI.Services.TenantService
             double storage = 0; // có thể tính từ file hoặc blob sau
 
             return (users, students, classes, storage);
+        }
+
+        public async Task<object> CreateAdminForTenantAsync(string tenantId, CreateTenantAdminDto dto)
+        {
+            // 1. Tìm tenant trong AdminDB
+            var tenant = _adminDbContext.Tenants.FirstOrDefault(t => t.TenantId == tenantId);
+            if (tenant == null)
+                throw new Exception($"Không tìm thấy tenant với ID: {tenantId}");
+
+            if (!tenant.IsActive)
+                throw new Exception("Tenant này đã bị vô hiệu hóa.");
+
+            // 2. Tạo scope mới với connection string của tenant
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+            var baseConnStr = _configuration.GetConnectionString("DefaultTenantConnection");
+            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr);
+            var tenantBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(tenant.ConnectionString);
+            baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;
+            dbContext.Database.SetConnectionString(baseBuilder.ConnectionString);
+
+            // 3. Check username đã tồn tại chưa
+            var exist = await dbContext.Users.AnyAsync(u => u.Username == dto.Username);
+            if (exist)
+                throw new Exception($"Username '{dto.Username}' đã tồn tại trong tenant này.");
+
+            // 4. Tạo User Admin (RoleId = 1 = Admin)
+            var user = new Models.User
+            {
+                Username = dto.Username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                FullName = dto.FullName,
+                Email = dto.Email,
+                RoleId = 1, // Admin
+                AccountStatus = "Active",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            dbContext.Users.Add(user);
+            await dbContext.SaveChangesAsync();
+
+            return new
+            {
+                userId = user.UserId,
+                username = user.Username,
+                fullName = user.FullName,
+                email = user.Email,
+                role = "Admin",
+                tenantId = tenantId
+            };
+        }
+
+        public async Task<List<object>> GetTenantAdminsAsync(string tenantId)
+        {
+            var tenant = _adminDbContext.Tenants.FirstOrDefault(t => t.TenantId == tenantId);
+            if (tenant == null)
+                throw new Exception($"Không tìm thấy tenant với ID: {tenantId}");
+
+            using IServiceScope scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+            var baseConnStr = _configuration.GetConnectionString("DefaultTenantConnection");
+            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr);
+            var tenantBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(tenant.ConnectionString);
+            baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;
+            dbContext.Database.SetConnectionString(baseBuilder.ConnectionString);
+
+            // RoleId = 1 = Admin
+            var admins = await dbContext.Users
+                .Include(u => u.Role)
+                .Where(u => u.RoleId == 1)
+                .Select(u => new
+                {
+                    userId = u.UserId,
+                    username = u.Username,
+                    fullName = u.FullName,
+                    email = u.Email,
+                    accountStatus = u.AccountStatus,
+                    createdAt = u.CreatedAt
+                })
+                .ToListAsync();
+
+            return admins.Cast<object>().ToList();
         }
     }
 }

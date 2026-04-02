@@ -48,6 +48,12 @@ namespace EducenAPI.Services.Interface
         /// Lấy danh sách hóa đơn sắp đến hạn (để gửi nhắc nhở)
         /// </summary>
         Task<List<TuitionInvoice>> GetUpcomingDueInvoicesAsync(int daysBefore);
+
+        /// <summary>
+        /// Cập nhật tự động các hóa đơn quá hạn
+        /// Chạy hàng ngày để cập nhật status từ "Sent" -> "Overdue"
+        /// </summary>
+        Task<int> UpdateOverdueInvoicesAsync();
     }
 
     public class CreateInvoiceRequest
@@ -67,6 +73,7 @@ namespace EducenAPI.Services.Interface
         public int Month { get; set; }
         public int Year { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
+        public List<int>? StudentIds { get; set; }
     }
 
     public class BatchInvoiceResult

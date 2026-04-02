@@ -2,6 +2,7 @@ using EducenAPI.DTOs.Teachers;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.DTOs.Classes;
 
@@ -10,10 +11,12 @@ namespace EducenAPI.Services
     public class TeacherService : ITeacherService
     {
         private readonly EducenV2Context _context;
+        private readonly MailService _mailService;
 
-        public TeacherService(EducenV2Context context)
+        public TeacherService(EducenV2Context context, MailService mailService)
         {
             _context = context;
+            _mailService = mailService;
         }
 
         public async Task<IEnumerable<TeacherDto>> GetAllTeachersAsync()
@@ -82,6 +85,10 @@ namespace EducenAPI.Services
 
         public async Task<TeacherDto> CreateTeacherAsync(CreateTeacherDto dto)
         {
+            dto.Username = dto.Username?.Trim();
+            dto.Email = dto.Email?.Trim()?.ToLower();
+            dto.FullName = dto.FullName?.Trim();
+
             // Skip user creation if username or password is null
             if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
             {
@@ -278,6 +285,47 @@ namespace EducenAPI.Services
                 .ToListAsync();
 
             return classes;
+        }
+
+        public async Task<bool> SendAccountAsync(int teacherId)
+        {
+            var teacher = await _context.Teachers
+                .Include(t => t.TeacherNavigation)
+                .FirstOrDefaultAsync(t => t.UserId == teacherId);
+
+            if (teacher == null)
+                throw new Exception("Không tìm thấy giáo viên.");
+
+            var user = teacher.TeacherNavigation;
+
+            if (string.IsNullOrWhiteSpace(user.Email))
+                throw new Exception("Giáo viên chưa có email. Vui lòng cập nhật email trước khi gửi tài khoản.");
+
+            // Generate username nếu chưa có
+            if (string.IsNullOrWhiteSpace(user.Username))
+            {
+                var emailPrefix = user.Email.Split('@')[0];
+                var baseUsername = $"gv_{emailPrefix}";
+                var username = baseUsername;
+                int counter = 1;
+                while (await _context.Users.AnyAsync(u => u.Username == username))
+                {
+                    username = $"{baseUsername}_{counter++}";
+                }
+                user.Username = username;
+            }
+
+            // Generate password
+            var newPassword = PasswordGenerator.GenerateSecurePassword();
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.AccountStatus = "Active";
+
+            await _context.SaveChangesAsync();
+
+            // Send email
+            await _mailService.SendTeacherAccount(user.Email, user.Username, newPassword);
+
+            return true;
         }
     }
 }

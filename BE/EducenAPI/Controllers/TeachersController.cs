@@ -101,5 +101,21 @@ namespace EducenAPI.Controllers
             var classes = await _teacherService.GetTeacherClassesAsync(id);
             return Ok(classes);
         }
+
+        // POST: api/Teachers/send-account/5
+        [HttpPost("send-account/{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> SendAccount(int id)
+        {
+            try
+            {
+                await _teacherService.SendAccountAsync(id);
+                return Ok(new { message = "Đã gửi tài khoản giáo viên qua email." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

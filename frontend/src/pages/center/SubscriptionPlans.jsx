@@ -201,13 +201,6 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                         </div>
                         <div className="subscription-modal-actions">
                             <button
-                                className="subscription-modal-cancel"
-                                onClick={() => setRenewTarget(null)}
-                                disabled={!!payingPlanId}
-                            >
-                                Hủy
-                            </button>
-                            <button
                                 className="subscription-modal-submit"
                                 onClick={() => {
                                     setRenewTarget(null);

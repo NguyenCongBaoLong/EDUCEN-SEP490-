@@ -43,6 +43,12 @@ namespace EducenAPI.Services
 
         public async Task<RoomDto> CreateRoomAsync(CreateRoomDto dto)
         {
+            dto.RoomName = dto.RoomName?.Trim();
+
+            var exists = await _context.Rooms.AnyAsync(r => r.RoomName == dto.RoomName);
+            if (exists)
+                throw new InvalidOperationException("Tên phòng đã tồn tại.");
+
             var room = new Room
             {
                 RoomName = dto.RoomName,

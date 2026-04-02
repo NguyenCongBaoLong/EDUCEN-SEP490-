@@ -23,6 +23,8 @@ namespace EducenAPI.Services
 
         public async Task<bool> UpdateProfileAsync(int userId, UpdateProfileRequest request)
         {
+            request.FullName = request.FullName?.Trim();
+
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
                 return false;

@@ -8,7 +8,8 @@ import {
     ChevronRight,
     Calendar,
     DollarSign,
-    Download
+    Download,
+    AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StudentSidebar from '../../components/StudentSidebar';
@@ -118,6 +119,12 @@ const MyInvoices = () => {
         }).format(amount);
     };
 
+    const formatDate = (value) => new Date(value).toLocaleDateString('vi-VN');
+
+    const isOverdue = (dueDate) => {
+        return new Date(dueDate) < new Date();
+    };
+
     const getStatusIcon = (status) => {
         switch (status) {
             case 'Paid':
@@ -214,6 +221,13 @@ const MyInvoices = () => {
                                                 {invoice.attendedSessions} buổi
                                             </div>
                                         </div>
+                                        <div className="detail-item">
+                                            <span className="detail-label">Hạn thanh toán</span>
+                                            <div className={`detail-value ${isOverdue(invoice.dueDate) ? 'overdue-due-date' : ''}`}>
+                                                <Calendar size={14} />
+                                                {formatDate(invoice.dueDate)}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="invoice-footer">
@@ -259,6 +273,15 @@ const MyInvoices = () => {
                                 <div className="summary-row">
                                     <span>Lớp học:</span>
                                     <strong>{selectedInvoice.class?.className}</strong>
+                                </div>
+                                <div className={`summary-row ${isOverdue(selectedInvoice.dueDate) ? 'overdue-warning' : ''}`}>
+                                    <span>Hạn thanh toán:</span>
+                                    <strong>
+                                        {formatDate(selectedInvoice.dueDate)}
+                                        {isOverdue(selectedInvoice.dueDate) && (
+                                            <span className="overdue-text"> (Quá hạn)</span>
+                                        )}
+                                    </strong>
                                 </div>
                                 <div className="summary-row total">
                                     <span>Số tiền thanh toán:</span>

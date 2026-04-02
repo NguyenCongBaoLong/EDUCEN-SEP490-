@@ -101,9 +101,9 @@ namespace EducenAPI.Persistence.Extensions
 
             foreach (var tenant in allTenants)
             {
-                // Xác định config nào dùng cho tenant nào
-                var isEducenV2 = tenant.TenantName.Contains("EducenV2", StringComparison.OrdinalIgnoreCase)
-                              || tenant.TenantName.Contains("Educen V2", StringComparison.OrdinalIgnoreCase);
+                // Phân biệt bằng TenantId (GUID hoặc string) - chính xác hơn TenantName
+                // EducenV2 → sandbox riêng, các tenant khác → sandbox chung SystemAdmin
+                var isEducenV2 = tenant.TenantId == "EducenV2";
 
                 var configData = isEducenV2 ? educenV2ConfigData : defaultConfigData;
                 var displayName = isEducenV2

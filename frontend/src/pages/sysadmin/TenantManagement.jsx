@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
     Building2, Plus, Search, Edit2, Eye, Lock, Unlock, Package,
-    X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter, TrendingUp
+    X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter, TrendingUp,
+    UserPlus
 } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import adminApi from '../../services/adminApi';
@@ -10,6 +11,7 @@ import '../../css/pages/sysadmin/TenantManagement.css';
 const EMPTY_FORM = {
     tenantId: '', tenantName: '', subDomain: '',
     contactPerson: '', email: '', phoneNumber: '', address: '',
+    adminUsername: '', adminPassword: '',
 };
 
 const TenantManagement = () => {
@@ -39,6 +41,13 @@ const TenantManagement = () => {
     const [form, setForm] = useState(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
+
+    // Create Admin Modal State
+    const [adminModalTarget, setAdminModalTarget] = useState(null);
+    const [adminForm, setAdminForm] = useState({ username: '', password: '', fullName: '', email: '' });
+    const [adminSaving, setAdminSaving] = useState(false);
+    const [tenantAdmins, setTenantAdmins] = useState([]);
+    const [loadingAdmins, setLoadingAdmins] = useState(false);
 
     // Custom Confirm Modal State
     const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
@@ -249,6 +258,35 @@ const TenantManagement = () => {
         }
     };
 
+    const openCreateAdmin = (tenant) => {
+        setAdminModalTarget(tenant);
+        setAdminForm({ username: '', password: '', fullName: '', email: '' });
+        setTenantAdmins([]);
+        setLoadingAdmins(true);
+        adminApi.get(`/admin/Tenants/${tenant.tenantId}/admins`)
+            .then(res => setTenantAdmins(res.data || []))
+            .catch(() => showToast('Không thể tải danh sách admin.', 'error'))
+            .finally(() => setLoadingAdmins(false));
+    };
+
+    const handleCreateAdmin = async (e) => {
+        e.preventDefault();
+        setAdminSaving(true);
+        try {
+            await adminApi.post(`/admin/Tenants/${adminModalTarget.tenantId}/admin`, adminForm);
+            showToast(`Đã tạo tài khoản Admin cho ${adminModalTarget.tenantName}!`);
+            setAdminForm({ username: '', password: '', fullName: '', email: '' });
+            // Refresh danh sách admin
+            const res = await adminApi.get(`/admin/Tenants/${adminModalTarget.tenantId}/admins`);
+            setTenantAdmins(res.data || []);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.response?.data || 'Không thể tạo admin.';
+            showToast(typeof msg === 'string' ? msg : 'Lỗi.', 'error');
+        } finally {
+            setAdminSaving(false);
+        }
+    };
+
     const filtered = tenants.filter(t =>
         t.tenantName?.toLowerCase().includes(search.toLowerCase()) ||
         t.subDomain?.toLowerCase().includes(search.toLowerCase())
@@ -430,6 +468,14 @@ const TenantManagement = () => {
                                                     onClick={() => openEdit(t)}
                                                 >
                                                     <Edit2 size={18} />
+                                                </button>
+                                                <button
+                                                    className="sa-action-btn"
+                                                    title="Tạo tài khoản Admin"
+                                                    onClick={() => openCreateAdmin(t)}
+                                                    style={{ background: '#eff6ff', border: '1px solid #3b82f6', color: '#3b82f6' }}
+                                                >
+                                                    <UserPlus size={18} />
                                                 </button>
                                                 <button
                                                     className={`sa-action-btn ${t.isActive ? 'lock' : 'unlock'}`}
@@ -692,6 +738,37 @@ const TenantManagement = () => {
                                         />
                                     </div>
                                 </div>
+                                {!editTarget && (
+                                    <>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginTop: '0.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+                                            Tài khoản Admin (tùy chọn)
+                                        </div>
+                                        <div className="sa-form-row">
+                                            <div className="sa-form-group">
+                                                <label>Tên đăng nhập Admin</label>
+                                                <input
+                                                    name="adminUsername"
+                                                    value={form.adminUsername}
+                                                    onChange={handleChange}
+                                                    placeholder="vd: admin_trungtam"
+                                                    minLength={3}
+                                                />
+                                                <span className="sa-form-hint">Nếu nhập sẽ tự tạo tài khoản Admin cho trung tâm</span>
+                                            </div>
+                                            <div className="sa-form-group">
+                                                <label>Mật khẩu Admin</label>
+                                                <input
+                                                    name="adminPassword"
+                                                    type="password"
+                                                    value={form.adminPassword}
+                                                    onChange={handleChange}
+                                                    placeholder="Tối thiểu 6 ký tự"
+                                                    minLength={6}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                                 {!editTarget && (
                                     <div className="sa-form-note">
                                         <CheckCircle size={14} />
@@ -1049,6 +1126,119 @@ const TenantManagement = () => {
                         </div>
                     </>
                 )}
+                {/* Create Admin Modal */}
+                {adminModalTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => !adminSaving && setAdminModalTarget(null)} />
+                        <div className="sa-modal" style={{ maxWidth: '480px' }}>
+                            <div className="sa-modal-header">
+                                <h2>Tạo Tài Khoản Admin</h2>
+                                <button className="sa-modal-close" onClick={() => !adminSaving && setAdminModalTarget(null)}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleCreateAdmin} className="sa-modal-form">
+                                <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem' }}>
+                                    <strong>Trung tâm:</strong> {adminModalTarget.tenantName}
+                                </div>
+
+                                {/* Danh sách admin hiện có */}
+                                <div>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+                                        Admin hiện có ({tenantAdmins.length})
+                                    </div>
+                                    {loadingAdmins ? (
+                                        <div style={{ padding: '0.75rem', textAlign: 'center', color: '#94a3b8' }}>
+                                            <Loader2 size={16} className="spin" /> Đang tải...
+                                        </div>
+                                    ) : tenantAdmins.length === 0 ? (
+                                        <div style={{ padding: '0.75rem', background: '#fffbeb', borderRadius: '6px', fontSize: '0.85rem', color: '#b45309' }}>
+                                            Chưa có tài khoản Admin nào.
+                                        </div>
+                                    ) : (
+                                        <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto' }}>
+                                            {tenantAdmins.map(admin => (
+                                                <div key={admin.userId} style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    padding: '0.5rem 0.75rem', borderBottom: '1px solid #f1f5f9',
+                                                    fontSize: '0.85rem'
+                                                }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 500, color: '#1e293b' }}>{admin.fullName || admin.username}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{admin.username}{admin.email ? ` • ${admin.email}` : ''}</div>
+                                                    </div>
+                                                    <span style={{
+                                                        fontSize: '0.7rem', padding: '2px 8px', borderRadius: 4, fontWeight: 600,
+                                                        background: admin.accountStatus === 'Active' ? '#ecfdf5' : '#fef2f2',
+                                                        color: admin.accountStatus === 'Active' ? '#10b981' : '#ef4444'
+                                                    }}>
+                                                        {admin.accountStatus === 'Active' ? 'Hoạt động' : 'Khóa'}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+                                    Tạo Admin mới
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Tên đăng nhập *</label>
+                                    <input
+                                        type="text"
+                                        value={adminForm.username}
+                                        onChange={e => setAdminForm(f => ({ ...f, username: e.target.value }))}
+                                        placeholder="vd: admin_trungtam"
+                                        required
+                                        minLength={3}
+                                    />
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Mật khẩu *</label>
+                                    <input
+                                        type="password"
+                                        value={adminForm.password}
+                                        onChange={e => setAdminForm(f => ({ ...f, password: e.target.value }))}
+                                        placeholder="Tối thiểu 6 ký tự"
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Họ và tên *</label>
+                                    <input
+                                        type="text"
+                                        value={adminForm.fullName}
+                                        onChange={e => setAdminForm(f => ({ ...f, fullName: e.target.value }))}
+                                        placeholder="Nguyễn Văn A"
+                                        required
+                                    />
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Email</label>
+                                    <input
+                                        type="email"
+                                        value={adminForm.email}
+                                        onChange={e => setAdminForm(f => ({ ...f, email: e.target.value }))}
+                                        placeholder="admin@trungtam.vn"
+                                    />
+                                </div>
+                                <div className="sa-modal-footer">
+                                    <button type="button" className="sa-btn-cancel" onClick={() => !adminSaving && setAdminModalTarget(null)}>
+                                        Hủy
+                                    </button>
+                                    <button type="submit" className="sa-btn-primary" disabled={adminSaving}>
+                                        {adminSaving
+                                            ? <><Loader2 size={16} className="spin" /> Đang tạo...</>
+                                            : <><UserPlus size={16} /> Tạo Admin</>}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </>
+                )}
+
             </main>
         </div>
     );

@@ -191,6 +191,9 @@ builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
 builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
 
+// ── Background Services ───────────────────────────────────────────────────────
+builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.OverdueInvoiceService>();
+
 // === Zalo OA ===
 builder.Services.AddHttpClient("ZaloAPI", client =>
 {

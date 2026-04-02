@@ -97,7 +97,7 @@ namespace EducenAPI.Services
                         .Where(m => m.SessionId == dto.SessionId && !string.IsNullOrEmpty(m.FileUrl))
                         .Select(m => m.FileUrl)
                         .ToListAsync();
-                    bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
+                    bool isDuplicate = existingNames.Any(url => NormalizeFileName(GetOriginalFileNameFromUrl(url)) == NormalizeFileName(originalFileName));
                     if (isDuplicate)
                         throw new ConflictException("File này đã tồn tại trong buổi học này.");
                 }
@@ -107,7 +107,7 @@ namespace EducenAPI.Services
                     .Where(m => m.SessionId == null && m.UserId == userId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
-                bool isLibDuplicate = existingLibraryNames.Any(url => GetOriginalFileNameFromUrl(url) == originalFileName);
+                bool isLibDuplicate = existingLibraryNames.Any(url => NormalizeFileName(GetOriginalFileNameFromUrl(url)) == NormalizeFileName(originalFileName));
                 if (isLibDuplicate)
                     throw new BadRequestException("File tài liệu này đã tồn tại trong thư viện. Vui lòng chọn từ thư viện.");
 
@@ -226,7 +226,7 @@ namespace EducenAPI.Services
                         .Where(m => m.SessionId == material.SessionId && m.MaterialId != id && !string.IsNullOrEmpty(m.FileUrl))
                         .Select(m => m.FileUrl)
                         .ToListAsync();
-                    bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
+                    bool isDuplicate = existingNames.Any(url => NormalizeFileName(GetOriginalFileNameFromUrl(url)) == NormalizeFileName(newOriginalFileName));
                     if (isDuplicate)
                         throw new ConflictException("File này đã tồn tại trong buổi học này.");
                 }
@@ -320,7 +320,7 @@ namespace EducenAPI.Services
                     .Where(m => m.SessionId == material.SessionId && m.MaterialId != dto.MaterialId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
-                bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
+                bool isDuplicate = existingNames.Any(url => NormalizeFileName(GetOriginalFileNameFromUrl(url)) == NormalizeFileName(newOriginalFileName));
                 if (isDuplicate)
                     throw new ConflictException("File này đã tồn tại trong buổi học này.");
             }
@@ -331,7 +331,7 @@ namespace EducenAPI.Services
                     .Where(m => m.SessionId == null && m.UserId == userId && m.MaterialId != dto.MaterialId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
-                bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == newOriginalFileName);
+                bool isDuplicate = existingNames.Any(url => NormalizeFileName(GetOriginalFileNameFromUrl(url)) == NormalizeFileName(newOriginalFileName));
                 if (isDuplicate)
                     throw new ConflictException("File này đã tồn tại trong thư viện.");
             }
@@ -419,7 +419,11 @@ namespace EducenAPI.Services
         public async Task<LessonMaterial> ImportMaterialAsync(int materialId, int sessionId)
         {
             var source = await _context.LessonMaterials.FindAsync(materialId);
-            if (source == null) throw new Exception("Source material not found");
+            if (source == null) throw new BadRequestException("Không tìm thấy tài liệu nguồn trong thư viện.");
+
+            // Validate session exists
+            var sessionExists = await _context.ClassSessions.AnyAsync(s => s.SessionId == sessionId);
+            if (!sessionExists) throw new BadRequestException($"Buổi học với ID {sessionId} không tồn tại.");
 
             var userId = _userServiceContext.GetUserId();
             string sourceOriginalName = GetOriginalFileNameFromUrl(source.FileUrl);
@@ -431,7 +435,7 @@ namespace EducenAPI.Services
                     .Where(m => m.SessionId == sessionId && !string.IsNullOrEmpty(m.FileUrl))
                     .Select(m => m.FileUrl)
                     .ToListAsync();
-                bool isDuplicate = existingNames.Any(url => GetOriginalFileNameFromUrl(url) == sourceOriginalName);
+                bool isDuplicate = existingNames.Any(url => NormalizeFileName(GetOriginalFileNameFromUrl(url)) == NormalizeFileName(sourceOriginalName));
                 if (isDuplicate)
                     throw new ConflictException("File này đã tồn tại trong buổi học này.");
             }
@@ -487,6 +491,13 @@ namespace EducenAPI.Services
                 return fileName.Substring(fileName.IndexOf('_') + 1);
             }
             return fileName;
+        }
+
+        // Chuẩn hóa tên file để so sánh chính xác (space → underscore, lowercase)
+        private string NormalizeFileName(string? fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return "";
+            return Path.GetFileName(fileName).Replace(" ", "_").ToLower();
         }
 
         private long GetFileSizeFromUrl(string? url)

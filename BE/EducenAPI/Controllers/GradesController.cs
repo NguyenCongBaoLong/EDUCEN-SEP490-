@@ -38,17 +38,31 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<ActionResult<GradeDto>> CreateGrade(CreateGradeDto dto)
         {
-            var grade = await _gradeService.CreateGradeAsync(dto);
-            return CreatedAtAction(nameof(GetGrade), new { id = grade.GradeId }, grade);
+            try
+            {
+                var grade = await _gradeService.CreateGradeAsync(dto);
+                return CreatedAtAction(nameof(GetGrade), new { id = grade.GradeId }, grade);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateGrade(int id, UpdateGradeDto dto)
         {
-            var success = await _gradeService.UpdateGradeAsync(id, dto);
-            if (!success) return NotFound();
-            return NoContent();
+            try
+            {
+                var success = await _gradeService.UpdateGradeAsync(id, dto);
+                if (!success) return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]

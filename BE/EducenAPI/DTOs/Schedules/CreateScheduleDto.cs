@@ -16,6 +16,8 @@ namespace EducenAPI.DTOs.Schedules
         [Required(ErrorMessage = "EndTime is required")]
         public TimeSpan EndTime { get; set; }
 
+        public int? RoomId { get; set; }
+
         private string? _notes;
         private string? _status;
 

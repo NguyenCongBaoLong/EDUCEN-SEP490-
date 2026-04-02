@@ -32,6 +32,10 @@ namespace EducenAPI.Services
 
             var name = request.PlanName.Trim();
 
+            var exists = await _context.Plans.AnyAsync(p => p.PlanName == name);
+            if (exists)
+                throw new InvalidOperationException("Tên gói dịch vụ đã tồn tại.");
+
             var plan = new Plan
             {
                 PlanId = Guid.NewGuid().ToString(),

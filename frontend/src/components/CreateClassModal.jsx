@@ -19,6 +19,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         gradeId: null,
         description: '',
         syllabusContent: '',
+        pricePerSession: '', // Đơn giá theo buổi
         scheduleSlots: [{ day: '', startTime: '', endTime: '' }], // Array of time slots
         startDate: '', // Ngày bắt đầu lớp
         endDate: '', // Ngày kết thúc lớp
@@ -93,6 +94,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 gradeId: editingClass.gradeId || null,
                 description: editingClass.description || '',
                 syllabusContent: editingClass.syllabusContent || '',
+                pricePerSession: editingClass.pricePerSession || '',
                 scheduleSlots,
                 startDate: editingClass.startDate || '',
                 endDate: editingClass.endDate || '',
@@ -110,6 +112,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 gradeId: null,
                 description: '',
                 syllabusContent: '',
+                pricePerSession: '',
                 scheduleSlots: [{ day: '', startTime: '', endTime: '', roomId: null }],
                 startDate: '',
                 endDate: '',
@@ -509,6 +512,23 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                 ))}
                             </select>
                         </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Đơn giá theo buổi *</label>
+                        <input
+                            type="number"
+                            name="pricePerSession"
+                            value={formData.pricePerSession}
+                            onChange={handleChange}
+                            placeholder="VD: 150000"
+                            min="0"
+                            step="1000"
+                            required
+                        />
+                        <small style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '4px', display: 'block' }}>
+                            Nhập đơn giá cho mỗi buổi học (VNĐ)
+                        </small>
                     </div>
 
                     <div className="form-row">

@@ -127,6 +127,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Classes/5/assign-teacher/{teacherId}
         [HttpPut("{id:int}/assign-teacher/{teacherId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignTeacher(int id, int teacherId)
         {
             try
@@ -145,6 +146,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Classes/5/assign-assistant/{assistantId}
         [HttpPut("{id:int}/assign-assistant/{assistantId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignAssistant(int id, int assistantId)
         {
             try
@@ -163,6 +165,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes/5/students/{studentId}
         [HttpPost("{id:int}/students/{studentId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddStudentToClass(int id, int studentId)
         {
             try
@@ -181,6 +184,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Classes/5/students/{studentId}
         [HttpDelete("{id:int}/students/{studentId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveStudentFromClass(int id, int studentId)
         {
             try
@@ -199,6 +203,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes/5/import-students
         [HttpPost("{id:int}/import-students")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ImportStudentsToClass(int id, IFormFile file)
         {
             try
@@ -314,24 +319,23 @@ namespace EducenAPI.Controllers
                             }
                         }
 
-                        // Validate required fields
-                        if (string.IsNullOrWhiteSpace(username) || 
-                            string.IsNullOrWhiteSpace(fullName) || 
+                        // Validate required: chỉ cần FullName và Email (không bắt buộc Username)
+                        if (string.IsNullOrWhiteSpace(fullName) || 
                             string.IsNullOrWhiteSpace(email))
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Dòng {row + 1}: Thiếu dữ liệu bắt buộc (Tên đăng nhập, Họ và tên, Email)");
+                            importResults.Errors.Add($"Dòng {row + 1}: Thiếu dữ liệu bắt buộc (Họ và tên, Email)");
                             continue;
                         }
 
-                        // Check if user exists (student must have User account)
+                        // Check user bằng EMAIL
                         var existingUser = await _context.Users
                             .FirstOrDefaultAsync(u => u.Email == email);
                         
                         if (existingUser == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Dòng {row + 1}: Người dùng có email '{email}' không tồn tại. Vui lòng tạo tài khoản Học sinh trước.");
+                            importResults.Errors.Add($"Dòng {row + 1}: Không tìm thấy tài khoản với email '{email}'. Vui lòng tạo tài khoản Học sinh trước.");
                             continue;
                         }
 
@@ -342,7 +346,7 @@ namespace EducenAPI.Controllers
                         if (existingStudent == null)
                         {
                             importResults.Failed++;
-                            importResults.Errors.Add($"Dòng {row + 1}: Người dùng có email '{email}' không phải là Học sinh. Vui lòng tạo Học sinh trước.");
+                            importResults.Errors.Add($"Dòng {row + 1}: Tài khoản email '{email}' không phải là Học sinh. Vui lòng tạo Học sinh trước.");
                             continue;
                         }
 

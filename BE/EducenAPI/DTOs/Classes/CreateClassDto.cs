@@ -64,8 +64,11 @@ namespace EducenAPI.DTOs.Classes
 
     public class CreateScheduleSlotDto
     {
+        [Range(0, 6, ErrorMessage = "DayOfWeek must be between 0 and 6")]
         public int DayOfWeek { get; set; } // 0 = Sunday, 1 = Monday, ...
+        [Required]
         public string StartTime { get; set; } = string.Empty; // Format "HH:mm"
+        [Required]
         public string EndTime { get; set; } = string.Empty;   // Format "HH:mm"
         public int? RoomId { get; set; }
         public string? RoomName { get; set; }

@@ -123,7 +123,8 @@ namespace EducenAPI.Controllers
                     ClassId = request.ClassId,
                     Month = request.Month,
                     Year = request.Year,
-                    CreatedBy = User.Identity?.Name ?? "System"
+                    CreatedBy = User.Identity?.Name ?? "System",
+                    StudentIds = request.StudentIds
                 });
 
                 return Ok(result);
@@ -176,6 +177,11 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
+
+                // Không cho Student/Parent xem hoá đơn nháp
+                var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                if (userRole != "Admin" && invoice.Status == "Draft")
                     return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 return Ok(invoice);
@@ -249,6 +255,30 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error marking invoice as paid");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật tự động các hóa đơn quá hạn
+        /// Endpoint này có thể được gọi bởi scheduled job hoặc manual trigger
+        /// </summary>
+        [HttpPost("update-overdue")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateOverdueInvoices()
+        {
+            try
+            {
+                var updatedCount = await _invoiceService.UpdateOverdueInvoicesAsync();
+                return Ok(new { 
+                    message = "Cập nhật hóa đơn quá hạn thành công",
+                    updatedCount = updatedCount,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating overdue invoices");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -408,6 +438,7 @@ namespace EducenAPI.Controllers
         public int ClassId { get; set; }
         public int Month { get; set; }
         public int Year { get; set; }
+        public List<int>? StudentIds { get; set; }
     }
 
     public class InvoiceFilterApiRequest
