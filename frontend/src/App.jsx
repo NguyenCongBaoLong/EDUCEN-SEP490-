@@ -26,7 +26,6 @@ import StudentSchedule from './pages/student/StudentSchedule';
 import StudentClassDetail from './pages/student/StudentClassDetail';
 import ParentClasses from './pages/parent/ParentClasses';
 import ParentSchedule from './pages/parent/ParentSchedule';
-import ParentFeedback from './pages/parent/ParentFeedback';
 import TuitionManagement from './pages/center/TuitionManagement';
 import RevenueReport from './pages/center/RevenueReport';
 import SubscriptionPlans from './pages/center/SubscriptionPlans';
@@ -100,7 +99,6 @@ function App() {
                 <Routes>
                   <Route path="classes" element={<PrivateRoute allowedRoles={['Parent']}><ParentClasses /></PrivateRoute>} />
                   <Route path="schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
-                  <Route path="feedback" element={<PrivateRoute allowedRoles={['Parent']}><ParentFeedback /></PrivateRoute>} />
                   <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
                 </Routes>
               } />

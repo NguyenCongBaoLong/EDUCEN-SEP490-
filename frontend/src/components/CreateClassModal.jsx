@@ -531,6 +531,125 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                         </small>
                     </div>
 
+
+                    {/* Schedule Slots Section */}
+                    <div className="schedule-slots-section">
+                        <div className="schedule-slots-header">
+                            <label>Lịch học *</label>
+                            <button
+                                type="button"
+                                className="btn-add-slot"
+                                onClick={handleAddSlot}
+                            >
+                                <Plus size={16} />
+                                Thêm buổi học
+                            </button>
+                        </div>
+
+                        <div className="schedule-slots-container">
+                            {formData.scheduleSlots.map((slot, index) => (
+                                <div key={index} className="schedule-slot-row">
+                                    <div className="slot-field">
+                                        <label>Ngày</label>
+                                        <select
+                                            value={slot.day}
+                                            onChange={(e) => handleSlotChange(index, 'day', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Chọn ngày</option>
+                                            <option value="Thứ 2">Thứ 2</option>
+                                            <option value="Thứ 3">Thứ 3</option>
+                                            <option value="Thứ 4">Thứ 4</option>
+                                            <option value="Thứ 5">Thứ 5</option>
+                                            <option value="Thứ 6">Thứ 6</option>
+                                            <option value="Thứ 7">Thứ 7</option>
+                                            <option value="CN">Chủ nhật</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="slot-field">
+                                        <label>Bắt đầu</label>
+                                        <input
+                                            type="time"
+                                            value={slot.startTime}
+                                            onChange={(e) => handleSlotChange(index, 'startTime', e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="slot-field">
+                                        <label>Kết thúc</label>
+                                        <input
+                                            type="time"
+                                            value={slot.endTime}
+                                            onChange={(e) => handleSlotChange(index, 'endTime', e.target.value)}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="slot-field">
+                                        <label>Phòng học</label>
+                                        <div className="input-with-button">
+                                            <select
+                                                value={slot.roomId || ''}
+                                                onChange={(e) => {
+                                                    const id = e.target.value ? parseInt(e.target.value) : null;
+                                                    const room = roomsList.find(r => r.roomId === id);
+                                                    handleSlotChange(index, 'roomId', id);
+                                                    handleSlotChange(index, 'roomName', room ? room.roomName : '');
+                                                }}
+                                                required
+                                            >
+                                                <option value="">Chọn phòng</option>
+                                                {roomsList.map(r => (
+                                                    <option key={r.roomId} value={r.roomId}>
+                                                        {r.roomName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                className="btn-check-room"
+                                                onClick={() => handleOpenRoomModal(index)}
+                                                title="Kiểm tra lịch phòng"
+                                            >
+                                                <Calendar size={18} />
+                                            </button>
+                                            {slot.roomId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        handleSlotChange(index, 'roomId', null);
+                                                        handleSlotChange(index, 'roomName', '');
+                                                    }}
+                                                    title="Xóa phòng học"
+                                                    style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', padding: '0 10px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+
+                                    <button
+                                        type="button"
+                                        className="btn-remove-slot"
+                                        onClick={() => handleRemoveSlot(index)}
+                                        title="Xóa buổi học"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <small className="schedule-hint">
+                            Mỗi buổi học có thể có thời gian khác nhau. Ví dụ: Thứ 2 từ 10:00-11:30, Thứ 4 từ 13:30-15:00
+                        </small>
+                    </div>
+
+
                     <div className="form-row">
                         <div className="form-group">
                             <label>Giáo viên chính *</label>
@@ -623,112 +742,6 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                             rows="3"
                         />
                     </div>
-
-
-                    {/* Schedule Slots Section */}
-                    <div className="schedule-slots-section">
-                        <div className="schedule-slots-header">
-                            <label>Lịch học *</label>
-                            <button
-                                type="button"
-                                className="btn-add-slot"
-                                onClick={handleAddSlot}
-                            >
-                                <Plus size={16} />
-                                Thêm buổi học
-                            </button>
-                        </div>
-
-                        <div className="schedule-slots-container">
-                            {formData.scheduleSlots.map((slot, index) => (
-                                <div key={index} className="schedule-slot-row">
-                                    <div className="slot-field">
-                                        <label>Ngày</label>
-                                        <select
-                                            value={slot.day}
-                                            onChange={(e) => handleSlotChange(index, 'day', e.target.value)}
-                                            required
-                                        >
-                                            <option value="">Chọn ngày</option>
-                                            <option value="Thứ 2">Thứ 2</option>
-                                            <option value="Thứ 3">Thứ 3</option>
-                                            <option value="Thứ 4">Thứ 4</option>
-                                            <option value="Thứ 5">Thứ 5</option>
-                                            <option value="Thứ 6">Thứ 6</option>
-                                            <option value="Thứ 7">Thứ 7</option>
-                                            <option value="CN">Chủ nhật</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="slot-field">
-                                        <label>Bắt đầu</label>
-                                        <input
-                                            type="time"
-                                            value={slot.startTime}
-                                            onChange={(e) => handleSlotChange(index, 'startTime', e.target.value)}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="slot-field">
-                                        <label>Kết thúc</label>
-                                        <input
-                                            type="time"
-                                            value={slot.endTime}
-                                            onChange={(e) => handleSlotChange(index, 'endTime', e.target.value)}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="slot-field">
-                                        <label>Phòng học</label>
-                                        <div className="input-with-button">
-                                            <select
-                                                value={slot.roomId || ''}
-                                                onChange={(e) => {
-                                                    const id = e.target.value ? parseInt(e.target.value) : null;
-                                                    const room = roomsList.find(r => r.roomId === id);
-                                                    handleSlotChange(index, 'roomId', id);
-                                                    handleSlotChange(index, 'roomName', room ? room.roomName : '');
-                                                }}
-                                                required
-                                            >
-                                                <option value="">Chọn phòng</option>
-                                                {roomsList.map(r => (
-                                                    <option key={r.roomId} value={r.roomId}>
-                                                        {r.roomName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                className="btn-check-room"
-                                                onClick={() => handleOpenRoomModal(index)}
-                                                title="Kiểm tra lịch phòng"
-                                            >
-                                                <Calendar size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        className="btn-remove-slot"
-                                        onClick={() => handleRemoveSlot(index)}
-                                        title="Xóa buổi học"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        <small className="schedule-hint">
-                            Mỗi buổi học có thể có thời gian khác nhau. Ví dụ: Thứ 2 từ 10:00-11:30, Thứ 4 từ 13:30-15:00
-                        </small>
-                    </div>
-
-
 
                     {/* Start Date and End Date Section */}
                     <div className="form-row">

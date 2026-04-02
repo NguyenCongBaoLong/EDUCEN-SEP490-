@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
+import TeacherInboxDrawer from '../../components/TeacherInboxDrawer';
 import api from '../../services/api';
 
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
@@ -149,13 +150,16 @@ const TeacherSchedule = ({ isTA = false }) => {
                         <h1>Lịch dạy của tôi</h1>
                         <p className="ts-subtitle">Chào {teacherName}, bạn có {filteredClasses.length} buổi dạy được phân công</p>
                     </div>
-                    <button className="ts-btn-request" onClick={() => {
-                        setRequestInitialData(null);
-                        setRequestOpen(true);
-                    }}>
-                        <MessageSquare size={18} />
-                        Yêu cầu thay đổi
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <TeacherInboxDrawer />
+                        <button className="ts-btn-request" onClick={() => {
+                            setRequestInitialData(null);
+                            setRequestOpen(true);
+                        }}>
+                            <MessageSquare size={18} />
+                            Yêu cầu thay đổi
+                        </button>
+                    </div>
                 </div>
 
                 <div className="ts-controls">

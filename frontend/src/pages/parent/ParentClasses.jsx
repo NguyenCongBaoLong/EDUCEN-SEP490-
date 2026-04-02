@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2 } from 'lucide-react';
 import ParentSidebar from '../../components/ParentSidebar';
+import ParentFeedbackDrawer from '../../components/ParentFeedbackDrawer';
 import { useChild } from '../../context/ChildContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -204,7 +205,7 @@ const ParentClasses = () => {
             <ParentSidebar />
 
             <main className="pc-main">
-                <div className="pc-header">
+                <div className="pc-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div className="pc-child-info">
                         <div className="pc-child-avatar">
                             {(selectedChild?.fullName || '?').trim().split(' ').pop().charAt(0).toUpperCase()}
@@ -214,6 +215,7 @@ const ParentClasses = () => {
                             <p className="pc-subtitle">{selectedChild?.grade || ''}</p>
                         </div>
                     </div>
+                    <ParentFeedbackDrawer />
                 </div>
 
                 {childLoading || loading ? (

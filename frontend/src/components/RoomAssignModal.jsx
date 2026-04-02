@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Calendar, AlertCircle, CheckCircle, Search } from 'lucide-react';
 import PropTypes from 'prop-types';
-import ConfirmModal from './ConfirmModal';
 import api from '../services/api';
-import '../css/components/TeacherAssignModal.css'; // Reuse the same CSS for consistency
+import '../css/components/TeacherAssignModal.css';
 
 const RoomAssignModal = ({ isOpen, onClose, onSelectRoom, slotInfo, rooms = [] }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [roomSchedule, setRoomSchedule] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [confirmData, setConfirmData] = useState({ isOpen: false, title: '', message: '' });
 
     useEffect(() => {
         if (isOpen && selectedRoom) {
@@ -146,12 +144,13 @@ const RoomAssignModal = ({ isOpen, onClose, onSelectRoom, slotInfo, rooms = [] }
     const confirmSelection = () => {
         onSelectRoom(selectedRoom);
         onClose();
-        setConfirmData({ isOpen: false, title: '', message: '' });
     };
 
     return (
+        <>
         <div className="modal-overlay" onClick={onClose}>
             <div className="teacher-assign-modal room-assign-modal" onClick={(e) => e.stopPropagation()}>
+                {/* ... same content ... */}
                 <div className="modal-header">
                     <div className="modal-title-section">
                         <h2>Kiểm tra phòng học</h2>
@@ -252,34 +251,17 @@ const RoomAssignModal = ({ isOpen, onClose, onSelectRoom, slotInfo, rooms = [] }
                         <button className="btn-cancel" onClick={onClose}>Hủy</button>
                         <button 
                             className="btn-assign" 
-                            disabled={!selectedRoom}
-                            onClick={() => {
-                                if (conflictInfo?.hasConflict) {
-                                    setConfirmData({
-                                        isOpen: true,
-                                        title: 'XÁC NHẬN CHỌN PHÒNG ĐANG BẬN',
-                                        message: `⚠️ Phòng <strong>"${selectedRoom.roomName}"</strong> đang bị trùng lịch vào thời gian này. Việc phân công có thể gây chồng chéo. Bạn có chắc chắn muốn tiếp tục?`
-                                    });
-                                    return;
-                                }
-                                confirmSelection();
-                            }}
+                            disabled={!selectedRoom || conflictInfo?.hasConflict}
+                            title={conflictInfo?.hasConflict ? 'Không thể chọn phòng đang xúng đột' : ''}
+                            onClick={confirmSelection}
                         >
                             Xác nhận chọn phòng
                         </button>
                     </div>
                 </div>
             </div>
-
-            <ConfirmModal
-                isOpen={confirmData.isOpen}
-                onClose={() => setConfirmData({ ...confirmData, isOpen: false })}
-                onConfirm={confirmSelection}
-                title={confirmData.title}
-                message={confirmData.message}
-                type="warning"
-            />
         </div>
+        </>
     );
 };
 

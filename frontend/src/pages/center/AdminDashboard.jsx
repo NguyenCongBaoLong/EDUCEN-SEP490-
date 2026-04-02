@@ -19,36 +19,6 @@ import zaloOAService from '../../services/zaloOAService';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
-/* ─── Mock Data (admin messages only) ────────────────── */
-
-
-const adminMessages = [
-    {
-        id: 'sys-1',
-        type: 'admin',
-        senderName: 'Admin Tổng Hệ Thống',
-        senderRole: 'Quản trị viên',
-        subject: '[QUAN TRỌNG] Cập nhật chính sách học phí 2025',
-        preview: 'Kính gửi các trung tâm, từ tháng 3/2025 hệ thống sẽ áp dụng chính sách mới...',
-        content: 'Kính gửi các trung tâm,\n\nTừ tháng 3/2025, hệ thống sẽ áp dụng chính sách học phí mới như sau:\n\n1. Học phí sẽ được thu theo kỳ (3 tháng/kỳ) thay vì theo tháng.\n2. Học sinh đăng ký trước ngày 01/03 sẽ được giữ nguyên mức học phí cũ đến hết học kỳ 1.\n3. Các trường hợp miễn giảm học phí cần nộp hồ sơ trước ngày 20/02.\n\nVui lòng thông báo đến phụ huynh và học sinh. Mọi thắc mắc liên hệ phòng hỗ trợ.\n\nTrân trọng,\nPhòng Quản Lý Hệ Thống',
-        sentAt: '2025-02-18T09:00:00',
-        isRead: false,
-        priority: 'high',
-    },
-    {
-        id: 'sys-2',
-        type: 'admin',
-        senderName: 'Admin Tổng Hệ Thống',
-        senderRole: 'Quản trị viên',
-        subject: 'Bảo trì hệ thống ngày 22/02/2025',
-        preview: 'Hệ thống sẽ tạm ngưng hoạt động từ 23:00 ngày 22/02 đến 02:00 ngày 23/02...',
-        content: 'Kính gửi các trung tâm,\n\nHệ thống sẽ tạm ngưng hoạt động để bảo trì theo lịch:\n\n- Thời gian: 23:00 ngày 22/02 đến 02:00 ngày 23/02/2025\n- Ảnh hưởng: Không thể đăng nhập, xem lịch học, hoặc nhắn tin trong thời gian này.\n\nXin lỗi vì sự bất tiện này. Chúng tôi sẽ cố gắng hoàn thành sớm nhất có thể.\n\nTrân trọng,\nPhòng Kỹ Thuật',
-        sentAt: '2025-02-17T14:30:00',
-        isRead: true,
-        priority: 'normal',
-    },
-];
-
 
 
 /* ─── Helpers ────────────────────────────────────────── */
@@ -108,7 +78,6 @@ const AdminDashboard = () => {
     const [replying, setReplying] = useState(false);
 
     const inboxMessages = [
-        ...adminMessages,
         ...supportRequests.map(sr => ({
             id: `sr-${sr.id}`,
             srId: sr.id,
