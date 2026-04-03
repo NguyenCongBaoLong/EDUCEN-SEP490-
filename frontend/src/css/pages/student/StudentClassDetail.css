@@ -110,9 +110,21 @@
 /* Info Cards */
 .scd-info-cards {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 14px;
     margin-bottom: 24px;
+}
+
+@media (max-width: 1400px) {
+    .scd-info-cards {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .scd-info-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .scd-info-card {
@@ -1405,4 +1417,71 @@
 
 .scd-grading-msg svg {
     color: #94a3b8;
+}
+
+/* ─── Stats Card Enhancements ─── */
+.scd-stats-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #f1f5f9;
+}
+
+.scd-stat-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.scd-stat-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.scd-stat-icon-wrap.gpa {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.scd-stat-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.scd-stat-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 2px;
+}
+
+.scd-stat-value {
+    font-size: 1.375rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1.1;
+}
+
+.scd-stat-value-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Responsive adjustment for stats */
+@media (max-width: 1200px) {
+    .scd-stats-summary {
+        grid-template-columns: 1fr;
+    }
 }

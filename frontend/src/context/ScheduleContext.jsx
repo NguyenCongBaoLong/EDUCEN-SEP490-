@@ -10,9 +10,15 @@ export const ScheduleProvider = ({ children }) => {
     // Parse date string as local date (not UTC) to avoid timezone off-by-one issues
     const parseLocalDate = (dateStr) => {
         if (!dateStr) return null;
-        // "2025-03-10T00:00:00" or "2025-03-10" → parse as local
-        const parts = dateStr.substring(0, 10).split('-');
-        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        try {
+            // Support both ISO strings and "YYYY-MM-DD"
+            const parts = dateStr.substring(0, 10).split('-');
+            if (parts.length !== 3) return null;
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            return isNaN(d.getTime()) ? null : d;
+        } catch (e) {
+            return null;
+        }
     };
 
     const refreshSchedules = useCallback(async () => {

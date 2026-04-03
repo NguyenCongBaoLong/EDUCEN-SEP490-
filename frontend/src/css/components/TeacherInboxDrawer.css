@@ -1,0 +1,356 @@
+/* ── Trigger Button ─────────────────────────────────── */
+.tid-trigger-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    position: relative;
+    transition: background 0.2s;
+}
+.tid-trigger-btn:hover {
+    background: #e2e8f0;
+}
+
+.tid-trigger-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 999px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+/* ── Overlay ────────────────────────────────────────── */
+.tid-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+/* ── Drawer ─────────────────────────────────────────── */
+.tid-drawer {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+    z-index: 1001;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+.tid-drawer.open {
+    right: 0;
+}
+
+/* ── Drawer Header ──────────────────────────────────── */
+.tid-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.tid-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #3b82f6;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.tid-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.tid-drawer-title-badge {
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.tid-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #64748b;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
+.tid-close-btn:hover {
+    background: #f1f5f9;
+}
+
+/* ── Drawer Body ────────────────────────────────────── */
+.tid-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* ── Message Detail ─────────────────────────────────── */
+.tid-detail {
+    padding: 20px;
+}
+
+.tid-detail-sender-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.tid-detail-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.tid-detail-sender-info {
+    flex: 1;
+}
+
+.tid-detail-sender-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem;
+}
+
+.tid-detail-sender-role {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.tid-detail-time {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tid-detail-subject {
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 12px;
+    font-size: 1rem;
+}
+
+.tid-detail-content {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+    color: #334155;
+    line-height: 1.6;
+}
+
+.tid-status-wrap {
+    margin-bottom: 16px;
+}
+
+.tid-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.tid-status-badge.answered {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+.tid-status-badge.pending {
+    background: #fefce8;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.tid-response-box {
+    background: #f0fdf4;
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid #bbf7d0;
+}
+
+.tid-response-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    color: #16a34a;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.tid-response-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+.tid-response-by {
+    margin: 8px 0 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.tid-pending-box {
+    background: #fefce8;
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid #fde68a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #92400e;
+    font-size: 0.875rem;
+}
+
+/* ── Message List ───────────────────────────────────── */
+.tid-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+}
+
+.tid-empty p {
+    margin-top: 12px;
+    font-size: 0.9rem;
+}
+
+.tid-msg-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.tid-msg-item:hover {
+    background: #f8fafc !important;
+}
+.tid-msg-item.unread {
+    background: #eff6ff;
+}
+
+.tid-msg-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+.tid-msg-avatar.replied {
+    background: #16a34a;
+}
+.tid-msg-avatar.pending {
+    background: #94a3b8;
+}
+
+.tid-msg-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.tid-msg-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.tid-msg-sender {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #1e293b;
+}
+
+.tid-msg-time {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.tid-msg-title {
+    font-size: 0.875rem;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+.tid-msg-title.unread {
+    font-weight: 600;
+}
+
+.tid-unread-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: #3b82f6;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.tid-msg-preview {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

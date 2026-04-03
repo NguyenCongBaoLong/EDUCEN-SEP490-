@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
+import TeacherInboxDrawer from '../../components/TeacherInboxDrawer';
 import api from '../../services/api';
 
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
@@ -106,7 +107,7 @@ const TeacherSchedule = ({ isTA = false }) => {
 
     const timeSlots = [
         '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
-        '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'
+        '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
     ];
 
     const handleCardClick = (classItem) => {
@@ -149,13 +150,16 @@ const TeacherSchedule = ({ isTA = false }) => {
                         <h1>Lịch dạy của tôi</h1>
                         <p className="ts-subtitle">Chào {teacherName}, bạn có {filteredClasses.length} buổi dạy được phân công</p>
                     </div>
-                    <button className="ts-btn-request" onClick={() => {
-                        setRequestInitialData(null);
-                        setRequestOpen(true);
-                    }}>
-                        <MessageSquare size={18} />
-                        Yêu cầu thay đổi
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <TeacherInboxDrawer />
+                        <button className="ts-btn-request" onClick={() => {
+                            setRequestInitialData(null);
+                            setRequestOpen(true);
+                        }}>
+                            <MessageSquare size={18} />
+                            Yêu cầu thay đổi
+                        </button>
+                    </div>
                 </div>
 
                 <div className="ts-controls">
@@ -213,7 +217,17 @@ const TeacherSchedule = ({ isTA = false }) => {
                             </div>
 
                             {weekDates.map((date, dayIndex) => {
-                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                const dayClasses = filteredClasses.filter(c => {
+                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
+                                    if (!isSameDay) return false;
+
+                                    // Filter by date range
+                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                    return check >= start && check <= end;
+                                });
 
                                 // Group overlapping
                                 const groupedClasses = [];
@@ -299,7 +313,17 @@ const TeacherSchedule = ({ isTA = false }) => {
                             {(() => {
                                 const date = new Date(currentDate);
                                 const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                const dayClasses = filteredClasses.filter(c => {
+                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
+                                    if (!isSameDay) return false;
+
+                                    // Filter by date range
+                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                    return check >= start && check <= end;
+                                });
 
                                 return (
                                     <div className="ts-day-column-single">
@@ -353,7 +377,17 @@ const TeacherSchedule = ({ isTA = false }) => {
                                             ))}
                                             {monthDates.map((date, i) => {
                                                 const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                                const dayClasses = filteredClasses.filter(c => {
+                                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
+                                                    if (!isSameDay) return false;
+
+                                                    // Filter by date range
+                                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                                    return check >= start && check <= end;
+                                                });
                                                 const isToday = date.toDateString() === new Date().toDateString();
 
                                                 return (

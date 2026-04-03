@@ -439,8 +439,8 @@ namespace EducenAPI.Services
                 var rf = new ResourceFile
                 {
                     FileName = Path.GetFileName(source.FileUrl),
-                    ContentType = null,
-                    Extension = Path.GetExtension(source.FileUrl)?.TrimStart('.'),
+                    ContentType = string.Empty,
+                    Extension = Path.GetExtension(source.FileUrl)?.TrimStart('.') ?? string.Empty,
                     FilePath = source.FileUrl,
                     FileSize = GetFileSizeFromUrl(source.FileUrl),
                     AssignmentId = assignment.AsmId,

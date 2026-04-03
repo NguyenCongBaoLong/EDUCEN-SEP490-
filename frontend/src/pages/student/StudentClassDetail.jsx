@@ -4,7 +4,8 @@ import {
     ChevronLeft, Calendar, Clock, Users, BookOpen,
     FileText, Download, PlayCircle, Upload, CheckCircle,
     AlertCircle, Clock as ClockIcon, Star, MessageSquare,
-    X, Paperclip, Eye, ChevronDown, ChevronUp, CheckSquare, Loader2, RefreshCw
+    X, Paperclip, Eye, ChevronDown, ChevronUp, CheckSquare, Loader2, RefreshCw,
+    Award, TrendingUp, TrendingDown, MinusCircle
 } from 'lucide-react';
 import StudentSidebar from '../../components/StudentSidebar';
 import '../../css/pages/student/StudentClassDetail.css';
@@ -243,8 +244,9 @@ const StudentClassDetail = () => {
     const pastSessions = sessions.filter(s => new Date(s.sessionDate) <= new Date()).reverse();
     const futureSessions = sessions.filter(s => new Date(s.sessionDate) > new Date());
     const totalSessions = sessions.length;
-    const completedSessions = sessions.filter(s => s.status === 'Completed').length;
-    const progress = totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
+    // User wants progress based on sessions that have passed (pastSessions)
+    const passedSessionsCount = pastSessions.length;
+    const progress = totalSessions > 0 ? Math.round((passedSessionsCount / totalSessions) * 100) : 0;
     
     // Check-in progress (mock for now or inferred from sessions)
     const attendedCount = sessions.filter(s => s.status === 'Attended').length; 
@@ -253,6 +255,24 @@ const StudentClassDetail = () => {
     const allAssignments = sessions.flatMap(s => s.assignments || []);
     const submittedAsmsCount = allAssignments.filter(a => a.currentSubmission != null).length;
     const totalMaterials = sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
+    
+    // Calculate GPA and Progress
+    const gradedAsms = allAssignments.filter(a => a.currentSubmission?.isPublished && a.currentSubmission?.score != null);
+    const gpa = gradedAsms.length > 0 
+        ? (gradedAsms.reduce((acc, a) => acc + a.currentSubmission.score, 0) / gradedAsms.length).toFixed(1) 
+        : '—';
+
+    let progressTrend = { label: 'Chưa đủ dữ liệu', icon: <MinusCircle size={14} />, color: '#94a3b8' };
+    if (gradedAsms.length >= 2) {
+        const sortedByDate = [...gradedAsms].sort((a, b) => new Date(b.currentSubmission.submittedAt || b.currentSubmission.createdAt) - new Date(a.currentSubmission.submittedAt || a.currentSubmission.createdAt));
+        const recentAvg = sortedByDate.slice(-2).reduce((acc, a) => acc + a.currentSubmission.score, 0) / 2;
+        const overallAvg = parseFloat(gpa);
+        const diff = recentAvg - overallAvg;
+
+        if (diff > 0.5) progressTrend = { label: 'Tiến bộ vượt bậc', icon: <TrendingUp size={14} />, color: '#16a34a' };
+        else if (diff >= -0.5) progressTrend = { label: 'Duy trì ổn định', icon: <TrendingUp size={14} />, color: '#3b82f6' };
+        else progressTrend = { label: 'Cần nỗ lực hơn', icon: <TrendingDown size={14} />, color: '#dc2626' };
+    }
 
     const renderMaterialCard = (item) => (
         <div key={item.materialId} className="scd-item-card" onClick={() => setSelectedMaterial(item)}>
@@ -315,10 +335,10 @@ const StudentClassDetail = () => {
                         {(() => {
                             const hasStarted = classInfo.startDate ? new Date(classInfo.startDate) <= new Date() : false;
                             const statusKey = classInfo.status === 'Active' 
-                                ? (completedSessions === 0 && !hasStarted ? 'notstarted' : 'active') 
+                                ? (passedSessionsCount === 0 && !hasStarted ? 'notstarted' : 'active') 
                                 : 'inactive';
                             const statusLabel = classInfo.status === 'Active' 
-                                ? (completedSessions === 0 && !hasStarted ? 'Chưa học' : 'Đang học') 
+                                ? (passedSessionsCount === 0 && !hasStarted ? 'Chưa học' : 'Đang học') 
                                 : 'Đã kết thúc';
                             return (
                                 <span className={`scd-status-badge ${statusKey}`}>
@@ -365,6 +385,19 @@ const StudentClassDetail = () => {
                             {attendanceRate}%
                         </div>
                         <div className="scd-info-sub">{attendedCount}/{pastSessions.length} buổi đã qua</div>
+                    </div>
+                    {/* New GPA & Progress cards in top bar */}
+                    <div className="scd-info-card highlight" style={{ '--accent': '#f59e0b' }}>
+                        <div className="scd-info-label"><Award size={15} /> ĐIỂM TRUNG BÌNH</div>
+                        <div className="scd-info-value" style={{ color: '#f59e0b' }}>{gpa}</div>
+                        <div className="scd-info-sub">điểm trung bình (GPA)</div>
+                    </div>
+                    <div className="scd-info-card highlight" style={{ '--accent': progressTrend.color }}>
+                        <div className="scd-info-label">{progressTrend.icon} TIẾN BỘ</div>
+                        <div className="scd-info-value" style={{ color: progressTrend.color, fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
+                            {progressTrend.label}
+                        </div>
+                        <div className="scd-info-sub">Xu hướng học tập</div>
                     </div>
                 </div>
 
@@ -462,13 +495,13 @@ const StudentClassDetail = () => {
                                     </div>
                                 </div>
 
-                                {/* Tiến độ */}
-                                <div className="scd-card scd-progress-card">
+                                {/* Thống kê học tập (Dạng cột bổ trợ) */}
+                                <div className="scd-card scd-stats-card">
                                     <div className="scd-card-header"><h3>Thống kê học tập</h3></div>
                                     <div className="cd-overview-stats">
                                         <div className="cd-overview-row">
-                                            <span>Buổi đã hoàn thành</span>
-                                            <span className="cd-overview-val">{completedSessions} / {totalSessions}</span>
+                                            <span>Buổi đã diễn ra</span>
+                                            <span className="cd-overview-val">{passedSessionsCount} / {totalSessions}</span>
                                         </div>
                                         <div className="cd-overview-row">
                                             <span>Chuyên cần</span>
@@ -478,11 +511,8 @@ const StudentClassDetail = () => {
                                             <span>Bài tập đã nộp</span>
                                             <span className="cd-overview-val">{submittedAsmsCount} / {allAssignments.length}</span>
                                         </div>
-                                        <div className="cd-overview-row">
-                                            <span>Tài liệu đã chia sẻ</span>
-                                            <span className="cd-overview-val">{totalMaterials} file</span>
-                                        </div>
                                     </div>
+                                    
                                     <div className="cd-progress-wrap">
                                         <div className="cd-progress-label">
                                             <span>Tiến độ khóa học</span>

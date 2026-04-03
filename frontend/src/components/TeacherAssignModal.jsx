@@ -157,6 +157,7 @@ const TeacherAssignModal = ({ isOpen, onClose, onSelectTeacher, classSlots = [],
     const selectedTeacherConflict = selectedTeacher ? checkConflict(selectedTeacher) : null;
 
     return (
+        <>
         <div className="modal-overlay" onClick={onClose}>
             <div className="teacher-assign-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
@@ -297,18 +298,22 @@ const TeacherAssignModal = ({ isOpen, onClose, onSelectTeacher, classSlots = [],
                     </div>
                 </div>
             </div>
-
-            <ConfirmModal
-                isOpen={confirmData.isOpen}
-                onClose={() => setConfirmData({ ...confirmData, isOpen: false })}
-                onConfirm={confirmSelection}
-                title={confirmData.title}
-                message={confirmData.message}
-                isAlert={confirmData.isAlert}
-                type={confirmData.type || 'warning'}
-                cancelText={confirmData.cancelText || 'Hủy'}
-            />
         </div>
+
+        <ConfirmModal
+            isOpen={confirmData.isOpen}
+            onClose={(e) => {
+                if (e && e.stopPropagation) e.stopPropagation();
+                setConfirmData({ ...confirmData, isOpen: false });
+            }}
+            onConfirm={confirmSelection}
+            title={confirmData.title}
+            message={confirmData.message}
+            isAlert={confirmData.isAlert}
+            type={confirmData.type || 'warning'}
+            cancelText={confirmData.cancelText || 'Hủy'}
+        />
+        </>
     );
 };
 
