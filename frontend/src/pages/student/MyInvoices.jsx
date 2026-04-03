@@ -212,13 +212,15 @@ const MyInvoices = () => {
                 {/* Outstanding Summary */}
                 {outstandingInvoices.length > 0 && (
                     <div className="outstanding-alert">
-                        <AlertCircle />
-                        <div>
-                            <h3>Phải thanh toán: {formatCurrency(outstandingInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0))}</h3>
-                            <p>
-                                Bạn hiện có <strong>{outstandingInvoices.length} hóa đơn</strong> đang chờ xử lý. 
-                                Vui lòng thanh toán sớm để đảm bảo quyền lợi học tập.
-                            </p>
+                        <div className="alert-content">
+                            <AlertCircle />
+                            <div className="alert-text">
+                                <h3>Phải thanh toán: {formatCurrency(outstandingInvoices.reduce((sum, inv) => sum + inv.finalAmount, 0))}</h3>
+                                <p>
+                                    Bạn hiện có <strong>{outstandingInvoices.length} hóa đơn</strong> đang chờ xử lý. 
+                                    Vui lòng thanh toán sớm để đảm bảo quyền lợi học tập.
+                                </p>
+                            </div>
                         </div>
                         {isParent && outstandingInvoices.length >= 2 && (
                             <button 

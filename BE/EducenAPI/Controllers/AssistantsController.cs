@@ -34,7 +34,7 @@ namespace EducenAPI.Controllers
             var assistant = await _assistantService.GetAssistantByIdAsync(id);
 
             if (assistant == null)
-                return NotFound(new { message = "Assistant not found" });
+                return NotFound(new { message = "Không tìm thấy trợ giảng" });
 
             return Ok(assistant);
         }
@@ -64,7 +64,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _assistantService.UpdateAssistantAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Assistant not found" });
+                    return NotFound(new { message = "Không tìm thấy trợ giảng" });
 
                 return NoContent();
             }
@@ -83,7 +83,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _assistantService.DeleteAssistantAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Assistant not found" });
+                    return NotFound(new { message = "Không tìm thấy trợ giảng" });
 
                 return NoContent();
             }

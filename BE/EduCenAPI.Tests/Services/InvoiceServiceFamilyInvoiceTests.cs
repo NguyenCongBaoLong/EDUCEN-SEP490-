@@ -47,7 +47,7 @@ public class InvoiceService_FamilyInvoice_Tests
 
         Assert.True(create.Success, create.Message);
 
-        var paid = await service.PayFamilyInvoiceAsync(create.InvoiceId, "Cash", "pay a");
+        var paid = await service.PayFamilyInvoiceAsync("10", create.InvoiceId, "Cash", "pay a");
         Assert.True(paid);
 
         var familyInvoice = await context.FamilyInvoices
@@ -91,7 +91,7 @@ public class InvoiceService_FamilyInvoice_Tests
             SelectedTuitionInvoiceIds = new List<string> { "a-1", "a-2", "a-3" }
         });
         Assert.True(createA.Success, createA.Message);
-        Assert.True(await service.PayFamilyInvoiceAsync(createA.InvoiceId, "Cash", "pay a"));
+        Assert.True(await service.PayFamilyInvoiceAsync("10", createA.InvoiceId, "Cash", "pay a"));
 
         var createB = await service.CreateFamilyInvoiceAsync("10", new CreateFamilyInvoiceRequest
         {
@@ -102,7 +102,7 @@ public class InvoiceService_FamilyInvoice_Tests
         });
 
         Assert.True(createB.Success, createB.Message);
-        Assert.True(await service.PayFamilyInvoiceAsync(createB.InvoiceId, "Cash", "pay b"));
+        Assert.True(await service.PayFamilyInvoiceAsync("10", createB.InvoiceId, "Cash", "pay b"));
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class InvoiceService_FamilyInvoice_Tests
             .FirstAsync(fi => fi.InvoiceId == result.InvoiceId);
 
         Assert.Equal(7, familyInvoice.StudentInvoices.Count);
-        Assert.True(await service.PayFamilyInvoiceAsync(result.InvoiceId, "Cash", "pay ab"));
+        Assert.True(await service.PayFamilyInvoiceAsync("10", result.InvoiceId, "Cash", "pay ab"));
     }
 
     [Fact]

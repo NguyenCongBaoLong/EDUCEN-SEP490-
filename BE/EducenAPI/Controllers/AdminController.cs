@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using EducenAPI.Services.Interface;
 
 namespace EducenAPI.Controllers
@@ -25,9 +26,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _userManagementService.LockUserAccountAsync(id);
                 if (!success)
-                    return NotFound(new { message = "User not found" });
+                    return NotFound(new { message = "Không tìm thấy người dùng" });
 
-                return Ok(new { message = "User account locked successfully", userId = id, status = "Locked" });
+                return Ok(new { message = "Khóa tài khoản người dùng thành công", userId = id, status = "Locked" });
             }
             catch (Exception ex)
             {
@@ -44,9 +45,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _userManagementService.UnlockUserAccountAsync(id);
                 if (!success)
-                    return NotFound(new { message = "User not found" });
+                    return NotFound(new { message = "Không tìm thấy người dùng" });
 
-                return Ok(new { message = "User account unlocked successfully", userId = id, status = "Active" });
+                return Ok(new { message = "Mở khóa tài khoản người dùng thành công", userId = id, status = "Active" });
             }
             catch (Exception ex)
             {
@@ -63,7 +64,7 @@ namespace EducenAPI.Controllers
             return Ok(users);
         }
 
-        // GET: api/admin/users/{id}
+// GET: api/admin/users/{id}
         [HttpGet("users/{id:int}")]
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> GetUserById(int id)
@@ -71,7 +72,7 @@ namespace EducenAPI.Controllers
             var user = await _userManagementService.GetUserByIdAsync(id);
 
             if (user == null)
-                return NotFound(new { message = "User not found" });
+                return NotFound(new { message = "Không tìm thấy người dùng" });
 
             return Ok(user);
         }

@@ -214,18 +214,22 @@ namespace EducenAPI.Controllers
             {
                 var session = await _context.ClassSessions.FindAsync(sessionId);
                 if (session == null)
-                    return NotFound(new { message = "Session not found" });
+                    return NotFound(new { message = "Không tìm thấy buổi học" });
 
                 // Sử dụng giờ Việt Nam (UTC+7)
                 var now = DateTime.UtcNow.AddHours(7);
                 var sessionDate = session.SessionDate.Date;
                 var today = now.Date;
+                var cutoffDate = today.AddDays(-2);
 
-                if (sessionDate != today)
-                    return Ok(new { canAttend = false, message = "Chỉ được điểm danh trong ngày hôm nay" });
+                if (sessionDate > today)
+                    return Ok(new { canAttend = false, message = "Buổi học chưa diễn ra" });
+
+                if (sessionDate < cutoffDate)
+                    return Ok(new { canAttend = false, message = "Đã quá hạn điểm danh (quá 2 ngày kể từ ngày học)" });
 
                 var schedule = await _context.Schedules.FindAsync(session.ScheduleId);
-                if (schedule != null)
+                if (schedule != null && sessionDate == today)
                 {
                     var sessionStart = sessionDate.Add(schedule.StartTime.ToTimeSpan());
                     if (now < sessionStart)

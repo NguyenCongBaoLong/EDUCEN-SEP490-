@@ -125,7 +125,7 @@ namespace EducenAPI.Services
                     && dto.SessionId == e.SessionId
                     && e.Title == dto.Title);
             if (isTitleUnique)
-                throw new ConflictException("Title đang bị trùng");
+                throw new ConflictException("Tiêu đề đang bị trùng");
             var material = new LessonMaterial
             {
                 SessionId = dto.SessionId,
@@ -206,7 +206,7 @@ namespace EducenAPI.Services
         {
             var material = await _context.LessonMaterials.FindAsync(id);
             if (material == null)
-                throw new Exception("Material not found");
+                throw new Exception("Không tìm thấy tài liệu");
 
             FileUploadDto? uploadedFileDto = null;
             string? oldFileUrl = material.FileUrl;
@@ -305,7 +305,7 @@ namespace EducenAPI.Services
             .FirstOrDefaultAsync(x => x.MaterialId == dto.MaterialId);
 
             if (material == null)
-                throw new Exception("Material not found");
+                throw new Exception("Không tìm thấy tài liệu");
 
             if (dto.File.Length == 0)
             {
@@ -345,7 +345,7 @@ namespace EducenAPI.Services
             var uploadedFile = uploadedFiles.FirstOrDefault();
 
             if (uploadedFile == null)
-                throw new Exception("Upload file failed");
+                throw new Exception("Tải tệp lên thất bại");
 
             string? oldFileUrl = material.FileUrl;
 

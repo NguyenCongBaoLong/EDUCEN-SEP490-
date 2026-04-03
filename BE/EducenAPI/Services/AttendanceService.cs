@@ -12,10 +12,12 @@ namespace EducenAPI.Services
     public class AttendanceService : IAttendanceService
     {
         private readonly EducenV2Context _context;
+        private readonly ILogger<AttendanceService> _logger;
 
-        public AttendanceService(EducenV2Context context)
+        public AttendanceService(EducenV2Context context, ILogger<AttendanceService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<Attendance>> GetAttendanceBySessionAsync(int sessionId)
@@ -67,6 +69,7 @@ namespace EducenAPI.Services
             ValidateStatus(status);
 
             var existing = await _context.Attendances
+                .Include(a => a.Session)
                 .FirstOrDefaultAsync(a => a.SessionId == sessionId && a.StudentId == studentId);
 
             var updater = await _context.Users.FindAsync(updatedByUserId);
@@ -102,7 +105,7 @@ namespace EducenAPI.Services
         {
             var session = await _context.ClassSessions.FindAsync(sessionId);
             if (session == null)
-                throw new Exception("Session not found");
+                throw new Exception("Không tìm thấy buổi học");
 
             ValidateSessionForAttendance(session);
 
@@ -173,7 +176,7 @@ namespace EducenAPI.Services
         {
             var classEntity = await _context.Classes.FindAsync(classId);
             if (classEntity == null)
-                throw new Exception("Class not found");
+                throw new Exception("Không tìm thấy lớp học");
 
             var sessions = await _context.ClassSessions
                 .Where(s => s.ClassId == classId)
@@ -269,12 +272,22 @@ namespace EducenAPI.Services
             var now = DateTime.UtcNow.AddHours(7);
             var sessionDate = session.SessionDate.Date;
             var today = now.Date;
+            var cutoffDate = today.AddDays(-2);
 
-            if (sessionDate != today)
-                throw new Exception("Chỉ được điểm danh trong ngày hôm nay");
+            if (sessionDate > today)
+            {
+                _logger.LogWarning("Attendance denied. Session {SessionId} is in future: {SessionDate}", session.SessionId, sessionDate);
+                throw new Exception("Buổi học chưa diễn ra, chưa thể điểm danh");
+            }
+
+            if (sessionDate < cutoffDate)
+            {
+                _logger.LogWarning("Attendance denied. Session {SessionId} exceeds 2-day window. SessionDate: {SessionDate}, Today: {Today}", session.SessionId, sessionDate, today);
+                throw new Exception("Chỉ được điểm danh trong vòng 2 ngày kể từ ngày học");
+            }
 
             var schedule = _context.Schedules.Find(session.ScheduleId);
-            if (schedule != null)
+            if (schedule != null && sessionDate == today)
             {
                 var sessionStart = sessionDate.Add(schedule.StartTime.ToTimeSpan());
                 if (now < sessionStart)
@@ -286,11 +299,26 @@ namespace EducenAPI.Services
         {
             // Sử dụng giờ Việt Nam (UTC+7)
             var now = DateTime.UtcNow.AddHours(7);
-            var sessionDate = attendance.Session.SessionDate.Date;
+            var sessionDate = attendance.Session?.SessionDate.Date ??
+                _context.ClassSessions
+                    .Where(s => s.SessionId == attendance.SessionId)
+                    .Select(s => s.SessionDate.Date)
+                    .FirstOrDefault();
             var today = now.Date;
+            var cutoffDate = today.AddDays(-2);
 
-            if (sessionDate != today)
-                throw new Exception("Không thể sửa điểm danh ngày hôm qua");
+            if (sessionDate == default)
+                throw new Exception("Không tìm thấy thông tin buổi học để kiểm tra điểm danh");
+
+            if (sessionDate > today)
+                throw new Exception("Buổi học chưa diễn ra, chưa thể chỉnh sửa điểm danh");
+
+            if (sessionDate < cutoffDate)
+            {
+                _logger.LogWarning("Attendance modification denied. AttendanceId: {AttendanceId}, SessionDate: {SessionDate}, Today: {Today}",
+                    attendance.AttendanceId, sessionDate, today);
+                throw new Exception("Chỉ được chỉnh sửa điểm danh trong vòng 2 ngày kể từ ngày học");
+            }
         }
     }
 }

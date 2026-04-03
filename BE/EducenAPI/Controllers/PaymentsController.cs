@@ -208,7 +208,7 @@ namespace EducenAPI.Controllers
                         success = true,
                         orderId = callbackOrderId,
                         status = "Paid",
-                        message = "Already processed"
+                        message = "Giao dịch đã được xử lý trước đó"
                     });
                 }
 
@@ -238,7 +238,7 @@ namespace EducenAPI.Controllers
                             success = true,
                             orderId = callbackOrderId,
                             status = "Paid",
-                            message = "Confirmed directly (hash verify bypassed)"
+                            message = "Đã xác nhận trực tiếp (bỏ qua kiểm tra hash)"
                         });
                     }
 

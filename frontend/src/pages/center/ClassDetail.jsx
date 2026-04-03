@@ -833,6 +833,7 @@ const ClassDetail = () => {
                     gradeId: classData.gradeId || classData.GradeId,
                     description: classData.description || '',
                     syllabusContent: classData.syllabusContent || '',
+                    pricePerSession: classData.pricePerSession ?? classData.PricePerSession ?? '',
                     startDate: classData.startDate ? classData.startDate.split('T')[0] : '',
                     endDate: classData.endDate ? classData.endDate.split('T')[0] : '',
                     status: classData.status?.toLowerCase() || 'active',

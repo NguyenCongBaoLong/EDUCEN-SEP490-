@@ -69,7 +69,7 @@ namespace EducenAPI.Services.Interface
         /// <summary>
         /// Thanh toán hóa đơn gia đình
         /// </summary>
-        Task<bool> PayFamilyInvoiceAsync(string invoiceId, string paymentMethod, string? notes);
+        Task<bool> PayFamilyInvoiceAsync(string parentId, string invoiceId, string paymentMethod, string? notes);
     }
 
     public class CreateInvoiceRequest

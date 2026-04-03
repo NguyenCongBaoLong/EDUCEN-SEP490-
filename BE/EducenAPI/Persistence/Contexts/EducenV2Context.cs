@@ -237,6 +237,13 @@ public partial class EducenV2Context : DbContext
         .HasForeignKey(a => a.StudentId)
         .OnDelete(DeleteBehavior.NoAction);
 
+        // ClassSession - Attendance relationship
+        modelBuilder.Entity<Attendance>()
+        .HasOne(a => a.Session)
+        .WithMany(s => s.Attendances)
+        .HasForeignKey(a => a.SessionId)
+        .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<CenterImage>()
         .HasOne(i => i.CenterProfile)
         .WithMany(c => c.Images)

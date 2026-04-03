@@ -285,16 +285,52 @@ namespace EducenAPI.Services.Payment
 
                 _logger.LogInformation("VNPay refund response: {Response}", responseBody);
 
-                // Parse response (simplified - should parse actual VNPay API response format)
-                var refundSuccess = response.IsSuccessStatusCode;
+                string? responseCode = null;
+                string? responseMessage = null;
+
+                try
+                {
+                    using var json = System.Text.Json.JsonDocument.Parse(responseBody);
+                    var root = json.RootElement;
+
+                    if (root.TryGetProperty("vnp_ResponseCode", out var vnpRespCode))
+                    {
+                        responseCode = vnpRespCode.GetString();
+                    }
+                    else if (root.TryGetProperty("RspCode", out var rspCode))
+                    {
+                        responseCode = rspCode.GetString();
+                    }
+
+                    if (root.TryGetProperty("vnp_Message", out var vnpMsg))
+                    {
+                        responseMessage = vnpMsg.GetString();
+                    }
+                    else if (root.TryGetProperty("Message", out var msg))
+                    {
+                        responseMessage = msg.GetString();
+                    }
+                }
+                catch (Exception parseEx)
+                {
+                    _logger.LogWarning(parseEx, "Không parse được phản hồi hoàn tiền VNPay");
+                }
+
+                var refundSuccess = response.IsSuccessStatusCode
+                    && (!string.IsNullOrWhiteSpace(responseCode)
+                        ? responseCode == "00"
+                        : !responseBody.Contains("error", StringComparison.OrdinalIgnoreCase));
 
                 return new RefundResponse
                 {
                     Success = refundSuccess,
                     RefundTransactionId = vnp_RequestId,
+                    ErrorMessage = refundSuccess ? null : (responseMessage ?? $"VNPay refund failed. ResponseCode={responseCode ?? "N/A"}"),
                     AdditionalData = new Dictionary<string, object>
                     {
                         { "response", responseBody },
+                        { "responseCode", responseCode ?? string.Empty },
+                        { "responseMessage", responseMessage ?? string.Empty },
                         { "configSource", config.Source }
                     }
                 };

@@ -398,7 +398,7 @@
 .hero {
     position: relative;
     padding: 8rem 0 6rem;
-    background: radial-gradient(circle at 50% 50%, rgba(20, 20, 60, 0.7) 0%, rgba(10, 10, 35, 0.9) 50%, rgba(0, 0, 0, 1) 100%), url('/images/cosmic-bg.jpg') center/cover no-repeat;
+    background: radial-gradient(circle at 50% 50%, rgba(20, 20, 60, 0.7) 0%, rgba(10, 10, 35, 0.9) 50%, rgba(0, 0, 0, 1) 100%);
     background-attachment: fixed;
     background-blend-mode: overlay;
     overflow: hidden;

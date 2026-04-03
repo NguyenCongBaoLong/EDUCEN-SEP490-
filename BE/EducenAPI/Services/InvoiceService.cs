@@ -551,16 +551,19 @@ namespace EducenAPI.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> PayFamilyInvoiceAsync(string invoiceId, string paymentMethod, string? notes)
+        public async Task<bool> PayFamilyInvoiceAsync(string parentId, string invoiceId, string paymentMethod, string? notes)
         {
             try
             {
                 var familyInvoice = await _context.FamilyInvoices
                     .Include(fi => fi.StudentInvoices)
-                    .FirstOrDefaultAsync(fi => fi.InvoiceId == invoiceId);
+                    .FirstOrDefaultAsync(fi => fi.InvoiceId == invoiceId && fi.ParentId == parentId);
 
                 if (familyInvoice == null)
+                {
+                    _logger.LogWarning("PayFamilyInvoice denied or not found. ParentId: {ParentId}, InvoiceId: {InvoiceId}", parentId, invoiceId);
                     return false;
+                }
 
                 if (familyInvoice.Status != "Pending")
                     return false;

@@ -135,7 +135,11 @@ namespace EducenAPI.Controllers
                 if (string.IsNullOrWhiteSpace(tenantId))
                     return BadRequest(new { message = "Không xác định được trung tâm." });
 
-                var success = await _invoiceService.PayFamilyInvoiceAsync(invoiceId, request.PaymentMethod, request.Notes);
+                var parentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrWhiteSpace(parentId))
+                    return BadRequest(new { message = "Không xác định được người dùng." });
+
+                var success = await _invoiceService.PayFamilyInvoiceAsync(parentId, invoiceId, request.PaymentMethod, request.Notes);
                 
                 if (success)
                 {

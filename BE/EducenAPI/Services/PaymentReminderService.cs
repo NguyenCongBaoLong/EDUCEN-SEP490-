@@ -34,10 +34,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
 
             if (invoice == null)
-                throw new Exception("Invoice not found");
+                throw new Exception("Không tìm thấy hóa đơn");
 
             if (invoice.Status == "Paid" || invoice.Status == "Cancelled")
-                throw new Exception("Invoice is already paid or cancelled");
+                throw new Exception("Hóa đơn đã được thanh toán hoặc đã hủy");
 
             // Get student's parents
             var student = await _tenantContext.Students

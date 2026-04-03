@@ -4,6 +4,7 @@ using EducenAPI.Services;
 using EducenAPI.Services.Interface;
 using EducenAPI.Services.TenantService;
 using EducenAPI.Services.Payment;
+using EducenAPI.Services.BackgroundServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +41,7 @@ builder.Services.AddControllers()
             return new BadRequestObjectResult(new
             {
                 statusCode = 400,
-                message = "Validation failed",
+                message = "Dữ liệu đầu vào không hợp lệ",
                 errors = errors
             });
         };
@@ -133,13 +134,14 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
 // Tenant DB (dynamic per request)
 builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
 {
-    var tenantService = serviceProvider.GetRequiredService<ICurrentTenantService>();
-
+    var currentTenantService = serviceProvider.GetRequiredService<ICurrentTenantService>();
     var connectionString =
-        tenantService.ConnectionString
+        currentTenantService.ConnectionString
         ?? builder.Configuration.GetConnectionString("DefaultTenantConnection");
 
     options.UseSqlServer(connectionString);
+    options.EnableSensitiveDataLogging(); // Enable để xem key values khi lỗi
+    options.EnableDetailedErrors(); // Enable detailed errors
 });
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -193,6 +195,7 @@ builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
 
 // ── Background Services ───────────────────────────────────────────────────────
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.OverdueInvoiceService>();
+builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.SubscriptionExpirationService>();
 
 // === Zalo OA ===
 builder.Services.AddHttpClient("ZaloAPI", client =>

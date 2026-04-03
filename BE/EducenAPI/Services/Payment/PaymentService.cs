@@ -2,6 +2,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace EducenAPI.Services.Payment
 {
@@ -60,7 +61,8 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
-                var isTuition = dto.TransactionType == "Tuition" || dto.TransactionType == "FamilyTuition";
+                var isTuition = string.Equals(dto.TransactionType, "Tuition", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(dto.TransactionType, "FamilyTuition", StringComparison.OrdinalIgnoreCase);
                 var tenantContext = await ResolveCreateTenantContextAsync(dto, isTuition);
                 if (string.IsNullOrWhiteSpace(tenantContext.TenantId))
                 {
@@ -69,6 +71,22 @@ namespace EducenAPI.Services.Payment
                         Success = false,
                         ErrorMessage = "Tenant context could not be resolved"
                     };
+                }
+
+                var resolvedAmount = dto.Amount;
+                if (isTuition)
+                {
+                    var validation = await ValidateTuitionPaymentRequestAsync(dto);
+                    if (!validation.IsValid)
+                    {
+                        return new PaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = validation.ErrorMessage
+                        };
+                    }
+
+                    resolvedAmount = validation.ExpectedAmount;
                 }
 
                 _logger.LogInformation(
@@ -109,7 +127,7 @@ namespace EducenAPI.Services.Payment
                             return new PaymentResult
                             {
                                 Success = false,
-                                ErrorMessage = $"Tenant with ID '{tenantContext.TenantId}' not found"
+                                ErrorMessage = $"Không tìm thấy trung tâm với ID '{tenantContext.TenantId}'"
                             };
                         }
                     }
@@ -119,7 +137,7 @@ namespace EducenAPI.Services.Payment
                         return new PaymentResult
                         {
                             Success = false,
-                            ErrorMessage = "PlanId is required for subscription payment"
+                            ErrorMessage = "Thiếu PlanId cho giao dịch thanh toán gói dịch vụ"
                         };
                     }
 
@@ -130,7 +148,7 @@ namespace EducenAPI.Services.Payment
                         return new PaymentResult
                         {
                             Success = false,
-                            ErrorMessage = "Selected plan is not available"
+                            ErrorMessage = "Gói dịch vụ đã chọn không khả dụng"
                         };
                     }
                 }
@@ -154,6 +172,21 @@ namespace EducenAPI.Services.Payment
                                 .FirstOrDefault(t => t.Status == "Pending");
                             if (existingTxn != null)
                             {
+                                if (!AmountEquals(existingPending.Amount, resolvedAmount))
+                                {
+                                    _logger.LogWarning(
+                                        "Pending payment amount mismatch for ReferenceId {RefId}. Existing: {ExistingAmount}, Expected: {ExpectedAmount}. Marking old pending as failed.",
+                                        dto.ReferenceId,
+                                        existingPending.Amount,
+                                        resolvedAmount);
+
+                                    existingTxn.Status = "Failed";
+                                    existingTxn.ErrorMessage = "Pending payment amount mismatch";
+                                    existingPending.Status = "Failed";
+                                    await _tenantDbContext.SaveChangesAsync();
+                                }
+                                else
+                                {
                                 _logger.LogInformation(
                                     "Existing pending payment found for ReferenceId: {RefId}, PaymentId: {PaymentId}. Reusing.",
                                     dto.ReferenceId, existingPending.PaymentId);
@@ -189,6 +222,7 @@ namespace EducenAPI.Services.Payment
                                 existingTxn.ErrorMessage = "Reused payment URL creation failed";
                                 existingPending.Status = "Failed";
                                 await _tenantDbContext.SaveChangesAsync();
+                                }
                             }
                         }
                     }
@@ -196,7 +230,7 @@ namespace EducenAPI.Services.Payment
                     var paymentRecord = new PaymentRecordTenant
                     {
                         PaymentId = Guid.NewGuid().ToString(),
-                        Amount = dto.Amount,
+                        Amount = resolvedAmount,
                         Status = "Pending",
                         PaymentDate = DateTime.UtcNow,
                         TransactionType = dto.TransactionType,
@@ -213,7 +247,7 @@ namespace EducenAPI.Services.Payment
                     {
                         PaymentRecordId = paymentRecord.PaymentId,
                         GatewayType = dto.GatewayType,
-                        Amount = dto.Amount,
+                        Amount = resolvedAmount,
                         Status = "Pending",
                         CreatedAt = DateTime.UtcNow
                     };
@@ -226,7 +260,7 @@ namespace EducenAPI.Services.Payment
                     {
                         TenantId = tenantContext.TenantId,
                         OrderId = paymentRecord.PaymentId,
-                        Amount = dto.Amount,
+                        Amount = resolvedAmount,
                         Description = dto.Description,
                         ReturnUrl = dto.ReturnUrl,
                         IpAddress = dto.IpAddress,
@@ -403,7 +437,7 @@ namespace EducenAPI.Services.Payment
                 return new PaymentResult
                 {
                     Success = false,
-                    ErrorMessage = $"Internal error: {ex.Message}"
+                    ErrorMessage = $"Lỗi hệ thống nội bộ: {ex.Message}"
                 };
             }
         }
@@ -493,7 +527,7 @@ namespace EducenAPI.Services.Payment
                     return new PaymentVerificationResult
                     {
                         IsValid = false,
-                        Message = "Transaction not found"
+                        Message = "Không tìm thấy giao dịch"
                     };
                 }
 
@@ -526,7 +560,7 @@ namespace EducenAPI.Services.Payment
                 return new PaymentVerificationResult
                 {
                     IsValid = false,
-                    Message = $"Processing error: {ex.Message}"
+                    Message = $"Lỗi xử lý: {ex.Message}"
                 };
             }
         }
@@ -781,6 +815,181 @@ namespace EducenAPI.Services.Payment
             return null;
         }
 
+        private async Task<(bool IsValid, decimal ExpectedAmount, string ErrorMessage)> ValidateTuitionPaymentRequestAsync(CreatePaymentDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.ReferenceId))
+            {
+                return (false, 0, "ReferenceId là bắt buộc cho thanh toán học phí.");
+            }
+
+            var (currentUserId, roleSet) = GetCurrentUserContext();
+            var normalizedType = dto.TransactionType?.Trim();
+
+            if (string.Equals(normalizedType, "Tuition", StringComparison.OrdinalIgnoreCase))
+            {
+                var tuitionInvoice = await _tenantDbContext.TuitionInvoices
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.InvoiceId == dto.ReferenceId);
+
+                if (tuitionInvoice == null)
+                {
+                    return (false, 0, "Không tìm thấy hóa đơn học phí cần thanh toán.");
+                }
+
+                if (tuitionInvoice.Status == "Paid")
+                {
+                    return (false, 0, "Hóa đơn này đã được thanh toán trước đó.");
+                }
+
+                if (tuitionInvoice.Status != "Sent" && tuitionInvoice.Status != "Overdue")
+                {
+                    return (false, 0, "Chỉ có thể thanh toán hóa đơn ở trạng thái Sent hoặc Overdue.");
+                }
+
+                var canAccess = await CanAccessStudentInvoiceAsync(tuitionInvoice.StudentId, currentUserId, roleSet);
+                if (!canAccess)
+                {
+                    _logger.LogWarning(
+                        "Tuition payment ownership denied. UserId: {UserId}, Roles: {Roles}, StudentId: {StudentId}, InvoiceId: {InvoiceId}",
+                        currentUserId ?? "N/A",
+                        string.Join(',', roleSet),
+                        tuitionInvoice.StudentId,
+                        dto.ReferenceId);
+                    return (false, 0, "Bạn không có quyền thanh toán hóa đơn này.");
+                }
+
+                if (!AmountEquals(dto.Amount, tuitionInvoice.FinalAmount))
+                {
+                    _logger.LogWarning(
+                        "Tuition payment amount mismatch. InvoiceId: {InvoiceId}, RequestedAmount: {RequestedAmount}, ExpectedAmount: {ExpectedAmount}",
+                        dto.ReferenceId,
+                        dto.Amount,
+                        tuitionInvoice.FinalAmount);
+                    return (false, 0, "Số tiền thanh toán không khớp với hóa đơn.");
+                }
+
+                return (true, tuitionInvoice.FinalAmount, string.Empty);
+            }
+
+            if (string.Equals(normalizedType, "FamilyTuition", StringComparison.OrdinalIgnoreCase))
+            {
+                var familyInvoice = await _tenantDbContext.FamilyInvoices
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(fi => fi.InvoiceId == dto.ReferenceId);
+
+                if (familyInvoice == null)
+                {
+                    return (false, 0, "Không tìm thấy hóa đơn gộp cần thanh toán.");
+                }
+
+                if (familyInvoice.Status == "Paid")
+                {
+                    return (false, 0, "Hóa đơn gộp này đã được thanh toán trước đó.");
+                }
+
+                if (familyInvoice.Status != "Pending")
+                {
+                    return (false, 0, "Chỉ có thể thanh toán hóa đơn gộp ở trạng thái Pending.");
+                }
+
+                if (!CanAccessFamilyInvoice(familyInvoice, currentUserId, roleSet))
+                {
+                    _logger.LogWarning(
+                        "Family payment ownership denied. UserId: {UserId}, Roles: {Roles}, ParentId: {ParentId}, InvoiceId: {InvoiceId}",
+                        currentUserId ?? "N/A",
+                        string.Join(',', roleSet),
+                        familyInvoice.ParentId,
+                        dto.ReferenceId);
+                    return (false, 0, "Bạn không có quyền thanh toán hóa đơn gộp này.");
+                }
+
+                if (!AmountEquals(dto.Amount, familyInvoice.TotalAmount))
+                {
+                    _logger.LogWarning(
+                        "Family payment amount mismatch. InvoiceId: {InvoiceId}, RequestedAmount: {RequestedAmount}, ExpectedAmount: {ExpectedAmount}",
+                        dto.ReferenceId,
+                        dto.Amount,
+                        familyInvoice.TotalAmount);
+                    return (false, 0, "Số tiền thanh toán không khớp với hóa đơn gộp.");
+                }
+
+                return (true, familyInvoice.TotalAmount, string.Empty);
+            }
+
+            return (false, 0, "Loại giao dịch học phí không hợp lệ.");
+        }
+
+        private (string? UserId, HashSet<string> Roles) GetCurrentUserContext()
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            var userId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var roles = user?.FindAll(ClaimTypes.Role)
+                .Select(r => r.Value)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase)
+                ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var role in user?.FindAll("role") ?? Enumerable.Empty<Claim>())
+            {
+                if (!string.IsNullOrWhiteSpace(role.Value))
+                {
+                    roles.Add(role.Value);
+                }
+            }
+
+            return (userId, roles);
+        }
+
+        private async Task<bool> CanAccessStudentInvoiceAsync(int studentId, string? currentUserId, HashSet<string> roles)
+        {
+            if (roles.Contains("Admin"))
+            {
+                return true;
+            }
+
+            if (!int.TryParse(currentUserId, out var currentUserInt))
+            {
+                return false;
+            }
+
+            if (roles.Contains("Student"))
+            {
+                return currentUserInt == studentId;
+            }
+
+            if (roles.Contains("Parent"))
+            {
+                return await _tenantDbContext.Set<Dictionary<string, object>>("ParentStudent")
+                    .AnyAsync(ps => EF.Property<int>(ps, "ParentsUserId") == currentUserInt
+                                 && EF.Property<int>(ps, "StudentsUserId") == studentId);
+            }
+
+            return false;
+        }
+
+        private static bool CanAccessFamilyInvoice(FamilyInvoice familyInvoice, string? currentUserId, HashSet<string> roles)
+        {
+            if (roles.Contains("Admin"))
+            {
+                return true;
+            }
+
+            if (roles.Contains("Parent"))
+            {
+                return !string.IsNullOrWhiteSpace(currentUserId)
+                    && string.Equals(familyInvoice.ParentId, currentUserId, StringComparison.Ordinal);
+            }
+
+            return false;
+        }
+
+        private static bool AmountEquals(decimal left, decimal right)
+        {
+            return decimal.Round(left, 2, MidpointRounding.AwayFromZero)
+                == decimal.Round(right, 2, MidpointRounding.AwayFromZero);
+        }
+
         private sealed record TenantResolutionContext(string TenantId, string Source, string? OrderId);
 
         private async Task<PaymentVerificationResult?> ApplyVerificationToTenantAsync(
@@ -798,7 +1007,7 @@ namespace EducenAPI.Services.Payment
                     IsSuccessful = transaction.Status == "Success",
                     OrderId = verification.OrderId,
                     Amount = transaction.Amount,
-                    Message = $"Already processed with status: {transaction.Status}"
+                    Message = $"Giao dịch đã được xử lý trước đó với trạng thái: {transaction.Status}"
                 };
             }
 
@@ -855,7 +1064,7 @@ namespace EducenAPI.Services.Payment
                     IsSuccessful = transaction.Status == "Success",
                     OrderId = verification.OrderId,
                     Amount = transaction.Amount,
-                    Message = $"Already processed with status: {transaction.Status}"
+                    Message = $"Giao dịch đã được xử lý trước đó với trạng thái: {transaction.Status}"
                 };
             }
 

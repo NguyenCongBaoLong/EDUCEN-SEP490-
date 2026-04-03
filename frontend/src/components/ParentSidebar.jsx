@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Calendar, LogOut, ChevronDown, User, FileText } from 'lucide-react';
+import { GraduationCap, Calendar, LogOut, ChevronDown, User, FileText, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChild } from '../context/ChildContext';
 import '../css/components/Sidebar.css';

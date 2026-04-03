@@ -3,10 +3,12 @@ using EducenAPI.DTOs.Students;
 using EducenAPI.DTOs.Assignments;
 using EducenAPI.DTOs.LessionMaterials;
 using EducenAPI.DTOs.Submissions;
+using EducenAPI.DTOs;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
-using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+using EducenAPI.Services.Interface;
 
 namespace EducenAPI.Services
 {
@@ -553,6 +555,8 @@ namespace EducenAPI.Services
             if (existingClass == null)
                 return false;
 
+            EnsureClassNotEnded(existingClass, "chỉnh sửa");
+
             // Use transaction for updating class and schedules
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -687,6 +691,9 @@ namespace EducenAPI.Services
 
                 if (dto.PricePerSession.HasValue)
                 {
+                    if (HasClassStarted(existingClass))
+                        throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi.");
+
                     Console.WriteLine($"[DEBUG] UpdateClassAsync: PricePerSession = {dto.PricePerSession}");
                     existingClass.PricePerSession = dto.PricePerSession;
                 }
@@ -710,6 +717,17 @@ namespace EducenAPI.Services
                         {
                             if (schedule.Sessions != null && schedule.Sessions.Any())
                             {
+                                // ✅ FIX: Load Attendances và xóa trước
+                                var sessionIds = schedule.Sessions.Select(s => s.SessionId).ToList();
+                                var attendancesToDelete = _context.Attendances
+                                    .Where(a => sessionIds.Contains(a.SessionId))
+                                    .ToList();
+
+                                if (attendancesToDelete.Any())
+                                {
+                                    _context.Attendances.RemoveRange(attendancesToDelete);
+                                }
+
                                 var sessionsToDelete = schedule.Sessions
                                     .Where(s => !s.Attendances.Any() && !s.Assignments.Any() && !s.LessonMaterials.Any())
                                     .ToList();
@@ -759,14 +777,27 @@ namespace EducenAPI.Services
             if (existingClass == null)
                 return false;
 
+            EnsureClassNotEnded(existingClass, "xóa");
+
             if (existingClass.Students.Any())
                 throw new Exception("Không thể xóa lớp học: lớp đang có học viên tham gia");
 
-            // ✅ FIX: Xóa ClassSessions trước khi xóa Schedules
+            // ✅ FIX: Xóa ClassSessions và Attendances trước khi xóa Schedules
             foreach (var schedule in existingClass.Schedules)
             {
                 if (schedule.Sessions != null && schedule.Sessions.Any())
                 {
+                    // ✅ FIX: Load Attendances và xóa trước
+                    var sessionIds = schedule.Sessions.Select(s => s.SessionId).ToList();
+                    var attendancesToDelete = _context.Attendances
+                        .Where(a => sessionIds.Contains(a.SessionId))
+                        .ToList();
+
+                    if (attendancesToDelete.Any())
+                    {
+                        _context.Attendances.RemoveRange(attendancesToDelete);
+                    }
+
                     _context.ClassSessions.RemoveRange(schedule.Sessions);
                 }
             }
@@ -786,6 +817,8 @@ namespace EducenAPI.Services
             if (existingClass == null)
                 return false;
 
+            EnsureClassNotEnded(existingClass, "phân công giáo viên");
+
             var teacher = await _context.Teachers.FindAsync(teacherId);
             if (teacher == null)
                 throw new Exception("Không tìm thấy giáo viên");
@@ -800,6 +833,8 @@ namespace EducenAPI.Services
             var existingClass = await _context.Classes.FindAsync(classId);
             if (existingClass == null)
                 return false;
+
+            EnsureClassNotEnded(existingClass, "phân công trợ giảng");
 
             var assistant = await _context.Assistants.FindAsync(assistantId);
             if (assistant == null)
@@ -818,6 +853,8 @@ namespace EducenAPI.Services
 
             if (existingClass == null)
                 return false;
+
+            EnsureClassNotEnded(existingClass, "thêm học sinh");
 
             var student = await _context.Students.FindAsync(studentId);
             if (student == null)
@@ -839,6 +876,8 @@ namespace EducenAPI.Services
 
             if (existingClass == null)
                 return false;
+
+            EnsureClassNotEnded(existingClass, "xóa học sinh");
 
             var student = existingClass.Students.FirstOrDefault(s => s.UserId == studentId);
             if (student == null)
@@ -909,6 +948,9 @@ namespace EducenAPI.Services
 
             if (existingClass == null)
                 return new ImportStudentToClassResult { Success = false, ErrorMessage = "Lớp học không tồn tại." };
+
+            if (IsClassEnded(existingClass))
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = "Lớp đã kết thúc, không thể thao tác thêm học sinh." };
 
             // Check if student already in class
             if (existingClass.Students.Any(s => s.UserId == student.UserId))
@@ -1220,9 +1262,51 @@ namespace EducenAPI.Services
             var existingClass = await _context.Classes.FindAsync(classId);
             if (existingClass == null) return false;
 
+            EnsureClassNotEnded(existingClass, "cập nhật đơn giá");
+            if (HasClassStarted(existingClass))
+                throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi.");
+
             existingClass.PricePerSession = price;
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        private static DateTime GetVietnamToday()
+        {
+            return DateTime.UtcNow.AddHours(7).Date;
+        }
+
+        private static bool IsClassEnded(EducenAPI.Models.Class classEntity)
+        {
+            if (classEntity == null) return false;
+
+            if (string.Equals(classEntity.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(classEntity.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var today = GetVietnamToday();
+            return classEntity.EndDate.HasValue && classEntity.EndDate.Value.Date < today;
+        }
+
+        private static bool HasClassStarted(EducenAPI.Models.Class classEntity)
+        {
+            if (classEntity == null || !classEntity.StartDate.HasValue)
+            {
+                return false;
+            }
+
+            var today = GetVietnamToday();
+            return classEntity.StartDate.Value.Date <= today;
+        }
+
+        private static void EnsureClassNotEnded(EducenAPI.Models.Class classEntity, string action)
+        {
+            if (IsClassEnded(classEntity))
+            {
+                throw new Exception($"Lớp đã kết thúc, không thể {action}.");
+            }
         }
     }
 }

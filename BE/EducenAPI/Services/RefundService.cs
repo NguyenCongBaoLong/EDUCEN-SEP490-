@@ -27,25 +27,32 @@ namespace EducenAPI.Services
 
         public async Task<Models.RefundRequest> CreateRefundRequestAsync(CreateRefundRequest request)
         {
+            _logger.LogInformation("Tạo yêu cầu hoàn tiền. PaymentRecordId={PaymentRecordId}, TenantId={TenantId}, RefundAmount={RefundAmount}, RefundMethod={RefundMethod}, IsServiceIssue={IsServiceIssue}",
+                request.PaymentRecordId,
+                request.TenantId,
+                request.RefundAmount,
+                request.RefundMethod,
+                request.IsServiceIssue);
+
             // Validate payment record
             var payment = await _adminContext.PaymentRecords
                 .FirstOrDefaultAsync(p => p.PaymentId == request.PaymentRecordId);
 
             if (payment == null)
-                throw new Exception("Payment record not found");
+                throw new Exception("Không tìm thấy giao dịch thanh toán");
 
             if (payment.Status != "Paid")
-                throw new Exception("Only paid payments can be refunded");
+                throw new Exception("Chỉ có thể hoàn tiền cho giao dịch đã thanh toán");
 
             if (payment.TransactionType != "Subscription")
-                throw new Exception("Only subscription payments can be refunded");
+                throw new Exception("Chỉ hỗ trợ hoàn tiền cho giao dịch gói dịch vụ");
 
             if (payment.SubscriptionMonths.GetValueOrDefault() != 1)
-                throw new Exception("Only monthly subscription payments can be refunded");
+                throw new Exception("Chỉ hỗ trợ hoàn tiền cho gói đăng ký theo tháng");
 
             var withinGracePeriod = IsWithinGracePeriod(payment.PaymentDate);
             if (!withinGracePeriod && !request.IsServiceIssue)
-                throw new Exception("Refund is only allowed within the grace period or for service issues");
+                throw new Exception("Chỉ được hoàn tiền trong thời gian gia hạn hoặc khi có sự cố dịch vụ");
 
             // Check if refund already exists
             var existingRefund = await _adminContext.RefundRequests
@@ -53,11 +60,18 @@ namespace EducenAPI.Services
                     (r.Status == "Pending" || r.Status == "Approved" || r.Status == "Processing" || r.Status == "Completed"));
 
             if (existingRefund != null)
-                throw new Exception("A refund request already exists for this payment");
+                throw new Exception("Đã tồn tại yêu cầu hoàn tiền cho giao dịch này");
 
             // Validate refund amount
             if (request.RefundAmount <= 0 || request.RefundAmount > payment.Amount)
-                throw new Exception("Invalid refund amount");
+                throw new Exception("Số tiền hoàn không hợp lệ");
+
+            var effectiveTenantId = string.IsNullOrWhiteSpace(request.TenantId)
+                ? payment.TenantId
+                : request.TenantId.Trim();
+
+            if (!string.Equals(payment.TenantId, effectiveTenantId, StringComparison.Ordinal))
+                throw new Exception("Mã trung tâm không khớp với giao dịch thanh toán");
 
             var refundMethod = NormalizeRefundMethod(request.RefundMethod);
             string? gatewayRef = null;
@@ -65,7 +79,7 @@ namespace EducenAPI.Services
             if (refundMethod == "Cash")
             {
                 if (!string.Equals(payment.PaymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase))
-                    throw new Exception("Cash refund is only supported for VNPay payments");
+                    throw new Exception("Hoàn tiền tiền mặt chỉ hỗ trợ cho giao dịch VNPay");
 
                 gatewayRef = request.GatewayRef;
                 if (string.IsNullOrWhiteSpace(gatewayRef))
@@ -78,7 +92,7 @@ namespace EducenAPI.Services
                 }
 
                 if (string.IsNullOrWhiteSpace(gatewayRef))
-                    throw new Exception("Gateway reference is required for cash refunds");
+                    throw new Exception("Thiếu mã tham chiếu cổng thanh toán cho hoàn tiền tiền mặt");
             }
 
             var refund = new Models.RefundRequest
@@ -86,7 +100,7 @@ namespace EducenAPI.Services
                 RefundId = Guid.NewGuid().ToString(),
                 PaymentRecordId = request.PaymentRecordId,
                 SubscriptionId = request.SubscriptionId,
-                TenantId = request.TenantId,
+                TenantId = effectiveTenantId,
                 RequestedBy = request.RequestedBy,
                 Reason = request.Reason,
                 OriginalAmount = payment.Amount,
@@ -111,10 +125,10 @@ namespace EducenAPI.Services
         {
             var refund = await _adminContext.RefundRequests.FindAsync(refundId);
             if (refund == null)
-                throw new Exception("Refund request not found");
+                throw new Exception("Không tìm thấy yêu cầu hoàn tiền");
 
             if (refund.Status != "Pending")
-                throw new Exception("Only pending refunds can be approved");
+                throw new Exception("Chỉ có thể duyệt yêu cầu hoàn tiền ở trạng thái chờ xử lý");
 
             refund.Status = "Approved";
             refund.ApprovedBy = approvedBy;
@@ -132,10 +146,10 @@ namespace EducenAPI.Services
         {
             var refund = await _adminContext.RefundRequests.FindAsync(refundId);
             if (refund == null)
-                throw new Exception("Refund request not found");
+                throw new Exception("Không tìm thấy yêu cầu hoàn tiền");
 
             if (refund.Status != "Pending")
-                throw new Exception("Only pending refunds can be rejected");
+                throw new Exception("Chỉ có thể từ chối yêu cầu hoàn tiền ở trạng thái chờ xử lý");
 
             refund.Status = "Rejected";
             refund.RejectionReason = reason;
@@ -156,10 +170,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(r => r.RefundId == refundId);
 
             if (refund == null)
-                throw new Exception("Refund request not found");
+                throw new Exception("Không tìm thấy yêu cầu hoàn tiền");
 
             if (refund.Status != "Approved")
-                throw new Exception("Only approved refunds can be processed");
+                throw new Exception("Chỉ có thể xử lý yêu cầu hoàn tiền đã được duyệt");
 
             refund.Status = "Processing";
             refund.UpdatedAt = DateTime.UtcNow;
@@ -169,17 +183,18 @@ namespace EducenAPI.Services
             {
                 if (string.Equals(refund.RefundMethod, "Cash", StringComparison.OrdinalIgnoreCase))
                 {
-                    var payment = refund.PaymentRecord ?? throw new Exception("Payment record not found");
+                    var payment = refund.PaymentRecord ?? throw new Exception("Không tìm thấy giao dịch thanh toán");
 
                     if (!string.Equals(payment.PaymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase))
-                        throw new Exception("Cash refund is only supported for VNPay payments");
+                        throw new Exception("Hoàn tiền tiền mặt chỉ hỗ trợ cho giao dịch VNPay");
 
                     if (string.IsNullOrWhiteSpace(refund.GatewayRef))
-                        throw new Exception("Gateway reference is required for cash refunds");
+                        throw new Exception("Thiếu mã tham chiếu cổng thanh toán cho hoàn tiền tiền mặt");
 
                     var gateway = _gatewayFactory.GetGateway("VNPay");
                     var gatewayResponse = await gateway.ProcessRefundAsync(new EducenAPI.Services.Interface.RefundRequest
                     {
+                        TenantId = refund.TenantId,
                         OriginalTransactionId = refund.GatewayRef,
                         OrderId = payment.PaymentId,
                         Amount = refund.RefundAmount,
@@ -192,7 +207,7 @@ namespace EducenAPI.Services
                         : JsonSerializer.Serialize(gatewayResponse.AdditionalData);
 
                     if (!gatewayResponse.Success)
-                        throw new Exception(gatewayResponse.ErrorMessage ?? "Refund failed");
+                        throw new Exception(gatewayResponse.ErrorMessage ?? "Hoàn tiền thất bại");
 
                     refund.Status = "Completed";
                     refund.ProcessedAt = DateTime.UtcNow;
@@ -212,7 +227,7 @@ namespace EducenAPI.Services
                     .FirstOrDefaultAsync(t => t.TenantId == refund.TenantId);
 
                 if (tenant == null)
-                    throw new Exception("Tenant not found");
+                    throw new Exception("Không tìm thấy trung tâm");
 
                 tenant.CreditBalance += refund.RefundAmount;
 

@@ -139,11 +139,11 @@ namespace EducenAPI.Services
             var startDate = now.AddMonths(-6);
 
             var data = await _db.Students
-                .Where(s => s.StudentNavigation.CreatedAt >= startDate)
+                .Where(s => s.StudentNavigation != null && s.StudentNavigation.CreatedAt >= startDate)
                 .GroupBy(s => new
                 {
-                    s.StudentNavigation.CreatedAt.Year,
-                    s.StudentNavigation.CreatedAt.Month
+                    s.StudentNavigation!.CreatedAt.Year,
+                    s.StudentNavigation!.CreatedAt.Month
                 })
                 .Select(g => new StudentRegistrationDto
                 {
@@ -167,7 +167,7 @@ namespace EducenAPI.Services
                 .SelectMany(c => c.Students,
                     (c, s) => new
                     {
-                        SubjectName = c.Subject.SubjectName
+                        SubjectName = c.Subject != null ? c.Subject.SubjectName : "Unknown"
                     })
                 .GroupBy(x => x.SubjectName)
                 .Select(g => new

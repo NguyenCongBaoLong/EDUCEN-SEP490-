@@ -138,7 +138,7 @@ namespace EducenAPI.Services
                 var isUniqueTitle = await _context.Assignments.AnyAsync(e => dto.SessionId != null
                         && dto.SessionId == e.SessionId
                         && e.Title == dto.Title);
-                if (isUniqueTitle) throw new ConflictException("Title đang bị trùng vui lòng đặt lại");
+                if (isUniqueTitle) throw new ConflictException("Tiêu đề đang bị trùng, vui lòng đặt lại");
             }
 
             
@@ -234,7 +234,7 @@ namespace EducenAPI.Services
             var assignment = await _context.Assignments.FindAsync(id);
             if (assignment == null)
             {
-                throw new Exception("Assignment not found");
+                throw new Exception("Không tìm thấy bài tập");
             }
 
             string? fileUrl = assignment.FileUrl;
@@ -523,7 +523,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(a => a.AsmId == assignmentId);
 
             if (assignment == null)
-                throw new Exception("Assignment not found");
+                throw new Exception("Không tìm thấy bài tập");
 
             var result = new AssignmentGradingDto
             {

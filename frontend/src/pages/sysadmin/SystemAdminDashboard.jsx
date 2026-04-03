@@ -210,7 +210,7 @@ const SystemAdminDashboard = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                         )}
-                    </div>
+</div>
                 </div>
 
             </main>

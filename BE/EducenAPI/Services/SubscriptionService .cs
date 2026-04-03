@@ -51,7 +51,8 @@ namespace EducenAPI.Services
             }
 
             var startDate = DateTime.UtcNow;
-            var endDate = startDate.AddMonths(1); // mặc định gói 1 tháng
+            // Nếu có TestEndDate thì dùng nó (cho test), otherwise mặc định 1 tháng
+            var endDate = startDate.AddMonths(1);
 
             var subscription = new Subscription
             {

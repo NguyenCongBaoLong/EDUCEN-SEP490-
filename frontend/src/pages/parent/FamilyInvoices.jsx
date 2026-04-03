@@ -34,6 +34,7 @@ const FamilyInvoices = () => {
     const [selectedTuitionInvoiceIds, setSelectedTuitionInvoiceIds] = useState([]);
     const [loadingOutstanding, setLoadingOutstanding] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [selectedPeriodFilter, setSelectedPeriodFilter] = useState('all');
 
     const selectedInvoices = useMemo(
         () => outstandingTuitionInvoices.filter((invoice) => selectedTuitionInvoiceIds.includes(invoice.invoiceId)),
@@ -50,6 +51,40 @@ const FamilyInvoices = () => {
         [selectedInvoices]
     );
 
+    const periodOptions = useMemo(() => {
+        const map = new Map();
+
+        outstandingTuitionInvoices.forEach((invoice) => {
+            const key = `${invoice.invoiceMonth}-${invoice.invoiceYear}`;
+            if (!map.has(key)) {
+                map.set(key, {
+                    key,
+                    month: invoice.invoiceMonth,
+                    year: invoice.invoiceYear
+                });
+            }
+        });
+
+        return Array.from(map.values()).sort((a, b) => {
+            if (a.year !== b.year) {
+                return b.year - a.year;
+            }
+
+            return b.month - a.month;
+        });
+    }, [outstandingTuitionInvoices]);
+
+    const filteredOutstandingInvoices = useMemo(() => {
+        if (selectedPeriodFilter === 'all') {
+            return outstandingTuitionInvoices;
+        }
+
+        const [month, year] = selectedPeriodFilter.split('-').map(Number);
+        return outstandingTuitionInvoices.filter(
+            (invoice) => invoice.invoiceMonth === month && invoice.invoiceYear === year
+        );
+    }, [outstandingTuitionInvoices, selectedPeriodFilter]);
+
     const childrenWithOutstanding = useMemo(() => {
         const mapByStudentId = new Map();
 
@@ -57,13 +92,11 @@ const FamilyInvoices = () => {
             mapByStudentId.set(child.studentId, child);
         });
 
-        const ids = [...new Set(outstandingTuitionInvoices.map((invoice) => invoice.studentId))];
+        const ids = [...new Set(filteredOutstandingInvoices.map((invoice) => invoice.studentId))];
         return ids.map((studentId) => (
             mapByStudentId.get(studentId) || { studentId, fullName: `Học sinh ${studentId}` }
         ));
-    }, [childrenList, outstandingTuitionInvoices]);
-
-    const defaultPairChildren = childrenWithOutstanding.slice(0, 2);
+    }, [childrenList, filteredOutstandingInvoices]);
 
     useEffect(() => {
         fetchFamilyInvoices();
@@ -76,7 +109,37 @@ const FamilyInvoices = () => {
         }
 
         setSelectedTuitionInvoiceIds([]);
+        setSelectedPeriodFilter('all');
     }, [showCreateModal]);
+
+    useEffect(() => {
+        if (!showCreateModal) {
+            return;
+        }
+
+        if (periodOptions.length === 0) {
+            setSelectedPeriodFilter('all');
+            return;
+        }
+
+        setSelectedPeriodFilter((prev) => {
+            if (prev === 'all') {
+                return periodOptions[0].key;
+            }
+
+            const exists = periodOptions.some((period) => period.key === prev);
+            return exists ? prev : periodOptions[0].key;
+        });
+    }, [periodOptions, showCreateModal]);
+
+    useEffect(() => {
+        if (!showCreateModal) {
+            return;
+        }
+
+        const allowedIds = new Set(filteredOutstandingInvoices.map((invoice) => invoice.invoiceId));
+        setSelectedTuitionInvoiceIds((prev) => prev.filter((id) => allowedIds.has(id)));
+    }, [filteredOutstandingInvoices, showCreateModal]);
 
     const fetchFamilyInvoices = async () => {
         try {
@@ -201,33 +264,40 @@ const FamilyInvoices = () => {
     };
 
     const selectAllInvoices = () => {
-        setSelectedTuitionInvoiceIds(outstandingTuitionInvoices.map((invoice) => invoice.invoiceId));
+        setSelectedTuitionInvoiceIds(filteredOutstandingInvoices.map((invoice) => invoice.invoiceId));
     };
 
     const selectOnlyChildInvoices = (studentId) => {
-        const childInvoices = outstandingTuitionInvoices
+        const childInvoices = filteredOutstandingInvoices
             .filter((invoice) => invoice.studentId === studentId)
             .map((invoice) => invoice.invoiceId);
 
         setSelectedTuitionInvoiceIds(childInvoices);
     };
 
-    const selectPairChildrenInvoices = () => {
-        if (defaultPairChildren.length < 2) {
-            toast.error('Cần ít nhất 2 con có hóa đơn để chọn chế độ A+B');
-            return;
-        }
-
-        const pairStudentIds = defaultPairChildren.map((child) => child.studentId);
-        const invoiceIds = outstandingTuitionInvoices
-            .filter((invoice) => pairStudentIds.includes(invoice.studentId))
-            .map((invoice) => invoice.invoiceId);
-
-        setSelectedTuitionInvoiceIds(invoiceIds);
-    };
-
     const clearSelection = () => {
         setSelectedTuitionInvoiceIds([]);
+    };
+
+    const isSameSelection = (candidateIds) => {
+        if (candidateIds.length !== selectedTuitionInvoiceIds.length) {
+            return false;
+        }
+
+        const selectedSet = new Set(selectedTuitionInvoiceIds);
+        return candidateIds.every((id) => selectedSet.has(id));
+    };
+
+    const getChildInvoiceIds = (studentId) => (
+        filteredOutstandingInvoices
+            .filter((invoice) => invoice.studentId === studentId)
+            .map((invoice) => invoice.invoiceId)
+    );
+
+    const allFilteredInvoiceIds = filteredOutstandingInvoices.map((invoice) => invoice.invoiceId);
+
+    const handlePeriodFilterChange = (event) => {
+        setSelectedPeriodFilter(event.target.value);
     };
 
     const getStudentName = (studentId) => {
@@ -486,7 +556,7 @@ const FamilyInvoices = () => {
             {/* Create Invoice Modal */}
             {showCreateModal && (
                 <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content modal-content--create" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>Tạo hóa đơn gộp</h3>
                             <button className="modal-close" onClick={() => setShowCreateModal(false)}>
@@ -495,107 +565,138 @@ const FamilyInvoices = () => {
                         </div>
                         
                         <div className="modal-body">
-                            <div className="selection-hint">
-                                Chọn các hóa đơn chưa thanh toán để tạo một lô thanh toán mới. Chỉ hỗ trợ gộp các hóa đơn cùng tháng và năm.
-                            </div>
-
-                            <div className="quick-actions">
-                                {defaultPairChildren.map((child, index) => (
-                                    <button
-                                        key={child.studentId}
-                                        type="button"
-                                        className="quick-action-btn"
-                                        onClick={() => selectOnlyChildInvoices(child.studentId)}
-                                    >
-                                        {`Chỉ con ${index === 0 ? 'A' : 'B'}: ${child.fullName}`}
-                                    </button>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    className="quick-action-btn"
-                                    onClick={selectPairChildrenInvoices}
-                                    disabled={defaultPairChildren.length < 2}
-                                >
-                                    {defaultPairChildren.length >= 2
-                                        ? `Kết hợp A+B (${defaultPairChildren[0].fullName} + ${defaultPairChildren[1].fullName})`
-                                        : 'Kết hợp A+B'}
-                                </button>
-
-                                <button type="button" className="quick-action-btn" onClick={selectAllInvoices}>
-                                    Chọn tất cả
-                                </button>
-
-                                <button type="button" className="quick-action-btn muted" onClick={clearSelection}>
-                                    Bỏ chọn
-                                </button>
-                            </div>
-
-                            {loadingOutstanding ? (
-                                <div className="loading-state compact">
-                                    <div className="spinner"></div>
-                                    <p>Đang tải hóa đơn chưa thanh toán...</p>
-                                </div>
-                            ) : outstandingTuitionInvoices.length === 0 ? (
-                                <div className="empty-state compact">
-                                    <FileText size={42} />
-                                    <h3>Không có hóa đơn cần gộp</h3>
-                                    <p>Tất cả hóa đơn học phí hiện đã được thanh toán hoặc chưa phát hành.</p>
-                                </div>
-                            ) : (
-                                <div className="tuition-selection-list">
-                                    {outstandingTuitionInvoices.map((invoice) => {
-                                        const checked = selectedTuitionInvoiceIds.includes(invoice.invoiceId);
-
-                                        return (
-                                            <label
-                                                key={invoice.invoiceId}
-                                                className={`tuition-item ${checked ? 'selected' : ''}`}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={() => toggleTuitionInvoice(invoice.invoiceId)}
-                                                />
-                                                <div className="tuition-item-content">
-                                                    <div className="tuition-item-top">
-                                                        <strong>{getStudentName(invoice.studentId)}</strong>
-                                                        <span>{formatCurrency(invoice.finalAmount)}</span>
-                                                    </div>
-                                                    <div className="tuition-item-meta">
-                                                        Tháng {invoice.invoiceMonth}/{invoice.invoiceYear} - Hạn {formatDate(invoice.dueDate)}
-                                                    </div>
-                                                </div>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            <div className="selection-summary">
-                                <div>
-                                    <span>Đã chọn:</span>
-                                    <strong>{selectedTuitionInvoiceIds.length} hóa đơn</strong>
-                                </div>
-                                <div>
-                                    <span>Tạm tính:</span>
-                                    <strong>
-                                        {formatCurrency(
-                                            selectedInvoices.reduce((sum, invoice) => sum + (Number(invoice.finalAmount) || 0), 0)
-                                        )}
-                                    </strong>
-                                </div>
-                                {selectedPeriods.length === 1 && selectedInvoices.length > 0 && (
-                                    <div>
-                                        <span>Kỳ gộp:</span>
-                                        <strong>Tháng {selectedInvoices[0].invoiceMonth}/{selectedInvoices[0].invoiceYear}</strong>
+                            <div className="create-modal-layout">
+                                <div className="create-modal-main">
+                                    <div className="selection-hint">
+                                        Chọn các hóa đơn chưa thanh toán để tạo một lô thanh toán mới. Nên chọn theo kỳ tháng/năm để thao tác nhanh và tránh sai kỳ.
                                     </div>
-                                )}
-                                {selectedPeriods.length > 1 && (
-                                    <p className="validation-warning">
-                                        Có nhiều tháng/năm trong danh sách chọn. Vui lòng chọn cùng kỳ để tạo hóa đơn gộp.
-                                    </p>
-                                )}
+
+                                    {periodOptions.length > 0 && (
+                                        <div className="period-filter">
+                                            <label htmlFor="family-period-filter">Kỳ hóa đơn:</label>
+                                            <select
+                                                id="family-period-filter"
+                                                value={selectedPeriodFilter}
+                                                onChange={handlePeriodFilterChange}
+                                            >
+                                                <option value="all">Tất cả kỳ</option>
+                                                {periodOptions.map((period) => (
+                                                    <option key={period.key} value={period.key}>
+                                                        Tháng {period.month}/{period.year}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div className="quick-actions">
+                                        {childrenWithOutstanding.map((child) => (
+                                            <button
+                                                key={child.studentId}
+                                                type="button"
+                                                className={`quick-action-btn ${isSameSelection(getChildInvoiceIds(child.studentId)) ? 'active' : ''}`}
+                                                onClick={() => selectOnlyChildInvoices(child.studentId)}
+                                            >
+                                                {`Chỉ ${child.fullName}`}
+                                            </button>
+                                        ))}
+
+                                        <button
+                                            type="button"
+                                            className={`quick-action-btn ${isSameSelection(allFilteredInvoiceIds) && allFilteredInvoiceIds.length > 0 ? 'active' : ''}`}
+                                            onClick={selectAllInvoices}
+                                        >
+                                            Chọn tất cả trong kỳ
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className={`quick-action-btn muted ${selectedTuitionInvoiceIds.length === 0 ? 'active' : ''}`}
+                                            onClick={clearSelection}
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                    </div>
+
+                                    {loadingOutstanding ? (
+                                        <div className="loading-state compact">
+                                            <div className="spinner"></div>
+                                            <p>Đang tải hóa đơn chưa thanh toán...</p>
+                                        </div>
+                                    ) : outstandingTuitionInvoices.length === 0 ? (
+                                        <div className="empty-state compact">
+                                            <FileText size={42} />
+                                            <h3>Không có hóa đơn cần gộp</h3>
+                                            <p>Tất cả hóa đơn học phí hiện đã được thanh toán hoặc chưa phát hành.</p>
+                                        </div>
+                                    ) : filteredOutstandingInvoices.length === 0 ? (
+                                        <div className="empty-state compact">
+                                            <FileText size={42} />
+                                            <h3>Không có hóa đơn trong kỳ đã chọn</h3>
+                                            <p>Hãy chọn kỳ khác hoặc chuyển sang "Tất cả kỳ".</p>
+                                        </div>
+                                    ) : (
+                                        <div className="tuition-selection-list">
+                                            {filteredOutstandingInvoices.map((invoice) => {
+                                                const checked = selectedTuitionInvoiceIds.includes(invoice.invoiceId);
+
+                                                return (
+                                                    <label
+                                                        key={invoice.invoiceId}
+                                                        className={`tuition-item ${checked ? 'selected' : ''}`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={() => toggleTuitionInvoice(invoice.invoiceId)}
+                                                        />
+                                                        <div className="tuition-item-content">
+                                                            <div className="tuition-item-top">
+                                                                <strong>{getStudentName(invoice.studentId)}</strong>
+                                                                <span>{formatCurrency(invoice.finalAmount)}</span>
+                                                            </div>
+                                                            <div className="tuition-item-meta">
+                                                                Tháng {invoice.invoiceMonth}/{invoice.invoiceYear} - Hạn {formatDate(invoice.dueDate)}
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <aside className="create-modal-side">
+                                    <div className="selection-summary">
+                                        <div>
+                                            <span>Đã chọn:</span>
+                                            <strong>{selectedTuitionInvoiceIds.length} hóa đơn</strong>
+                                        </div>
+                                        <div>
+                                            <span>Đang hiển thị:</span>
+                                            <strong>{filteredOutstandingInvoices.length} hóa đơn</strong>
+                                        </div>
+                                        <div>
+                                            <span>Tạm tính:</span>
+                                            <strong>
+                                                {formatCurrency(
+                                                    selectedInvoices.reduce((sum, invoice) => sum + (Number(invoice.finalAmount) || 0), 0)
+                                                )}
+                                            </strong>
+                                        </div>
+                                        {selectedPeriods.length === 1 && selectedInvoices.length > 0 && (
+                                            <div>
+                                                <span>Kỳ gộp:</span>
+                                                <strong>Tháng {selectedInvoices[0].invoiceMonth}/{selectedInvoices[0].invoiceYear}</strong>
+                                            </div>
+                                        )}
+                                        {selectedPeriods.length > 1 && (
+                                            <p className="validation-warning">
+                                                Có nhiều tháng/năm trong danh sách chọn. Vui lòng chọn cùng kỳ để tạo hóa đơn gộp.
+                                            </p>
+                                        )}
+                                    </div>
+                                </aside>
                             </div>
                         </div>
                         
@@ -609,7 +710,13 @@ const FamilyInvoices = () => {
                             <button 
                                 className="confirm-button"
                                 onClick={handleCreateInvoice}
-                                disabled={creating || loadingOutstanding || outstandingTuitionInvoices.length === 0}
+                                disabled={
+                                    creating ||
+                                    loadingOutstanding ||
+                                    filteredOutstandingInvoices.length === 0 ||
+                                    selectedTuitionInvoiceIds.length === 0 ||
+                                    selectedPeriods.length > 1
+                                }
                             >
                                 {creating ? 'Đang tạo...' : 'Tạo hóa đơn'}
                             </button>

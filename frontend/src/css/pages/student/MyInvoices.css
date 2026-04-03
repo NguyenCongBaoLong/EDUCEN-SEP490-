@@ -49,6 +49,7 @@
 .outstanding-alert {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 1.5rem;
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     border-radius: 1.25rem;
@@ -57,6 +58,17 @@
     color: white;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     animation: slideDown 0.5s ease-out;
+}
+
+.outstanding-alert .alert-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.outstanding-alert .alert-text {
+    flex: 1;
 }
 
 @keyframes slideDown {
@@ -89,6 +101,48 @@
 .outstanding-alert strong {
     color: #3b82f6;
     font-size: 1.1rem;
+}
+
+/* Consolidate Button - Gộp hóa đơn */
+.consolidate-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 0.875rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    white-space: nowrap;
+    min-width: 140px;
+    justify-content: center;
+}
+
+.consolidate-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+    filter: brightness(1.05);
+}
+
+.consolidate-btn:active {
+    transform: translateY(0);
+}
+
+.consolidate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.consolidate-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* Invoices Grid */
@@ -365,6 +419,23 @@
     .invoices-list {
         grid-template-columns: 1fr;
     }
+    
+    .outstanding-alert {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+    
+    .outstanding-alert .alert-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .consolidate-btn {
+        width: 100%;
+        max-width: 300px;
+    }
 }
 
 @media (max-width: 640px) {
@@ -374,5 +445,27 @@
     
     .invoice-details {
         grid-template-columns: 1fr;
+    }
+    
+    .outstanding-alert {
+        padding: 1.25rem 1.5rem;
+        gap: 1rem;
+    }
+    
+    .outstanding-alert .alert-content {
+        gap: 0.75rem;
+    }
+    
+    .outstanding-alert h3 {
+        font-size: 1rem;
+    }
+    
+    .outstanding-alert p {
+        font-size: 0.875rem;
+    }
+    
+    .consolidate-btn {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
     }
 }

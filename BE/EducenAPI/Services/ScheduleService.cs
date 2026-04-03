@@ -309,14 +309,22 @@ namespace EducenAPI.Services
         {
             var schedule = await _context.Schedules
                 .Include(s => s.Sessions)
+                    .ThenInclude(session => session.Attendances) // Load Attendances
                 .FirstOrDefaultAsync(s => s.ScheduleId == id);
                 
             if (schedule == null)
                 return false;
 
-            // ✅ FIX: Xóa ClassSession trước khi xóa Schedule (cascade delete)
+            // ✅ FIX: Xóa Attendance trước, sau đó xóa ClassSession, cuối cùng xóa Schedule
             if (schedule.Sessions != null && schedule.Sessions.Any())
             {
+                foreach (var session in schedule.Sessions)
+                {
+                    if (session.Attendances != null && session.Attendances.Any())
+                    {
+                        _context.Attendances.RemoveRange(session.Attendances);
+                    }
+                }
                 _context.ClassSessions.RemoveRange(schedule.Sessions);
             }
 

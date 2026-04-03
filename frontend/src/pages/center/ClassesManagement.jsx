@@ -117,7 +117,8 @@ const ClassesManagement = () => {
                 gradeId: c.gradeId || c.GradeId,
                 gradeName: c.gradeName || c.GradeName,
                 roomId: c.roomId || c.RoomId,
-                roomName: c.roomName || c.RoomName
+                roomName: c.roomName || c.RoomName,
+                pricePerSession: c.pricePerSession ?? c.PricePerSession ?? ''
             }));
             setClasses(mappedClasses);
         } catch (error) {

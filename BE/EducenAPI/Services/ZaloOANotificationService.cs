@@ -46,7 +46,7 @@ namespace EducenAPI.Services
         public async Task<ZaloOAConfigResponse> SetupConfigAsync(string tenantId, SetupZaloOARequest request)
         {
             var tenant = await _adminContext.Tenants.FindAsync(tenantId)
-                ?? throw new Exception("Tenant không tồn tại.");
+                ?? throw new Exception("Trung tâm không tồn tại.");
 
             var existing = await _adminContext.TenantZaloOAConfigs
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId);
@@ -121,7 +121,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId);
 
             if (config == null)
-                throw new Exception("Tenant chưa cấu hình Zalo OA.");
+                throw new Exception("Trung tâm chưa cấu hình Zalo OA.");
 
             _logger.LogInformation("=== Verify Zalo OA Connection for tenant {TenantId} ===", tenantId);
             _logger.LogInformation("OAId: {OAId}, IsActive: {IsActive}, HasAccessToken: {HasAT}, HasRefreshToken: {HasRT}, TokenExpiresAt: {Exp}",
@@ -191,7 +191,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId);
 
             if (config == null)
-                throw new Exception("Tenant chưa cấu hình Zalo OA.");
+                throw new Exception("Trung tâm chưa cấu hình Zalo OA.");
 
             var secretKey = Decrypt(config.EncryptedSecretKey);
 
@@ -225,7 +225,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId);
 
             if (config == null)
-                throw new Exception("Tenant chưa cấu hình Zalo OA.");
+                throw new Exception("Trung tâm chưa cấu hình Zalo OA.");
 
             var secretKey = Decrypt(config.EncryptedSecretKey);
 

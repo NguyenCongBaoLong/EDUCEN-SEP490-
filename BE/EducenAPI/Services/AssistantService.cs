@@ -37,7 +37,7 @@ namespace EducenAPI.Services
                     AssignedClassesCount = _context.Classes.Count(c => c.AssistantId == a.UserId),
                     CreatedAt = DateTime.Now,
                     Schedule = a.Classes
-                        .Where(c => c.Status.ToLower() == "active")
+                        .Where(c => c.Status != null && c.Status.ToLower() == "active")
                         .SelectMany(c => c.Schedules)
                         .Select(s => new CreateScheduleSlotDto
                         {
@@ -70,7 +70,7 @@ namespace EducenAPI.Services
                     AssignedClassesCount = a.Classes.Count,
                     CreatedAt = DateTime.Now,
                     Schedule = a.Classes
-                        .Where(c => c.Status.ToLower() == "active")
+                        .Where(c => c.Status != null && c.Status.ToLower() == "active")
                         .SelectMany(c => c.Schedules)
                         .Select(s => new CreateScheduleSlotDto
                         {

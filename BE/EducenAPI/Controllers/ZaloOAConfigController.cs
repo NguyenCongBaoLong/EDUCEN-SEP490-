@@ -30,7 +30,7 @@ namespace EducenAPI.Controllers
         {
             var config = await _zaloService.GetConfigAsync(tenantId);
             if (config == null)
-                return NotFound(ApiResponse<ZaloOAConfigResponse>.ErrorResponse("Tenant chưa cấu hình Zalo OA."));
+                return NotFound(ApiResponse<ZaloOAConfigResponse>.ErrorResponse("Trung tâm chưa cấu hình Zalo OA."));
 
             return Ok(ApiResponse<ZaloOAConfigResponse>.SuccessResponse(config));
         }

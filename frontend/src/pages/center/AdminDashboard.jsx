@@ -16,6 +16,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText } from 'lucide-react';
 import zaloOAService from '../../services/zaloOAService';
+import notificationService from '../../services/notificationService';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
@@ -72,12 +73,31 @@ const AdminDashboard = () => {
 
     // Inbox state
     const [supportRequests, setSupportRequests] = useState([]);
+    const [systemNotifications, setSystemNotifications] = useState([]);
     const [inboxOpen, setInboxOpen] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replying, setReplying] = useState(false);
+    const { tenantId } = useAuth();
 
     const inboxMessages = [
+        // System notifications (Subscription expiration, etc.)
+        ...systemNotifications.map(n => ({
+            id: `notif-${n.notificationId}`,
+            notificationId: n.notificationId,
+            type: 'system',
+            senderName: 'Hệ thống',
+            senderRole: n.category === 'Subscription' ? 'Thông báo gói dịch vụ' : 'Thông báo',
+            subject: n.title,
+            preview: n.message?.substring(0, 80) + (n.message?.length > 80 ? '...' : ''),
+            content: n.message,
+            sentAt: n.createdAt,
+            isRead: n.isRead,
+            priority: n.type === 'Warning' ? 'high' : 'normal',
+            category: n.category,
+            referenceId: n.referenceId,
+        })),
+        // Support requests
         ...supportRequests.map(sr => ({
             id: `sr-${sr.id}`,
             srId: sr.id,
@@ -107,11 +127,35 @@ const AdminDashboard = () => {
         }
     };
 
+    const fetchSystemNotifications = async () => {
+        if (!tenantId) return;
+        try {
+            const res = await notificationService.getNotifications(tenantId);
+            setSystemNotifications(res.data || []);
+        } catch (error) {
+            console.error('Error fetching system notifications:', error);
+        }
+    };
+
     useEffect(() => {
         fetchSupportRequests();
-    }, []);
+        fetchSystemNotifications();
+    }, [tenantId]);
 
     const handleMarkAsRead = async (msg) => {
+        // Handle system notifications
+        if (msg.type === 'system' && msg.notificationId && !msg.isRead) {
+            try {
+                await notificationService.markAsRead(msg.notificationId);
+                setSystemNotifications(prev =>
+                    prev.map(n => n.notificationId === msg.notificationId ? { ...n, isRead: true } : n)
+                );
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+            return;
+        }
+        // Handle support requests
         if (msg.type !== 'feedback' || !msg.srId || msg.isRead) return;
         try {
             await api.put(`/admin/support-requests/${msg.srId}/read`);
@@ -730,16 +774,16 @@ const AdminDashboard = () => {
                         ) : inboxMessages.map(msg => (
                             <div
                                 key={msg.id}
-                                className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''}`}
+                                className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''} ${msg.priority === 'high' ? 'high-priority' : ''}`}
                                 onClick={() => {
                                     setSelectedMessage(msg);
-                                    if (msg.srId) {
+                                    if (msg.srId || msg.notificationId) {
                                         handleMarkAsRead(msg);
                                     }
                                 }}
                             >
-                                <div className={`inbox-avatar ${msg.type}`}>
-                                    {msg.senderName.charAt(0)}
+                                <div className={`inbox-avatar ${msg.type} ${msg.priority === 'high' ? 'warning' : ''}`}>
+                                    {msg.type === 'system' ? (msg.priority === 'high' ? '⚠️' : '📢') : msg.senderName.charAt(0)}
                                 </div>
                                 <div className="drawer-msg-body">
                                     <div className="drawer-msg-top">

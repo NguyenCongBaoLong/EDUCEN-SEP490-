@@ -32,6 +32,15 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [activeSlotIndex, setActiveSlotIndex] = useState(null);
 
+    const isPriceLocked = (() => {
+        if (!editingClass?.startDate) return false;
+        const startDate = new Date(editingClass.startDate);
+        if (Number.isNaN(startDate.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return startDate <= today;
+    })();
+
     useEffect(() => {
         console.log('CreateClassModal: editingClass changed:', editingClass);
         if (editingClass) {
@@ -525,9 +534,12 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                             min="0"
                             step="1000"
                             required
+                            disabled={isPriceLocked}
                         />
                         <small style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '4px', display: 'block' }}>
-                            Nhập đơn giá cho mỗi buổi học (VNĐ)
+                            {isPriceLocked
+                                ? 'Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi'
+                                : 'Nhập đơn giá cho mỗi buổi học (VNĐ)'}
                         </small>
                     </div>
 

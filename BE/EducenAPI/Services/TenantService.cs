@@ -31,6 +31,9 @@ namespace EducenAPI.Services.TenantService
             request.Address = request.Address?.Trim();
             request.SubDomain = request.SubDomain?.Trim().ToLower();
 
+            if (string.IsNullOrWhiteSpace(request.SubDomain))
+                throw new Exception("SubDomain là bắt buộc.");
+
             // 1. Check SubDomain chứa space
             if (request.SubDomain.Contains(" "))
                 throw new Exception("SubDomain không được chứa khoảng trắng.");
@@ -298,7 +301,7 @@ namespace EducenAPI.Services.TenantService
                 throw new Exception($"Không tìm thấy tenant với ID: {tenantId}");
 
             if (!tenant.IsActive)
-                throw new Exception("Tenant này đã bị vô hiệu hóa.");
+                throw new Exception("Trung tâm này đã bị vô hiệu hóa.");
 
             // 2. Tạo scope mới với connection string của tenant
             using IServiceScope scope = _serviceProvider.CreateScope();

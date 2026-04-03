@@ -26,7 +26,6 @@ import StudentSchedule from './pages/student/StudentSchedule';
 import StudentClassDetail from './pages/student/StudentClassDetail';
 import ParentClasses from './pages/parent/ParentClasses';
 import ParentSchedule from './pages/parent/ParentSchedule';
-import ParentFeedback from './pages/parent/ParentFeedback';
 import FamilyInvoices from './pages/parent/FamilyInvoices';
 import MyInvoices from './pages/student/MyInvoices';
 import TuitionManagement from './pages/center/TuitionManagement';
@@ -37,6 +36,7 @@ import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
 import TenantManagement from './pages/sysadmin/TenantManagement';
 import PlansManagement from './pages/sysadmin/PlansManagement';
 import ZaloOAConfig from './pages/sysadmin/ZaloOAConfig';
+import RefundManagement from './pages/sysadmin/RefundManagement';
 import SystemAdminLogin from './pages/auth/SystemAdminLogin';
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
@@ -97,12 +97,14 @@ function App() {
               <Route path="/student/invoices" element={<PrivateRoute allowedRoles={['Student']}><MyInvoices /></PrivateRoute>} />
 
               {/* ── Parent Routes (Parent) ── */}
-              <Route path="/parent/*" element={
+                <Route path="/parent/*" element={
                 <Routes>
                   <Route path="classes" element={<PrivateRoute allowedRoles={['Parent']}><ParentClasses /></PrivateRoute>} />
                   <Route path="schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
                   <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
                   <Route path="family-invoices" element={<PrivateRoute allowedRoles={['Parent']}><FamilyInvoices /></PrivateRoute>} />
+                  <Route path="feedback" element={<Navigate to="/parent/classes" replace />} />
+                  <Route path="*" element={<Navigate to="/parent/classes" replace />} />
                 </Routes>
               } />
 
@@ -113,6 +115,7 @@ function App() {
               <Route path="/sysadmin/tenants" element={<PrivateRoute allowedRoles={['SystemAdmin']}><TenantManagement /></PrivateRoute>} />
               <Route path="/sysadmin/plans" element={<PrivateRoute allowedRoles={['SystemAdmin']}><PlansManagement /></PrivateRoute>} />
               <Route path="/sysadmin/zalo-oa" element={<PrivateRoute allowedRoles={['SystemAdmin']}><ZaloOAConfig /></PrivateRoute>} />
+              <Route path="/sysadmin/refunds" element={<PrivateRoute allowedRoles={['SystemAdmin']}><RefundManagement /></PrivateRoute>} />
 
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

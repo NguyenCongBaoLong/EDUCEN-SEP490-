@@ -4,6 +4,7 @@ using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace EducenAPI.Controllers
 {
@@ -14,23 +15,36 @@ namespace EducenAPI.Controllers
     {
         private readonly ISubscriptionService _subscriptionService;
         private readonly AdminDbContext _adminDbContext;
+        private readonly ILogger<SubscriptionController> _logger;
 
-        public SubscriptionController(ISubscriptionService subscriptionService, AdminDbContext adminDbContext)
+        public SubscriptionController(
+            ISubscriptionService subscriptionService, 
+            AdminDbContext adminDbContext,
+            ILogger<SubscriptionController> logger)
         {
             _subscriptionService = subscriptionService;
             _adminDbContext = adminDbContext;
+            _logger = logger;
         }
 
         [HttpPost("subscribe")]
-        public async Task<IActionResult> RegisterSubscription(RegisterSubscriptionRequestDTO request)
+        public async Task<IActionResult> RegisterSubscription([FromBody] RegisterSubscriptionRequestDTO? request)
         {
             try
             {
+                _logger.LogInformation("RegisterSubscription called with: {@Request}", request);
+                
+                if (request == null || string.IsNullOrEmpty(request.TenantId))
+                {
+                    return BadRequest(new { message = "TenantId là bắt buộc" });
+                }
+                
                 var result = await _subscriptionService.RegisterSubscription(request);
                 return Ok(result);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "RegisterSubscription error");
                 return BadRequest(new { message = ex.Message });
             }
         }

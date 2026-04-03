@@ -96,7 +96,7 @@ namespace EducenAPI.Controllers
             try
             {
                 await _zaloService.HandleWebhookAsync(payload);
-                return Ok(new { error = 0, message = "Success" });
+                return Ok(new { error = 0, message = "Thành công" });
             }
             catch (Exception ex)
             {

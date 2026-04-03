@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
     CheckCircle, 
@@ -18,6 +18,7 @@ const PaymentResult = () => {
     const { user } = useAuth();
     const [status, setStatus] = useState('loading'); // 'loading' | 'success' | 'failed'
     const [paymentInfo, setPaymentInfo] = useState(null);
+    const hasVerifiedRef = useRef(false);
 
     const success = searchParams.get('success') === 'true';
     const orderId = searchParams.get('orderId');
@@ -41,11 +42,24 @@ const PaymentResult = () => {
     const invoicesLabel = user?.role === 'Admin' ? 'Quản lý gói dịch vụ' : 'Xem hóa đơn';
 
     useEffect(() => {
+        if (hasVerifiedRef.current) {
+            return;
+        }
+        hasVerifiedRef.current = true;
+
         if (isValidTenantId(tenantHint)) {
             localStorage.setItem('tenantId', tenantHint);
         }
         verifyPayment();
     }, []);
+
+    const showSuccessToast = (message) => {
+        toast.success(message, { id: 'payment-result-status' });
+    };
+
+    const showErrorToast = (message) => {
+        toast.error(message, { id: 'payment-result-status' });
+    };
 
     const verifyPayment = async () => {
         // Kiểm tra VNPay redirect trực tiếp (có vnp_ params)
@@ -79,20 +93,17 @@ const PaymentResult = () => {
 
                 try {
                     const confirmResult = await paymentService.confirmPayment(vnpParams);
-                    if (confirmResult.success) {
+                    if (confirmResult.success && confirmResult.status === 'Paid') {
                         setPaymentInfo({ amount: confirmResult.amount, gatewayType: 'VNPay', status: 'Paid' });
                         setStatus('success');
-                        toast.success('Thanh toán thành công!');
+                        showSuccessToast('Thanh toán thành công!');
                     } else {
-                        // Confirm fail nhưng VNPay báo thành công → vẫn hiển thị success
-                        setPaymentInfo({ amount: confirmResult.amount, gatewayType: 'VNPay' });
-                        setStatus('success');
-                        toast.success('Thanh toán thành công!');
+                        setStatus('failed');
+                        showErrorToast(confirmResult?.message || 'Không thể xác nhận thanh toán với hệ thống');
                     }
                 } catch {
-                    // Backend confirm fail → vẫn hiển thị success (VNPay đã confirm)
-                    setStatus('success');
-                    toast.success('Thanh toán thành công!');
+                    setStatus('failed');
+                    showErrorToast('Không thể xác nhận thanh toán với hệ thống');
                 }
             } else if (isDirectVNPayRedirect) {
                 // VNPay redirect nhưng không thành công (hủy/giả mạo)
@@ -109,7 +120,7 @@ const PaymentResult = () => {
                     // Backend confirm fail cũng không sao - đã là hủy rồi
                 }
                 setStatus('failed');
-                toast.error('Thanh toán thất bại');
+                showErrorToast('Thanh toán thất bại');
             } else {
                 // Redirect từ backend callback (có orderId param)
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -118,20 +129,15 @@ const PaymentResult = () => {
 
                 if (result.status === 'Paid' || result.status === 'Success') {
                     setStatus('success');
-                    toast.success('Thanh toán thành công!');
+                    showSuccessToast('Thanh toán thành công!');
                 } else {
                     setStatus('failed');
-                    toast.error('Thanh toán thất bại hoặc đang xử lý');
+                    showErrorToast('Thanh toán thất bại hoặc đang xử lý');
                 }
             }
         } catch (error) {
-            if (isDirectVNPayRedirect && vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
-                setStatus('success');
-                toast.success('Thanh toán thành công!');
-            } else {
-                setStatus('failed');
-                toast.error('Không thể xác minh thanh toán');
-            }
+            setStatus('failed');
+            showErrorToast('Không thể xác minh thanh toán');
         }
     };
 
