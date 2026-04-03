@@ -27,10 +27,11 @@ import StudentClassDetail from './pages/student/StudentClassDetail';
 import ParentClasses from './pages/parent/ParentClasses';
 import ParentSchedule from './pages/parent/ParentSchedule';
 import ParentFeedback from './pages/parent/ParentFeedback';
+import FamilyInvoices from './pages/parent/FamilyInvoices';
+import MyInvoices from './pages/student/MyInvoices';
 import TuitionManagement from './pages/center/TuitionManagement';
 import RevenueReport from './pages/center/RevenueReport';
 import SubscriptionPlans from './pages/center/SubscriptionPlans';
-import MyInvoices from './pages/student/MyInvoices';
 import PaymentResult from './pages/PaymentResult';
 import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
 import TenantManagement from './pages/sysadmin/TenantManagement';
@@ -102,6 +103,7 @@ function App() {
                   <Route path="schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
                   <Route path="feedback" element={<PrivateRoute allowedRoles={['Parent']}><ParentFeedback /></PrivateRoute>} />
                   <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
+                  <Route path="family-invoices" element={<PrivateRoute allowedRoles={['Parent']}><FamilyInvoices /></PrivateRoute>} />
                 </Routes>
               } />
 

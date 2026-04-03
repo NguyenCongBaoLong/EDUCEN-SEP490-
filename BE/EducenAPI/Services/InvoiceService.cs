@@ -1,3 +1,4 @@
+using EducenAPI.DTOs.Invoice;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -321,6 +322,284 @@ namespace EducenAPI.Services
             }
 
             return overdueInvoices.Count;
+        }
+
+        public async Task<FamilyInvoiceResult> CreateFamilyInvoiceAsync(string parentId, CreateFamilyInvoiceRequest request)
+        {
+            try
+            {
+                if (!int.TryParse(parentId, out var parentUserId))
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không xác định được phụ huynh hợp lệ."
+                    };
+
+                // Validate parent exists
+                var parent = await _context.Parents
+                    .FirstOrDefaultAsync(p => p.UserId == parentUserId);
+
+                if (parent == null)
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy thông tin phụ huynh."
+                    };
+
+                // Validate type
+                if (request.Type != "Student" && request.Type != "Family")
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Loại hóa đơn không hợp lệ. Chỉ chấp nhận 'Student' hoặc 'Family'."
+                    };
+
+                // Resolve selected invoice IDs
+                var selectedInvoiceIds = request.SelectedTuitionInvoiceIds?
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Select(id => id.Trim())
+                    .Distinct()
+                    .ToList() ?? new List<string>();
+
+                // Backward compatibility fallback: derive from StudentIds + Month + Year
+                if (!selectedInvoiceIds.Any())
+                {
+                    if (request.StudentIds == null || !request.StudentIds.Any())
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Danh sách hóa đơn học phí được chọn không hợp lệ."
+                        };
+
+                    selectedInvoiceIds = await _context.TuitionInvoices
+                        .Where(i => request.StudentIds.Contains(i.StudentId)
+                                    && i.InvoiceMonth == request.Month
+                                    && i.InvoiceYear == request.Year
+                                    && (i.Status == "Sent" || i.Status == "Overdue"))
+                        .Select(i => i.InvoiceId)
+                        .Distinct()
+                        .ToListAsync();
+                }
+
+                if (!selectedInvoiceIds.Any())
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy hóa đơn nào để gộp."
+                    };
+
+                // Load selected invoices
+                var studentInvoices = await _context.TuitionInvoices
+                    .Where(i => selectedInvoiceIds.Contains(i.InvoiceId))
+                    .ToListAsync();
+
+                if (studentInvoices.Count != selectedInvoiceIds.Count)
+                {
+                    var foundIds = studentInvoices.Select(i => i.InvoiceId).ToHashSet();
+                    var missingCount = selectedInvoiceIds.Count(id => !foundIds.Contains(id));
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = $"Có {missingCount} hóa đơn học phí không tồn tại hoặc không truy cập được."
+                    };
+                }
+
+                // Ownership validation: selected invoices must belong to this parent's children
+                var parentStudentIds = await _context.Set<Dictionary<string, object>>("ParentStudent")
+                    .Where(ps => EF.Property<int>(ps, "ParentsUserId") == parentUserId)
+                    .Select(ps => EF.Property<int>(ps, "StudentsUserId"))
+                    .ToListAsync();
+
+                var parentStudentSet = parentStudentIds.ToHashSet();
+                if (!parentStudentSet.Any())
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy học sinh nào thuộc phụ huynh này."
+                    };
+
+                if (studentInvoices.Any(i => !parentStudentSet.Contains(i.StudentId)))
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Danh sách hóa đơn có phần tử không thuộc học sinh của phụ huynh."
+                    };
+
+                // Integrity validation: month/year + allowed status only
+                if (studentInvoices.Any(i => i.InvoiceMonth != request.Month || i.InvoiceYear != request.Year))
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Chỉ được gộp hóa đơn đúng tháng/năm đã chọn."
+                    };
+
+                if (studentInvoices.Any(i => i.Status == "Paid" || (i.Status != "Sent" && i.Status != "Overdue")))
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Chỉ được chọn hóa đơn trạng thái Sent/Overdue và chưa thanh toán."
+                    };
+
+                // Overlap guard: same TuitionInvoice cannot be in another active pending FamilyInvoice
+                var overlappingInvoiceIds = await _context.FamilyInvoiceItems
+                    .Where(item => selectedInvoiceIds.Contains(item.StudentInvoiceId)
+                                   && item.FamilyInvoice.Status == "Pending")
+                    .Select(item => item.StudentInvoiceId)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (overlappingInvoiceIds.Any())
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Một hoặc nhiều hóa đơn đã nằm trong hóa đơn gộp đang chờ thanh toán."
+                    };
+
+                var selectedStudentIds = studentInvoices
+                    .Select(i => i.StudentId)
+                    .Distinct()
+                    .ToList();
+
+                var studentNameById = await _context.Students
+                    .Include(s => s.StudentNavigation)
+                    .Where(s => selectedStudentIds.Contains(s.UserId))
+                    .ToDictionaryAsync(
+                        s => s.UserId,
+                        s => s.StudentNavigation != null && !string.IsNullOrWhiteSpace(s.StudentNavigation.FullName)
+                            ? s.StudentNavigation.FullName
+                            : "Unknown");
+
+                if (request.Type == "Student" && selectedStudentIds.Count > 1)
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Loại Student chỉ cho phép gộp hóa đơn của một học sinh."
+                    };
+                }
+
+                // Create family invoice
+                var familyInvoice = new FamilyInvoice
+                {
+                    InvoiceId = Guid.NewGuid().ToString(),
+                    ParentId = parent.UserId.ToString(),
+                    Type = request.Type,
+                    Month = request.Month,
+                    Year = request.Year,
+                    TotalAmount = studentInvoices.Sum(i => i.FinalAmount),
+                    StudentCount = request.Type == "Student" ? 1 : selectedStudentIds.Count,
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow,
+                    Notes = request.Notes
+                };
+
+                // Add family invoice items
+                foreach (var invoice in studentInvoices)
+                {
+                    familyInvoice.StudentInvoices.Add(new FamilyInvoiceItem
+                    {
+                        FamilyInvoiceId = familyInvoice.InvoiceId,
+                        StudentInvoiceId = invoice.InvoiceId,
+                        StudentId = invoice.StudentId,
+                        StudentName = studentNameById.TryGetValue(invoice.StudentId, out var studentName)
+                            ? studentName
+                            : "Unknown",
+                        Amount = invoice.FinalAmount,
+                        Status = "Pending",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                _context.FamilyInvoices.Add(familyInvoice);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "Created {Type} family invoice {InvoiceId} for parent {ParentId} with {Count} items, total: {Total}",
+                    request.Type, familyInvoice.InvoiceId, familyInvoice.ParentId,
+                    familyInvoice.StudentInvoices.Count, familyInvoice.TotalAmount);
+
+                return new FamilyInvoiceResult
+                {
+                    Success = true,
+                    InvoiceId = familyInvoice.InvoiceId,
+                    TotalAmount = familyInvoice.TotalAmount,
+                    StudentCount = familyInvoice.StudentCount
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating family invoice for parent {ParentId}", parentId);
+                return new FamilyInvoiceResult
+                {
+                    Success = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public async Task<List<FamilyInvoice>> GetFamilyInvoicesAsync(string parentId, string? type = null)
+        {
+            var query = _context.FamilyInvoices
+                .Include(fi => fi.StudentInvoices)
+                .Where(fi => fi.ParentId == parentId);
+
+            if (!string.IsNullOrWhiteSpace(type))
+                query = query.Where(fi => fi.Type == type);
+
+            return await query
+                .OrderByDescending(fi => fi.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<bool> PayFamilyInvoiceAsync(string invoiceId, string paymentMethod, string? notes)
+        {
+            try
+            {
+                var familyInvoice = await _context.FamilyInvoices
+                    .Include(fi => fi.StudentInvoices)
+                    .FirstOrDefaultAsync(fi => fi.InvoiceId == invoiceId);
+
+                if (familyInvoice == null)
+                    return false;
+
+                if (familyInvoice.Status != "Pending")
+                    return false;
+
+                // Update family invoice status
+                familyInvoice.Status = "Paid";
+                familyInvoice.PaidAt = DateTime.UtcNow;
+                familyInvoice.Notes = notes;
+
+                // Update all student invoice statuses to "Paid"
+                foreach (var item in familyInvoice.StudentInvoices)
+                {
+                    var studentInvoice = await _context.TuitionInvoices
+                        .FirstOrDefaultAsync(i => i.InvoiceId == item.StudentInvoiceId);
+
+                    if (studentInvoice != null)
+                    {
+                        studentInvoice.Status = "Paid";
+                        studentInvoice.PaidAt = DateTime.UtcNow;
+                        studentInvoice.PaymentRecordId = familyInvoice.PaymentRecordId;
+                        studentInvoice.UpdatedAt = DateTime.UtcNow;
+                    }
+
+                    item.Status = "Paid";
+                    item.PaidAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Paid {Type} family invoice {InvoiceId} for parent {ParentId}",
+                    familyInvoice.Type, invoiceId, familyInvoice.ParentId);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error paying family invoice {InvoiceId}", invoiceId);
+                return false;
+            }
         }
     }
 }

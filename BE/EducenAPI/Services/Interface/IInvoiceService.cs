@@ -1,3 +1,4 @@
+using EducenAPI.DTOs.Invoice;
 using EducenAPI.Models;
 
 namespace EducenAPI.Services.Interface
@@ -54,6 +55,21 @@ namespace EducenAPI.Services.Interface
         /// Chạy hàng ngày để cập nhật status từ "Sent" -> "Overdue"
         /// </summary>
         Task<int> UpdateOverdueInvoicesAsync();
+
+        /// <summary>
+        /// Tạo hóa đơn gia đình (gộp nhiều hóa đơn con)
+        /// </summary>
+        Task<FamilyInvoiceResult> CreateFamilyInvoiceAsync(string parentId, CreateFamilyInvoiceRequest request);
+
+        /// <summary>
+        /// Lấy danh sách hóa đơn gia đình của parent
+        /// </summary>
+        Task<List<FamilyInvoice>> GetFamilyInvoicesAsync(string parentId, string? type = null);
+
+        /// <summary>
+        /// Thanh toán hóa đơn gia đình
+        /// </summary>
+        Task<bool> PayFamilyInvoiceAsync(string invoiceId, string paymentMethod, string? notes);
     }
 
     public class CreateInvoiceRequest

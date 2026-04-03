@@ -19,6 +19,7 @@ const ParentSidebar = () => {
         { path: '/parent/classes', icon: GraduationCap, label: 'Lớp học của con' },
         { path: '/parent/schedule', icon: Calendar, label: 'Lịch học của con' },
         { path: '/parent/invoices', icon: FileText, label: 'Hóa đơn học phí' },
+        { path: '/parent/family-invoices', icon: FileText, label: 'Hóa đơn gia đình' },
         { path: '/parent/feedback', icon: MessageSquare, label: 'Gửi phản hồi' },
     ];
 

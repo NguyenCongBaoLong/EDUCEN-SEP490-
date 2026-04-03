@@ -9,6 +9,9 @@ using EducenAPI.Persistence.Contexts;
 using EduCenAPI.Tests.Fakes;
 using System.Linq;
 using EducenAPI.DTOs.Teachers;
+using Microsoft.Extensions.Logging;
+using EducenAPI.Ultils;
+using Microsoft.Extensions.Configuration;
 
 public class TeacherService_CreateTeacher_Tests
 {
@@ -23,6 +26,23 @@ public class TeacherService_CreateTeacher_Tests
         return new EducenV2Context(options, tenantService);
     }
 
+    private MailService GetMailService()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            {"EmailSettings:Email", "test@example.com"},
+            {"EmailSettings:Password", "test123"},
+            {"EmailSettings:Host", "smtp.example.com"},
+            {"EmailSettings:Port", "587"}
+        };
+        
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+            
+        return new MailService(configuration);
+    }
+
     // ================================
     // 1. Username null → profile only
     // ================================
@@ -30,7 +50,8 @@ public class TeacherService_CreateTeacher_Tests
     public async Task CreateTeacher_ShouldCreateProfileOnly_WhenUsernameNull()
     {
         var context = GetDbContext();
-        var service = new TeacherService(context);
+        var mailService = GetMailService();
+        var service = new TeacherService(context, mailService);
 
         var dto = new CreateTeacherDto
         {
@@ -54,7 +75,8 @@ public class TeacherService_CreateTeacher_Tests
     public async Task CreateTeacher_ShouldCreateProfileOnly_WhenPasswordNull()
     {
         var context = GetDbContext();
-        var service = new TeacherService(context);
+        var mailService = GetMailService();
+        var service = new TeacherService(context, mailService);
 
         var dto = new CreateTeacherDto
         {
@@ -83,7 +105,7 @@ public class TeacherService_CreateTeacher_Tests
         context.Users.Add(new User { Username = "teacher1" });
         await context.SaveChangesAsync();
 
-        var service = new TeacherService(context);
+        var service = new TeacherService(context, GetMailService());
 
         var dto = new CreateTeacherDto
         {
@@ -111,7 +133,7 @@ public class TeacherService_CreateTeacher_Tests
         context.Users.Add(new User { Email = "test@mail.com" });
         await context.SaveChangesAsync();
 
-        var service = new TeacherService(context);
+        var service = new TeacherService(context, GetMailService());
 
         var dto = new CreateTeacherDto
         {
@@ -133,7 +155,7 @@ public class TeacherService_CreateTeacher_Tests
     public async Task CreateTeacher_ShouldThrow_WhenRoleNotFound()
     {
         var context = GetDbContext();
-        var service = new TeacherService(context);
+        var service = new TeacherService(context, GetMailService());
 
         var dto = new CreateTeacherDto
         {
@@ -158,7 +180,7 @@ public class TeacherService_CreateTeacher_Tests
         context.Roles.Add(new Role { RoleName = "Teacher" });
         await context.SaveChangesAsync();
 
-        var service = new TeacherService(context);
+        var service = new TeacherService(context, GetMailService());
 
         var dto = new CreateTeacherDto
         {

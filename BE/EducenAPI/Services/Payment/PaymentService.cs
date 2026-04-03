@@ -60,7 +60,7 @@ namespace EducenAPI.Services.Payment
                     };
                 }
 
-                var isTuition = dto.TransactionType == "Tuition";
+                var isTuition = dto.TransactionType == "Tuition" || dto.TransactionType == "FamilyTuition";
                 var tenantContext = await ResolveCreateTenantContextAsync(dto, isTuition);
                 if (string.IsNullOrWhiteSpace(tenantContext.TenantId))
                 {
@@ -617,6 +617,13 @@ namespace EducenAPI.Services.Payment
                             tenantTransaction.PaymentRecord.ReferenceId,
                             tenantTransaction.PaymentRecord.PaymentId);
                     }
+                    else if (tenantTransaction.PaymentRecord.TransactionType == "FamilyTuition"
+                        && !string.IsNullOrWhiteSpace(tenantTransaction.PaymentRecord.ReferenceId))
+                    {
+                        await UpdateFamilyInvoiceAsync(
+                            tenantTransaction.PaymentRecord.ReferenceId,
+                            tenantTransaction.PaymentRecord.PaymentId);
+                    }
                 }
                 await _tenantDbContext.SaveChangesAsync();
                 _logger.LogInformation("Payment {OrderId} confirmed directly in TenantDB", orderId);
@@ -813,6 +820,13 @@ namespace EducenAPI.Services.Payment
                         transaction.PaymentRecord.ReferenceId,
                         transaction.PaymentRecord.PaymentId);
                 }
+                else if (transaction.PaymentRecord?.TransactionType == "FamilyTuition"
+                    && !string.IsNullOrEmpty(transaction.PaymentRecord.ReferenceId))
+                {
+                    await UpdateFamilyInvoiceAsync(
+                        transaction.PaymentRecord.ReferenceId,
+                        transaction.PaymentRecord.PaymentId);
+                }
             }
             else
             {
@@ -999,6 +1013,65 @@ namespace EducenAPI.Services.Payment
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update TuitionInvoice {InvoiceId} after payment", invoiceId);
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật FamilyInvoice + tất cả TuitionInvoice con sau khi thanh toán gia đình thành công.
+        /// </summary>
+        private async Task UpdateFamilyInvoiceAsync(string familyInvoiceId, string paymentRecordId)
+        {
+            try
+            {
+                var familyInvoice = await _tenantDbContext.FamilyInvoices
+                    .Include(fi => fi.StudentInvoices)
+                    .FirstOrDefaultAsync(fi => fi.InvoiceId == familyInvoiceId);
+
+                if (familyInvoice == null)
+                {
+                    _logger.LogWarning("FamilyInvoice {InvoiceId} not found when updating after payment", familyInvoiceId);
+                    return;
+                }
+
+                if (familyInvoice.Status == "Paid")
+                {
+                    _logger.LogInformation("FamilyInvoice {InvoiceId} already marked as Paid", familyInvoiceId);
+                    return;
+                }
+
+                // Update FamilyInvoice
+                familyInvoice.Status = "Paid";
+                familyInvoice.PaidAt = DateTime.UtcNow;
+                familyInvoice.PaymentRecordId = paymentRecordId;
+
+                // Update all child TuitionInvoices
+                foreach (var item in familyInvoice.StudentInvoices)
+                {
+                    var tuitionInvoice = await _tenantDbContext.TuitionInvoices
+                        .FirstOrDefaultAsync(i => i.InvoiceId == item.StudentInvoiceId);
+
+                    if (tuitionInvoice != null && tuitionInvoice.Status != "Paid")
+                    {
+                        tuitionInvoice.Status = "Paid";
+                        tuitionInvoice.PaidAt = DateTime.UtcNow;
+                        tuitionInvoice.PaymentRecordId = paymentRecordId;
+                        tuitionInvoice.UpdatedAt = DateTime.UtcNow;
+                        tuitionInvoice.Notes = "Thanh toán qua hóa đơn gộp gia đình";
+                    }
+
+                    item.Status = "Paid";
+                    item.PaidAt = DateTime.UtcNow;
+                }
+
+                await _tenantDbContext.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "FamilyInvoice {InvoiceId} ({Type}) marked as Paid with PaymentRecord {PaymentRecordId}, {Count} child invoices updated",
+                    familyInvoiceId, familyInvoice.Type, paymentRecordId, familyInvoice.StudentInvoices.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update FamilyInvoice {InvoiceId} after payment", familyInvoiceId);
             }
         }
     }

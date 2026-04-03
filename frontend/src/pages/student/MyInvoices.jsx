@@ -16,6 +16,7 @@ import StudentSidebar from '../../components/StudentSidebar';
 import ParentSidebar from '../../components/ParentSidebar';
 import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChild } from '../../context/ChildContext';
 import '../../css/pages/student/MyInvoices.css';
@@ -112,6 +113,48 @@ const MyInvoices = () => {
         }
     };
 
+    const handleConsolidateInvoices = async () => {
+        if (!isParent || !selectedChild?.studentId) {
+            toast.error('Vui lòng chọn con');
+            return;
+        }
+        if (outstandingInvoices.length < 2) {
+            toast.error('Cần ít nhất 2 hóa đơn để gộp');
+            return;
+        }
+
+        setProcessingPayment(true);
+        try {
+            const parentId = user?.userId || user?.nameid;
+            const periods = [...new Set(outstandingInvoices.map(inv => `${inv.invoiceMonth}-${inv.invoiceYear}`))];
+
+            // Create consolidated invoice for each month/year that has invoices
+            for (const period of periods) {
+                const [month, year] = period.split('-').map(Number);
+                const monthInvoices = outstandingInvoices.filter(
+                    inv => inv.invoiceMonth === month && inv.invoiceYear === year
+                );
+                if (monthInvoices.length >= 2) {
+                    await api.post('/family-invoices/create-family', {
+                        parentId: String(parentId),
+                        type: 'Student',
+                        month,
+                        year,
+                        studentIds: [selectedChild.studentId],
+                        selectedTuitionInvoiceIds: monthInvoices.map(inv => inv.invoiceId)
+                    });
+                }
+            }
+
+            toast.success('Đã tạo hóa đơn gộp thành công');
+            window.location.href = '/parent/family-invoices';
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Lỗi tạo hóa đơn gộp');
+        } finally {
+            setProcessingPayment(false);
+        }
+    };
+
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', {
             style: 'currency',
@@ -177,6 +220,16 @@ const MyInvoices = () => {
                                 Vui lòng thanh toán sớm để đảm bảo quyền lợi học tập.
                             </p>
                         </div>
+                        {isParent && outstandingInvoices.length >= 2 && (
+                            <button 
+                                className="consolidate-btn"
+                                onClick={handleConsolidateInvoices}
+                                disabled={processingPayment}
+                            >
+                                <CreditCard size={18} />
+                                {processingPayment ? 'Đang xử lý...' : 'Gộp hóa đơn'}
+                            </button>
+                        )}
                     </div>
                 )}
 

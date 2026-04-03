@@ -54,6 +54,10 @@ public partial class EducenV2Context : DbContext
     public DbSet<TuitionInvoice> TuitionInvoices { get; set; }
     public DbSet<TuitionInvoiceItem> TuitionInvoiceItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    
+    // === Family Invoice System ===
+    public DbSet<FamilyInvoice> FamilyInvoices { get; set; }
+    public DbSet<FamilyInvoiceItem> FamilyInvoiceItems { get; set; }
 
     // === Payment Records (Học phí - lưu trong Tenant DB) ===
     public DbSet<PaymentRecordTenant> PaymentRecordTenants { get; set; }
@@ -407,6 +411,25 @@ public partial class EducenV2Context : DbContext
 
         modelBuilder.Entity<ZaloOARecipient>()
             .HasIndex(z => z.ZaloUserId);
+
+        // === FamilyInvoice Configuration ===
+        modelBuilder.Entity<FamilyInvoice>()
+            .HasKey(fi => fi.InvoiceId);
+
+        modelBuilder.Entity<FamilyInvoice>()
+            .HasIndex(fi => new { fi.ParentId, fi.Month, fi.Year, fi.Type });
+
+        modelBuilder.Entity<FamilyInvoiceItem>()
+            .HasKey(fii => fii.ItemId);
+
+        modelBuilder.Entity<FamilyInvoiceItem>()
+            .HasOne(fii => fii.FamilyInvoice)
+            .WithMany(fi => fi.StudentInvoices)
+            .HasForeignKey(fii => fii.FamilyInvoiceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FamilyInvoiceItem>()
+            .HasIndex(fii => fii.StudentInvoiceId);
 
     }
 
