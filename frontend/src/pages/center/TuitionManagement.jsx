@@ -47,6 +47,7 @@ const TuitionManagement = () => {
     
     // State cho tick chọn học sinh
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+    const [existingInvoiceStudentIds, setExistingInvoiceStudentIds] = useState([]);
     
     // State cho danh sách hóa đơn
     const [invoices, setInvoices] = useState([]);
@@ -116,6 +117,22 @@ const TuitionManagement = () => {
         }
     };
 
+    const fetchExistingInvoiceStudentIds = async (classId, month, year) => {
+        const invoiceList = await tuitionService.getInvoices({ classId, month, year });
+        const existingIds = new Set();
+
+        (invoiceList || []).forEach((invoice) => {
+            const studentId = invoice.studentId || invoice.student?.studentId || invoice.student?.studentNavigation?.studentId;
+            if (studentId) {
+                existingIds.add(studentId);
+            }
+        });
+
+        return Array.from(existingIds);
+    };
+
+    const isStudentAlreadyInvoiced = (studentId) => existingInvoiceStudentIds.includes(studentId);
+
     // Tính toán học phí cho lớp
     const handleCalculate = async () => {
         if (!selectedClass) {
@@ -125,13 +142,25 @@ const TuitionManagement = () => {
 
         setLoading(true);
         try {
-            const data = await tuitionService.calculateClassTuition(
-                parseInt(selectedClass),
-                selectedMonth,
-                selectedYear
-            );
+            const parsedClassId = parseInt(selectedClass);
+            const [data, existingIds] = await Promise.all([
+                tuitionService.calculateClassTuition(
+                    parsedClassId,
+                    selectedMonth,
+                    selectedYear
+                ),
+                fetchExistingInvoiceStudentIds(parsedClassId, selectedMonth, selectedYear)
+            ]);
+
             setCalculations(data);
+            setExistingInvoiceStudentIds(existingIds);
             setSelectedStudentIds([]);
+
+            if (existingIds.length > 0) {
+                toast.success(`Đã tính toán học phí cho ${data.length} học sinh. ${existingIds.length} học sinh đã có hóa đơn sẽ bị khóa chọn.`);
+                return;
+            }
+
             toast.success(`Đã tính toán học phí cho ${data.length} học sinh`);
         } catch (error) {
             const data = error.response?.data;
@@ -152,20 +181,31 @@ const TuitionManagement = () => {
     const handleGenerateInvoices = async () => {
         // Lọc học sinh đã chọn
         const selected = calculations.filter(c => selectedStudentIds.includes(c.studentId));
+        const alreadyInvoicedStudents = selected.filter(c => isStudentAlreadyInvoiced(c.studentId));
+        const selectedWithoutExistingInvoice = selected.filter(c => !isStudentAlreadyInvoiced(c.studentId));
         
         // Chỉ giữ học sinh có buổi học > 0
-        const validStudents = selected.filter(c => c.attendedSessions > 0);
-        const noSessionStudents = selected.filter(c => c.attendedSessions === 0);
+        const validStudents = selectedWithoutExistingInvoice.filter(c => c.attendedSessions > 0);
+        const noSessionStudents = selectedWithoutExistingInvoice.filter(c => c.attendedSessions === 0);
 
         if (validStudents.length === 0) {
+            if (alreadyInvoicedStudents.length > 0) {
+                toast.error('Các học sinh đã chọn đã có hóa đơn trong kỳ này. Vui lòng bỏ chọn các học sinh đã có hóa đơn.');
+                return;
+            }
             toast.error('Vui lòng chọn ít nhất một học sinh có buổi học.');
             return;
         }
 
-        let warningMsg = '';
+        const warningParts = [];
         if (noSessionStudents.length > 0) {
-            warningMsg = `<br/><span style="color:#f59e0b">⚠ ${noSessionStudents.length} học sinh không có buổi học sẽ bị bỏ qua.</span>`;
+            warningParts.push(`<span style="color:#f59e0b">⚠ ${noSessionStudents.length} học sinh không có buổi học sẽ bị bỏ qua.</span>`);
         }
+        if (alreadyInvoicedStudents.length > 0) {
+            warningParts.push(`<span style="color:#64748b">ℹ ${alreadyInvoicedStudents.length} học sinh đã có hóa đơn và sẽ bị loại khỏi yêu cầu tạo mới.</span>`);
+        }
+
+        const warningMsg = warningParts.length > 0 ? `<br/>${warningParts.join('<br/>')}` : '';
 
         setConfirmModal({
             isOpen: true,
@@ -180,18 +220,30 @@ const TuitionManagement = () => {
     };
 
     const executeGenerateInvoices = async (studentIds) => {
+        const filteredStudentIds = [...new Set(studentIds)].filter((studentId) => !isStudentAlreadyInvoiced(studentId));
+        if (filteredStudentIds.length === 0) {
+            toast.error('Không có học sinh hợp lệ để tạo hóa đơn.');
+            return;
+        }
+
         setGenerating(true);
         try {
             const result = await tuitionService.createBatchInvoices({
                 classId: parseInt(selectedClass),
                 month: selectedMonth,
                 year: selectedYear,
-                studentIds
+                studentIds: filteredStudentIds
             });
 
             if (result.successCount > 0) {
                 toast.success(`Đã tạo ${result.successCount} hóa đơn thành công`);
                 setSelectedStudentIds([]);
+                const refreshedExistingIds = await fetchExistingInvoiceStudentIds(
+                    parseInt(selectedClass),
+                    selectedMonth,
+                    selectedYear
+                );
+                setExistingInvoiceStudentIds(refreshedExistingIds);
                 fetchInvoices();
             }
             if (result.failedCount > 0) {
@@ -383,6 +435,10 @@ const TuitionManagement = () => {
         }
     }, [activeTab, invoiceFilters]);
 
+    useEffect(() => {
+        setSelectedStudentIds((prev) => prev.filter((id) => !isStudentAlreadyInvoiced(id)));
+    }, [existingInvoiceStudentIds]);
+
     return (
         <div className="tuition-management-container">
             <Sidebar />
@@ -470,6 +526,9 @@ const TuitionManagement = () => {
                                         <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
                                             Đã chọn: <strong>{selectedStudentIds.length}</strong>
                                         </span>
+                                        <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+                                            Đã có hóa đơn (khóa chọn): <strong>{existingInvoiceStudentIds.length}</strong>
+                                        </span>
                                         <button 
                                             className="generate-btn"
                                             onClick={handleGenerateInvoices}
@@ -481,22 +540,35 @@ const TuitionManagement = () => {
                                     </div>
                                 </div>
                                 <div className="calculation-table">
+                                    <div className="table-hint-text">
+                                        Checkbox bị khóa nghĩa là học sinh đã có hóa đơn trong cùng lớp/tháng/năm.
+                                    </div>
                                     <table>
                                         <thead>
                                             <tr>
                                                 <th style={{ width: 40 }}>
+                                                    {(() => {
+                                                        const selectableRows = calculations.filter((calc) => !isStudentAlreadyInvoiced(calc.studentId));
+                                                        const selectableIds = selectableRows.map((calc) => calc.studentId);
+                                                        const allSelectableChecked = selectableIds.length > 0
+                                                            && selectableIds.every((id) => selectedStudentIds.includes(id));
+
+                                                        return (
                                                     <input
                                                         type="checkbox"
-                                                        checked={selectedStudentIds.length === calculations.length && calculations.length > 0}
+                                                        checked={allSelectableChecked}
+                                                        disabled={selectableIds.length === 0}
                                                         onChange={(e) => {
                                                             if (e.target.checked) {
-                                                                setSelectedStudentIds(calculations.map(c => c.studentId));
+                                                                setSelectedStudentIds(selectableIds);
                                                             } else {
                                                                 setSelectedStudentIds([]);
                                                             }
                                                         }}
                                                         style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
                                                     />
+                                                        );
+                                                    })()}
                                                 </th>
                                                 <th>Học sinh</th>
                                                 <th>Số buổi học</th>
@@ -510,12 +582,14 @@ const TuitionManagement = () => {
                                             {calculations.map((calc, index) => {
                                                 const isSelected = selectedStudentIds.includes(calc.studentId);
                                                 const hasNoSessions = calc.attendedSessions === 0;
+                                                const isDisabled = isStudentAlreadyInvoiced(calc.studentId);
                                                 return (
-                                                <tr key={index} style={hasNoSessions ? { opacity: 0.5, background: '#fef2f2' } : {}}>
+                                                <tr key={index} style={isDisabled ? { opacity: 0.6, background: '#f1f5f9' } : hasNoSessions ? { opacity: 0.5, background: '#fef2f2' } : {}}>
                                                     <td>
                                                         <input
                                                             type="checkbox"
                                                             checked={isSelected}
+                                                            disabled={isDisabled}
                                                             onChange={(e) => {
                                                                 if (e.target.checked) {
                                                                     setSelectedStudentIds(prev => [...prev, calc.studentId]);
@@ -529,6 +603,7 @@ const TuitionManagement = () => {
                                                     <td>
                                                         {calc.studentName}
                                                         {hasNoSessions && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#ef4444' }}>(0 buổi)</span>}
+                                                        {isDisabled && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#64748b' }}>(đã có hóa đơn)</span>}
                                                     </td>
                                                     <td>{calc.totalSessions}</td>
                                                     <td className="attended">{calc.attendedSessions}</td>

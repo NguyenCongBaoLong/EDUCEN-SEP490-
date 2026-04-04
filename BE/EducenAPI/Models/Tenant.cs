@@ -40,6 +40,9 @@ namespace EducenAPI.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal CreditBalance { get; set; } = 0m;
 
+        [Column(TypeName = "datetime2")]
+        public DateTime? UpdatedAt { get; set; }
+
         // Navigation
         public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
 

@@ -34,20 +34,28 @@ const RefundManagement = () => {
         window.setTimeout(() => setMessage(null), 3500);
     };
 
+    const getErrorMessage = (error, fallback) => error?.response?.data?.message || fallback;
+
     const loadInitial = async () => {
         setLoading(true);
-        try {
-            const [tenantData, refundData] = await Promise.all([
-                refundService.getTenants(),
-                refundService.getRefunds({})
-            ]);
-            setTenants(tenantData || []);
-            setRefunds(refundData || []);
-        } catch (error) {
-            showMessage(error.response?.data?.message || 'Không thể tải dữ liệu hoàn tiền.', 'error');
-        } finally {
-            setLoading(false);
+        const [tenantResult, refundResult] = await Promise.allSettled([
+            refundService.getTenants(),
+            refundService.getRefunds({})
+        ]);
+
+        if (tenantResult.status === 'fulfilled') {
+            setTenants(tenantResult.value || []);
+        } else {
+            showMessage(getErrorMessage(tenantResult.reason, 'Không thể tải danh sách trung tâm.'), 'error');
         }
+
+        if (refundResult.status === 'fulfilled') {
+            setRefunds(refundResult.value || []);
+        } else {
+            showMessage(getErrorMessage(refundResult.reason, 'Không thể tải dữ liệu hoàn tiền.'), 'error');
+        }
+
+        setLoading(false);
     };
 
     const loadRefunds = async () => {
@@ -58,7 +66,7 @@ const RefundManagement = () => {
             const data = await refundService.getRefunds(params);
             setRefunds(data || []);
         } catch (error) {
-            showMessage(error.response?.data?.message || 'Không thể lọc dữ liệu hoàn tiền.', 'error');
+            showMessage(getErrorMessage(error, 'Không thể lọc dữ liệu hoàn tiền.'), 'error');
         }
     };
 
@@ -74,7 +82,7 @@ const RefundManagement = () => {
             setPayments(eligible);
         } catch (error) {
             setPayments([]);
-            showMessage(error.response?.data?.message || 'Không thể tải lịch sử thanh toán của trung tâm.', 'error');
+            showMessage(getErrorMessage(error, 'Không thể tải lịch sử thanh toán của trung tâm.'), 'error');
         }
     };
 
@@ -145,7 +153,7 @@ const RefundManagement = () => {
             showMessage('Tạo yêu cầu hoàn tiền thành công.');
             await loadRefunds();
         } catch (error) {
-            showMessage(error.response?.data?.message || 'Tạo yêu cầu hoàn tiền thất bại.', 'error');
+            showMessage(getErrorMessage(error, 'Tạo yêu cầu hoàn tiền thất bại.'), 'error');
         } finally {
             setSubmitting(false);
         }
@@ -167,7 +175,7 @@ const RefundManagement = () => {
             }
             await loadRefunds();
         } catch (error) {
-            showMessage(error.response?.data?.message || 'Thao tác hoàn tiền thất bại.', 'error');
+            showMessage(getErrorMessage(error, 'Thao tác hoàn tiền thất bại.'), 'error');
         }
     };
 
@@ -182,53 +190,77 @@ const RefundManagement = () => {
 
                 {message && <div className={`refund-alert ${message.type}`}>{message.text}</div>}
 
-                <section className="refund-card">
-                    <h2>Tạo yêu cầu hoàn tiền</h2>
+                <section className="refund-card refund-form-card">
+                    <div className="refund-card-header">
+                        <h2>Tạo yêu cầu hoàn tiền</h2>
+                        <p>Điền đầy đủ thông tin để gửi yêu cầu hoàn tiền cho giao dịch đã thanh toán.</p>
+                    </div>
                     <form onSubmit={createRefund} className="refund-form">
-                        <select value={form.tenantId} onChange={(e) => onTenantChange(e.target.value)} required>
-                            <option value="">Chọn trung tâm</option>
-                            {tenants.map(t => (
-                                <option key={t.tenantId} value={t.tenantId}>{t.tenantName} ({t.subDomain})</option>
-                            ))}
-                        </select>
+                        <div className="refund-form-grid">
+                            <div className="refund-field">
+                                <label htmlFor="refund-tenant">Trung tâm</label>
+                                <select id="refund-tenant" value={form.tenantId} onChange={(e) => onTenantChange(e.target.value)} required>
+                                    <option value="">Chọn trung tâm</option>
+                                    {tenants.map(t => (
+                                        <option key={t.tenantId} value={t.tenantId}>{t.tenantName} ({t.subDomain})</option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <select value={form.paymentRecordId} onChange={(e) => onPaymentChange(e.target.value)} required disabled={!form.tenantId}>
-                            <option value="">Chọn giao dịch đã thanh toán</option>
-                            {payments.map(p => (
-                                <option key={p.paymentId} value={p.paymentId}>
-                                    {p.paymentId} - {Number(p.amount).toLocaleString('vi-VN')} đ - {new Date(p.paymentDate).toLocaleDateString('vi-VN')}
-                                </option>
-                            ))}
-                        </select>
+                            <div className="refund-field">
+                                <label htmlFor="refund-payment">Giao dịch đã thanh toán</label>
+                                <select id="refund-payment" value={form.paymentRecordId} onChange={(e) => onPaymentChange(e.target.value)} required disabled={!form.tenantId}>
+                                    <option value="">Chọn giao dịch đã thanh toán</option>
+                                    {payments.map(p => (
+                                        <option key={p.paymentId} value={p.paymentId}>
+                                            {p.paymentId} - {Number(p.amount).toLocaleString('vi-VN')} đ - {new Date(p.paymentDate).toLocaleDateString('vi-VN')}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <input
-                            type="number"
-                            min="1"
-                            step="1000"
-                            placeholder="Số tiền hoàn"
-                            value={form.refundAmount}
-                            onChange={(e) => setForm(prev => ({ ...prev, refundAmount: e.target.value }))}
-                            required
-                        />
+                            <div className="refund-field">
+                                <label htmlFor="refund-amount">Số tiền hoàn (VND)</label>
+                                <input
+                                    id="refund-amount"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    placeholder="Nhập số tiền hoàn"
+                                    value={form.refundAmount}
+                                    onChange={(e) => setForm(prev => ({ ...prev, refundAmount: e.target.value }))}
+                                    required
+                                />
+                            </div>
 
-                        <select
-                            value={form.refundMethod}
-                            onChange={(e) => setForm(prev => ({ ...prev, refundMethod: e.target.value }))}
-                        >
-                            <option value="Credit">Hoàn vào số dư trung tâm</option>
-                            <option value="Cash">Hoàn qua VNPay</option>
-                        </select>
+                            <div className="refund-field">
+                                <label htmlFor="refund-method">Phương thức hoàn tiền</label>
+                                <select
+                                    id="refund-method"
+                                    value={form.refundMethod}
+                                    onChange={(e) => setForm(prev => ({ ...prev, refundMethod: e.target.value }))}
+                                >
+                                    <option value="Credit">Hoàn vào số dư trung tâm</option>
+                                    <option value="Cash">Hoàn qua VNPay</option>
+                                </select>
+                            </div>
 
-                        <textarea
-                            rows={3}
-                            placeholder="Lý do hoàn tiền"
-                            value={form.reason}
-                            onChange={(e) => setForm(prev => ({ ...prev, reason: e.target.value }))}
-                            required
-                        />
+                            <div className="refund-field refund-field-full">
+                                <label htmlFor="refund-reason">Lý do hoàn tiền</label>
+                                <textarea
+                                    id="refund-reason"
+                                    rows={3}
+                                    placeholder="Mô tả rõ lý do hoàn tiền"
+                                    value={form.reason}
+                                    onChange={(e) => setForm(prev => ({ ...prev, reason: e.target.value }))}
+                                    required
+                                />
+                            </div>
+                        </div>
 
-                        <label className="refund-checkbox">
+                        <label className="refund-checkbox" htmlFor="refund-service-issue">
                             <input
+                                id="refund-service-issue"
                                 type="checkbox"
                                 checked={form.isServiceIssue}
                                 onChange={(e) => setForm(prev => ({ ...prev, isServiceIssue: e.target.checked }))}
@@ -242,28 +274,39 @@ const RefundManagement = () => {
                             </div>
                         )}
 
-                        <button type="submit" disabled={submitting}>
+                        <button type="submit" className="refund-submit-btn" disabled={submitting}>
                             <Send size={16} />
                             {submitting ? 'Đang tạo...' : 'Tạo yêu cầu'}
                         </button>
                     </form>
                 </section>
 
-                <section className="refund-card">
+                <section className="refund-card refund-filter-card">
                     <div className="refund-table-header">
-                        <h2>Danh sách yêu cầu hoàn tiền</h2>
-                        <div className="refund-filters">
-                            <select value={filter.status} onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}>
-                                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s === 'All' ? 'Tất cả trạng thái' : s}</option>)}
-                            </select>
-                            <select value={filter.tenantId} onChange={(e) => setFilter(prev => ({ ...prev, tenantId: e.target.value }))}>
-                                <option value="">Tất cả trung tâm</option>
-                                {tenants.map(t => <option key={t.tenantId} value={t.tenantId}>{t.tenantName}</option>)}
-                            </select>
-                            <button type="button" onClick={loadRefunds}><Search size={16} /> Lọc</button>
+                        <h2>Bộ lọc danh sách</h2>
+                        <div className="refund-filters" role="group" aria-label="Bộ lọc hoàn tiền">
+                            <label className="refund-filter-field" htmlFor="refund-filter-status">
+                                <span>Trạng thái</span>
+                                <select id="refund-filter-status" value={filter.status} onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}>
+                                    {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s === 'All' ? 'Tất cả trạng thái' : s}</option>)}
+                                </select>
+                            </label>
+                            <label className="refund-filter-field" htmlFor="refund-filter-tenant">
+                                <span>Trung tâm</span>
+                                <select id="refund-filter-tenant" value={filter.tenantId} onChange={(e) => setFilter(prev => ({ ...prev, tenantId: e.target.value }))}>
+                                    <option value="">Tất cả trung tâm</option>
+                                    {tenants.map(t => <option key={t.tenantId} value={t.tenantId}>{t.tenantName}</option>)}
+                                </select>
+                            </label>
+                            <button type="button" className="refund-filter-btn" onClick={loadRefunds}><Search size={16} /> Lọc</button>
                         </div>
                     </div>
+                </section>
 
+                <section className="refund-card refund-table-card">
+                    <div className="refund-table-header">
+                        <h2>Danh sách yêu cầu hoàn tiền</h2>
+                    </div>
                     <div className="refund-table-wrap">
                         <table className="refund-table">
                             <thead>
@@ -291,21 +334,24 @@ const RefundManagement = () => {
                                             <td>{Number(r.refundAmount).toLocaleString('vi-VN')} đ</td>
                                             <td>{r.refundMethod}</td>
                                             <td><span className={`status ${String(r.status || '').toLowerCase()}`}>{r.status}</span></td>
-                                            <td>
+                                            <td className="refund-action-cell">
                                                 <div className="refund-actions">
                                                     {r.status === 'Pending' && (
                                                         <>
-                                                            <button type="button" className="approve" onClick={() => executeAction('approve', r.refundId)} title="Duyệt">
+                                                            <button type="button" className="approve" onClick={() => executeAction('approve', r.refundId)} title="Duyệt yêu cầu">
                                                                 <CheckCircle2 size={16} />
+                                                                <span>Duyệt</span>
                                                             </button>
-                                                            <button type="button" className="reject" onClick={() => executeAction('reject', r.refundId, { reason: 'Không đạt điều kiện hoàn tiền' })} title="Từ chối">
+                                                            <button type="button" className="reject" onClick={() => executeAction('reject', r.refundId, { reason: 'Không đạt điều kiện hoàn tiền' })} title="Từ chối yêu cầu">
                                                                 <XCircle size={16} />
+                                                                <span>Từ chối</span>
                                                             </button>
                                                         </>
                                                     )}
                                                     {r.status === 'Approved' && (
-                                                        <button type="button" className="process" onClick={() => executeAction('process', r.refundId)} title="Xử lý hoàn tiền">
+                                                        <button type="button" className="process" onClick={() => executeAction('process', r.refundId)} title="Gửi xử lý hoàn tiền">
                                                             <RotateCcw size={16} />
+                                                            <span>Xử lý</span>
                                                         </button>
                                                     )}
                                                     {r.status === 'Failed' && (

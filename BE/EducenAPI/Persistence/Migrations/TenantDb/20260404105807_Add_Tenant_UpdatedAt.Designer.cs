@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    [Migration("20260403100647_Add_ClassSession_Attendance_Relationship")]
-    partial class Add_ClassSession_Attendance_Relationship
+    [Migration("20260404105807_Add_Tenant_UpdatedAt")]
+    partial class Add_Tenant_UpdatedAt
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -507,6 +507,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Year")
                         .HasColumnType("int");

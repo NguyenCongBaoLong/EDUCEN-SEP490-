@@ -10,7 +10,7 @@ namespace EducenAPI.Controllers
 {
     [Route("api/support-requests")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Parent,Teacher,Assistant,Student")]
     public class SupportRequestsController : ControllerBase
     {
         private readonly ISupportRequestsService _service;

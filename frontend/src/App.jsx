@@ -103,7 +103,7 @@ function App() {
                   <Route path="schedule" element={<PrivateRoute allowedRoles={['Parent']}><ParentSchedule /></PrivateRoute>} />
                   <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
                   <Route path="family-invoices" element={<PrivateRoute allowedRoles={['Parent']}><FamilyInvoices /></PrivateRoute>} />
-                  <Route path="feedback" element={<Navigate to="/parent/classes" replace />} />
+                  <Route path="feedback" element={<Navigate to="/parent/classes?panel=feedback" replace />} />
                   <Route path="*" element={<Navigate to="/parent/classes" replace />} />
                 </Routes>
               } />

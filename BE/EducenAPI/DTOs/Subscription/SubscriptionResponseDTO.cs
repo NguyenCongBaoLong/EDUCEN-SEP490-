@@ -1,4 +1,4 @@
-﻿namespace EducenAPI.DTOs.Subscription
+namespace EducenAPI.DTOs.Subscription
 {
     public class SubscriptionResponseDTO
     {
@@ -8,6 +8,7 @@
 
         public string PlanId { get; set; }
         public string PlanName { get; set; }
+        public decimal PlanPrice { get; set; }
 
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }

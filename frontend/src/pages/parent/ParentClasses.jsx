@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2 } from 'lucide-react';
 import ParentSidebar from '../../components/ParentSidebar';
 import ParentFeedbackDrawer from '../../components/ParentFeedbackDrawer';
@@ -171,12 +172,23 @@ const ClassDetailModal = ({ cls, onClose }) => {
 
 /* ── Main ── */
 const ParentClasses = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const { selectedChild, loading: childLoading } = useChild();
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [selectedClass, setSelectedClass] = useState(null);
+    const [feedbackOpenSignal, setFeedbackOpenSignal] = useState(0);
+
+    useEffect(() => {
+        if (searchParams.get('panel') !== 'feedback') return;
+        setFeedbackOpenSignal(prev => prev + 1);
+
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('panel');
+        setSearchParams(nextParams, { replace: true });
+    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         if (!selectedChild) return;
@@ -215,7 +227,7 @@ const ParentClasses = () => {
                             <p className="pc-subtitle">{selectedChild?.grade || ''}</p>
                         </div>
                     </div>
-                    <ParentFeedbackDrawer />
+                    <ParentFeedbackDrawer autoOpenSignal={feedbackOpenSignal} />
                 </div>
 
                 {childLoading || loading ? (

@@ -8,6 +8,8 @@ namespace EducenAPI.Services
 {
     public class RefundService : IRefundService
     {
+        private const string RefundGraceOrServiceIssueMessage = "Chỉ được hoàn tiền trong thời gian gia hạn hoặc khi có sự cố dịch vụ.";
+
         private readonly AdminDbContext _adminContext;
         private readonly ILogger<RefundService> _logger;
         private readonly IConfiguration _configuration;
@@ -47,12 +49,15 @@ namespace EducenAPI.Services
             if (payment.TransactionType != "Subscription")
                 throw new Exception("Chỉ hỗ trợ hoàn tiền cho giao dịch gói dịch vụ");
 
-            if (payment.SubscriptionMonths.GetValueOrDefault() != 1)
-                throw new Exception("Chỉ hỗ trợ hoàn tiền cho gói đăng ký theo tháng");
-
+            // Chính sách mới: Chỉ refund trong grace period hoặc khi có sự cố dịch vụ
             var withinGracePeriod = IsWithinGracePeriod(payment.PaymentDate);
             if (!withinGracePeriod && !request.IsServiceIssue)
-                throw new Exception("Chỉ được hoàn tiền trong thời gian gia hạn hoặc khi có sự cố dịch vụ");
+                throw new Exception(RefundGraceOrServiceIssueMessage);
+
+            // Chính sách mới: KHÔNG hoàn tiền mặt, chỉ quy đổi sang credit
+            // Bắt buộc refundMethod = Credit
+            if (!string.Equals(request.RefundMethod, "Credit", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Chỉ hỗ trợ hoàn tiền dưới dạng credit, không hoàn tiền mặt");
 
             // Check if refund already exists
             var existingRefund = await _adminContext.RefundRequests
@@ -309,9 +314,6 @@ namespace EducenAPI.Services
                 return false;
 
             if (payment.SubscriptionMonths.GetValueOrDefault() != 1)
-                return false;
-
-            if (!IsWithinGracePeriod(payment.PaymentDate))
                 return false;
 
             // Check if refund already exists

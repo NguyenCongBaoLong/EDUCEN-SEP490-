@@ -15,6 +15,11 @@ const familyInvoiceService = {
     createFamilyInvoice: async (payload) => {
         const response = await api.post('/family-invoices/create-family', payload);
         return response.data;
+    },
+
+    cancelFamilyInvoice: async (invoiceId, reason = '') => {
+        const response = await api.post(`/family-invoices/${invoiceId}/cancel`, { reason });
+        return response.data;
     }
 };
 

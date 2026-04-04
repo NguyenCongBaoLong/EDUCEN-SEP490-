@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
     CheckCircle, AlertCircle, Info, ChevronRight, BookOpen,
@@ -14,9 +14,10 @@ import {
 } from 'recharts';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText } from 'lucide-react';
+import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText, Wallet } from 'lucide-react';
 import zaloOAService from '../../services/zaloOAService';
 import notificationService from '../../services/notificationService';
+import creditService from '../../services/creditService';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
@@ -38,6 +39,15 @@ const CustomTooltip = ({ active, payload, label }) => {
         );
     }
     return null;
+};
+
+const normalizeNotifications = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== 'object') return [];
+    if (Array.isArray(payload.data)) return payload.data;
+    if (Array.isArray(payload.notifications)) return payload.notifications;
+    if (Array.isArray(payload.items)) return payload.items;
+    return [];
 };
 
 /* ─── Main Component ─────────────────────────────────── */
@@ -78,7 +88,25 @@ const AdminDashboard = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replying, setReplying] = useState(false);
-    const { tenantId } = useAuth();
+
+    // Credit state
+    const [creditBalance, setCreditBalance] = useState(null);
+    const [creditLoading, setCreditLoading] = useState(false);
+    const [creditLedger, setCreditLedger] = useState([]);
+    const [ledgerLoading, setLedgerLoading] = useState(false);
+    const [showLedger, setShowLedger] = useState(false);
+    const tenantId = useMemo(() => {
+        const isValidTenantId = (value) => (
+            !!value && value !== 'undefined' && value !== 'null'
+        );
+
+        if (isValidTenantId(user?.tenantId)) return user.tenantId;
+
+        const storedTenantId = localStorage.getItem('tenantId');
+        if (isValidTenantId(storedTenantId)) return storedTenantId;
+
+        return null;
+    }, [user?.tenantId]);
 
     const inboxMessages = [
         // System notifications (Subscription expiration, etc.)
@@ -131,7 +159,7 @@ const AdminDashboard = () => {
         if (!tenantId) return;
         try {
             const res = await notificationService.getNotifications(tenantId);
-            setSystemNotifications(res.data || []);
+            setSystemNotifications(normalizeNotifications(res));
         } catch (error) {
             console.error('Error fetching system notifications:', error);
         }
@@ -242,6 +270,42 @@ const AdminDashboard = () => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
+
+    // Load credit data when subscription tab is active
+    useEffect(() => {
+        if (activeTab === 'subscription' && tenantId && !creditBalance) {
+            const loadCredit = async () => {
+                setCreditLoading(true);
+                try {
+                    const balanceData = await creditService.getCreditBalance(tenantId);
+                    setCreditBalance(balanceData);
+                } catch (error) {
+                    console.error('Error loading credit balance:', error);
+                } finally {
+                    setCreditLoading(false);
+                }
+            };
+            loadCredit();
+        }
+    }, [activeTab, tenantId]);
+
+    // Load credit ledger when showLedger is toggled
+    useEffect(() => {
+        if (showLedger && tenantId && creditLedger.length === 0) {
+            const loadLedger = async () => {
+                setLedgerLoading(true);
+                try {
+                    const ledgerData = await creditService.getCreditLedger(tenantId, 1, 20);
+                    setCreditLedger(ledgerData || []);
+                } catch (error) {
+                    console.error('Error loading credit ledger:', error);
+                } finally {
+                    setLedgerLoading(false);
+                }
+            };
+            loadLedger();
+        }
+    }, [showLedger, tenantId]);
 
     const handleSend = async () => {
         if (!form.title.trim() || !form.content.trim()) return;
@@ -626,7 +690,100 @@ const AdminDashboard = () => {
                 )}
 
                 {activeTab === 'revenue' && <RevenueReport hideSidebar={true} />}
-                {activeTab === 'subscription' && <SubscriptionPlans hideSidebar={true} />}
+                
+                {activeTab === 'subscription' && (
+                    <>
+                        {/* Credit Balance Display */}
+                        <div className="credit-balance-card" style={{
+                            marginBottom: '1rem',
+                            padding: '1rem',
+                            background: creditBalance ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#f3f4f6',
+                            borderRadius: '12px',
+                            color: creditBalance ? 'white' : '#374151'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{
+                                    width: '48px', height: '48px',
+                                    borderRadius: '50%',
+                                    background: creditBalance ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                    <Wallet size={24} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: '14px', opacity: 0.9 }}>Số dư Credit</div>
+                                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                                        {creditLoading ? '...' : creditBalance 
+                                            ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(creditBalance.creditBalance)
+                                            : '0 ₫'
+                                        }
+                                    </div>
+                                    <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                                        Dùng cho thanh toán gói dịch vụ tiếp theo
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setShowLedger(!showLedger)}
+                                    style={{
+                                        padding: '8px 16px',
+                                        background: creditBalance ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    {showLedger ? 'Ẩn' : 'Xem'} lịch sử
+                                </button>
+                            </div>
+                            
+                            {/* Credit Ledger Table */}
+                            {showLedger && (
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.3)' }}>
+                                    {ledgerLoading ? (
+                                        <div style={{ textAlign: 'center', padding: '1rem' }}>Đang tải...</div>
+                                    ) : creditLedger.length === 0 ? (
+                                        <div style={{ textAlign: 'center', padding: '1rem', opacity: 0.8 }}>Chưa có lịch sử credit</div>
+                                    ) : (
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                                            <thead>
+                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
+                                                    <th style={{ textAlign: 'left', padding: '8px' }}>Ngày</th>
+                                                    <th style={{ textAlign: 'left', padding: '8px' }}>Loại</th>
+                                                    <th style={{ textAlign: 'right', padding: '8px' }}>Số tiền</th>
+                                                    <th style={{ textAlign: 'right', padding: '8px' }}>Sau</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {creditLedger.map((entry, idx) => (
+                                                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                                        <td style={{ padding: '8px' }}>
+                                                            {new Date(entry.createdAt).toLocaleDateString('vi-VN')}
+                                                        </td>
+                                                        <td style={{ padding: '8px' }}>{entry.note || entry.entryType}</td>
+                                                        <td style={{ 
+                                                            padding: '8px', 
+                                                            textAlign: 'right',
+                                                            color: entry.entryType === 'Credit' ? '#86efac' : '#fca5a5'
+                                                        }}>
+                                                            {entry.entryType === 'Credit' ? '+' : '-'}
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(entry.amount)}
+                                                        </td>
+                                                        <td style={{ textAlign: 'right', padding: '8px' }}>
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(entry.balanceAfter)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <SubscriptionPlans hideSidebar={true} />
+                    </>
+                )}
 
             </main>
 

@@ -21,6 +21,10 @@
 .subscription-header {
     margin-bottom: 40px;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
 }
 
 .subscription-header h1 {
@@ -36,6 +40,24 @@
     font-size: 16px;
     max-width: 600px;
     margin: 0 auto;
+}
+
+.subscription-credit-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 1px solid #6ee7b7;
+    border-radius: 12px;
+    color: #065f46;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.subscription-credit-info strong {
+    color: #047857;
+    font-size: 18px;
 }
 
 /* ─── Pricing Grid ─── */
@@ -230,6 +252,83 @@
 .subscription-pay-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* Nút đổi gói */
+.subscription-change-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #f59e0b;
+    background: #fffbeb;
+    color: #b45309;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.subscription-change-btn:hover:not(:disabled) {
+    background: #fef3c7;
+    border-color: #d97706;
+}
+
+.subscription-change-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal summary for change plan */
+.subscription-change-summary {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 16px;
+}
+
+.change-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.change-summary-row span {
+    color: #64748b;
+}
+
+.change-summary-row strong {
+    color: #1e293b;
+}
+
+.change-summary-row .credit-value {
+    color: #059669;
+}
+
+.change-summary-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 12px 0;
+}
+
+.change-summary-row.total {
+    font-size: 16px;
+    padding-top: 12px;
+}
+
+.change-summary-row.total strong.free {
+    color: #059669;
+    font-weight: 700;
+}
+
+.change-summary-row.total strong.pay {
+    color: #dc2626;
+    font-weight: 700;
 }
 
 /* ─── Modal & Misc ─── */

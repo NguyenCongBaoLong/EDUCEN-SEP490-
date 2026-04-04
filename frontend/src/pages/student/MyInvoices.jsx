@@ -114,8 +114,21 @@ const MyInvoices = () => {
     };
 
     const handleConsolidateInvoices = async () => {
-        if (!isParent || !selectedChild?.studentId) {
+        const parentId = user?.userId || user?.nameid;
+        const studentId = isParent
+            ? selectedChild?.studentId
+            : outstandingInvoices.find(inv => inv.studentId)?.studentId
+                || invoices.find(inv => inv.studentId)?.studentId
+                || user?.userId
+                || user?.nameid;
+
+        if (isParent && !studentId) {
             toast.error('Vui lòng chọn con');
+            return;
+        }
+
+        if (!isParent && !studentId) {
+            toast.error('Không thể xác định học sinh để gộp hóa đơn');
             return;
         }
         if (outstandingInvoices.length < 2) {
@@ -125,7 +138,6 @@ const MyInvoices = () => {
 
         setProcessingPayment(true);
         try {
-            const parentId = user?.userId || user?.nameid;
             const periods = [...new Set(outstandingInvoices.map(inv => `${inv.invoiceMonth}-${inv.invoiceYear}`))];
 
             // Create consolidated invoice for each month/year that has invoices
@@ -140,14 +152,18 @@ const MyInvoices = () => {
                         type: 'Student',
                         month,
                         year,
-                        studentIds: [selectedChild.studentId],
+                        studentIds: [studentId],
                         selectedTuitionInvoiceIds: monthInvoices.map(inv => inv.invoiceId)
                     });
                 }
             }
 
             toast.success('Đã tạo hóa đơn gộp thành công');
-            window.location.href = '/parent/family-invoices';
+            if (isParent) {
+                window.location.href = '/parent/family-invoices';
+            } else {
+                await fetchInvoices();
+            }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Lỗi tạo hóa đơn gộp');
         } finally {
@@ -222,7 +238,7 @@ const MyInvoices = () => {
                                 </p>
                             </div>
                         </div>
-                        {isParent && outstandingInvoices.length >= 2 && (
+                        {outstandingInvoices.length >= 2 && (
                             <button 
                                 className="consolidate-btn"
                                 onClick={handleConsolidateInvoices}

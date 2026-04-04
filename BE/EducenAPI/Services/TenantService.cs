@@ -141,6 +141,22 @@ namespace EducenAPI.Services.TenantService
                 .FirstOrDefault(t => t.TenantId == tenantId);
         }
 
+        public async Task<Tenant?> GetTenantByIdAsync(string tenantId)
+        {
+            return await _adminDbContext.Tenants
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId);
+        }
+
+        public async Task<List<TenantCreditLedger>> GetCreditLedgerAsync(string tenantId, int page, int pageSize)
+        {
+            return await _adminDbContext.TenantCreditLedgers
+                .Where(l => l.TenantId == tenantId)
+                .OrderByDescending(l => l.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
         public Tenant? UpdateTenant(string tenantId, UpdateTenantRequest request)
         {
             var tenant = _adminDbContext.Tenants

@@ -64,7 +64,7 @@ const parseContent = (content) => {
 
 const EMPTY_FORM = { category: '', subject: '', content: '', rating: 0 };
 
-const ParentFeedbackDrawer = () => {
+const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
     const [open, setOpen] = useState(false);
     // 'list' | 'form' | 'detail'
     const [view, setView] = useState('list');
@@ -91,6 +91,12 @@ const ParentFeedbackDrawer = () => {
     useEffect(() => {
         if (open) fetchFeedbacks();
     }, [open]);
+
+    useEffect(() => {
+        if (autoOpenSignal > 0) {
+            setOpen(true);
+        }
+    }, [autoOpenSignal]);
 
     const unreadCount = feedbacks.filter(f => f.adminResponse && !f.isReadByUser).length;
 

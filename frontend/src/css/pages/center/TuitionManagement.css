@@ -168,6 +168,12 @@
     border-collapse: collapse;
 }
 
+.table-hint-text {
+    font-size: 12px;
+    color: #475569;
+    padding: 10px 20px 0;
+}
+
 .calculation-table th,
 .calculation-table td {
     padding: 14px 20px;

@@ -100,5 +100,52 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Lấy số dư credit của tenant
+        /// </summary>
+        [HttpGet("{tenantId}/credit-balance")]
+        public async Task<IActionResult> GetCreditBalance(string tenantId)
+        {
+            try
+            {
+                var tenant = await _tenantService.GetTenantByIdAsync(tenantId);
+                if (tenant == null)
+                    return NotFound(new { message = "Không tìm thấy trung tâm" });
+
+                return Ok(new
+                {
+                    tenantId = tenant.TenantId,
+                    tenantName = tenant.TenantName,
+                    creditBalance = tenant.CreditBalance,
+                    updatedAt = tenant.UpdatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy lịch sử credit của tenant
+        /// </summary>
+        [HttpGet("{tenantId}/credit-ledger")]
+        public async Task<IActionResult> GetCreditLedger(string tenantId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var tenant = await _tenantService.GetTenantByIdAsync(tenantId);
+                if (tenant == null)
+                    return NotFound(new { message = "Không tìm thấy trung tâm" });
+
+                var ledger = await _tenantService.GetCreditLedgerAsync(tenantId, page, pageSize);
+                return Ok(ledger);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

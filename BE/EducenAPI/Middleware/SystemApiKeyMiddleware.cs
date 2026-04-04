@@ -21,8 +21,10 @@ namespace EducenAPI.Middleware
         {
             _logger.LogInformation($"[SystemApiKey] Path: {context.Request.Path}, Auth: {context.User?.Identity?.IsAuthenticated}");
             
-            // Chỉ áp dụng cho API admin
-            if (!context.Request.Path.StartsWithSegments("/api/admin"))
+            // Chỉ áp dụng cho API admin và refunds
+            var isAdminApi = context.Request.Path.StartsWithSegments("/api/admin");
+            var isRefundsApi = context.Request.Path.StartsWithSegments("/api/refunds");
+            if (!isAdminApi && !isRefundsApi)
             {
                 await _next(context);
                 return;
@@ -68,10 +70,17 @@ namespace EducenAPI.Middleware
                 return;
             }
 
+            var systemApiUserId = configuration["SystemApiUserId"];
+            if (!int.TryParse(systemApiUserId, out var parsedSystemApiUserId))
+            {
+                parsedSystemApiUserId = 0;
+            }
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, "SystemAdmin"),
-                new Claim(ClaimTypes.Role, "SystemAdmin")
+                new Claim(ClaimTypes.Role, "SystemAdmin"),
+                new Claim(ClaimTypes.NameIdentifier, parsedSystemApiUserId.ToString())
             };
             var identity = new ClaimsIdentity(claims, "SystemApiKey");
             context.User = new ClaimsPrincipal(identity);

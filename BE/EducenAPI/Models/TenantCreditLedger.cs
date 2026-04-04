@@ -31,6 +31,17 @@ namespace EducenAPI.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Ngày hết hạn của credit (null = không có thời hạn)
+        /// </summary>
+        public DateTime? ExpiredAt { get; set; }
+
+        /// <summary>
+        /// Đã hết hạn chưa
+        /// </summary>
+        [NotMapped]
+        public bool IsExpired => ExpiredAt.HasValue && ExpiredAt.Value < DateTime.UtcNow;
+
         [ForeignKey(nameof(TenantId))]
         public Tenant Tenant { get; set; } = null!;
     }

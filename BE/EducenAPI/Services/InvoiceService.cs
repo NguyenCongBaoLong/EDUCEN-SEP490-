@@ -324,27 +324,83 @@ namespace EducenAPI.Services
             return overdueInvoices.Count;
         }
 
-        public async Task<FamilyInvoiceResult> CreateFamilyInvoiceAsync(string parentId, CreateFamilyInvoiceRequest request)
+        public async Task<FamilyInvoiceResult> CreateFamilyInvoiceAsync(string ownerUserId, CreateFamilyInvoiceRequest request, string requesterRole = "Parent")
         {
             try
             {
-                if (!int.TryParse(parentId, out var parentUserId))
+                if (!int.TryParse(ownerUserId, out var requesterUserId))
                     return new FamilyInvoiceResult
                     {
                         Success = false,
-                        Message = "Không xác định được phụ huynh hợp lệ."
+                        Message = "Không xác định được người dùng hợp lệ."
                     };
 
-                // Validate parent exists
-                var parent = await _context.Parents
-                    .FirstOrDefaultAsync(p => p.UserId == parentUserId);
+                var isStudentRequester = string.Equals(requesterRole, "Student", StringComparison.OrdinalIgnoreCase)
+                                         && !string.Equals(requesterRole, "Parent", StringComparison.OrdinalIgnoreCase);
 
-                if (parent == null)
-                    return new FamilyInvoiceResult
+                string invoiceOwnerId;
+                List<int> ownerStudentIds;
+
+                if (isStudentRequester)
+                {
+                    var studentExists = await _context.Students.AnyAsync(s => s.UserId == requesterUserId);
+                    if (!studentExists)
                     {
-                        Success = false,
-                        Message = "Không tìm thấy thông tin phụ huynh."
-                    };
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin học sinh."
+                        };
+                    }
+
+                    if (!string.Equals(request.Type, "Student", StringComparison.Ordinal))
+                    {
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Học sinh chỉ được tạo hóa đơn gộp loại 'Student'."
+                        };
+                    }
+
+                    if (request.StudentIds != null && request.StudentIds.Any(id => id != requesterUserId))
+                    {
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Danh sách học sinh chỉ được chứa chính học sinh hiện tại."
+                        };
+                    }
+
+                    invoiceOwnerId = requesterUserId.ToString();
+                    ownerStudentIds = new List<int> { requesterUserId };
+                }
+                else
+                {
+                    // Validate parent exists
+                    var parent = await _context.Parents
+                        .FirstOrDefaultAsync(p => p.UserId == requesterUserId);
+
+                    if (parent == null)
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin phụ huynh."
+                        };
+
+                    ownerStudentIds = await _context.Set<Dictionary<string, object>>("ParentStudent")
+                        .Where(ps => EF.Property<int>(ps, "ParentsUserId") == requesterUserId)
+                        .Select(ps => EF.Property<int>(ps, "StudentsUserId"))
+                        .ToListAsync();
+
+                    if (!ownerStudentIds.Any())
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy học sinh nào thuộc phụ huynh này."
+                        };
+
+                    invoiceOwnerId = parent.UserId.ToString();
+                }
 
                 // Validate type
                 if (request.Type != "Student" && request.Type != "Family")
@@ -364,21 +420,35 @@ namespace EducenAPI.Services
                 // Backward compatibility fallback: derive from StudentIds + Month + Year
                 if (!selectedInvoiceIds.Any())
                 {
-                    if (request.StudentIds == null || !request.StudentIds.Any())
-                        return new FamilyInvoiceResult
-                        {
-                            Success = false,
-                            Message = "Danh sách hóa đơn học phí được chọn không hợp lệ."
-                        };
+                    if (isStudentRequester)
+                    {
+                        selectedInvoiceIds = await _context.TuitionInvoices
+                            .Where(i => i.StudentId == requesterUserId
+                                        && i.InvoiceMonth == request.Month
+                                        && i.InvoiceYear == request.Year
+                                        && (i.Status == "Sent" || i.Status == "Overdue"))
+                            .Select(i => i.InvoiceId)
+                            .Distinct()
+                            .ToListAsync();
+                    }
+                    else
+                    {
+                        if (request.StudentIds == null || !request.StudentIds.Any())
+                            return new FamilyInvoiceResult
+                            {
+                                Success = false,
+                                Message = "Danh sách hóa đơn học phí được chọn không hợp lệ."
+                            };
 
-                    selectedInvoiceIds = await _context.TuitionInvoices
-                        .Where(i => request.StudentIds.Contains(i.StudentId)
-                                    && i.InvoiceMonth == request.Month
-                                    && i.InvoiceYear == request.Year
-                                    && (i.Status == "Sent" || i.Status == "Overdue"))
-                        .Select(i => i.InvoiceId)
-                        .Distinct()
-                        .ToListAsync();
+                        selectedInvoiceIds = await _context.TuitionInvoices
+                            .Where(i => request.StudentIds.Contains(i.StudentId)
+                                        && i.InvoiceMonth == request.Month
+                                        && i.InvoiceYear == request.Year
+                                        && (i.Status == "Sent" || i.Status == "Overdue"))
+                            .Select(i => i.InvoiceId)
+                            .Distinct()
+                            .ToListAsync();
+                    }
                 }
 
                 if (!selectedInvoiceIds.Any())
@@ -404,25 +474,15 @@ namespace EducenAPI.Services
                     };
                 }
 
-                // Ownership validation: selected invoices must belong to this parent's children
-                var parentStudentIds = await _context.Set<Dictionary<string, object>>("ParentStudent")
-                    .Where(ps => EF.Property<int>(ps, "ParentsUserId") == parentUserId)
-                    .Select(ps => EF.Property<int>(ps, "StudentsUserId"))
-                    .ToListAsync();
-
-                var parentStudentSet = parentStudentIds.ToHashSet();
-                if (!parentStudentSet.Any())
+                // Ownership validation
+                var ownerStudentSet = ownerStudentIds.ToHashSet();
+                if (studentInvoices.Any(i => !ownerStudentSet.Contains(i.StudentId)))
                     return new FamilyInvoiceResult
                     {
                         Success = false,
-                        Message = "Không tìm thấy học sinh nào thuộc phụ huynh này."
-                    };
-
-                if (studentInvoices.Any(i => !parentStudentSet.Contains(i.StudentId)))
-                    return new FamilyInvoiceResult
-                    {
-                        Success = false,
-                        Message = "Danh sách hóa đơn có phần tử không thuộc học sinh của phụ huynh."
+                        Message = isStudentRequester
+                            ? "Danh sách hóa đơn có phần tử không thuộc học sinh hiện tại."
+                            : "Danh sách hóa đơn có phần tử không thuộc học sinh của phụ huynh."
                     };
 
                 // Integrity validation: month/year + allowed status only
@@ -482,7 +542,7 @@ namespace EducenAPI.Services
                 var familyInvoice = new FamilyInvoice
                 {
                     InvoiceId = Guid.NewGuid().ToString(),
-                    ParentId = parent.UserId.ToString(),
+                    ParentId = invoiceOwnerId,
                     Type = request.Type,
                     Month = request.Month,
                     Year = request.Year,
@@ -514,9 +574,9 @@ namespace EducenAPI.Services
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation(
-                    "Created {Type} family invoice {InvoiceId} for parent {ParentId} with {Count} items, total: {Total}",
+                    "Created {Type} family invoice {InvoiceId} for owner {OwnerId} (role: {Role}) with {Count} items, total: {Total}",
                     request.Type, familyInvoice.InvoiceId, familyInvoice.ParentId,
-                    familyInvoice.StudentInvoices.Count, familyInvoice.TotalAmount);
+                    requesterRole, familyInvoice.StudentInvoices.Count, familyInvoice.TotalAmount);
 
                 return new FamilyInvoiceResult
                 {
@@ -528,7 +588,7 @@ namespace EducenAPI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating family invoice for parent {ParentId}", parentId);
+                _logger.LogError(ex, "Error creating family invoice for owner {OwnerUserId}", ownerUserId);
                 return new FamilyInvoiceResult
                 {
                     Success = false,
@@ -537,11 +597,22 @@ namespace EducenAPI.Services
             }
         }
 
-        public async Task<List<FamilyInvoice>> GetFamilyInvoicesAsync(string parentId, string? type = null)
+        public async Task<List<FamilyInvoice>> GetFamilyInvoicesAsync(string ownerUserId, string? type = null, string requesterRole = "Parent")
         {
+            if (!int.TryParse(ownerUserId, out var requesterUserId))
+                return new List<FamilyInvoice>();
+
+            if (string.Equals(requesterRole, "Student", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(requesterRole, "Parent", StringComparison.OrdinalIgnoreCase))
+            {
+                var studentExists = await _context.Students.AnyAsync(s => s.UserId == requesterUserId);
+                if (!studentExists)
+                    return new List<FamilyInvoice>();
+            }
+
             var query = _context.FamilyInvoices
                 .Include(fi => fi.StudentInvoices)
-                .Where(fi => fi.ParentId == parentId);
+                .Where(fi => fi.ParentId == ownerUserId);
 
             if (!string.IsNullOrWhiteSpace(type))
                 query = query.Where(fi => fi.Type == type);
@@ -571,6 +642,7 @@ namespace EducenAPI.Services
                 // Update family invoice status
                 familyInvoice.Status = "Paid";
                 familyInvoice.PaidAt = DateTime.UtcNow;
+                familyInvoice.UpdatedAt = DateTime.UtcNow;
                 familyInvoice.Notes = notes;
 
                 // Update all student invoice statuses to "Paid"
@@ -602,6 +674,136 @@ namespace EducenAPI.Services
             {
                 _logger.LogError(ex, "Error paying family invoice {InvoiceId}", invoiceId);
                 return false;
+            }
+        }
+
+        public async Task<FamilyInvoiceResult> CancelFamilyInvoiceAsync(string ownerUserId, string invoiceId, string? reason, string requesterRole = "Parent")
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(ownerUserId))
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không xác định được người dùng hợp lệ."
+                    };
+                }
+
+                if (!int.TryParse(ownerUserId, out var ownerUserIdInt))
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không xác định được người dùng hợp lệ."
+                    };
+                }
+
+                var isStudentRequester = string.Equals(requesterRole, "Student", StringComparison.OrdinalIgnoreCase)
+                                         && !string.Equals(requesterRole, "Parent", StringComparison.OrdinalIgnoreCase);
+
+                if (isStudentRequester)
+                {
+                    var studentExists = await _context.Students.AnyAsync(s => s.UserId == ownerUserIdInt);
+                    if (!studentExists)
+                    {
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin học sinh."
+                        };
+                    }
+                }
+                else
+                {
+                    var parentExists = await _context.Parents.AnyAsync(p => p.UserId == ownerUserIdInt);
+                    if (!parentExists)
+                    {
+                        return new FamilyInvoiceResult
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin phụ huynh."
+                        };
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(invoiceId))
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Mã hóa đơn gộp không hợp lệ."
+                    };
+                }
+
+                var familyInvoice = await _context.FamilyInvoices
+                    .FirstOrDefaultAsync(fi => fi.InvoiceId == invoiceId);
+
+                if (familyInvoice == null)
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy hóa đơn gộp cần hủy."
+                    };
+                }
+
+                if (!string.Equals(familyInvoice.ParentId, ownerUserId, StringComparison.Ordinal))
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Bạn không có quyền hủy hóa đơn gộp này."
+                    };
+                }
+
+                if (!string.Equals(familyInvoice.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new FamilyInvoiceResult
+                    {
+                        Success = false,
+                        Message = "Chỉ có thể hủy hóa đơn gộp ở trạng thái Pending."
+                    };
+                }
+
+                familyInvoice.Status = "Cancelled";
+                familyInvoice.UpdatedAt = DateTime.UtcNow;
+
+                if (!string.IsNullOrWhiteSpace(reason))
+                {
+                    familyInvoice.Notes = string.IsNullOrWhiteSpace(familyInvoice.Notes)
+                        ? $"Đã hủy: {reason.Trim()}"
+                        : $"{familyInvoice.Notes}\nĐã hủy: {reason.Trim()}";
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "Cancelled family invoice {InvoiceId} by owner {OwnerUserId} (role: {Role})",
+                    invoiceId,
+                    ownerUserId,
+                    requesterRole);
+
+                return new FamilyInvoiceResult
+                {
+                    Success = true,
+                    InvoiceId = familyInvoice.InvoiceId,
+                    Message = "Hủy hóa đơn gộp thành công."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error cancelling family invoice {InvoiceId} by owner {OwnerUserId} (role: {Role})",
+                    invoiceId,
+                    ownerUserId,
+                    requesterRole);
+                return new FamilyInvoiceResult
+                {
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi hủy hóa đơn gộp."
+                };
             }
         }
     }

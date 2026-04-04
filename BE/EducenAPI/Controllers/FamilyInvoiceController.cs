@@ -33,7 +33,7 @@ namespace EducenAPI.Controllers
         /// Chỉ Parent mới có thể tạo cho con của mình
         /// </summary>
         [HttpPost("create-family")]
-        [Authorize(Roles = "Parent")]
+        [Authorize(Roles = "Parent,Student")]
         public async Task<IActionResult> CreateFamilyInvoice([FromBody] CreateFamilyInvoiceRequest request)
         {
             try
@@ -55,11 +55,12 @@ namespace EducenAPI.Controllers
                 if (request.Type == "Student" && !hasSelectedInvoiceIds && request.StudentIds.Count > 1)
                     return BadRequest(new { message = "Gộp hóa đơn theo con chỉ được chọn 1 học sinh." });
 
-                var parentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrWhiteSpace(parentId))
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrWhiteSpace(userId))
                     return BadRequest(new { message = "Không xác định được người dùng." });
 
-                var result = await _invoiceService.CreateFamilyInvoiceAsync(parentId, request);
+                var requesterRole = User.IsInRole("Parent") ? "Parent" : "Student";
+                var result = await _invoiceService.CreateFamilyInvoiceAsync(userId, request, requesterRole);
                 
                 if (result.Success)
                 {
@@ -93,7 +94,7 @@ namespace EducenAPI.Controllers
         /// không truyền type: lấy tất cả
         /// </summary>
         [HttpGet("family-invoices")]
-        [Authorize(Roles = "Parent")]
+        [Authorize(Roles = "Parent,Student")]
         public async Task<IActionResult> GetFamilyInvoices([FromQuery] string? type = null)
         {
             try
@@ -102,16 +103,17 @@ namespace EducenAPI.Controllers
                 if (string.IsNullOrWhiteSpace(tenantId))
                     return BadRequest(new { message = "Không xác định được trung tâm." });
 
-                var parentId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 
-                if (string.IsNullOrWhiteSpace(parentId))
+                if (string.IsNullOrWhiteSpace(userId))
                     return BadRequest(new { message = "Không xác định được người dùng." });
 
                 // Validate type if provided
                 if (!string.IsNullOrWhiteSpace(type) && type != "Student" && type != "Family")
                     return BadRequest(new { message = "Loại hóa đơn không hợp lệ." });
 
-                var invoices = await _invoiceService.GetFamilyInvoicesAsync(parentId, type);
+                var requesterRole = User.IsInRole("Parent") ? "Parent" : "Student";
+                var invoices = await _invoiceService.GetFamilyInvoicesAsync(userId, type, requesterRole);
                 
                 return Ok(invoices);
             }
@@ -156,11 +158,52 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Hủy hóa đơn gộp của chính chủ sở hữu (Parent/Student)
+        /// </summary>
+        [HttpPost("{invoiceId}/cancel")]
+        [Authorize(Roles = "Parent,Student")]
+        public async Task<IActionResult> CancelFamilyInvoice(string invoiceId, [FromBody] CancelFamilyInvoiceRequest? request)
+        {
+            try
+            {
+                var tenantId = _currentTenantService.TenantId;
+                if (string.IsNullOrWhiteSpace(tenantId))
+                    return BadRequest(new { message = "Không xác định được trung tâm." });
+
+                var ownerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrWhiteSpace(ownerUserId))
+                    return BadRequest(new { message = "Không xác định được người dùng." });
+
+                var requesterRole = User.IsInRole("Parent") ? "Parent" : "Student";
+
+                var result = await _invoiceService.CancelFamilyInvoiceAsync(ownerUserId, invoiceId, request?.Reason, requesterRole);
+                if (!result.Success)
+                    return BadRequest(new { message = result.Message });
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    invoiceId = result.InvoiceId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling family invoice {InvoiceId}", invoiceId);
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 
     public class PayFamilyInvoiceRequest
     {
         public string PaymentMethod { get; set; } = "Cash";
         public string? Notes { get; set; }
+    }
+
+    public class CancelFamilyInvoiceRequest
+    {
+        public string? Reason { get; set; }
     }
 }

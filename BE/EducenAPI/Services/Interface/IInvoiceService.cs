@@ -59,17 +59,22 @@ namespace EducenAPI.Services.Interface
         /// <summary>
         /// Tạo hóa đơn gia đình (gộp nhiều hóa đơn con)
         /// </summary>
-        Task<FamilyInvoiceResult> CreateFamilyInvoiceAsync(string parentId, CreateFamilyInvoiceRequest request);
+        Task<FamilyInvoiceResult> CreateFamilyInvoiceAsync(string ownerUserId, CreateFamilyInvoiceRequest request, string requesterRole = "Parent");
 
         /// <summary>
         /// Lấy danh sách hóa đơn gia đình của parent
         /// </summary>
-        Task<List<FamilyInvoice>> GetFamilyInvoicesAsync(string parentId, string? type = null);
+        Task<List<FamilyInvoice>> GetFamilyInvoicesAsync(string ownerUserId, string? type = null, string requesterRole = "Parent");
 
         /// <summary>
         /// Thanh toán hóa đơn gia đình
         /// </summary>
         Task<bool> PayFamilyInvoiceAsync(string parentId, string invoiceId, string paymentMethod, string? notes);
+
+        /// <summary>
+        /// Hủy hóa đơn gia đình (owner Parent/Student)
+        /// </summary>
+        Task<FamilyInvoiceResult> CancelFamilyInvoiceAsync(string ownerUserId, string invoiceId, string? reason, string requesterRole = "Parent");
     }
 
     public class CreateInvoiceRequest

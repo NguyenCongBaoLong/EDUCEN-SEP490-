@@ -1,11 +1,14 @@
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5106/api';
+
 // API client riêng cho hệ thống tổng (AdminDB)
 // Không gửi "tenant" header — truy cập trực tiếp AdminDbContext
 const adminApi = axios.create({
-    baseURL: 'http://localhost:5106/api',
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
     },
 });
 

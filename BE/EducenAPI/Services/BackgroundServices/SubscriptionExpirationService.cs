@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -21,7 +22,7 @@ namespace EducenAPI.Services.BackgroundServices
     {
         private readonly ILogger<SubscriptionExpirationService> _logger;
         private readonly IServiceProvider _serviceProvider;
-        private readonly TimeSpan _checkInterval = TimeSpan.FromHours(6); // Kiểm tra mỗi 6 giờ
+        private static readonly int[] ScheduledHours = new[] { 8, 14 };
 
         // Số ngày trước khi hết hạn để gửi thông báo
         private const int DAYS_BEFORE_EXPIRY_WARNING = 7;
@@ -49,15 +50,19 @@ namespace EducenAPI.Services.BackgroundServices
             {
                 try
                 {
-                    await Task.Delay(_checkInterval, stoppingToken);
+                    var localNow = DateTime.Now;
+                    var delay = GetDelayUntilNextScheduledRun(localNow);
+                    var nextRun = localNow.Add(delay);
 
-                    // Chỉ chạy vào lúc 8:00 AM và 2:00 PM hàng ngày
-                    var now = DateTime.Now;
-                    if ((now.Hour == 8 || now.Hour == 14) && now.Minute < 10)
-                    {
-                        _logger.LogInformation("Running subscription expiration check at {Time}", now);
-                        await CheckAndNotifyExpiringSubscriptionsAsync();
-                    }
+                    _logger.LogInformation("Next subscription expiration check scheduled at {NextRun}", nextRun);
+                    await Task.Delay(delay, stoppingToken);
+
+                    _logger.LogInformation("Running scheduled subscription expiration check at {Time}", DateTime.Now);
+                    await CheckAndNotifyExpiringSubscriptionsAsync();
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -95,8 +100,7 @@ namespace EducenAPI.Services.BackgroundServices
                 {
                     try
                     {
-                        // Kiểm tra xem đã gửi thông báo chưa (tránh gửi trùng)
-                        var daysRemaining = (subscription.EndDate - now).TotalDays;
+                        var daysRemaining = Math.Max((subscription.EndDate.Date - now.Date).Days, 0);
                         var isUrgent = daysRemaining <= DAYS_BEFORE_EXPIRY_URGENT;
 
                         // Gửi thông báo vào tenant database
@@ -104,8 +108,9 @@ namespace EducenAPI.Services.BackgroundServices
                             adminDbContext,
                             subscription.Tenant,
                             subscription,
-                            (int)daysRemaining,
-                            isUrgent);
+                            daysRemaining,
+                            isUrgent,
+                            now);
                     }
                     catch (Exception ex)
                     {
@@ -123,12 +128,30 @@ namespace EducenAPI.Services.BackgroundServices
             }
         }
 
+        private static TimeSpan GetDelayUntilNextScheduledRun(DateTime localNow)
+        {
+            var nextRun = ScheduledHours
+                .Select(hour => new DateTime(localNow.Year, localNow.Month, localNow.Day, hour, 0, 0, DateTimeKind.Local))
+                .FirstOrDefault(candidate => candidate > localNow);
+
+            if (nextRun == default)
+            {
+                var firstScheduledHourTomorrow = ScheduledHours.Min();
+                nextRun = new DateTime(localNow.Year, localNow.Month, localNow.Day, firstScheduledHourTomorrow, 0, 0, DateTimeKind.Local)
+                    .AddDays(1);
+            }
+
+            var delay = nextRun - localNow;
+            return delay > TimeSpan.Zero ? delay : TimeSpan.FromSeconds(1);
+        }
+
         private async Task SendNotificationToTenantAsync(
             AdminDbContext adminDbContext,
             Tenant tenant,
             Subscription subscription,
             int daysRemaining,
-            bool isUrgent)
+            bool isUrgent,
+            DateTime utcNow)
         {
             if (string.IsNullOrEmpty(tenant.ConnectionString))
             {
@@ -156,27 +179,68 @@ namespace EducenAPI.Services.BackgroundServices
                 tenantDbContext.Database.SetConnectionString(tenant.ConnectionString);
                 tenantDbContext.Database.SetCommandTimeout(5);
 
-                // Tạo notification trong tenant database (trong hệ thống thông báo)
-                var notification = new Models.Notification
+                var recipientUserIds = await ResolveRecipientUserIdsAsync(tenantDbContext);
+                if (recipientUserIds.Count == 0)
                 {
-                    TenantId = tenant.TenantId,
-                    UserId = 1, // Gửi cho admin (UserId = 1)
-                    Title = notificationTitle,
-                    Message = notificationMessage,
-                    Type = isUrgent ? "Warning" : "Info",
-                    Category = "Subscription",
-                    ReferenceId = subscription.Id.ToString(),
-                    ReferenceType = "Subscription",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                };
+                    _logger.LogWarning("No recipient user found for tenant {TenantId}, skipping in-app notification",
+                        tenant.TenantId);
+                }
+                else
+                {
+                    var startOfDayUtc = utcNow.Date;
+                    var endOfDayUtc = startOfDayUtc.AddDays(1);
+                    var notificationMarker = $"sau {daysRemaining} ngày";
 
-                tenantDbContext.Notifications.Add(notification);
-                await tenantDbContext.SaveChangesAsync();
+                    var existingRecipientIds = await tenantDbContext.Notifications
+                        .Where(n =>
+                            n.TenantId == tenant.TenantId &&
+                            recipientUserIds.Contains(n.UserId) &&
+                            n.Category == "Subscription" &&
+                            n.ReferenceType == "Subscription" &&
+                            n.ReferenceId == subscription.Id.ToString() &&
+                            n.CreatedAt >= startOfDayUtc &&
+                            n.CreatedAt < endOfDayUtc &&
+                            n.Message.Contains(notificationMarker))
+                        .Select(n => n.UserId)
+                        .Distinct()
+                        .ToListAsync();
 
-                _logger.LogInformation(
-                    "Saved in-app notification for tenant {TenantId} - subscription expiring in {Days} days",
-                    tenant.TenantId, daysRemaining);
+                    var pendingRecipientIds = recipientUserIds
+                        .Except(existingRecipientIds)
+                        .ToList();
+
+                    if (pendingRecipientIds.Count == 0)
+                    {
+                        _logger.LogInformation(
+                            "Skip duplicate in-app notification for tenant {TenantId}, subscription {SubscriptionId}, daysRemaining {DaysRemaining}",
+                            tenant.TenantId,
+                            subscription.Id,
+                            daysRemaining);
+                    }
+                    else
+                    {
+                        var notifications = pendingRecipientIds.Select(userId => new Models.Notification
+                        {
+                            TenantId = tenant.TenantId,
+                            UserId = userId,
+                            Title = notificationTitle,
+                            Message = notificationMessage,
+                            Type = isUrgent ? "Warning" : "Info",
+                            Category = "Subscription",
+                            ReferenceId = subscription.Id.ToString(),
+                            ReferenceType = "Subscription",
+                            IsRead = false,
+                            CreatedAt = utcNow
+                        }).ToList();
+
+                        tenantDbContext.Notifications.AddRange(notifications);
+                        await tenantDbContext.SaveChangesAsync();
+
+                        _logger.LogInformation(
+                            "Saved {Count} in-app notifications for tenant {TenantId} - subscription expiring in {Days} days",
+                            notifications.Count, tenant.TenantId, daysRemaining);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -186,6 +250,33 @@ namespace EducenAPI.Services.BackgroundServices
 
             // Gửi thông báo qua Zalo OA nếu đã cấu hình
             await TrySendZaloOANotificationAsync(adminDbContext, tenant, subscription, notificationTitle, notificationMessage, daysRemaining);
+        }
+
+        private static async Task<List<int>> ResolveRecipientUserIdsAsync(EducenV2Context tenantDbContext)
+        {
+            var adminUserIds = await tenantDbContext.Users
+                .Where(u => u.RoleId == 1 && u.AccountStatus == "Active")
+                .OrderBy(u => u.UserId)
+                .Select(u => u.UserId)
+                .ToListAsync();
+
+            if (adminUserIds.Count > 0)
+                return adminUserIds;
+
+            var activeUserIds = await tenantDbContext.Users
+                .Where(u => u.AccountStatus == "Active")
+                .OrderBy(u => u.UserId)
+                .Select(u => u.UserId)
+                .ToListAsync();
+
+            if (activeUserIds.Count > 0)
+                return activeUserIds;
+
+            return await tenantDbContext.Users
+                .OrderBy(u => u.UserId)
+                .Select(u => u.UserId)
+                .Take(1)
+                .ToListAsync();
         }
 
         private async Task TrySendZaloOANotificationAsync(

@@ -6,6 +6,13 @@ using System.Security.Claims;
 
 namespace EducenAPI.Services.Payment
 {
+    public class CreditPaymentResult
+    {
+        public bool Success { get; set; }
+        public decimal CreditUsed { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
     public interface IPaymentService
     {
         Task<PaymentResult> CreatePaymentAsync(CreatePaymentDto dto);
@@ -26,6 +33,87 @@ namespace EducenAPI.Services.Payment
         private readonly ILogger<PaymentService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
+
+        private async Task<CreditPaymentResult> UseCreditForPaymentAsync(string tenantId, decimal amount)
+        {
+            var tenant = await _adminDbContext.Tenants.FindAsync(tenantId);
+            if (tenant == null)
+            {
+                return new CreditPaymentResult { Success = false, ErrorMessage = "Tenant not found" };
+            }
+
+            if (tenant.CreditBalance <= 0)
+            {
+                return new CreditPaymentResult { Success = true, CreditUsed = 0, RemainingAmount = amount };
+            }
+
+            decimal creditUsed;
+            decimal remainingAmount;
+
+            if (tenant.CreditBalance >= amount)
+            {
+                creditUsed = amount;
+                remainingAmount = 0;
+                tenant.CreditBalance -= amount;
+            }
+            else
+            {
+                creditUsed = tenant.CreditBalance;
+                remainingAmount = amount - tenant.CreditBalance;
+                tenant.CreditBalance = 0;
+            }
+
+            var ledgerEntry = new TenantCreditLedger
+            {
+                TenantId = tenantId,
+                Amount = creditUsed,
+                EntryType = "Debit",
+                ReferenceType = "SubscriptionPayment",
+                BalanceAfter = tenant.CreditBalance,
+                Note = $"Used credit for payment"
+            };
+            _adminDbContext.TenantCreditLedgers.Add(ledgerEntry);
+
+            _logger.LogInformation(
+                "Credit used for tenant {TenantId}: {CreditUsed} (Remaining: {RemainingAmount}), New Balance: {NewBalance}",
+                tenantId, creditUsed, remainingAmount, tenant.CreditBalance);
+
+            return new CreditPaymentResult
+            {
+                Success = true,
+                CreditUsed = creditUsed,
+                RemainingAmount = remainingAmount
+            };
+        }
+
+        private async Task HandleSubscriptionCreditOnCallbackAsync(string tenantId, decimal gatewayAmount)
+        {
+            if (gatewayAmount <= 0) return;
+
+            var tenant = await _adminDbContext.Tenants.FindAsync(tenantId);
+            if (tenant == null || tenant.CreditBalance <= 0) return;
+
+            var actualCreditUsed = Math.Min(tenant.CreditBalance, gatewayAmount);
+            if (actualCreditUsed > 0)
+            {
+                tenant.CreditBalance -= actualCreditUsed;
+
+                var ledgerEntry = new TenantCreditLedger
+                {
+                    TenantId = tenantId,
+                    Amount = actualCreditUsed,
+                    EntryType = "Debit",
+                    ReferenceType = "SubscriptionPayment",
+                    BalanceAfter = tenant.CreditBalance,
+                    Note = $"Used credit for partial payment callback"
+                };
+                _adminDbContext.TenantCreditLedgers.Add(ledgerEntry);
+
+                _logger.LogInformation(
+                    "Credit applied on callback for tenant {TenantId}: {CreditUsed}, new balance: {NewBalance}",
+                    tenantId, actualCreditUsed, tenant.CreditBalance);
+            }
+        }
 
         public PaymentService(
             AdminDbContext adminDbContext,
@@ -383,51 +471,71 @@ namespace EducenAPI.Services.Payment
                     };
 
                     _adminDbContext.PaymentTransactions.Add(transaction);
-                    await _adminDbContext.SaveChangesAsync();
 
-                    var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
-                    var gatewayRequest = new CreatePaymentRequest
+                    var creditResult = await UseCreditForPaymentAsync(tenantContext.TenantId, dto.Amount);
+                    var gatewayAmount = creditResult.RemainingAmount;
+
+                    if (gatewayAmount > 0)
                     {
-                        // Subscription: tiền về SystemAdmin → dùng global config (appsettings.json)
-                        // TenantId = null → VNPayService.ResolveEffectiveConfigAsync dùng global config
-                        TenantId = null,
-                        OrderId = paymentRecord.PaymentId,
-                        Amount = dto.Amount,
-                        Description = dto.Description,
-                        ReturnUrl = dto.ReturnUrl,
-                        IpAddress = dto.IpAddress,
-                        CustomerName = dto.CustomerName,
-                        CustomerEmail = dto.CustomerEmail,
-                        CustomerPhone = dto.CustomerPhone
-                    };
-
-                    var gatewayResponse = await gateway.CreatePaymentAsync(gatewayRequest);
-
-                    if (!gatewayResponse.Success)
-                    {
-                        transaction.Status = "Failed";
-                        transaction.ErrorMessage = gatewayResponse.ErrorMessage;
-                        await _adminDbContext.SaveChangesAsync();
-
-                        return new PaymentResult
+                        var gateway = _gatewayFactory.GetGateway(dto.GatewayType);
+                        var gatewayRequest = new CreatePaymentRequest
                         {
-                            Success = false,
-                            ErrorMessage = gatewayResponse.ErrorMessage,
-                            PaymentRecordId = paymentRecord.PaymentId
+                            TenantId = null,
+                            OrderId = paymentRecord.PaymentId,
+                            Amount = gatewayAmount,
+                            Description = dto.Description,
+                            ReturnUrl = dto.ReturnUrl,
+                            IpAddress = dto.IpAddress,
+                            CustomerName = dto.CustomerName,
+                            CustomerEmail = dto.CustomerEmail,
+                            CustomerPhone = dto.CustomerPhone
                         };
+
+                        var gatewayResponse = await gateway.CreatePaymentAsync(gatewayRequest);
+
+                        if (!gatewayResponse.Success)
+                        {
+                            transaction.Status = "Failed";
+                            transaction.ErrorMessage = gatewayResponse.ErrorMessage;
+                            await _adminDbContext.SaveChangesAsync();
+
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = gatewayResponse.ErrorMessage,
+                                PaymentRecordId = paymentRecord.PaymentId
+                            };
+                        }
+
+                        transaction.GatewayTransactionId = gatewayResponse.TransactionId;
+                    }
+                    else
+                    {
+                        transaction.Status = "Paid";
+                        transaction.CompletedAt = DateTime.UtcNow;
+                        paymentRecord.Status = "Paid";
+                        paymentRecord.PaymentDate = DateTime.UtcNow;
+                        await _adminDbContext.SaveChangesAsync();
+                        await ActivateSubscriptionFromPaymentAsync(paymentRecord);
                     }
 
-                    transaction.GatewayTransactionId = gatewayResponse.TransactionId;
                     await _adminDbContext.SaveChangesAsync();
+
+                    if (creditResult.CreditUsed > 0)
+                    {
+                        _logger.LogInformation(
+                            "Subscription payment {PaymentId} used credit: {CreditUsed}, remaining gateway: {GatewayAmount}",
+                            paymentRecord.PaymentId, creditResult.CreditUsed, gatewayAmount);
+                    }
 
                     return new PaymentResult
                     {
                         Success = true,
                         PaymentRecordId = paymentRecord.PaymentId,
                         TransactionId = transaction.TransactionId,
-                        PaymentUrl = gatewayResponse.PaymentUrl,
-                        QrCodeUrl = gatewayResponse.QrCodeUrl,
-                        Deeplink = gatewayResponse.Deeplink
+                        PaymentUrl = gatewayAmount > 0 ? $"credit-used-{paymentRecord.PaymentId}" : null,
+                        QrCodeUrl = null,
+                        Deeplink = null
                     };
                 }
             }
@@ -622,6 +730,16 @@ namespace EducenAPI.Services.Payment
 
                     if (adminTransaction.PaymentRecord.TransactionType == "Subscription")
                     {
+                        if (adminTransaction.PaymentRecord.TenantId != null)
+                        {
+                            var tenant = await _adminDbContext.Tenants.FindAsync(adminTransaction.PaymentRecord.TenantId);
+                            if (tenant != null && tenant.CreditBalance > 0)
+                            {
+                                await HandleSubscriptionCreditOnCallbackAsync(
+                                    adminTransaction.PaymentRecord.TenantId,
+                                    adminTransaction.Amount);
+                            }
+                        }
                         await ActivateSubscriptionFromPaymentAsync(adminTransaction.PaymentRecord);
                     }
                 }
@@ -1081,6 +1199,16 @@ namespace EducenAPI.Services.Payment
 
                 if (transaction.PaymentRecord?.TransactionType == "Subscription")
                 {
+                    if (transaction.PaymentRecord.TenantId != null)
+                    {
+                        var tenant = await _adminDbContext.Tenants.FindAsync(transaction.PaymentRecord.TenantId);
+                        if (tenant != null && tenant.CreditBalance > 0)
+                        {
+                            await HandleSubscriptionCreditOnCallbackAsync(
+                                transaction.PaymentRecord.TenantId,
+                                transaction.Amount);
+                        }
+                    }
                     await ActivateSubscriptionFromPaymentAsync(transaction.PaymentRecord);
                 }
             }
@@ -1121,6 +1249,9 @@ namespace EducenAPI.Services.Payment
 
                 var now = DateTime.UtcNow;
 
+                // Lấy thông tin tenant
+                var tenant = await _adminDbContext.Tenants.FindAsync(paymentRecord.TenantId);
+
                 var activeSubscription = await _adminDbContext.Subscriptions
                     .Where(s => s.TenantId == paymentRecord.TenantId && s.Status == "Active" && s.EndDate > now)
                     .OrderByDescending(s => s.EndDate)
@@ -1130,6 +1261,25 @@ namespace EducenAPI.Services.Payment
                 {
                     activeSubscription.EndDate = activeSubscription.EndDate.AddMonths(months);
                     paymentRecord.ReferenceId = activeSubscription.Id;
+                    
+                    // Tạo credit khi gia hạn gói - có thời hạn 12 tháng
+                    if (tenant != null)
+                    {
+                        var creditExpirationMonths = 12;
+                        tenant.CreditBalance += paymentRecord.Amount;
+                        var creditLedger = new TenantCreditLedger
+                        {
+                            TenantId = tenant.TenantId,
+                            Amount = paymentRecord.Amount,
+                            EntryType = "Credit",
+                            ReferenceType = "SubscriptionRenew",
+                            ReferenceId = activeSubscription.Id,
+                            BalanceAfter = tenant.CreditBalance,
+                            ExpiredAt = DateTime.UtcNow.AddMonths(creditExpirationMonths),
+                            Note = $"Gia hạn gói {plan.PlanName} - Tạo credit (hết hạn sau {creditExpirationMonths} tháng)"
+                        };
+                        _adminDbContext.TenantCreditLedgers.Add(creditLedger);
+                    }
                     return;
                 }
 
@@ -1150,6 +1300,25 @@ namespace EducenAPI.Services.Payment
 
                 _adminDbContext.Subscriptions.Add(newSubscription);
                 paymentRecord.ReferenceId = newSubscription.Id;
+
+                // Tạo credit cho tenant bằng với giá gói đã mua - có thời hạn 12 tháng
+                if (tenant != null)
+                {
+                    var creditExpirationMonths = 12;
+                    tenant.CreditBalance += paymentRecord.Amount;
+                    var creditLedger = new TenantCreditLedger
+                    {
+                        TenantId = tenant.TenantId,
+                        Amount = paymentRecord.Amount,
+                        EntryType = "Credit",
+                        ReferenceType = "SubscriptionPayment",
+                        ReferenceId = newSubscription.Id,
+                        BalanceAfter = tenant.CreditBalance,
+                        ExpiredAt = DateTime.UtcNow.AddMonths(creditExpirationMonths),
+                        Note = $"Đăng ký gói {plan.PlanName} - Tạo credit (hết hạn sau {creditExpirationMonths} tháng)"
+                    };
+                    _adminDbContext.TenantCreditLedgers.Add(creditLedger);
+                }
             }
             catch (Exception ex)
             {
@@ -1248,10 +1417,20 @@ namespace EducenAPI.Services.Payment
                     return;
                 }
 
+                if (familyInvoice.Status == "Cancelled")
+                {
+                    _logger.LogWarning(
+                        "Skip confirm paid for cancelled FamilyInvoice {InvoiceId} from callback. PaymentRecordId: {PaymentRecordId}",
+                        familyInvoiceId,
+                        paymentRecordId);
+                    return;
+                }
+
                 // Update FamilyInvoice
                 familyInvoice.Status = "Paid";
                 familyInvoice.PaidAt = DateTime.UtcNow;
                 familyInvoice.PaymentRecordId = paymentRecordId;
+                familyInvoice.UpdatedAt = DateTime.UtcNow;
 
                 // Update all child TuitionInvoices
                 foreach (var item in familyInvoice.StudentInvoices)

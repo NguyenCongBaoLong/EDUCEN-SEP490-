@@ -11,6 +11,7 @@ namespace EducenAPI.Services.TenantService
         IEnumerable<Tenant> GetAllTenants();
 
         Tenant? GetTenantById(string tenantId);
+        Task<Tenant?> GetTenantByIdAsync(string tenantId);
 
         Tenant? UpdateTenant(string tenantId, UpdateTenantRequest request);
         IEnumerable<TenantWithSubscriptionRequest> GetAllTenantDetails();
@@ -18,5 +19,7 @@ namespace EducenAPI.Services.TenantService
         TenantWithSubscriptionRequest? GetTenantDetails(string tenantId);
         Task<object> CreateAdminForTenantAsync(string tenantId, CreateTenantAdminDto dto);
         Task<List<object>> GetTenantAdminsAsync(string tenantId);
+
+        Task<List<TenantCreditLedger>> GetCreditLedgerAsync(string tenantId, int page, int pageSize);
     }
 }

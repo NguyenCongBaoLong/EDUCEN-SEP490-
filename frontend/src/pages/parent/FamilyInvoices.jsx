@@ -28,13 +28,15 @@ const FamilyInvoices = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [processingPayment, setProcessingPayment] = useState(false);
-    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'student' | 'family'
+    const [activeTab, setActiveTab] = useState('all'); // 'all' | 'paid' | 'pending'
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [outstandingTuitionInvoices, setOutstandingTuitionInvoices] = useState([]);
     const [selectedTuitionInvoiceIds, setSelectedTuitionInvoiceIds] = useState([]);
     const [loadingOutstanding, setLoadingOutstanding] = useState(false);
     const [creating, setCreating] = useState(false);
     const [selectedPeriodFilter, setSelectedPeriodFilter] = useState('all');
+    const [cancellingInvoiceId, setCancellingInvoiceId] = useState(null);
+    const [expandedInvoiceIds, setExpandedInvoiceIds] = useState([]);
 
     const selectedInvoices = useMemo(
         () => outstandingTuitionInvoices.filter((invoice) => selectedTuitionInvoiceIds.includes(invoice.invoiceId)),
@@ -49,6 +51,11 @@ const FamilyInvoices = () => {
     const selectedPeriods = useMemo(
         () => [...new Set(selectedInvoices.map((invoice) => `${invoice.invoiceMonth}-${invoice.invoiceYear}`))],
         [selectedInvoices]
+    );
+
+    const inferredMergeType = useMemo(
+        () => (selectedStudents.length <= 1 ? 'Student' : 'Family'),
+        [selectedStudents]
     );
 
     const periodOptions = useMemo(() => {
@@ -100,7 +107,7 @@ const FamilyInvoices = () => {
 
     useEffect(() => {
         fetchFamilyInvoices();
-    }, [activeTab]);
+    }, [activeTab]); // Refetch khi tab thay đổi
 
     useEffect(() => {
         if (showCreateModal) {
@@ -144,13 +151,18 @@ const FamilyInvoices = () => {
     const fetchFamilyInvoices = async () => {
         try {
             setLoading(true);
-            const type = activeTab === 'student'
-                ? 'Student'
-                : activeTab === 'family'
-                    ? 'Family'
-                    : 'all';
-            const response = await familyInvoiceService.getFamilyInvoices(type);
-            setInvoices(response);
+            // Luôn fetch tất cả hóa đơn gia đình
+            const response = await familyInvoiceService.getFamilyInvoices('all');
+            
+            // Filter theo tab ở frontend
+            let filteredInvoices = response;
+            if (activeTab === 'paid') {
+                filteredInvoices = response.filter(invoice => invoice.status === 'Paid');
+            } else if (activeTab === 'pending') {
+                filteredInvoices = response.filter(invoice => invoice.status === 'Pending');
+            }
+            
+            setInvoices(filteredInvoices);
         } catch (error) {
             toast.error('Không thể tải danh sách hóa đơn');
             console.error('Error fetching family invoices:', error);
@@ -233,6 +245,13 @@ const FamilyInvoices = () => {
             return;
         }
 
+        // Validate: chỉ gộp hóa đơn chưa thanh toán
+        const hasPaidInvoices = selectedInvoices.some(invoice => invoice.status === 'Paid');
+        if (hasPaidInvoices) {
+            toast.error('Không thể gộp hóa đơn đã thanh toán. Vui lòng bỏ chọn các hóa đơn đã thanh toán.');
+            return;
+        }
+
         const [month, year] = selectedPeriods[0].split('-').map(Number);
         const requestData = {
             type: selectedStudents.length === 1 ? 'Student' : 'Family',
@@ -252,6 +271,27 @@ const FamilyInvoices = () => {
             toast.error(error.response?.data?.message || 'Lỗi tạo hóa đơn');
         } finally {
             setCreating(false);
+        }
+    };
+
+    const handleCancelFamilyInvoice = async (invoiceId) => {
+        if (!invoiceId) {
+            return;
+        }
+
+        setCancellingInvoiceId(invoiceId);
+        try {
+            const response = await familyInvoiceService.cancelFamilyInvoice(
+                invoiceId,
+                'Parent cancel to regroup tuition invoices'
+            );
+
+            toast.success(response?.message || 'Đã hủy hóa đơn gộp');
+            await Promise.all([fetchFamilyInvoices(), fetchOutstandingTuitionInvoices()]);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể hủy hóa đơn gộp');
+        } finally {
+            setCancellingInvoiceId(null);
         }
     };
 
@@ -300,6 +340,14 @@ const FamilyInvoices = () => {
         setSelectedPeriodFilter(event.target.value);
     };
 
+    const toggleInvoiceDetails = (invoiceId) => {
+        setExpandedInvoiceIds((prev) => (
+            prev.includes(invoiceId)
+                ? prev.filter((id) => id !== invoiceId)
+                : [...prev, invoiceId]
+        ));
+    };
+
     const getStudentName = (studentId) => {
         const child = childrenList.find((item) => item.studentId === studentId);
         return child?.fullName || `Học sinh ${studentId}`;
@@ -339,7 +387,11 @@ const FamilyInvoices = () => {
     };
 
     const getTypeLabel = (type) => {
-        return type === 'Student' ? 'Gộp theo con' : 'Gộp tất cả con';
+        return type === 'Student' ? 'Gộp theo học sinh' : 'Gộp cả gia đình';
+    };
+
+    const getCardTitle = (type) => {
+        return type === 'Student' ? 'Hóa đơn gộp theo học sinh' : 'Hóa đơn gộp gia đình';
     };
 
     const getTypeIcon = (type) => {
@@ -353,8 +405,8 @@ const FamilyInvoices = () => {
             <div className="family-invoices-content">
                 <div className="page-header">
                     <div className="header-left">
-                        <h1>Hóa đơn gộp</h1>
-                        <p>Chọn linh hoạt từng hóa đơn học phí để tạo lô thanh toán theo con hoặc kết hợp nhiều con</p>
+                        <h1>Hóa đơn gia đình</h1>
+                        <p>Quản lý tất cả hóa đơn học phí của gia đình</p>
                     </div>
                     <button 
                         className="create-invoice-btn"
@@ -374,18 +426,18 @@ const FamilyInvoices = () => {
                         Tất cả
                     </button>
                     <button 
-                        className={`tab-btn ${activeTab === 'student' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('student')}
+                        className={`tab-btn ${activeTab === 'paid' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('paid')}
                     >
-                        <User size={16} />
-                        Gộp theo con
+                        <CheckCircle size={16} />
+                        Đã thanh toán
                     </button>
                     <button 
-                        className={`tab-btn ${activeTab === 'family' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('family')}
+                        className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('pending')}
                     >
-                        <Users size={16} />
-                        Gộp tất cả con
+                        <Clock size={16} />
+                        Chờ thanh toán
                     </button>
                 </div>
 
@@ -405,51 +457,78 @@ const FamilyInvoices = () => {
                         {invoices.map((invoice) => (
                             <div key={invoice.invoiceId} className={`family-invoice-card ${invoice.status?.toLowerCase()}`}>
                                 <div className="invoice-header">
-                                    <div className="invoice-info">
-                                        <div className="invoice-type-badge">
-                                            {getTypeIcon(invoice.type)}
-                                            <span>{getTypeLabel(invoice.type)}</span>
+                                    <div className="invoice-heading">
+                                        <div>
+                                            <h3>{getCardTitle(invoice.type)}</h3>
+                                            <div className="invoice-type-badge">
+                                                {getTypeIcon(invoice.type)}
+                                                <span>{getTypeLabel(invoice.type)}</span>
+                                            </div>
                                         </div>
-                                        <div className="invoice-meta">
-                                            <span className={`invoice-status ${(invoice.status || '').toLowerCase()}`}>
-                                                {getStatusIcon(invoice.status)}
-                                                {getStatusText(invoice.status)}
-                                            </span>
-                                        </div>
-                                        <div className="invoice-period">
-                                            <Calendar size={16} />
-                                            Tháng {invoice.month}/{invoice.year}
-                                        </div>
-                                    </div>
-                                    <div className="invoice-actions">
-                                        {invoice.status === 'Pending' && (
-                                            <button 
-                                                className="pay-button"
-                                                onClick={() => handlePayInvoice(invoice)}
-                                                disabled={processingPayment}
-                                            >
-                                                <CreditCard size={18} />
-                                                {processingPayment ? 'Đang xử lý...' : 'Thanh toán ngay'}
-                                            </button>
-                                        )}
+                                        <span className={`invoice-status-badge ${(invoice.status || '').toLowerCase()}`}>
+                                            {getStatusIcon(invoice.status)}
+                                            {getStatusText(invoice.status)}
+                                        </span>
                                     </div>
                                 </div>
                                 
                                 <div className="invoice-summary">
                                     <div className="summary-row">
-                                        <span className="summary-label">Số lượng:</span>
+                                        <span className="summary-label">
+                                            <Calendar size={14} />
+                                            Kỳ hóa đơn
+                                        </span>
+                                        <span className="summary-value">Tháng {invoice.month}/{invoice.year}</span>
+                                    </div>
+                                    <div className="summary-row">
+                                        <span className="summary-label">
+                                            <FileText size={14} />
+                                            Số học sinh
+                                        </span>
                                         <span className="summary-value">
                                             {invoice.type === 'Student' 
                                                 ? '1 học sinh' 
                                                 : `${invoice.studentCount} con`}
                                         </span>
                                     </div>
+                                    
+                                    {/* Hiển thị thông tin con trên card */}
+                                    {invoice.type === 'Student' && invoice.studentInvoices && invoice.studentInvoices.length > 0 && (
+                                        <div className="summary-row">
+                                            <span className="summary-label">
+                                                <User size={14} />
+                                                Học sinh
+                                            </span>
+                                            <span className="summary-value student-name">
+                                                {invoice.studentInvoices[0].studentName}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    {invoice.type === 'Family' && invoice.studentInvoices && invoice.studentInvoices.length > 0 && (
+                                        <div className="summary-row">
+                                            <span className="summary-label">
+                                                <Users size={14} />
+                                                Danh sách
+                                            </span>
+                                            <span className="summary-value student-names">
+                                                {[...new Set(invoice.studentInvoices.map(item => item.studentName))].join(', ')}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
                                     <div className="summary-row">
-                                        <span className="summary-label">Tổng tiền:</span>
+                                        <span className="summary-label">
+                                            <CreditCard size={14} />
+                                            Tổng tiền
+                                        </span>
                                         <span className="summary-value amount">{formatCurrency(invoice.totalAmount)}</span>
                                     </div>
                                     <div className="summary-row">
-                                        <span className="summary-label">Ngày tạo:</span>
+                                        <span className="summary-label">
+                                            <Clock size={14} />
+                                            Ngày tạo
+                                        </span>
                                         <span className="summary-value">{formatDate(invoice.createdAt)}</span>
                                     </div>
                                     {invoice.paidAt && (
@@ -460,7 +539,38 @@ const FamilyInvoices = () => {
                                     )}
                                 </div>
 
-                                {invoice.studentInvoices && invoice.studentInvoices.length > 0 && (
+                                <div className="invoice-actions">
+                                    {invoice.status === 'Pending' && (
+                                        <>
+                                            <button
+                                                className="invoice-action-btn pay"
+                                                onClick={() => handlePayInvoice(invoice)}
+                                                disabled={processingPayment}
+                                            >
+                                                <CreditCard size={16} />
+                                                {processingPayment ? 'Đang xử lý...' : 'Thanh toán'}
+                                            </button>
+                                            <button
+                                                className="invoice-action-btn cancel"
+                                                onClick={() => handleCancelFamilyInvoice(invoice.invoiceId)}
+                                                disabled={cancellingInvoiceId === invoice.invoiceId}
+                                            >
+                                                {cancellingInvoiceId === invoice.invoiceId ? 'Đang hủy...' : 'Hủy gộp'}
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {invoice.studentInvoices && invoice.studentInvoices.length > 0 && (
+                                        <button
+                                            className="invoice-action-btn details"
+                                            onClick={() => toggleInvoiceDetails(invoice.invoiceId)}
+                                        >
+                                            {expandedInvoiceIds.includes(invoice.invoiceId) ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {invoice.studentInvoices && invoice.studentInvoices.length > 0 && expandedInvoiceIds.includes(invoice.invoiceId) && (
                                     <div className="student-invoices-detail">
                                         <h4>Chi tiết hóa đơn:</h4>
                                         <div className="student-list">
@@ -568,7 +678,7 @@ const FamilyInvoices = () => {
                             <div className="create-modal-layout">
                                 <div className="create-modal-main">
                                     <div className="selection-hint">
-                                        Chọn các hóa đơn chưa thanh toán để tạo một lô thanh toán mới. Nên chọn theo kỳ tháng/năm để thao tác nhanh và tránh sai kỳ.
+                                        Chọn các hóa đơn chưa thanh toán để tạo một lô thanh toán mới. Nếu chỉ chọn hóa đơn của 1 học sinh, hệ thống sẽ tạo gộp theo học sinh; chọn từ nhiều học sinh sẽ tạo gộp gia đình.
                                     </div>
 
                                     {periodOptions.length > 0 && (
@@ -694,6 +804,12 @@ const FamilyInvoices = () => {
                                             <p className="validation-warning">
                                                 Có nhiều tháng/năm trong danh sách chọn. Vui lòng chọn cùng kỳ để tạo hóa đơn gộp.
                                             </p>
+                                        )}
+                                        {selectedTuitionInvoiceIds.length > 0 && (
+                                            <div>
+                                                <span>Kiểu gộp:</span>
+                                                <strong>{getTypeLabel(inferredMergeType)}</strong>
+                                            </div>
                                         )}
                                     </div>
                                 </aside>

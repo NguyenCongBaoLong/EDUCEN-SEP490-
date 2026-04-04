@@ -32,6 +32,8 @@ namespace EducenAPI.Models
         public string Status { get; set; } = "Pending"; // Pending | Paid | Cancelled
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
         
         public DateTime? PaidAt { get; set; }
         

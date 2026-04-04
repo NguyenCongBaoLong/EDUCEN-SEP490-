@@ -505,6 +505,9 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Year")
                         .HasColumnType("int");
 
