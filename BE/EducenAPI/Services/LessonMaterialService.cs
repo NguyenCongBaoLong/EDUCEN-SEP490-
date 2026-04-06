@@ -81,7 +81,14 @@ namespace EducenAPI.Services
             var userId = _userServiceContext.GetUserId();
 
             FileUploadDto? uploadedFileDto = null;
-
+            if (dto.GradeId != null)
+            {
+                var isExistedGrading = await _context.Grades.AnyAsync(e => e.GradeId == dto.GradeId);
+                if (!isExistedGrading)
+                {
+                    throw new BadRequestException("Grade không hợp lệ");
+                }
+            }
             if (dto.File != null)
             {
                 if (dto.File.Length == 0)

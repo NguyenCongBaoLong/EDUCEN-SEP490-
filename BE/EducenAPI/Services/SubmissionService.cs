@@ -13,11 +13,13 @@ namespace EducenAPI.Services
         private readonly EducenV2Context _context;
         private readonly IFileUploadService _fileService;
         private readonly IPaymentReminderService _notificationService;
-        public SubmissionService(EducenV2Context context, IFileUploadService fileService, IPaymentReminderService notificationService)
+        private readonly IUserContextService _userContextService;
+        public SubmissionService(EducenV2Context context, IFileUploadService fileService, IPaymentReminderService notificationService, IUserContextService userContextService)
         {
             _context = context;
             _fileService = fileService;
             _notificationService = notificationService;
+            _userContextService = userContextService;
         }
 
         private async Task CleanupFileAsync(string? fileUrl)
@@ -240,11 +242,19 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
-                throw new Exception("Không tìm thấy bài nộp");
+                throw new NotFoundException("Không tìm thấy bài nộp");
 
             if (string.IsNullOrWhiteSpace(submission.FileUrl))
                 throw new Exception("Không thể chấm điểm vì không tìm thấy file bài làm");
 
+            var userId = _userContextService.GetUserId();
+
+            var isBelongOfTeacher = await _context.Assignments.AnyAsync(e => e.Submissions.Any(x=>x.AsmId==e.AsmId)&&e.UserId==userId);
+
+            if (!isBelongOfTeacher)
+            {
+                throw new BadRequestException("Bạn không thể chấm điểm vì bài này không thuộc về bạn");
+            }
             submission.Score = request.Score;
             submission.TeacherComment = request.TeacherComment;
             submission.GradedAt = DateTime.Now;
@@ -265,7 +275,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
-                throw new Exception("Không tìm thấy bài nộp");
+                throw new NotFoundException("Không tìm thấy bài nộp");
 
             if (submission.Score == null)
                 throw new Exception("Không thể công khai điểm trước khi chấm điểm");
