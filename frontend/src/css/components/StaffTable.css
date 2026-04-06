@@ -106,6 +106,7 @@
 .staff-table {
     width: 100%;
     border-collapse: collapse;
+    min-width: 1000px;
 }
 
 .staff-table thead {
@@ -114,13 +115,18 @@
 }
 
 .staff-table th {
-    padding: 1rem 1.5rem;
+    padding: 0.875rem 0.75rem;
     text-align: left;
     font-size: 0.75rem;
     font-weight: 700;
     color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.staff-table th:first-child {
+    padding-left: 1.25rem;
 }
 
 .staff-table tbody tr {
@@ -128,8 +134,12 @@
     transition: background 0.2s;
 }
 
-.staff-table tbody tr:hover {
-    background: #f9fafb;
+.staff-table td {
+    padding: 0.875rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    font-size: 0.875rem;
+    vertical-align: middle;
 }
 
 .staff-table td {
@@ -266,6 +276,7 @@
 .action-buttons {
     display: flex;
     gap: 0.5rem;
+    justify-content: flex-end;
 }
 
 .action-btn {
@@ -320,7 +331,62 @@
     color: #047857;
 }
 
-/* Pagination */
+/* Email button - purple color (original) */
+.action-btn.email {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.action-btn.email:hover {
+    background: #c7d2fe;
+    color: #4338ca;
+}
+
+.action-btn.email.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn.send-account {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.action-btn.send-account:hover {
+    background: #c7d2fe;
+    color: #4338ca;
+}
+
+/* Account Badge - giống StudentTable */
+.account-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.account-badge.sent {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.account-badge.pending {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+/* Checkbox styling - giống StudentTable */
+.staff-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #3b82f6;
+}
+
 /* Pagination */
 .staff-pagination {
     display: flex;

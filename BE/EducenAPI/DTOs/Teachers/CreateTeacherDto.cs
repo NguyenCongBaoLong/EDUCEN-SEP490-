@@ -37,9 +37,8 @@ namespace EducenAPI.DTOs.Teachers
         }
 
         [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ErrorMessage = "Email format is invalid")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string Email 
         { 
             get => _email;
@@ -78,9 +77,8 @@ namespace EducenAPI.DTOs.Teachers
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "FullName cannot be only whitespace")]
         public string? FullName { get; set; }
 
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ErrorMessage = "Email format is invalid")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string? Email { get; set; }
 
         [Phone(ErrorMessage = "Invalid phone number format")]
@@ -108,6 +106,7 @@ namespace EducenAPI.DTOs.Teachers
         public string Specialization { get; set; } = string.Empty;
         public string? Degree { get; set; }
         public string AccountStatus { get; set; } = string.Empty;
+        public bool IsAccountSent { get; set; }
         public int ClassesCount { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<CreateScheduleSlotDto> Schedule { get; set; } = new();

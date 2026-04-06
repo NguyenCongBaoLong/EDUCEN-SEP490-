@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Upload, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
-import api from '../../services/api';
+import api, { parseValidationErrors } from '../../services/api';
 import StudentTable from '../../components/StudentTable';
 import AddStudentModal from '../../components/AddStudentModal';
 import StudentDetailModal from '../../components/StudentDetailModal';
@@ -26,6 +26,9 @@ const StudentManagement = () => {
     const [classFilter, setClassFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
+    // State for form validation errors
+    const [errors, setErrors] = useState({});
+
     // Enrollment Request States
     const [viewingRequest, setViewingRequest] = useState(null);
     const [rejectingRequest, setRejectingRequest] = useState(null);
@@ -35,17 +38,32 @@ const StudentManagement = () => {
     const [studentList, setStudentList] = useState([]);
     const [parentList, setParentList] = useState([]);
     const [gradeList, setGradeList] = useState([]);
+    const [classList, setClassList] = useState([]);
+    const [allUsers, setAllUsers] = useState([]); // For email validation across all roles
 
     useEffect(() => {
         fetchData();
     }, []);
+
+    const fetchAllUsers = async () => {
+        try {
+            const usersRes = await api.get('/admin/users');
+            setAllUsers(usersRes.data || []);
+        } catch (error) {
+            console.error("Fetch users error:", error);
+        }
+    };
 
     const fetchData = async () => {
         setIsLoading(true);
         try {
             const parents = await fetchParents();
             await fetchGrades();
+            await fetchClasses();
             await fetchStudents(parents);
+            
+            // Also fetch all users for email validation
+            await fetchAllUsers();
         } finally {
             setIsLoading(false);
         }
@@ -74,6 +92,15 @@ const StudentManagement = () => {
             setGradeList(res.data);
         } catch (error) {
             console.error("Fetch grades error:", error);
+        }
+    };
+
+    const fetchClasses = async () => {
+        try {
+            const res = await api.get('/Classes');
+            setClassList(res.data);
+        } catch (error) {
+            console.error("Fetch classes error:", error);
         }
     };
 
@@ -148,9 +175,24 @@ const StudentManagement = () => {
 
     // Filter students
     // We pass parentList as parentListData to the StudentTable to display actual parent info
+    
+    // Normalize grade for comparison - extract numeric part from grade (e.g., "Khối 6" -> "6", "6" -> "6")
+    const normalizeGrade = (grade) => {
+        if (!grade) return '';
+        // Extract numeric part: "Khối 6" -> "6", "6" -> "6", "Lớp 6" -> "6"
+        const match = grade.toString().match(/\d+/);
+        return match ? match[0] : grade.toString();
+    };
+    
     const filteredStudents = studentList
         .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()) || student.id.toLowerCase().includes(searchQuery.toLowerCase()))
-        .filter(student => gradeFilter ? student.grade.toString() === gradeFilter : true)
+        .filter(student => {
+            if (!gradeFilter) return true;
+            const studentGrade = normalizeGrade(student.grade);
+            const filterGrade = normalizeGrade(gradeFilter);
+            return studentGrade === filterGrade;
+        })
+        .filter(student => classFilter ? student.class === classFilter : true)
         .filter(student => statusFilter ? student.status === statusFilter : true);
 
     const handleAddStudent = () => {
@@ -173,7 +215,7 @@ const StudentManagement = () => {
                 // Edit existing
                 const updatePayload = {
                     fullName: studentData.name,
-                    email: studentData.email || `${studentData.name.replace(/\s/g, '').toLowerCase()}@temp.com`,
+                    email: studentData.email,
                     enrollmentStatus: studentData.status,
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,
@@ -189,7 +231,7 @@ const StudentManagement = () => {
                 // Add new
                 const payload = {
                     fullName: studentData.name,
-                    email: studentData.email || `${studentData.name.replace(/\s/g, '').toLowerCase()}${Date.now()}@temp.com`,
+                    email: studentData.email,
                     enrollmentStatus: studentData.status,
                     grade: studentData.grade ? studentData.grade.toString() : null,
                     dateOfBirth: studentData.dateOfBirth || null,
@@ -206,6 +248,31 @@ const StudentManagement = () => {
             setIsModalOpen(false);
             setEditingStudent(null);
         } catch (error) {
+            // Parse validation errors using helper
+            const parsed = parseValidationErrors(error);
+            if (parsed.hasErrors && parsed.details) {
+                // Show errors on form fields
+                const formErrors = {};
+                if (parsed.details['Email']) {
+                    formErrors.email = parsed.details['Email'][0];
+                }
+                if (parsed.details['Họ tên']) {
+                    formErrors.name = parsed.details['Họ tên'][0];
+                }
+                if (Object.keys(formErrors).length > 0) {
+                    // Mở modal và hiển thị lỗi
+                    setEditingStudent(studentData);
+                    setIsModalOpen(true);
+                    setTimeout(() => {
+                        // Set errors on form fields
+                        window.dispatchEvent(new CustomEvent('set-form-errors', { 
+                            detail: formErrors 
+                        }));
+                    }, 100);
+                    return;
+                }
+            }
+            // Fallback: show toast
             toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
@@ -409,6 +476,7 @@ const StudentManagement = () => {
                         selectedIds={selectedStudentIds}
                         setSelectedIds={setSelectedStudentIds}
                         gradeList={gradeList}
+                        classList={classList}
                     />
                 ) : (
                     <EnrollmentRequestsTable
@@ -423,17 +491,21 @@ const StudentManagement = () => {
             </main>
 
             {/* Add/Edit Student Modal */}
-            <AddStudentModal
+             <AddStudentModal
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
                     setEditingStudent(null);
+                    setErrors({});
                 }}
                 onSubmit={handleSubmitStudent}
                 editingStudent={editingStudent}
                 existingStudents={studentList}
                 parentList={parentList}
                 gradeList={gradeList}
+                allUsers={allUsers}
+                errors={errors}
+                setErrors={setErrors}
             />
 
             {/* Student Detail Modal */}
@@ -458,12 +530,12 @@ const StudentManagement = () => {
             />
 
             {/* Import Students Modal */}
-            <ImportStudentModal
+             <ImportStudentModal
                 isOpen={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
                 onImport={handleImportStudents}
             />
-        </div >
+        </div>
     );
 };
 

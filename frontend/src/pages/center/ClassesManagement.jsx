@@ -7,7 +7,8 @@ import CreateClassModal from '../../components/CreateClassModal';
 import SubjectModal from '../../components/SubjectModal';
 import RoomModal from '../../components/RoomModal';
 import GradeModal from '../../components/GradeModal';
-import api from '../../services/api';
+import api, { parseValidationErrors } from '../../services/api';
+import { showValidationError } from '../../services/toastHelper';
 import '../../css/pages/center/ClassesManagement.css';
 import '../../css/components/DeleteModal.css';
 
@@ -299,7 +300,7 @@ const ClassesManagement = () => {
             setEditingClass(null);
         } catch (error) {
             console.error(error);
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi lưu lớp học');
+            showValidationError(error, 'Có lỗi xảy ra khi lưu lớp học');
         }
     };
 

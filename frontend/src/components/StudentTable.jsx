@@ -21,7 +21,8 @@ const StudentTable = ({
     onSendAccount,
     selectedIds = [],
     setSelectedIds = () => { },
-    gradeList = []
+    gradeList = [],
+    classList = []
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lockModal, setLockModal] = useState({ show: false, student: null });
@@ -132,12 +133,9 @@ const StudentTable = ({
                     onChange={(e) => setClassFilter(e.target.value)}
                 >
                     <option value="">Tất cả lớp</option>
-                    {/* Mock Filter Options */}
-                    <option value="Toán 6A">Toán 6A</option>
-                    <option value="Vật lý 7B">Vật lý 7B</option>
-                    <option value="Hóa 8A">Hóa 8A</option>
-                    <option value="Toán 9A">Toán 9A</option>
-                    {/* In real app, generate from data */}
+                    {classList.map(c => (
+                        <option key={c.classId} value={c.className}>{c.className}</option>
+                    ))}
                 </select>
 
                 <select
@@ -265,15 +263,14 @@ const StudentTable = ({
                                             >
                                                 <Edit2 size={18} />
                                             </button>
-                                            {!student.accountSent && (
-                                                <button
-                                                    className="action-btn send-account"
-                                                    title="Gửi tài khoản qua email"
-                                                    onClick={() => handleSendAccountClick(student)}
-                                                >
-                                                    <Mail size={18} />
-                                                </button>
-                                            )}
+                                            <button
+                                                className={`action-btn send-account ${student.accountSent ? 'disabled' : ''}`}
+                                                title={student.accountSent ? 'Đã gửi tài khoản' : 'Gửi tài khoản qua email'}
+                                                onClick={() => !student.accountSent && handleSendAccountClick(student)}
+                                                disabled={student.accountSent}
+                                            >
+                                                <Mail size={18} />
+                                            </button>
                                             <button
                                                 className={`action-btn ${student.status === 'active' ? 'lock' : 'unlock'} ${!student.accountSent ? 'disabled' : ''}`}
                                                 title={!student.accountSent ? 'Cần gửi tài khoản để kích hoạt' : (student.status === 'active' ? 'Tạm ngưng học' : 'Kích hoạt lại')}
@@ -433,7 +430,8 @@ StudentTable.propTypes = {
     onEdit: PropTypes.func.isRequired,
     onToggleStatus: PropTypes.func.isRequired,
     onSendAccount: PropTypes.func,
-    gradeList: PropTypes.array
+    gradeList: PropTypes.array,
+    classList: PropTypes.array
 };
 
 export default StudentTable;

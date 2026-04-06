@@ -1,5 +1,5 @@
 using EducenAPI.DTOs.Assistants;
- 
+  
 namespace EducenAPI.Services.Interface
 {
     public interface IAssistantService
@@ -10,5 +10,6 @@ namespace EducenAPI.Services.Interface
         Task<bool> UpdateAssistantAsync(int id, UpdateAssistantDto dto);
         Task<bool> DeleteAssistantAsync(int id);
         Task<object> GetAssistantClassesAsync(int id);
+        Task<bool> SendAccountAsync(int assistantId);
     }
 }

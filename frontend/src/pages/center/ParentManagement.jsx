@@ -6,7 +6,7 @@ import ParentTable from '../../components/ParentTable';
 import AddParentModal from '../../components/AddParentModal';
 import ParentDetailModal from '../../components/ParentDetailModal';
 import ConfirmModal from '../../components/ConfirmModal';
-import api from '../../services/api';
+import api, { parseValidationErrors } from '../../services/api';
 import '../../css/pages/center/ParentManagement.css';
 
 const ParentManagement = () => {
@@ -17,8 +17,12 @@ const ParentManagement = () => {
     const [selectedParentIds, setSelectedParentIds] = useState([]);
     const [parentList, setParentList] = useState([]);
     const [studentList, setStudentList] = useState([]);
+    const [allUsers, setAllUsers] = useState([]); // For email validation across all roles
     const [isLoading, setIsLoading] = useState(false);
     
+    // State for form validation errors
+    const [errors, setErrors] = useState({});
+
     // State cho ConfirmModal
     const [confirmModal, setConfirmModal] = useState({
         isOpen: false,
@@ -31,6 +35,15 @@ const ParentManagement = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const fetchAllUsers = async () => {
+        try {
+            const usersRes = await api.get('/admin/users');
+            setAllUsers(usersRes.data || []);
+        } catch (error) {
+            console.error("Fetch users error:", error);
+        }
+    };
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -65,6 +78,9 @@ const ParentManagement = () => {
 
             setParentList(parents);
             setStudentList(students);
+            
+            // Also fetch all users for email validation
+            await fetchAllUsers();
         } catch (error) {
             console.error("Fetch data error:", error);
             toast.error("Không thể tải dữ liệu phụ huynh");
@@ -115,6 +131,26 @@ const ParentManagement = () => {
             setIsModalOpen(false);
             setEditingParent(null);
         } catch (error) {
+            // Parse validation errors and show on form
+            const parsed = parseValidationErrors(error);
+            if (parsed.hasErrors && parsed.details) {
+                // Show errors on form fields
+                const formErrors = {};
+                if (parsed.details['Email']) {
+                    formErrors.email = parsed.details['Email'][0];
+                }
+                if (parsed.details['Họ tên']) {
+                    formErrors.name = parsed.details['Họ tên'][0];
+                }
+                if (parsed.details['Số điện thoại']) {
+                    formErrors.phone = parsed.details['Số điện thoại'][0];
+                }
+                if (Object.keys(formErrors).length > 0) {
+                    setErrors(formErrors);
+                    return;
+                }
+            }
+            // Fallback: show toast
             toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
@@ -262,10 +298,14 @@ const ParentManagement = () => {
             {/* Add/Edit Modal */}
             <AddParentModal
                 isOpen={isModalOpen}
-                onClose={() => { setIsModalOpen(false); setEditingParent(null); }}
+                onClose={() => { setIsModalOpen(false); setEditingParent(null); setErrors({}); }}
                 onSubmit={handleSubmit}
                 editingParent={editingParent}
                 studentList={studentList}
+                existingParents={parentList}
+                allUsers={allUsers}
+                errors={errors}
+                setErrors={setErrors}
             />
 
             {/* Parent Detail Modal */}

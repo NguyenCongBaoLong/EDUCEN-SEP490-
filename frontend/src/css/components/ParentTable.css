@@ -257,6 +257,11 @@
     border-color: #dbeafe;
 }
 
+.action-btn.send-account.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Pagination */
 .pagination {
     display: flex;

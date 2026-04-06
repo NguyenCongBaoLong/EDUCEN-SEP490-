@@ -34,9 +34,13 @@ const StaffTable = ({
 
     onSendAccount,
 
-    selectedIds = [],
+    selectedStaff = [],
 
-    setSelectedIds = () => { }
+    onToggleSelect = () => {},
+
+    onSelectAll = () => {},
+
+    onSendBulkAccounts = () => {}
 
 }) => {
 
@@ -120,7 +124,7 @@ const StaffTable = ({
 
         <>
 
-            <div className="staff-table-container">
+            <div className="student-table-container">
 
                 {/* Search and Filters */}
 
@@ -204,15 +208,23 @@ const StaffTable = ({
 
                             <tr>
 
-                                <th>TÊN</th>
+                                <th style={{ width: '40px' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        className="bulk-checkbox"
+                                        checked={staffData.length > 0 && staffData.filter(s => !s.accountSent).length > 0 && selectedStaff.length === staffData.filter(s => !s.accountSent).length}
+                                        onChange={onSelectAll}
+                                        title="Chọn tất cả chưa gửi"
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                    />
+                                </th>
 
-                                <th>VAI TRÒ</th>
-
-                                <th>LIÊN HỆ</th>
-
-                                <th>TRẠNG THÁI</th>
-
-                                <th>HÀNH ĐỘNG</th>
+                                <th>Giáo Viên</th>
+                                <th>Vai Trò</th>
+                                <th>Email</th>
+                                <th>Trạng Thái</th>
+                                <th>Tài Khoản</th>
+                                <th className="text-right">Hành Động</th>
 
                             </tr>
 
@@ -223,6 +235,19 @@ const StaffTable = ({
                             {currentItems.map((staff) => (
 
                                 <tr key={staff.id}>
+                                    <td>
+                                        <input 
+                                            type="checkbox" 
+                                            className="bulk-checkbox"
+                                            disabled={staff.accountSent}
+                                            checked={selectedStaff.includes(staff.id)}
+                                            onChange={(e) => {
+                                                if (staff.accountSent) return;
+                                                onToggleSelect(staff.id);
+                                            }}
+                                            style={{ width: '16px', height: '16px', cursor: staff.accountSent ? 'not-allowed' : 'pointer', accentColor: '#3b82f6' }}
+                                        />
+                                    </td>
 
                                     <td>
 
@@ -289,6 +314,13 @@ const StaffTable = ({
                                     </td>
 
                                     <td>
+                                        {staff.accountSent
+                                            ? <span className="account-badge sent">Đã gửi</span>
+                                            : <span className="account-badge pending">Chưa gửi</span>
+                                        }
+                                    </td>
+
+                                    <td style={{ textAlign: 'right' }}>
 
                                         <div className="action-buttons">
 
@@ -317,6 +349,21 @@ const StaffTable = ({
                                             >
 
                                                 <Edit2 size={18} />
+
+                                            </button>
+
+                                            <button
+
+                                                className={`action-btn email ${staff.accountSent ? 'disabled' : ''}`}
+
+                                                title={staff.accountSent ? 'Đã gửi tài khoản' : 'Gửi email tài khoản'}
+
+                                                onClick={() => !staff.accountSent && onSendAccount(staff.id)}
+                                                disabled={staff.accountSent}
+
+                                            >
+
+                                                <Mail size={18} />
 
                                             </button>
 
@@ -356,7 +403,7 @@ const StaffTable = ({
 
                     <div className="pagination-info">
 
-                        Hiển thị {startIndex + 1} đến {Math.min(endIndex, staffData.length)} của {staffData.length} nhân viên
+                        Hiển thị {startIndex + 1}-{Math.min(endIndex, staffData.length)} trên tổng số {staffData.length} nhân viên
 
                     </div>
 
@@ -532,7 +579,17 @@ StaffTable.propTypes = {
 
     onEdit: PropTypes.func.isRequired,
 
-    onToggleLock: PropTypes.func.isRequired
+    onToggleLock: PropTypes.func.isRequired,
+
+    onSendAccount: PropTypes.func,
+    
+    selectedStaff: PropTypes.array,
+    
+    onToggleSelect: PropTypes.func,
+    
+    onSelectAll: PropTypes.func,
+    
+    onSendBulkAccounts: PropTypes.func
 
 };
 

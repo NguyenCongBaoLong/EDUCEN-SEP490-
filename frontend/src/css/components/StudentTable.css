@@ -317,6 +317,13 @@
     border-color: #dbeafe;
 }
 
+.action-btn.send-account.disabled,
+.action-btn.email.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 /* Account Badge */
 .account-badge {
     display: inline-flex;

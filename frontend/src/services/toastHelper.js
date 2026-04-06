@@ -1,126 +1,4 @@
-import axios from 'axios';
 import toast from 'react-hot-toast';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5106/api';
-
-const api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-    },
-});
-
-// Helper: lấy tenantId từ nhiều nguồn (ưu tiên localStorage → URL query param)
-function resolveTenantId() {
-    const isValidTenantId = (tenantId) => (
-        !!tenantId && tenantId !== 'undefined' && tenantId !== 'null'
-    );
-
-    // 1. Ưu tiên URL query param (?tenant=xxx hoặc ?tenantId=xxx) 
-    // Nếu người dùng gõ trực tiếp URL, họ muốn truy cập chính xác trung tâm đó
-    const urlParams = new URLSearchParams(window.location.search);
-    const tenantFromUrl = urlParams.get('tenantId') || urlParams.get('tenant');
-    
-    if (isValidTenantId(tenantFromUrl)) {
-        localStorage.setItem('tenantId', tenantFromUrl);
-        return tenantFromUrl;
-    }
-
-    // 2. Nếu URL không có, mới lấy từ localStorage (giá trị đã "ghi nhớ" trước đó)
-    const stored = localStorage.getItem('tenantId');
-    if (isValidTenantId(stored)) return stored;
-
-    return null;
-}
-
-// Tự động gắn JWT token vào mỗi request
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    // Không gửi session giả của SystemAdmin (không phải JWT hợp lệ)
-    if (token && token !== 'sysadmin-session') {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    
-    // SystemAdmin không cần tenant header
-    if (token !== 'sysadmin-session') {
-        const tenantId = resolveTenantId();
-        if (tenantId) {
-            console.log(`[API Interceptor] Using TenantId: ${tenantId}`);
-            config.headers['tenant'] = tenantId;
-        } else {
-            console.log('[API Interceptor] No TenantId found');
-        }
-    }
-
-    return config;
-});
-
-// Xử lý lỗi 401 (token hết hạn) → redirect về đúng trang login theo role
-// và xử lý validation errors để hiển thị chi tiết
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        // Xử lý lỗi 401
-        if (error.response?.status === 401) {
-            // Không logout SystemAdmin — họ xác thực bằng X-API-KEY, không dùng JWT
-            const token = localStorage.getItem('token');
-            if (token === 'sysadmin-session') {
-                return Promise.reject(error);
-            }
-
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-
-            // Tránh infinite loop nếu đã ở trang login/public
-            const currentPath = window.location.pathname;
-            const isPublicPath = currentPath === '/' || currentPath === '/login' || currentPath === '/signup'
-                || currentPath === '/forgot-password' || currentPath === '/reset-password'
-                || currentPath.startsWith('/sysadmin');
-
-            if (!isPublicPath) {
-                // Redirect về đúng trang login theo role hiện tại
-                if (currentPath.startsWith('/student')) {
-                    window.location.href = '/login';
-                } else if (currentPath.startsWith('/teacher') || currentPath.startsWith('/ta')) {
-                    window.location.href = '/login';
-                } else if (currentPath.startsWith('/parent')) {
-                    window.location.href = '/login';
-                } else if (currentPath.startsWith('/center')) {
-                    window.location.href = '/login';
-                } else {
-                    window.location.href = '/login';
-                }
-            }
-        }
-        
-        // Xử lý validation errors (400 Bad Request) - tự động hiển thị toast
-        if (error.response?.status === 400) {
-            const parsed = parseValidationErrors(error.response);
-            if (parsed.hasErrors && parsed.formattedMessage) {
-                // Chỉ hiển thị toast nếu chưa có ai handle (tránh duplicate toast)
-                // Bằng cách kiểm tra error.config để đánh dấu đã được xử lý
-                if (!error.config._validationHandled) {
-                    error.config._validationHandled = true;
-                    toast.error(parsed.formattedMessage, { 
-                        duration: 5000,
-                        style: {
-                            maxWidth: '500px',
-                            whiteSpace: 'pre-line'
-                        }
-                    });
-                }
-            }
-        }
-        
-        return Promise.reject(error);
-    }
-);
-
-// ─────────────────────────────────────────────────────────────
-// Utility: Parse validation errors từ API response + translate to Vietnamese
-// Trả về: { hasErrors: boolean, message: string, details: object }
-// ─────────────────────────────────────────────────────────────
 
 // Map English validation error messages to Vietnamese
 const errorMessageMap = {
@@ -149,44 +27,6 @@ const errorMessageMap = {
     // Regular expression (whitespace)
     'cannot be only whitespace': 'không được chỉ có khoảng trắng',
     'cannot be empty': 'không được để trống',
-    
-    // Common field names (lowercase for matching)
-    'fullname': 'Họ tên',
-    'email': 'Email',
-    'phonenumber': 'Số điện thoại',
-    'username': 'Tên đăng nhập',
-    'password': 'Mật khẩu',
-    'address': 'Địa chỉ',
-    'classname': 'Tên lớp',
-    'description': 'Mô tả',
-    'syllabuscontent': 'Nội dung giáo trình',
-    'subjectid': 'Môn học',
-    'subjectname': 'Tên môn học',
-    'teacherid': 'Giáo viên',
-    'assistantid': 'Trợ giảng',
-    'startdate': 'Ngày bắt đầu',
-    'enddate': 'Ngày kết thúc',
-    'status': 'Trạng thái',
-    'scheduleslots': 'Lịch học',
-    'pricepersession': 'Đơn giá',
-    'roomid': 'Phòng học',
-    'roomname': 'Tên phòng',
-    'gradeid': 'Khối lớp',
-    'gradename': 'Tên khối lớp',
-    'dayofweek': 'Ngày trong tuần',
-    'starttime': 'Giờ bắt đầu',
-    'endtime': 'Giờ kết thúc',
-    'specialization': 'Chuyên môn',
-    'degree': 'Bằng cấp',
-    'supportlevel': 'Cấp độ hỗ trợ',
-    'enrollmentstatus': 'Trạng thái ghi danh',
-    'planname': 'Tên gói',
-    'price': 'Giá',
-    'limitusers': 'Giới hạn người dùng',
-    'storagelimit': 'Giới hạn lưu trữ',
-    'features': 'Tính năng',
-    'studentids': 'Danh sách học sinh',
-    'parentids': 'Danh sách phụ huynh',
     
     // Range validation
     'must be between 0 and 6': 'phải từ 0 đến 6 (0=Chủ nhật, 1=Thứ 2,...)',
@@ -291,7 +131,10 @@ function translateErrorMessage(englishMsg) {
     return vietnameseMsg;
 }
 
-export function parseValidationErrors(errorResponse) {
+/**
+ * Parse validation errors trực tiếp với translate to Vietnamese
+ */
+function parseValidationErrors(errorResponse) {
     const data = errorResponse?.data;
     
     if (!data) {
@@ -305,7 +148,7 @@ export function parseValidationErrors(errorResponse) {
 
         data.errors.forEach(err => {
             if (err.Field && err.Errors) {
-                // Map field names from BE to Vietnamese
+                // Map common field names from BE to Vietnamese
                 const fieldNameMap = {
                     'ClassName': 'Tên lớp',
                     'ClassNames': 'Tên lớp',
@@ -399,4 +242,41 @@ export function parseValidationErrors(errorResponse) {
     return { hasErrors: false, message: 'Lỗi không xác định', details: null };
 }
 
-export default api;
+/**
+ * Hiển thị toast error với thông báo lỗi chi tiết từ API validation (đã dịch sang tiếng Việt)
+ * @param {object} error - Error object từ axios catch
+ * @param {string} defaultMessage - Message mặc định nếu không parse được lỗi
+ */
+export function showValidationError(error, defaultMessage = 'Có lỗi xảy ra') {
+    const parsed = parseValidationErrors(error);
+    
+    if (parsed.hasErrors && parsed.formattedMessage) {
+        // Hiển thị chi tiết lỗi đã dịch sang tiếng Việt
+        toast.error(parsed.formattedMessage, { 
+            duration: 5000,
+            style: {
+                maxWidth: '500px',
+                whiteSpace: 'pre-line'
+            }
+        });
+    } else {
+        // Fallback to default message or response data message
+        toast.error(error.response?.data?.message || defaultMessage);
+    }
+}
+
+/**
+ * Hiển thị toast error đơn giản (legacy compatibility)
+ */
+export function showError(message) {
+    toast.error(message);
+}
+
+/**
+ * Hiển thị toast success
+ */
+export function showSuccess(message) {
+    toast.success(message);
+}
+
+export default { showValidationError, showError, showSuccess };

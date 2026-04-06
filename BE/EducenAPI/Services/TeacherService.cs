@@ -35,6 +35,9 @@ namespace EducenAPI.Services
                     Specialization = t.Specialization ?? "",
                     Degree = t.Degree,
                     AccountStatus = t.TeacherNavigation.AccountStatus,
+                    IsAccountSent = !string.IsNullOrEmpty(t.TeacherNavigation.Username) && 
+                                    t.TeacherNavigation.AccountStatus != null &&
+                                    t.TeacherNavigation.AccountStatus.ToLower() == "active",
                     ClassesCount = _context.Classes.Count(c => c.TeacherId == t.UserId),
                     CreatedAt = DateTime.Now,
                     Schedule = t.Classes

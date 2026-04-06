@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import '../css/components/CreateClassModal.css';
 import '../css/components/AddParentModal.css';
 
-const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList = [] }) => {
+const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList = [], existingParents = [], allUsers = [], errors = {}, setErrors }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -13,7 +13,6 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         address: '',
         linkedStudentIds: []
     });
-    const [errors, setErrors] = useState({});
     const [studentSearch, setStudentSearch] = useState('');
 
     useEffect(() => {
@@ -39,9 +38,32 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         if (!val || val.trim().length < 3) return 'Tên phải có ít nhất 3 ký tự';
         return '';
     };
-    const validateEmail = (val) => {
-        if (!val || val.trim() === '') return 'Email bắt buộc (dùng để gửi tài khoản)';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return 'Email không hợp lệ';
+    const validateEmail = (val, allUsersList = []) => {
+        if (!val || val.trim() === '') return 'Email là bắt buộc';
+        
+        // Check if it's a valid email format first
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(val)) {
+            // More specific error messages
+            if (!val.includes('@')) {
+                return 'Email phải chứa ký tự @ (vd: parent@example.com)';
+            }
+            if (!val.includes('.')) {
+                return 'Email phải chứa tên miền (vd: parent@example.com)';
+            }
+            return 'Email không hợp lệ (vd: parent@example.com)';
+        }
+        
+        // Check duplicate email across ALL users (teachers, students, parents, admins)
+        const isDuplicate = allUsersList.some(user => {
+            // Skip current user if editing
+            if (editingParent && user.userId && user.userId.toString() === editingParent.id) {
+                return false;
+            }
+            return user.email && user.email.toLowerCase() === val.toLowerCase();
+        });
+        
+        if (isDuplicate) return 'Email này đã được sử dụng bởi người dùng khác trong hệ thống';
         return '';
     };
     const validatePhone = (val) => {
@@ -53,7 +75,21 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(p => ({ ...p, [name]: value }));
-        if (errors[name]) setErrors(p => ({ ...p, [name]: '' }));
+        
+        // Validate email realtime
+        if (name === 'email') {
+            const emailErr = validateEmail(value, allUsers);
+            setErrors(p => ({ ...p, email: emailErr }));
+        } else if (errors[name]) {
+            setErrors(p => ({ ...p, [name]: '' }));
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        if (name === 'email') {
+            setErrors(p => ({ ...p, email: validateEmail(value, allUsers) }));
+        }
     };
 
     const toggleStudent = (id) => {
@@ -69,7 +105,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         e.preventDefault();
         const errs = {
             name: validateName(formData.name),
-            email: validateEmail(formData.email),
+            email: validateEmail(formData.email, allUsers),
             phone: validatePhone(formData.phone)
         };
         Object.keys(errs).forEach(k => { if (!errs[k]) delete errs[k]; });
@@ -114,7 +150,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
                         <div className="form-group">
                             <label><Mail size={13} style={{ marginRight: 4 }} />Email *</label>
                             <input type="email" name="email" value={formData.email}
-                                onChange={handleChange} placeholder="parent@example.com"
+                                onChange={handleChange} onBlur={handleBlur} placeholder="parent@example.com"
                                 className={errors.email ? 'input-error' : ''} />
                             {errors.email && <span className="error-message">{errors.email}</span>}
                         </div>

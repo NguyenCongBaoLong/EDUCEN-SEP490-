@@ -35,9 +35,8 @@ namespace EducenAPI.DTOs.Parents
         }
 
         [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ErrorMessage = "Email format is invalid")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string Email
         {
             get => _email;
@@ -94,9 +93,8 @@ namespace EducenAPI.DTOs.Parents
             set => _fullName = value?.Trim();
         }
 
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ErrorMessage = "Email format is invalid")]
         [StringLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Email cannot be only whitespace")]
         public string? Email
         {
             get => _email;

@@ -11,7 +11,7 @@ import '../css/components/CreateClassModal.css';
  * - Staff manages: Address, Date of Birth, Notes, Avatar (personal info via User Profile page)
  * - Admin can view all info in StaffDetailModal (read-only)
  */
-const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff = [] }) => {
+const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff = [], allUsers = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -51,17 +51,32 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
         return '';
     };
 
-    const validateEmail = (email) => {
-        if (!email || !email.includes('@')) {
-            return 'Email không hợp lệ';
+    const validateEmail = (email, allUsersList = []) => {
+        if (!email || email.trim() === '') return 'Email là bắt buộc';
+        
+        // Check if it's a valid email format first
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            // More specific error messages
+            if (!email.includes('@')) {
+                return 'Email phải chứa ký tự @ (vd: staff@example.com)';
+            }
+            if (!email.includes('.')) {
+                return 'Email phải chứa tên miền (vd: staff@example.com)';
+            }
+            return 'Email không hợp lệ (vd: staff@example.com)';
         }
-        // Check duplicate email (exclude current staff when editing)
-        const isDuplicate = existingStaff.some(staff =>
-            staff.email === email && staff.id !== editingStaff?.id
-        );
-        if (isDuplicate) {
-            return 'Email đã được sử dụng';
-        }
+        
+        // Check duplicate email across ALL users (teachers, students, parents, admins)
+        const isDuplicate = allUsersList.some(user => {
+            // Skip current user if editing
+            if (editingStaff && user.userId && user.userId.toString() === editingStaff.id) {
+                return false;
+            }
+            return user.email && user.email.toLowerCase() === email.toLowerCase();
+        });
+        
+        if (isDuplicate) return 'Email này đã được sử dụng bởi người dùng khác trong hệ thống';
         return '';
     };
 
@@ -72,12 +87,19 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
             [name]: value
         }));
 
-        // Clear error when user types
-        if (errors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: ''
-            }));
+        // Validate email realtime
+        if (name === 'email') {
+            const emailErr = validateEmail(value, allUsers);
+            setErrors(prev => ({ ...prev, email: emailErr }));
+        } else if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        if (name === 'email') {
+            setErrors(prev => ({ ...prev, email: validateEmail(value, allUsers) }));
         }
     };
 
@@ -87,7 +109,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
         // Validate all fields
         const newErrors = {
             name: validateName(formData.name),
-            email: validateEmail(formData.email)
+            email: validateEmail(formData.email, allUsers)
         };
 
         // Check if there are any errors
@@ -145,8 +167,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 placeholder="email@example.com"
-                                required
                                 className={errors.email ? 'input-error' : ''}
                             />
                             {errors.email && <span className="error-message">{errors.email}</span>}
@@ -224,7 +246,9 @@ AddStaffModal.propTypes = {
     onClose: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
     editingStaff: PropTypes.object,
-    existingStaff: PropTypes.array
+    existingStaff: PropTypes.array,
+    errors: PropTypes.object,
+    setErrors: PropTypes.func
 };
 
 export default AddStaffModal;

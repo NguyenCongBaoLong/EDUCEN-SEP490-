@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import '../css/components/CreateClassModal.css';
 import '../css/components/AddParentModal.css';
 
-const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingStudents = [], parentList = [], gradeList = [] }) => {
+const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingStudents = [], parentList = [], gradeList = [], allUsers = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
         avatar: null,
@@ -67,17 +67,32 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         return '';
     };
 
-    const validateEmail = (email) => {
-        if (!email) return '';
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return 'Email không hợp lệ';
-        // Kiểm tra trùng email trong danh sách học sinh hiện có
-        const isDuplicate = existingStudents.some(s => {
-            // Nếu đang chỉnh sửa, bỏ qua học sinh hiện tại
-            if (editingStudent && s.id === editingStudent.id) return false;
-            return s.email?.toLowerCase() === email.toLowerCase();
+    const validateEmail = (email, allUsersList = []) => {
+        if (!email || email.trim() === '') return 'Email là bắt buộc';
+        
+        // Check if it's a valid email format first
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            // More specific error messages
+            if (!email.includes('@')) {
+                return 'Email phải chứa ký tự @ (vd: student@example.com)';
+            }
+            if (!email.includes('.')) {
+                return 'Email phải chứa tên miền (vd: student@example.com)';
+            }
+            return 'Email không hợp lệ (vd: student@example.com)';
+        }
+        
+        // Check duplicate email across ALL users (teachers, students, parents, admins)
+        const isDuplicate = allUsersList.some(user => {
+            // Skip current user if editing
+            if (editingStudent && user.userId && user.userId.toString() === editingStudent.id) {
+                return false;
+            }
+            return user.email && user.email.toLowerCase() === email.toLowerCase();
         });
-        if (isDuplicate) return 'Email này đã được sử dụng bởi học sinh khác';
+        
+        if (isDuplicate) return 'Email này đã được sử dụng bởi người dùng khác trong hệ thống';
         return '';
     };
 
@@ -93,7 +108,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         setFormData(prev => ({ ...prev, [name]: value }));
         // Validate email realtime khi user đang nhập
         if (name === 'email') {
-            const emailErr = validateEmail(value);
+            const emailErr = validateEmail(value, allUsers);
             setErrors(prev => ({ ...prev, email: emailErr }));
         } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
@@ -103,7 +118,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
     const handleBlur = (e) => {
         const { name, value } = e.target;
         if (name === 'email') {
-            setErrors(prev => ({ ...prev, email: validateEmail(value) }));
+            setErrors(prev => ({ ...prev, email: validateEmail(value, allUsers) }));
         }
     };
 
@@ -112,7 +127,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
 
         const newErrors = {
             name: validateName(formData.name),
-            email: validateEmail(formData.email),
+            email: validateEmail(formData.email, allUsers),
             grade: !formData.grade ? 'Vui lòng chọn khối' : ''
         };
 
@@ -186,7 +201,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                     </div>
 
                     <div className="form-group">
-                        <label>Email học sinh <span style={{ color: '#94a3b8', fontWeight: 400 }}>(tuỳ chọn — dùng để gửi tài khoản)</span></label>
+                        <label>Email học sinh * <span style={{ color: '#94a3b8', fontWeight: 400 }}>(dùng để gửi tài khoản)</span></label>
                         <input
                             type="email"
                             name="email"

@@ -85,6 +85,53 @@ public class StudentImportService : IStudentImportService
     }
 
     /// <summary>
+    /// Normalize grade input: trích xuất số từ "10A", "6B", "Khối 6" -> "Khối X"
+    /// </summary>
+    private string NormalizeGrade(string? gradeInput)
+    {
+        if (string.IsNullOrWhiteSpace(gradeInput))
+            return string.Empty;
+
+        var trimmed = gradeInput.Trim();
+
+        // Nếu đã có "Khối" rồi thì giữ nguyên
+        if (trimmed.Contains("Khối", StringComparison.OrdinalIgnoreCase))
+            return trimmed;
+
+        // Trích xuất số đầu tiên từ chuỗi (xử lý "10A", "6B", "6", "12A1")
+        var match = System.Text.RegularExpressions.Regex.Match(trimmed, @"^(\d+)");
+        if (match.Success && int.TryParse(match.Groups[1].Value, out int gradeNumber))
+        {
+            return $"Khối {gradeNumber}";
+        }
+
+        // Giữ nguyên các trường hợp khác
+        return trimmed;
+    }
+
+    /// <summary>
+    /// Insert grade vào bảng Grade nếu chưa tồn tại
+    /// </summary>
+    private async Task EnsureGradeExistsAsync(string gradeName)
+    {
+        if (string.IsNullOrWhiteSpace(gradeName))
+            return;
+
+        var existingGrade = await _context.Grades
+            .FirstOrDefaultAsync(g => g.GradeName == gradeName);
+
+        if (existingGrade == null)
+        {
+            var newGrade = new Grade
+            {
+                GradeName = gradeName
+            };
+            _context.Grades.Add(newGrade);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    /// <summary>
     /// Process a single worksheet and import students
     /// </summary>
     private async Task ProcessWorksheetAsync(
@@ -142,7 +189,17 @@ public class StudentImportService : IStudentImportService
                 var fullName = GetValue("FullName");
                 var email = GetValue("Email");
                 var phoneNumber = GetValue("PhoneNumber");
-                var grade = GetValue("Grade");
+                var gradeInput = GetValue("Grade");
+                
+                // Normalize grade: nếu là số (như "6") -> chuyển thành "Khối 6" để khớp với bảng Grade
+                var grade = NormalizeGrade(gradeInput);
+                
+                // Insert grade vào bảng Grade nếu chưa tồn tại
+                if (!string.IsNullOrWhiteSpace(grade))
+                {
+                    await EnsureGradeExistsAsync(grade);
+                }
+                
                 var dateOfBirthRaw = GetValue("DateOfBirth");
                 var gender = GetValue("Gender");
 
