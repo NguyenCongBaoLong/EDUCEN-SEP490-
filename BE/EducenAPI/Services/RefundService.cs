@@ -1,3 +1,4 @@
+using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Payment;
 using EducenAPI.Services.Interface;
@@ -14,17 +15,20 @@ namespace EducenAPI.Services
         private readonly ILogger<RefundService> _logger;
         private readonly IConfiguration _configuration;
         private readonly PaymentGatewayFactory _gatewayFactory;
+        private readonly ISubscriptionService _subscriptionService;
 
         public RefundService(
             AdminDbContext adminContext,
             ILogger<RefundService> logger,
             IConfiguration configuration,
-            PaymentGatewayFactory gatewayFactory)
+            PaymentGatewayFactory gatewayFactory,
+            ISubscriptionService subscriptionService)
         {
             _adminContext = adminContext;
             _logger = logger;
             _configuration = configuration;
             _gatewayFactory = gatewayFactory;
+            _subscriptionService = subscriptionService;
         }
 
         public async Task<Models.RefundRequest> CreateRefundRequestAsync(CreateRefundRequest request)
@@ -67,16 +71,40 @@ namespace EducenAPI.Services
             if (existingRefund != null)
                 throw new Exception("Đã tồn tại yêu cầu hoàn tiền cho giao dịch này");
 
-            // Validate refund amount
-            if (request.RefundAmount <= 0 || request.RefundAmount > payment.Amount)
-                throw new Exception("Số tiền hoàn không hợp lệ");
-
             var effectiveTenantId = string.IsNullOrWhiteSpace(request.TenantId)
                 ? payment.TenantId
                 : request.TenantId.Trim();
 
             if (!string.Equals(payment.TenantId, effectiveTenantId, StringComparison.Ordinal))
                 throw new Exception("Mã trung tâm không khớp với giao dịch thanh toán");
+
+            var subscriptionId = string.IsNullOrWhiteSpace(request.SubscriptionId)
+                ? payment.ReferenceId
+                : request.SubscriptionId.Trim();
+
+            var refundAmount = request.RefundAmount;
+            if (IsCancellationRequest(subscriptionId, request.Reason))
+            {
+                if (!string.IsNullOrWhiteSpace(payment.ReferenceId)
+                    && !string.IsNullOrWhiteSpace(subscriptionId)
+                    && !string.Equals(payment.ReferenceId, subscriptionId, StringComparison.Ordinal))
+                    throw new Exception("Gói dịch vụ không khớp với giao dịch thanh toán");
+
+                var subscription = await GetSubscriptionForCancellationAsync(subscriptionId!, effectiveTenantId);
+                var unusedCredit = _subscriptionService.CalculateUnusedCredit(subscription);
+
+                if (unusedCredit <= 0)
+                    throw new Exception("Gói dịch vụ đã hết hạn hoặc không còn giá trị hoàn lại");
+
+                if (refundAmount > 0 && refundAmount != unusedCredit)
+                    throw new Exception("Không hỗ trợ hủy gói một phần. Số tiền hoàn phải bằng giá trị còn lại.");
+
+                refundAmount = unusedCredit;
+            }
+
+            // Validate refund amount
+            if (refundAmount <= 0 || refundAmount > payment.Amount)
+                throw new Exception("Số tiền hoàn không hợp lệ");
 
             var refundMethod = NormalizeRefundMethod(request.RefundMethod);
             string? gatewayRef = null;
@@ -104,12 +132,12 @@ namespace EducenAPI.Services
             {
                 RefundId = Guid.NewGuid().ToString(),
                 PaymentRecordId = request.PaymentRecordId,
-                SubscriptionId = request.SubscriptionId,
+                SubscriptionId = subscriptionId,
                 TenantId = effectiveTenantId,
                 RequestedBy = request.RequestedBy,
                 Reason = request.Reason,
                 OriginalAmount = payment.Amount,
-                RefundAmount = request.RefundAmount,
+                RefundAmount = refundAmount,
                 RefundMethod = refundMethod,
                 GatewayRef = gatewayRef,
                 IsServiceIssue = request.IsServiceIssue,
@@ -186,22 +214,49 @@ namespace EducenAPI.Services
 
             try
             {
-                if (string.Equals(refund.RefundMethod, "Cash", StringComparison.OrdinalIgnoreCase))
+                Subscription? cancellationSubscription = null;
+                var isCancellationRefund = IsCancellationRequest(refund.SubscriptionId, refund.Reason);
+                if (isCancellationRefund)
                 {
-                    var payment = refund.PaymentRecord ?? throw new Exception("Không tìm thấy giao dịch thanh toán");
+                    if (string.IsNullOrWhiteSpace(refund.SubscriptionId))
+                        throw new Exception("Thiếu mã gói dịch vụ để hủy");
 
-                    if (!string.Equals(payment.PaymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase))
+                    if (refund.PaymentRecord != null
+                        && !string.IsNullOrWhiteSpace(refund.PaymentRecord.ReferenceId)
+                        && !string.Equals(refund.PaymentRecord.ReferenceId, refund.SubscriptionId, StringComparison.Ordinal))
+                        throw new Exception("Gói dịch vụ không khớp với giao dịch thanh toán");
+
+                    cancellationSubscription = await GetSubscriptionForCancellationAsync(refund.SubscriptionId, refund.TenantId);
+                    var unusedCredit = _subscriptionService.CalculateUnusedCredit(cancellationSubscription);
+
+                    if (unusedCredit <= 0)
+                        throw new Exception("Gói dịch vụ đã hết hạn hoặc không còn giá trị hoàn lại");
+
+                    if (refund.RefundAmount != unusedCredit)
+                    {
+                        _logger.LogInformation(
+                            "Adjust refund amount for cancellation refund {RefundId} from {OldAmount} to {NewAmount}",
+                            refund.RefundId, refund.RefundAmount, unusedCredit);
+                        refund.RefundAmount = unusedCredit;
+                    }
+                }
+
+if (string.Equals(refund.RefundMethod, "Cash", StringComparison.OrdinalIgnoreCase))
+                {
+                    var refundPayment = refund.PaymentRecord ?? throw new Exception("Không tìm thấy giao dịch thanh toán");
+
+if (!string.Equals(refundPayment.PaymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase))
                         throw new Exception("Hoàn tiền tiền mặt chỉ hỗ trợ cho giao dịch VNPay");
 
                     if (string.IsNullOrWhiteSpace(refund.GatewayRef))
                         throw new Exception("Thiếu mã tham chiếu cổng thanh toán cho hoàn tiền tiền mặt");
 
                     var gateway = _gatewayFactory.GetGateway("VNPay");
-                    var gatewayResponse = await gateway.ProcessRefundAsync(new EducenAPI.Services.Interface.RefundRequest
+var gatewayResponse = await gateway.ProcessRefundAsync(new EducenAPI.Services.Interface.RefundRequest
                     {
                         TenantId = refund.TenantId,
                         OriginalTransactionId = refund.GatewayRef,
-                        OrderId = payment.PaymentId,
+                        OrderId = refundPayment.PaymentId,
                         Amount = refund.RefundAmount,
                         Reason = refund.Reason
                     });
@@ -218,7 +273,10 @@ namespace EducenAPI.Services
                     refund.ProcessedAt = DateTime.UtcNow;
                     refund.UpdatedAt = DateTime.UtcNow;
 
-                    UpdatePaymentStatusForRefund(payment, refund.RefundAmount);
+                    UpdatePaymentStatusForRefund(refundPayment, refund.RefundAmount);
+
+if (cancellationSubscription != null)
+                        ApplyCancellation(cancellationSubscription!);
 
                     await _adminContext.SaveChangesAsync();
 
@@ -234,21 +292,66 @@ namespace EducenAPI.Services
                 if (tenant == null)
                     throw new Exception("Không tìm thấy trung tâm");
 
-                tenant.CreditBalance += refund.RefundAmount;
-
-                var ledger = new Models.TenantCreditLedger
+                var payment = refund.PaymentRecord ?? throw new Exception("Không tìm thấy giao dịch thanh toán");
+                if (!string.IsNullOrWhiteSpace(payment.ReferenceId))
                 {
-                    TenantId = tenant.TenantId,
-                    Amount = refund.RefundAmount,
-                    EntryType = "Credit",
-                    ReferenceId = refund.RefundId,
-                    ReferenceType = "Refund",
-                    BalanceAfter = tenant.CreditBalance,
-                    Note = $"Refund credit for payment {refund.PaymentRecordId}",
-                    CreatedAt = DateTime.UtcNow
-                };
+                    var originalCredit = await _adminContext.TenantCreditLedgers
+                        .Where(l => l.TenantId == tenant.TenantId
+                                 && l.EntryType == "Credit"
+                                 && l.ReferenceId == payment.ReferenceId
+                                 && (l.ReferenceType == "SubscriptionPayment" || l.ReferenceType == "SubscriptionRenew"))
+                        .OrderByDescending(l => l.CreatedAt)
+                        .FirstOrDefaultAsync();
 
-                _adminContext.TenantCreditLedgers.Add(ledger);
+                    if (originalCredit != null)
+                    {
+                        var reversedTotal = await _adminContext.TenantCreditLedgers
+                            .Where(l => l.TenantId == tenant.TenantId
+                                     && l.EntryType == "Debit"
+                                     && l.ReferenceType == "SubscriptionCreditReversal"
+                                     && l.ReferenceId == originalCredit.LedgerId)
+                            .SumAsync(l => l.Amount);
+
+                        var remainingReversible = originalCredit.Amount - reversedTotal;
+                        if (remainingReversible > 0)
+                        {
+                            var reversalAmount = Math.Min(refund.RefundAmount, remainingReversible);
+                            tenant.CreditBalance -= reversalAmount;
+
+                            var reversalLedger = new Models.TenantCreditLedger
+                            {
+                                TenantId = tenant.TenantId,
+                                Amount = reversalAmount,
+                                EntryType = "Debit",
+                                ReferenceId = originalCredit.LedgerId,
+                                ReferenceType = "SubscriptionCreditReversal",
+                                BalanceAfter = tenant.CreditBalance,
+                                Note = $"Reverse subscription credit for payment {refund.PaymentRecordId}",
+                                CreatedAt = DateTime.UtcNow
+                            };
+
+                            _adminContext.TenantCreditLedgers.Add(reversalLedger);
+                        }
+                        else
+                        {
+                            _logger.LogInformation(
+                                "Refund {RefundId} already reversed subscription credit for payment {PaymentId}",
+                                refund.RefundId, refund.PaymentRecordId);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Refund {RefundId} could not find subscription credit ledger for payment {PaymentId}",
+                            refund.RefundId, refund.PaymentRecordId);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Refund {RefundId} missing payment reference to locate credit ledger for payment {PaymentId}",
+                        refund.RefundId, refund.PaymentRecordId);
+                }
 
                 refund.Status = "Completed";
                 refund.ProcessedAt = DateTime.UtcNow;
@@ -256,6 +359,9 @@ namespace EducenAPI.Services
 
                 if (refund.PaymentRecord != null)
                     UpdatePaymentStatusForRefund(refund.PaymentRecord, refund.RefundAmount);
+
+if (cancellationSubscription != null)
+                    ApplyCancellation(cancellationSubscription!);
 
                 await _adminContext.SaveChangesAsync();
 
@@ -358,6 +464,34 @@ namespace EducenAPI.Services
             }
 
             paymentRecord.Status = "Refunded";
+        }
+
+        private async Task<Models.Subscription> GetSubscriptionForCancellationAsync(string subscriptionId, string tenantId)
+        {
+            var subscription = await _adminContext.Subscriptions
+                .Include(s => s.Plan)
+                .FirstOrDefaultAsync(s => s.Id == subscriptionId && s.TenantId == tenantId);
+
+            if (subscription == null)
+                throw new Exception("Không tìm thấy gói dịch vụ cần hủy");
+
+            return subscription;
+        }
+
+        private static bool IsCancellationRequest(string? subscriptionId, string? reason)
+        {
+            if (string.IsNullOrWhiteSpace(subscriptionId) || string.IsNullOrWhiteSpace(reason))
+                return false;
+
+            return reason.Contains("cancel", StringComparison.OrdinalIgnoreCase)
+                || reason.Contains("huy", StringComparison.OrdinalIgnoreCase)
+                || reason.Contains("hủy", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void ApplyCancellation(Models.Subscription subscription)
+        {
+            subscription.Status = "Cancelled";
+            subscription.EndDate = DateTime.UtcNow;
         }
     }
 }

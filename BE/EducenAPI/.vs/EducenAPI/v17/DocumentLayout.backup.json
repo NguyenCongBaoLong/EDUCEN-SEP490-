@@ -922,8 +922,7 @@
               "RelativeToolTip": "Controllers\\CenterSubscriptionController.cs",
               "ViewState": "AgIAAFIAAAAAAAAAAADgv2IAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-04T10:54:36.309Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-04T10:54:36.309Z"
             },
             {
               "$type": "Document",
@@ -933,10 +932,9 @@
               "RelativeDocumentMoniker": "Services\\SubscriptionService .cs",
               "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\SubscriptionService .cs",
               "RelativeToolTip": "Services\\SubscriptionService .cs",
-              "ViewState": "AgIAANsBAAAAAAAAAADgv9sBAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAwCAAAAAAAAAADgvwwCAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-04T10:46:06.511Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-04T10:46:06.511Z"
             },
             {
               "$type": "Document",
@@ -1174,7 +1172,7 @@
               "RelativeDocumentMoniker": "appsettings.json",
               "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\appsettings.json",
               "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAABgAAAAAAAAAAAAAABYAAAAoAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-03-26T07:57:09.171Z",
               "EditorCaption": ""

@@ -23,6 +23,10 @@ public partial class Assignment
 
     public DateTime? EndTime { get; set; }
 
+    public bool AllowLateSubmission { get; set; } = false;
+
+    public int? LateSubmissionDays { get; set; }
+
     public ClassSession Session { get; set; } = null!;
     public virtual User? User { get; set; }
     public virtual Grade? Grade { get; set; }

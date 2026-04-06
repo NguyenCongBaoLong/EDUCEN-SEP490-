@@ -20,5 +20,7 @@ namespace EducenAPI.Services.Interface
         Task<SubscriptionResponseDTO> ChangePlan(ChangePlanRequestDTO request);
 
         Task<SubscriptionResponseDTO?> GetActiveSubscriptionAsync(string tenantId);
+
+        decimal CalculateUnusedCredit(Subscription subscription);
     }
 }

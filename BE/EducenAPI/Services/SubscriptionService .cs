@@ -184,13 +184,13 @@ namespace EducenAPI.Services
             if (remainingDays < 0) remainingDays = 0;
 
             var dailyRate = subscription.Plan.Price / totalDays;
-            return Math.Round(dailyRate * remainingDays, 2);
+            return Math.Round(dailyRate * remainingDays, 0, MidpointRounding.AwayFromZero);
         }
 
         /// <summary>
         /// Tính credit hoàn lại từ gói cũ (theo thời gian còn lại)
         /// </summary>
-        private decimal CalculateUnusedCredit(Subscription currentSub)
+        private decimal CalculateUnusedCreditInternal(Subscription currentSub)
         {
             if (currentSub?.Plan == null) return 0;
             if (currentSub.EndDate <= DateTime.UtcNow) return 0;
@@ -202,7 +202,12 @@ namespace EducenAPI.Services
             if (remainingDays < 0) remainingDays = 0;
 
             var dailyRate = currentSub.Plan.Price / totalDays;
-            return Math.Round(dailyRate * remainingDays, 2);
+            return Math.Round(dailyRate * remainingDays, 0, MidpointRounding.AwayFromZero);
+        }
+
+        public decimal CalculateUnusedCredit(Subscription subscription)
+        {
+            return CalculateUnusedCreditInternal(subscription);
         }
 
         /// <summary>
@@ -241,7 +246,7 @@ namespace EducenAPI.Services
             var refundPercentage = (double)remainingDays / totalDays;
             var refundAmount = priceDiff * (decimal)refundPercentage;
 
-            return Math.Round(refundAmount, 2);
+            return Math.Round(refundAmount, 0, MidpointRounding.AwayFromZero);
         }
 
         public async Task<SubscriptionResponseDTO?> GetActiveSubscriptionAsync(string tenantId)
@@ -471,6 +476,8 @@ namespace EducenAPI.Services
                 // Hiệu lực kỳ sau → không trừ credit ngay
                 amountToCharge = totalAmount;
             }
+
+            amountToCharge = Math.Round(amountToCharge, 0, MidpointRounding.AwayFromZero);
 
             // Nếu amountToCharge <= 0 thì không cần thanh toán, set payment là Paid luôn
             if (amountToCharge <= 0)

@@ -13,11 +13,13 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private readonly ILogger<AttendanceService> _logger;
+        private readonly IPaymentReminderService _notificationService;
 
-        public AttendanceService(EducenV2Context context, ILogger<AttendanceService> logger)
+        public AttendanceService(EducenV2Context context, ILogger<AttendanceService> logger, IPaymentReminderService notificationService)
         {
             _context = context;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<IEnumerable<Attendance>> GetAttendanceBySessionAsync(int sessionId)
@@ -143,6 +145,32 @@ namespace EducenAPI.Services
 
             await _context.SaveChangesAsync();
 
+            var studentIds = records.Select(r => r.StudentId).Distinct().ToList();
+            var studentNames = await _context.Students
+                .Include(s => s.StudentNavigation)
+                .Where(s => studentIds.Contains(s.UserId))
+                .ToDictionaryAsync(s => s.UserId, s => s.StudentNavigation?.FullName ?? "Học sinh");
+
+            var className = await _context.Classes
+                .Where(c => c.ClassId == session.ClassId)
+                .Select(c => c.ClassName)
+                .FirstOrDefaultAsync() ?? "";
+
+            foreach (var record in records)
+            {
+                var studentName = studentNames.TryGetValue(record.StudentId, out var name) ? name : "Học sinh";
+                await _notificationService.SendToParentsOfStudentAsync(record.StudentId, new CreateRoleNotificationRequest
+                {
+                    TenantId = _context.CurrentTenantId,
+                    Title = "Cập nhật điểm danh",
+                    Message = $"{studentName} đã được điểm danh '{record.Status}' cho buổi học ngày {session.SessionDate:dd/MM/yyyy} ({className}).",
+                    Type = "Info",
+                    Category = "Attendance",
+                    ReferenceId = sessionId.ToString(),
+                    ReferenceType = "ClassSession"
+                });
+            }
+
             return await _context.Attendances
                 .Include(a => a.Student)
                     .ThenInclude(s => s.StudentNavigation)
@@ -156,6 +184,9 @@ namespace EducenAPI.Services
 
             var attendance = await _context.Attendances
                 .Include(a => a.Session)
+                    .ThenInclude(s => s.Class)
+                .Include(a => a.Student)
+                    .ThenInclude(s => s.StudentNavigation)
                 .FirstOrDefaultAsync(a => a.AttendanceId == attendanceId);
 
             if (attendance == null)
@@ -169,6 +200,18 @@ namespace EducenAPI.Services
             attendance.UpdatedBy = updater;
 
             await _context.SaveChangesAsync();
+
+            await _notificationService.SendToParentsOfStudentAsync(attendance.StudentId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Cập nhật điểm danh",
+                Message = $"{attendance.Student.StudentNavigation?.FullName} đã được điểm danh '{attendance.Status}' cho buổi học ngày {attendance.Session?.SessionDate:dd/MM/yyyy} ({attendance.Session?.Class?.ClassName}).",
+                Type = "Info",
+                Category = "Attendance",
+                ReferenceId = attendance.SessionId.ToString(),
+                ReferenceType = "ClassSession"
+            });
+
             return true;
         }
 

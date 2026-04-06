@@ -12,6 +12,7 @@ namespace EducenAPI.DTOs.Assignments
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
         public DateTime? DueDate { get; set; }
+        public bool AllowLateSubmission { get; set; }
         public long? FileSize { get; set; }
         public string? OriginalFileName { get; set; }
         public int SubmissionsCount { get; set; }

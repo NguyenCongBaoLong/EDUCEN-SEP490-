@@ -127,6 +127,26 @@ main, .grading-main, .classes-main, .ts-main, .cd-main, .classes-management {
     display: none;
 }
 
+.sidebar-notification-btn {
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.sidebar-notification-btn:hover {
+    background: #f9fafb;
+    color: #111827;
+}
+
+.sidebar.collapsed .sidebar-notification-btn .notification-label {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-notification-btn .notification-badge {
+    display: inline-flex;
+}
+
 .sidebar-nav-item:hover {
     background: #f9fafb;
     color: #111827;

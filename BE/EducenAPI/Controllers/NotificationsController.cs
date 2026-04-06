@@ -151,6 +151,9 @@ namespace EducenAPI.Controllers
         {
             try
             {
+                if (request == null)
+                    return BadRequest(new { message = "Dữ liệu thông báo không hợp lệ." });
+
                 var notification = await _notificationService.CreateSystemNotificationAsync(new CreateNotificationRequest
                 {
                     TenantId = request.TenantId,

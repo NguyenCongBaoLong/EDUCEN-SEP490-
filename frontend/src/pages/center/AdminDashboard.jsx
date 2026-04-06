@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
     CheckCircle, AlertCircle, Info, ChevronRight, BookOpen,
-    TrendingUp, MessageSquare, X, Inbox, Star, ShieldAlert,
-    MessageCircle, ArrowLeft, Mail, MailOpen, HardDrive, Reply
+    TrendingUp, MessageSquare, Inbox, ShieldAlert,
+    MessageCircle, Mail, HardDrive, Reply
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import RevenueReport from './RevenueReport';
@@ -18,6 +18,7 @@ import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText, Wallet
 import zaloOAService from '../../services/zaloOAService';
 import notificationService from '../../services/notificationService';
 import creditService from '../../services/creditService';
+import NotificationMailbox from '../../components/NotificationMailbox';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
@@ -110,38 +111,46 @@ const AdminDashboard = () => {
 
     const inboxMessages = [
         // System notifications (Subscription expiration, etc.)
-        ...systemNotifications.map(n => ({
-            id: `notif-${n.notificationId}`,
-            notificationId: n.notificationId,
-            type: 'system',
-            senderName: 'Hệ thống',
-            senderRole: n.category === 'Subscription' ? 'Thông báo gói dịch vụ' : 'Thông báo',
-            subject: n.title,
-            preview: n.message?.substring(0, 80) + (n.message?.length > 80 ? '...' : ''),
-            content: n.message,
-            sentAt: n.createdAt,
-            isRead: n.isRead,
-            priority: n.type === 'Warning' ? 'high' : 'normal',
-            category: n.category,
-            referenceId: n.referenceId,
-        })),
+        ...systemNotifications.map(n => {
+            const message = n.message || '';
+            return {
+                id: `notif-${n.notificationId}`,
+                notificationId: n.notificationId,
+                type: 'system',
+                senderName: 'Hệ thống',
+                senderRole: n.category === 'Subscription' ? 'Thông báo gói dịch vụ' : 'Thông báo',
+                subject: n.title || 'Thông báo',
+                preview: message.substring(0, 80) + (message.length > 80 ? '...' : ''),
+                content: message,
+                sentAt: n.createdAt,
+                isRead: n.isRead,
+                priority: n.type === 'Warning' ? 'high' : 'normal',
+                category: n.category,
+                referenceId: n.referenceId,
+                canDelete: true,
+            };
+        }),
         // Support requests
-        ...supportRequests.map(sr => ({
-            id: `sr-${sr.id}`,
-            srId: sr.id,
-            type: 'feedback',
-            senderName: sr.senderName || 'Người dùng',
-            senderRole: 'Yêu cầu hỗ trợ',
-            subject: sr.title,
-            preview: sr.content?.substring(0, 80) + (sr.content?.length > 80 ? '...' : ''),
-            content: sr.content,
-            sentAt: sr.createdAt,
-            isRead: sr.isRead,
-            priority: 'normal',
-            adminResponse: sr.adminResponse,
-            status: sr.status,
-            receiverName: sr.receiverName,
-        })),
+        ...supportRequests.map(sr => {
+            const content = sr.content || '';
+            return {
+                id: `sr-${sr.id}`,
+                srId: sr.id,
+                type: 'feedback',
+                senderName: sr.senderName || 'Người dùng',
+                senderRole: 'Yêu cầu hỗ trợ',
+                subject: sr.title || 'Yêu cầu hỗ trợ',
+                preview: content.substring(0, 80) + (content.length > 80 ? '...' : ''),
+                content,
+                sentAt: sr.createdAt,
+                isRead: sr.isRead,
+                priority: 'normal',
+                adminResponse: sr.adminResponse,
+                status: sr.status,
+                receiverName: sr.receiverName,
+                canDelete: false,
+            };
+        }),
     ].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
 
     const unreadCount = inboxMessages.filter(m => !m.isRead).length;
@@ -192,6 +201,20 @@ const AdminDashboard = () => {
             );
         } catch (error) {
             console.error('Error marking as read:', error);
+        }
+    };
+
+    const handleDeleteNotification = async (msg) => {
+        if (!msg?.notificationId) return false;
+        try {
+            await notificationService.deleteNotification(msg.notificationId);
+            setSystemNotifications(prev =>
+                prev.filter(n => n.notificationId !== msg.notificationId)
+            );
+            return true;
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            return false;
         }
     };
 
@@ -362,9 +385,90 @@ const AdminDashboard = () => {
         count: item.totalStudents,
         color: COLORS[index % COLORS.length]
     }));
+
+    const renderInboxDetailExtra = (message) => {
+        if (!message) return null;
+        return (
+            <>
+                {message.adminResponse && (
+                    <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: '#f0fdf4',
+                        borderRadius: '8px',
+                        border: '1px solid #bbf7d0'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
+                            <CheckCircle size={14} /> Đã trả lời
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#1e293b' }}>
+                            {message.adminResponse}
+                        </p>
+                        {message.receiverName && (
+                            <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                                Bởi: {message.receiverName}
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {message.type === 'feedback' && !message.adminResponse && (
+                    <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 600, fontSize: '0.85rem', color: '#475569' }}>
+                            <Reply size={14} /> Trả lời
+                        </div>
+                        <textarea
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                fontSize: '0.9rem',
+                                resize: 'vertical',
+                                minHeight: '80px',
+                                boxSizing: 'border-box',
+                                outline: 'none',
+                            }}
+                            placeholder="Nhập phản hồi của bạn..."
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                        />
+                        <button
+                            style={{
+                                marginTop: '8px',
+                                padding: '8px 16px',
+                                background: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                fontSize: '0.85rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                opacity: !replyText.trim() || replying ? 0.5 : 1,
+                            }}
+                            disabled={!replyText.trim() || replying}
+                            onClick={() => handleReply(message)}
+                        >
+                            <Send size={14} />
+                            {replying ? 'Đang gửi...' : 'Gửi trả lời'}
+                        </button>
+                    </div>
+                )}
+            </>
+        );
+    };
     return (
         <div className="admin-dashboard">
-            <Sidebar />
+            <Sidebar showNotifications={false} />
             <main className="dashboard-main">
 
                 {/* ── Header ── */}
@@ -692,273 +796,24 @@ const AdminDashboard = () => {
                 {activeTab === 'revenue' && <RevenueReport hideSidebar={true} />}
                 
                 {activeTab === 'subscription' && (
-                    <>
-                        {/* Credit Balance Display */}
-                        <div className="credit-balance-card" style={{
-                            marginBottom: '1rem',
-                            padding: '1rem',
-                            background: creditBalance ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#f3f4f6',
-                            borderRadius: '12px',
-                            color: creditBalance ? 'white' : '#374151'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <div style={{
-                                    width: '48px', height: '48px',
-                                    borderRadius: '50%',
-                                    background: creditBalance ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    <Wallet size={24} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontSize: '14px', opacity: 0.9 }}>Số dư Credit</div>
-                                    <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                                        {creditLoading ? '...' : creditBalance 
-                                            ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(creditBalance.creditBalance)
-                                            : '0 ₫'
-                                        }
-                                    </div>
-                                    <div style={{ fontSize: '12px', opacity: 0.8 }}>
-                                        Dùng cho thanh toán gói dịch vụ tiếp theo
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => setShowLedger(!showLedger)}
-                                    style={{
-                                        padding: '8px 16px',
-                                        background: creditBalance ? 'rgba(255,255,255,0.2)' : '#e5e7eb',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontWeight: 500
-                                    }}
-                                >
-                                    {showLedger ? 'Ẩn' : 'Xem'} lịch sử
-                                </button>
-                            </div>
-                            
-                            {/* Credit Ledger Table */}
-                            {showLedger && (
-                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.3)' }}>
-                                    {ledgerLoading ? (
-                                        <div style={{ textAlign: 'center', padding: '1rem' }}>Đang tải...</div>
-                                    ) : creditLedger.length === 0 ? (
-                                        <div style={{ textAlign: 'center', padding: '1rem', opacity: 0.8 }}>Chưa có lịch sử credit</div>
-                                    ) : (
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.3)' }}>
-                                                    <th style={{ textAlign: 'left', padding: '8px' }}>Ngày</th>
-                                                    <th style={{ textAlign: 'left', padding: '8px' }}>Loại</th>
-                                                    <th style={{ textAlign: 'right', padding: '8px' }}>Số tiền</th>
-                                                    <th style={{ textAlign: 'right', padding: '8px' }}>Sau</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {creditLedger.map((entry, idx) => (
-                                                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                                        <td style={{ padding: '8px' }}>
-                                                            {new Date(entry.createdAt).toLocaleDateString('vi-VN')}
-                                                        </td>
-                                                        <td style={{ padding: '8px' }}>{entry.note || entry.entryType}</td>
-                                                        <td style={{ 
-                                                            padding: '8px', 
-                                                            textAlign: 'right',
-                                                            color: entry.entryType === 'Credit' ? '#86efac' : '#fca5a5'
-                                                        }}>
-                                                            {entry.entryType === 'Credit' ? '+' : '-'}
-                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(entry.amount)}
-                                                        </td>
-                                                        <td style={{ textAlign: 'right', padding: '8px' }}>
-                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(entry.balanceAfter)}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        
-                        <SubscriptionPlans hideSidebar={true} />
-                    </>
+                    <SubscriptionPlans hideSidebar={true} />
                 )}
 
             </main>
 
-            {/* ── Inbox Drawer Overlay ── */}
-            {inboxOpen && (
-                <div
-                    className="inbox-overlay"
-                    onClick={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
-                />
-            )}
-
-            {/* ── Inbox Drawer ── */}
-            <div className={`inbox-drawer ${inboxOpen ? 'open' : ''}`}>
-                {/* Header */}
-                <div className="inbox-drawer-header">
-                    {selectedMessage ? (
-                        <button className="inbox-back-btn" onClick={() => { setSelectedMessage(null); setReplyText(''); }}>
-                            <ArrowLeft size={16} /> Tất cả thông báo
-                        </button>
-                    ) : (
-                        <div className="inbox-drawer-title">
-                            <Inbox size={18} />
-                            <span>Hộp Thư</span>
-                            {unreadCount > 0 && (
-                                <span className="drawer-unread-badge">
-                                    {unreadCount}
-                                </span>
-                            )}
-                        </div>
-                    )}
-                    <button
-                        className="inbox-drawer-close"
-                        onClick={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-
-                {/* Body */}
-                {selectedMessage ? (
-                    <div className="inbox-drawer-detail">
-                        <div className="drawer-detail-sender-row">
-                            <div className={`inbox-avatar ${selectedMessage.type}`}>
-                                {selectedMessage.senderName.charAt(0)}
-                            </div>
-                            <div className="drawer-detail-sender-info">
-                                <div className="drawer-detail-sender-name">{selectedMessage.senderName}</div>
-                                <div className="drawer-detail-sender-role">{selectedMessage.senderRole}</div>
-                            </div>
-                            <div className="drawer-detail-time">
-                                <Clock size={12} />
-                                {formatDateTime(selectedMessage.sentAt)}
-                            </div>
-                        </div>
-                        <h3 className="drawer-detail-subject">{selectedMessage.subject}</h3>
-                        <div className="drawer-detail-body">
-                            {selectedMessage.content.split('\n').map((line, i) => (
-                                <p key={i}>{line || '\u00a0'}</p>
-                            ))}
-                        </div>
-
-                        {/* Admin response (if already replied) */}
-                        {selectedMessage.adminResponse && (
-                            <div style={{
-                                marginTop: '16px',
-                                padding: '12px',
-                                background: '#f0fdf4',
-                                borderRadius: '8px',
-                                border: '1px solid #bbf7d0'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#16a34a', fontWeight: 600, fontSize: '0.85rem' }}>
-                                    <CheckCircle size={14} /> Đã trả lời
-                                </div>
-                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#1e293b' }}>
-                                    {selectedMessage.adminResponse}
-                                </p>
-                                {selectedMessage.receiverName && (
-                                    <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                                        Bởi: {selectedMessage.receiverName}
-                                    </p>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Reply input (only for feedback/support requests) */}
-                        {selectedMessage.type === 'feedback' && !selectedMessage.adminResponse && (
-                            <div style={{
-                                marginTop: '16px',
-                                padding: '12px',
-                                background: '#f8fafc',
-                                borderRadius: '8px',
-                                border: '1px solid #e2e8f0'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 600, fontSize: '0.85rem', color: '#475569' }}>
-                                    <Reply size={14} /> Trả lời
-                                </div>
-                                <textarea
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        borderRadius: '6px',
-                                        border: '1px solid #cbd5e1',
-                                        fontSize: '0.9rem',
-                                        resize: 'vertical',
-                                        minHeight: '80px',
-                                        boxSizing: 'border-box',
-                                        outline: 'none',
-                                    }}
-                                    placeholder="Nhập phản hồi của bạn..."
-                                    value={replyText}
-                                    onChange={(e) => setReplyText(e.target.value)}
-                                />
-                                <button
-                                    style={{
-                                        marginTop: '8px',
-                                        padding: '8px 16px',
-                                        background: '#3b82f6',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                        fontWeight: 600,
-                                        fontSize: '0.85rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        opacity: !replyText.trim() || replying ? 0.5 : 1,
-                                    }}
-                                    disabled={!replyText.trim() || replying}
-                                    onClick={() => handleReply(selectedMessage)}
-                                >
-                                    <Send size={14} />
-                                    {replying ? 'Đang gửi...' : 'Gửi trả lời'}
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div className="inbox-drawer-list">
-                        {inboxMessages.length === 0 ? (
-                            <div className="inbox-empty">
-                                <MailOpen size={36} />
-                                <p>Không có tin nhắn nào</p>
-                            </div>
-                        ) : inboxMessages.map(msg => (
-                            <div
-                                key={msg.id}
-                                className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''} ${msg.priority === 'high' ? 'high-priority' : ''}`}
-                                onClick={() => {
-                                    setSelectedMessage(msg);
-                                    if (msg.srId || msg.notificationId) {
-                                        handleMarkAsRead(msg);
-                                    }
-                                }}
-                            >
-                                <div className={`inbox-avatar ${msg.type} ${msg.priority === 'high' ? 'warning' : ''}`}>
-                                    {msg.type === 'system' ? (msg.priority === 'high' ? '⚠️' : '📢') : msg.senderName.charAt(0)}
-                                </div>
-                                <div className="drawer-msg-body">
-                                    <div className="drawer-msg-top">
-                                        <span className="drawer-msg-sender">{msg.senderName}</span>
-                                        <span className="drawer-msg-time">{formatDateTime(msg.sentAt)}</span>
-                                    </div>
-                                    <div className="drawer-msg-subject">
-                                        {!msg.isRead && <span className="unread-dot" />}
-                                        {msg.priority === 'high' && <Star size={12} className="priority-star" />}
-                                        {msg.subject}
-                                    </div>
-                                    <div className="drawer-msg-preview">{msg.preview}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            <NotificationMailbox
+                variant="drawer"
+                open={inboxOpen}
+                showOverlay={inboxOpen}
+                onOverlayClick={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
+                onClose={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
+                messages={inboxMessages}
+                selectedMessage={selectedMessage}
+                onSelectedMessageChange={(msg) => { setSelectedMessage(msg); if (!msg) setReplyText(''); }}
+                onMarkAsRead={handleMarkAsRead}
+                onDelete={handleDeleteNotification}
+                renderDetailExtra={renderInboxDetailExtra}
+            />
 
         </div>
     );

@@ -70,6 +70,18 @@
     font-weight: 600;
 }
 
+.sa-notification-btn {
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+}
+
+.sa-notification-btn:hover {
+    background: #f5f3ff;
+    color: #6366f1;
+}
+
 .sa-sidebar-footer {
     padding: 1.25rem;
     border-top: 1px solid #e5e7eb;

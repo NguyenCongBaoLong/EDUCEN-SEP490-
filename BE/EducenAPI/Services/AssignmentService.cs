@@ -153,6 +153,7 @@ namespace EducenAPI.Services
                 EndTime = dto.EndTime,
                 UserId = userId,
                 GradeId = dto.GradeId,
+                AllowLateSubmission = dto.AllowLateSubmission,
             };
 
             _context.Assignments.Add(assignment);
@@ -220,6 +221,7 @@ namespace EducenAPI.Services
                 Description = assignment.Description,
                 StartTime = assignment.StartTime,
                 EndTime = assignment.EndTime,
+                AllowLateSubmission = assignment.AllowLateSubmission,
                 FileUrl = !string.IsNullOrEmpty(assignment.FileUrl)
                     ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                     : null,
@@ -294,6 +296,7 @@ namespace EducenAPI.Services
             assignment.EndTime = dto.EndTime;
             assignment.FileUrl = fileUrl;
             assignment.GradeId = dto.GradeId;
+            assignment.AllowLateSubmission = dto.AllowLateSubmission;
 
             // Nếu lưu vào kho và có session, tạo thêm 1 bản copy cho kho (SessionId = null)
             if (dto.SaveToLibrary && assignment.SessionId.HasValue)
@@ -359,6 +362,7 @@ namespace EducenAPI.Services
                     Description = a.Description,
                     StartTime = a.StartTime,
                     EndTime = a.EndTime,
+                    AllowLateSubmission = a.AllowLateSubmission,
                     FileUrl = !string.IsNullOrEmpty(a.FileUrl)
                         ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                         : null,
@@ -427,7 +431,8 @@ namespace EducenAPI.Services
                 StartTime = DateTime.Now,
                 EndTime = endTime ?? DateTime.Now.AddDays(7),
                 UserId = userId,
-                GradeId = source.GradeId
+                GradeId = source.GradeId,
+                AllowLateSubmission = source.AllowLateSubmission,
             };
 
             _context.Assignments.Add(assignment);
@@ -536,6 +541,7 @@ namespace EducenAPI.Services
                     Description = assignment.Description,
                     StartTime = assignment.StartTime,
                     EndTime = assignment.EndTime,
+                    AllowLateSubmission = assignment.AllowLateSubmission,
                     FileUrl = !string.IsNullOrEmpty(assignment.FileUrl)
                         ? $"{baseUrl}/{assignment.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                         : null,

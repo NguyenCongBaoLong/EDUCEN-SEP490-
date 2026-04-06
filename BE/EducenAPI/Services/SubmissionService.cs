@@ -12,10 +12,12 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private readonly IFileUploadService _fileService;
-        public SubmissionService(EducenV2Context context, IFileUploadService fileService)
+        private readonly IPaymentReminderService _notificationService;
+        public SubmissionService(EducenV2Context context, IFileUploadService fileService, IPaymentReminderService notificationService)
         {
             _context = context;
             _fileService = fileService;
+            _notificationService = notificationService;
         }
 
         private async Task CleanupFileAsync(string? fileUrl)
@@ -41,7 +43,10 @@ namespace EducenAPI.Services
         {
             string fileUrl = string.Empty;
 
-            var assignment = await _context.Assignments.FindAsync(request.AsmId);
+            var assignment = await _context.Assignments
+                .Include(a => a.Session)
+                    .ThenInclude(s => s.Class)
+                .FirstOrDefaultAsync(a => a.AsmId == request.AsmId);
             if (assignment == null)
                 throw new Exception("Không tìm thấy bài tập");
 
@@ -49,7 +54,23 @@ namespace EducenAPI.Services
             {
                 throw new Exception("Bài tập này chưa mở");
             }
-            var student = await _context.Students.FindAsync(request.StudentId);
+
+            // Check if assignment has ended and handle late submission logic
+            var now = DateTime.Now;
+            bool isLate = false;
+            if (assignment.EndTime.HasValue && now > assignment.EndTime.Value)
+            {
+                // If late submission is not allowed, reject
+                if (!assignment.AllowLateSubmission)
+                {
+                    throw new Exception("Đã hết hạn nộp bài. Giáo viên không cho phép nộp muộn.");
+                }
+
+                isLate = true;
+            }
+            var student = await _context.Students
+                .Include(s => s.StudentNavigation)
+                .FirstOrDefaultAsync(s => s.UserId == request.StudentId);
             if (student == null)
                 throw new Exception("Không tìm thấy học sinh");
 
@@ -70,14 +91,8 @@ namespace EducenAPI.Services
                 var uploadedFile = uploadedFiles.FirstOrDefault();
                 if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
             }
-            var now = DateTime.Now;
 
-            var status = SubmissionStatus.Submitted;
-
-            if (assignment.EndTime.HasValue && now > assignment.EndTime.Value)
-            {
-                status = SubmissionStatus.LateSubmitted;
-            }
+            var status = isLate ? SubmissionStatus.LateSubmitted : SubmissionStatus.Submitted;
 
             var submission = new Submission
             {
@@ -92,6 +107,36 @@ namespace EducenAPI.Services
             _context.Submissions.Add(submission);
             await _context.SaveChangesAsync();
 
+            var classId = assignment.Session?.ClassId;
+            if (classId.HasValue)
+            {
+                await _notificationService.SendToClassTeachersAsync(classId.Value, new CreateRoleNotificationRequest
+                {
+                    TenantId = _context.CurrentTenantId,
+                    Title = "Bài nộp mới",
+                    Message = $"{student.StudentNavigation?.FullName} đã nộp bài: {assignment.Title}.",
+                    Type = "Info",
+                    Category = "Submission",
+                    ReferenceId = submission.SubId.ToString(),
+                    ReferenceType = "Submission"
+                });
+            }
+
+            await _notificationService.CreateSystemNotificationAsync(new CreateNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                UserId = request.StudentId,
+                TargetRole = "Student",
+                StudentId = request.StudentId,
+                Title = "Đã nộp bài",
+                Message = $"Bạn đã nộp bài: {assignment.Title}.",
+                Type = "Success",
+                Category = "Submission",
+                ReferenceId = submission.SubId.ToString(),
+                ReferenceType = "Submission",
+                IsInApp = true
+            });
+
             return MapToResponseDto(submission, baseUrl);
         }
 
@@ -100,6 +145,7 @@ namespace EducenAPI.Services
             string fileUrl = string.Empty;
             var submission = await _context.Submissions
                 .Include(x => x.Asm)
+                    .ThenInclude(a => a.Session)
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
@@ -107,6 +153,20 @@ namespace EducenAPI.Services
 
             if (submission.Score != null || submission.Status == "Graded" || submission.Status == "Published" || submission.IsPublished)
                 throw new Exception("Không thể cập nhật bài nộp vì nó đã được chấm hoặc công khai.");
+
+            // Check if assignment has ended and handle late submission logic for update
+            var now = DateTime.Now;
+            bool isLateUpdate = false;
+            if (submission.Asm.EndTime.HasValue && now > submission.Asm.EndTime.Value)
+            {
+                // If late submission is not allowed, reject
+                if (!submission.Asm.AllowLateSubmission)
+                {
+                    throw new Exception("Đã hết hạn nộp bài. Giáo viên không cho phép nộp muộn.");
+                }
+
+                isLateUpdate = true;
+            }
 
             string? oldFileUrl = submission.FileUrl;
 
@@ -125,15 +185,8 @@ namespace EducenAPI.Services
                 submission.FileUrl = fileUrl;
             }
 
-
-            var now = DateTime.Now;
-            submission.SubmittedAt = now;
-            submission.Status = SubmissionStatus.Submitted;
-
-            if (submission.Asm.EndTime.HasValue && now > submission.Asm.EndTime.Value)
-            {
-                submission.Status = SubmissionStatus.LateSubmitted;
-            }
+            submission.SubmittedAt = DateTime.Now;
+            submission.Status = isLateUpdate ? SubmissionStatus.LateSubmitted : SubmissionStatus.Submitted;
 
             submission.Score = null;
             submission.TeacherComment = null;
@@ -147,6 +200,36 @@ namespace EducenAPI.Services
             {
                 await CleanupFileAsync(oldFileUrl);
             }
+
+            var classId = submission.Asm.Session?.ClassId;
+            if (classId.HasValue)
+            {
+                await _notificationService.SendToClassTeachersAsync(classId.Value, new CreateRoleNotificationRequest
+                {
+                    TenantId = _context.CurrentTenantId,
+                    Title = "Bài nộp đã được cập nhật",
+                    Message = $"Học sinh đã cập nhật bài: {submission.Asm.Title}.",
+                    Type = "Info",
+                    Category = "Submission",
+                    ReferenceId = submission.SubId.ToString(),
+                    ReferenceType = "Submission"
+                });
+            }
+
+            await _notificationService.CreateSystemNotificationAsync(new CreateNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                UserId = submission.StudentId,
+                TargetRole = "Student",
+                StudentId = submission.StudentId,
+                Title = "Đã cập nhật bài nộp",
+                Message = $"Bạn đã cập nhật bài: {submission.Asm.Title}.",
+                Type = "Info",
+                Category = "Submission",
+                ReferenceId = submission.SubId.ToString(),
+                ReferenceType = "Submission",
+                IsInApp = true
+            });
 
             return MapToResponseDto(submission, baseUrl);
         }
@@ -174,6 +257,11 @@ namespace EducenAPI.Services
         public async Task<SubmissionResponseDto> PublishGradeAsync(int subId, bool isPublished, string baseUrl)
         {
             var submission = await _context.Submissions
+                .Include(s => s.Student)
+                    .ThenInclude(st => st.StudentNavigation)
+                .Include(s => s.Asm)
+                    .ThenInclude(a => a.Session)
+                        .ThenInclude(sess => sess.Class)
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
@@ -186,6 +274,21 @@ namespace EducenAPI.Services
             submission.Status = isPublished ? "Published" : "Unpublished";
 
             await _context.SaveChangesAsync();
+
+            if (isPublished)
+            {
+                await _notificationService.SendToStudentAndParentsAsync(submission.StudentId, new CreateRoleNotificationRequest
+                {
+                    TenantId = _context.CurrentTenantId,
+                    Title = "Điểm đã được công khai",
+                    Message = $"Điểm bài {submission.Asm?.Title} đã được công khai.",
+                    Type = "Success",
+                    Category = "Grade",
+                    ReferenceId = submission.SubId.ToString(),
+                    ReferenceType = "Submission"
+                });
+            }
+
             return MapToResponseDto(submission, baseUrl);
         }
 
@@ -220,6 +323,8 @@ namespace EducenAPI.Services
         public async Task<bool> PublishAllGradesAsync(int assignmentId, bool isPublished)
         {
             var submissions = await _context.Submissions
+                .Include(s => s.Student)
+                    .ThenInclude(st => st.StudentNavigation)
                 .Where(x => x.AsmId == assignmentId && x.Score != null)
                 .ToListAsync();
 
@@ -233,6 +338,26 @@ namespace EducenAPI.Services
             }
 
             await _context.SaveChangesAsync();
+
+            if (isPublished)
+            {
+                var assignment = await _context.Assignments
+                    .FirstOrDefaultAsync(a => a.AsmId == assignmentId);
+
+                foreach (var sub in submissions)
+                {
+                    await _notificationService.SendToStudentAndParentsAsync(sub.StudentId, new CreateRoleNotificationRequest
+                    {
+                        TenantId = _context.CurrentTenantId,
+                        Title = "Điểm đã được công khai",
+                        Message = $"Điểm bài {assignment?.Title} đã được công khai.",
+                        Type = "Success",
+                        Category = "Grade",
+                        ReferenceId = sub.SubId.ToString(),
+                        ReferenceType = "Submission"
+                    });
+                }
+            }
             return true;
         }
 

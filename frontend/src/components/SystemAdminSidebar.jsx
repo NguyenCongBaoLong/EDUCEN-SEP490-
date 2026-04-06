@@ -1,11 +1,10 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Building2, Package, LogOut, Globe, MessageSquare, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/components/SystemAdminSidebar.css';
 
 const SystemAdminSidebar = () => {
     const location = useLocation();
-    const navigate = useNavigate();
     const { user, logout } = useAuth();
 
     const menuItems = [

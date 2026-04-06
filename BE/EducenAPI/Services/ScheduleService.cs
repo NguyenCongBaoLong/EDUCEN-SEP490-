@@ -9,10 +9,12 @@ namespace EducenAPI.Services
     public class ScheduleService : IScheduleService
     {
         private readonly EducenV2Context _context;
+        private readonly IPaymentReminderService _notificationService;
 
-        public ScheduleService(EducenV2Context context)
+        public ScheduleService(EducenV2Context context, IPaymentReminderService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         private DateTime GetNextScheduleDate(int scheduleDayOfWeek)
@@ -302,6 +304,41 @@ namespace EducenAPI.Services
             }
 
             await _context.SaveChangesAsync();
+
+            var className = schedule.Class?.ClassName ?? "";
+            await _notificationService.SendToClassTeachersAsync(schedule.ClassId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Lịch học đã cập nhật",
+                Message = $"Lịch học của lớp {className} đã được cập nhật.",
+                Type = "Info",
+                Category = "Schedule",
+                ReferenceId = schedule.ScheduleId.ToString(),
+                ReferenceType = "Schedule"
+            });
+
+            await _notificationService.SendToClassStudentsAsync(schedule.ClassId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Lịch học đã cập nhật",
+                Message = $"Lịch học của lớp {className} đã được cập nhật.",
+                Type = "Info",
+                Category = "Schedule",
+                ReferenceId = schedule.ScheduleId.ToString(),
+                ReferenceType = "Schedule"
+            });
+
+            await _notificationService.SendToClassParentsAsync(schedule.ClassId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Lịch học đã cập nhật",
+                Message = $"Lịch học của lớp {className} đã được cập nhật.",
+                Type = "Info",
+                Category = "Schedule",
+                ReferenceId = schedule.ScheduleId.ToString(),
+                ReferenceType = "Schedule"
+            });
+
             return true;
         }
 
@@ -310,6 +347,7 @@ namespace EducenAPI.Services
             var schedule = await _context.Schedules
                 .Include(s => s.Sessions)
                     .ThenInclude(session => session.Attendances) // Load Attendances
+                .Include(s => s.Class)
                 .FirstOrDefaultAsync(s => s.ScheduleId == id);
                 
             if (schedule == null)
@@ -330,6 +368,41 @@ namespace EducenAPI.Services
 
             _context.Schedules.Remove(schedule);
             await _context.SaveChangesAsync();
+
+            var className = schedule.Class?.ClassName ?? "";
+            await _notificationService.SendToClassTeachersAsync(schedule.ClassId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Lịch học đã bị xóa",
+                Message = $"Lịch học của lớp {className} đã bị xóa.",
+                Type = "Warning",
+                Category = "Schedule",
+                ReferenceId = id.ToString(),
+                ReferenceType = "Schedule"
+            });
+
+            await _notificationService.SendToClassStudentsAsync(schedule.ClassId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Lịch học đã bị xóa",
+                Message = $"Lịch học của lớp {className} đã bị xóa.",
+                Type = "Warning",
+                Category = "Schedule",
+                ReferenceId = id.ToString(),
+                ReferenceType = "Schedule"
+            });
+
+            await _notificationService.SendToClassParentsAsync(schedule.ClassId, new CreateRoleNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                Title = "Lịch học đã bị xóa",
+                Message = $"Lịch học của lớp {className} đã bị xóa.",
+                Type = "Warning",
+                Category = "Schedule",
+                ReferenceId = id.ToString(),
+                ReferenceType = "Schedule"
+            });
+
             return true;
         }
 

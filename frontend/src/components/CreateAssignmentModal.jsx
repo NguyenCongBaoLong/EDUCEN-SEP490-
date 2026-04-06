@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, FileText, Link as LinkIcon, AlertCircle } from 'lucide-react';
+import { X, Calendar, FileText, Link as LinkIcon } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -14,7 +14,8 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
         file: null,
         sessionId: sessionId || '',
         startTime: '',
-        saveToLibrary: true
+        saveToLibrary: true,
+        allowLateSubmission: false,
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +45,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                 saveToLibrary: initialData.saveToLibrary ?? true,
                 sessionId: initialData.sessionId || initialData.SessionId || sessionId || '',
                 startTime: initialData.startTime || initialData.StartTime || '',
+                allowLateSubmission: initialData.allowLateSubmission ?? false,
                 file: (initialData.fileUrl || (initialData.file && initialData.file.name)) ? { name: initialData.originalFileName || (initialData.file && initialData.file.name) || 'Tệp hiện tại', isExisting: true } : null
             });
         } else if (currentClassId) {
@@ -114,6 +116,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                 // Send as local datetime string to avoid UTC shift unless server handles it
                 data.append('EndTime', formData.dueDate);
             }
+            data.append('AllowLateSubmission', formData.allowLateSubmission);
             // Always set StartTime to now for new assignments
             if (!initialData) {
                 // For new, we can use ISO but a local-compatible format is better for consistency
@@ -212,6 +215,21 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                                 </div>
                                 {errors.dueDate && <span className="error-text">{errors.dueDate}</span>}
                             </div>
+                        </div>
+                    )}
+
+                    {/* Allow late submission option */}
+                    {!isTemplate && formData.dueDate && (
+                        <div className="cam-form-group">
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.875rem', color: '#374151' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={formData.allowLateSubmission}
+                                    onChange={(e) => setFormData({ ...formData, allowLateSubmission: e.target.checked })}
+                                    style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3b82f6' }}
+                                />
+                                <span style={{ fontWeight: 500 }}>Cho phép nộp muộn sau khi hết hạn</span>
+                            </label>
                         </div>
                     )}
 

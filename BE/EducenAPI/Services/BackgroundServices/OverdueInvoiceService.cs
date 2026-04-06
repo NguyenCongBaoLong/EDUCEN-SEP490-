@@ -1,4 +1,6 @@
 using EducenAPI.Services.Interface;
+using EducenAPI.Persistence.Contexts;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -57,14 +59,37 @@ namespace EducenAPI.Services.BackgroundServices
         {
             using var scope = _serviceProvider.CreateScope();
             var invoiceService = scope.ServiceProvider.GetRequiredService<IInvoiceService>();
+            var notificationService = scope.ServiceProvider.GetRequiredService<IPaymentReminderService>();
+            var tenantContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
 
             try
             {
+                var overdueInvoices = await tenantContext.TuitionInvoices
+                    .Include(i => i.Student)
+                        .ThenInclude(s => s.StudentNavigation)
+                    .Include(i => i.Class)
+                    .Where(i => i.Status == "Sent" && i.DueDate < DateTime.UtcNow)
+                    .ToListAsync();
+
                 var updatedCount = await invoiceService.UpdateOverdueInvoicesAsync();
                 
                 if (updatedCount > 0)
                 {
                     _logger.LogInformation("Successfully updated {Count} invoices to overdue status", updatedCount);
+
+                    foreach (var invoice in overdueInvoices)
+                    {
+                        await notificationService.SendToStudentAndParentsAsync(invoice.StudentId, new CreateRoleNotificationRequest
+                        {
+                            TenantId = tenantContext.CurrentTenantId,
+                            Title = "Hóa đơn học phí quá hạn",
+                            Message = $"Hóa đơn học phí {invoice.InvoiceMonth}/{invoice.InvoiceYear} của {invoice.Student.StudentNavigation?.FullName} đã quá hạn. Vui lòng thanh toán sớm.",
+                            Type = "Warning",
+                            Category = "Invoice",
+                            ReferenceId = invoice.InvoiceId,
+                            ReferenceType = "TuitionInvoice"
+                        });
+                    }
                 }
                 else
                 {

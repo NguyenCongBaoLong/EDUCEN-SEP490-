@@ -20,6 +20,8 @@ namespace EducenAPI.DTOs.Assignments
 
         public DateTime? EndTime { get; set; }
 
+        public bool AllowLateSubmission { get; set; } = false;
+
         public IFormFile? File { get; set; }
 
         public bool SaveToLibrary { get; set; }

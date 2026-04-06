@@ -60,6 +60,53 @@
     font-size: 18px;
 }
 
+.subscription-credit-history-btn {
+    margin-left: 12px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: none;
+    background: #059669;
+    color: #ecfdf5;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    white-space: nowrap;
+}
+
+.subscription-credit-history-btn:hover:not(:disabled) {
+    background: #047857;
+    transform: translateY(-1px);
+}
+
+.subscription-credit-history-btn:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+.subscription-credit-history-table {
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.subscription-credit-history-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.subscription-credit-history-table th,
+.subscription-credit-history-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.subscription-credit-history-table th {
+    text-align: left;
+    color: #64748b;
+    font-weight: 600;
+}
+
 /* ─── Pricing Grid ─── */
 .subscription-grid {
     display: grid;
@@ -283,6 +330,72 @@
     cursor: not-allowed;
 }
 
+/* Nút gia hạn gói */
+.subscription-extend-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid #10b981;
+    background: #ecfdf5;
+    color: #047857;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+}
+
+.subscription-extend-btn:hover:not(:disabled) {
+    background: #d1fae5;
+    border-color: #059669;
+}
+
+.subscription-extend-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal gia hạn gói */
+.extend-current-plan {
+    background: #f0f7ff;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.extend-current-plan span {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.extend-current-plan strong {
+    font-size: 16px;
+    color: #1e293b;
+}
+
+.extend-end-date {
+    font-size: 13px;
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.extend-duration-select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    font-weight: 600;
+    margin-bottom: 12px;
+    background: #f8fafc;
+}
+
 /* Modal summary for change plan */
 .subscription-change-summary {
     background: #f8fafc;
@@ -351,6 +464,13 @@
     z-index: 1000;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     padding: 32px;
+}
+
+/* Modal lịch sử credit rộng hơn để xem bảng thoải mái */
+.subscription-credit-history-modal {
+    width: min(720px, calc(100% - 40px));
+    max-height: min(520px, calc(100% - 80px));
+    padding: 28px 28px 24px;
 }
 
 .subscription-modal-header {

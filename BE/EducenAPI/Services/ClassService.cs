@@ -22,10 +22,12 @@ namespace EducenAPI.Services
     {
 
         private readonly EducenV2Context _context;
+        private readonly IPaymentReminderService _notificationService;
 
-        public ClassService(EducenV2Context context)
+        public ClassService(EducenV2Context context, IPaymentReminderService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         public async Task<IEnumerable<ClassDto>> GetAllClassesAsync()
@@ -757,6 +759,24 @@ namespace EducenAPI.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                if (existingClass.TeacherId.HasValue)
+                {
+                    await _notificationService.CreateSystemNotificationAsync(new CreateNotificationRequest
+                    {
+                        TenantId = _context.CurrentTenantId,
+                        UserId = existingClass.TeacherId.Value,
+                        TargetRole = "Teacher",
+                        Title = "Lớp học đã được cập nhật",
+                        Message = $"Thông tin lớp {existingClass.ClassName} đã được cập nhật.",
+                        Type = "Info",
+                        Category = "Class",
+                        ReferenceId = existingClass.ClassId.ToString(),
+                        ReferenceType = "Class",
+                        IsInApp = true
+                    });
+                }
+
                 return true;
             }
             catch (Exception)
@@ -825,6 +845,21 @@ namespace EducenAPI.Services
 
             existingClass.TeacherId = teacherId;
             await _context.SaveChangesAsync();
+
+            await _notificationService.CreateSystemNotificationAsync(new CreateNotificationRequest
+            {
+                TenantId = _context.CurrentTenantId,
+                UserId = teacherId,
+                TargetRole = "Teacher",
+                Title = "Phân công giảng dạy",
+                Message = $"Bạn đã được phân công dạy lớp {existingClass.ClassName}.",
+                Type = "Success",
+                Category = "Class",
+                ReferenceId = existingClass.ClassId.ToString(),
+                ReferenceType = "Class",
+                IsInApp = true
+            });
+
             return true;
         }
 

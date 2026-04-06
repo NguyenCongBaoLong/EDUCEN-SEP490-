@@ -54,6 +54,7 @@ public partial class EducenV2Context : DbContext
     public DbSet<TuitionInvoice> TuitionInvoices { get; set; }
     public DbSet<TuitionInvoiceItem> TuitionInvoiceItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NotificationSetting> NotificationSettings { get; set; }
     
     // === Family Invoice System ===
     public DbSet<FamilyInvoice> FamilyInvoices { get; set; }
@@ -379,6 +380,11 @@ public partial class EducenV2Context : DbContext
 
         modelBuilder.Entity<Notification>()
             .HasIndex(n => new { n.TenantId, n.Category, n.CreatedAt });
+
+        // === NotificationSetting Configuration ===
+        modelBuilder.Entity<NotificationSetting>()
+            .HasIndex(ns => new { ns.TenantId, ns.UserId })
+            .IsUnique();
 
         // === PaymentTransactionTenant Configuration ===
         modelBuilder.Entity<PaymentTransactionTenant>()

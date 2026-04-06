@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet } from 'lucide-react';
+import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -16,6 +16,12 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [renewMonths, setRenewMonths] = useState(1);
     const [creditBalance, setCreditBalance] = useState(0);
     const [changePlanTarget, setChangePlanTarget] = useState(null);
+    const [extendTarget, setExtendTarget] = useState(null);
+    const [extendMonths, setExtendMonths] = useState(1);
+    const [extendDurationType, setExtendDurationType] = useState('months');
+    const [showCreditHistory, setShowCreditHistory] = useState(false);
+    const [creditLedger, setCreditLedger] = useState([]);
+    const [creditHistoryLoading, setCreditHistoryLoading] = useState(false);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -51,6 +57,27 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
         fetchPlans();
     }, []);
+
+    const loadCreditHistory = async () => {
+        if (creditHistoryLoading || creditLedger.length > 0) {
+            setShowCreditHistory(true);
+            return;
+        }
+
+        setCreditHistoryLoading(true);
+        try {
+            const res = await api.get('/admin/subscription/credit-ledger', {
+                params: { page: 1, pageSize: 20 }
+            });
+            setCreditLedger(Array.isArray(res.data) ? res.data : []);
+            setShowCreditHistory(true);
+        } catch (error) {
+            console.error('Load credit history error:', error?.response?.data || error);
+            toast.error('Không thể tải lịch sử giao dịch credit');
+        } finally {
+            setCreditHistoryLoading(false);
+        }
+    };
 
     const handlePay = async (plan, months = 1) => {
         const tenantId = user?.tenantId || localStorage.getItem('tenantId');
@@ -91,6 +118,124 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         setRenewTarget(plan);
         setRenewMonths(1);
     };
+
+    const openExtendModal = () => {
+        if (!activeSubscription) return;
+        setExtendTarget({ ...activeSubscription });
+        setExtendMonths(1);
+        setExtendDurationType('months');
+    };
+
+    const handleExtendSubscription = async () => {
+        if (!extendTarget) return;
+
+        const tenantId = user?.tenantId || localStorage.getItem('tenantId');
+        if (!tenantId) {
+            toast.error('Không tìm thấy thông tin trung tâm');
+            return;
+        }
+
+        setPayingPlanId('extend');
+        try {
+            const actualMonths = extendDurationType === 'quarters' ? extendMonths * 3 : extendMonths;
+            
+            const extendResponse = await api.post('/admin/subscription/extend', {
+                months: actualMonths
+            });
+
+            const extendData = extendResponse.data;
+
+            if (!extendData.requiresPayment) {
+                const confirmResponse = await api.post('/admin/subscription/extend-confirm', {
+                    months: actualMonths,
+                    paymentRecordId: null
+                });
+
+                if (confirmResponse.data.success) {
+                    toast.success('Gia hạn gói dịch vụ thành công!');
+                    setExtendTarget(null);
+                    
+                    const [subResult, creditResult] = await Promise.all([
+                        api.get('/admin/subscription/current'),
+                        api.get('/admin/subscription/credit-balance')
+                    ]);
+                    setActiveSubscription(subResult.data || null);
+                    if (creditResult.data) {
+                        setCreditBalance(creditResult.data.creditBalance || 0);
+                    }
+                }
+            } else {
+                const paymentData = {
+                    tenantId,
+                    amount: extendData.amountToCharge,
+                    gatewayType: 'VNPay',
+                    transactionType: 'SubscriptionExtend',
+                    referenceId: extendData.subscriptionId,
+                    description: `Gia hạn gói ${extendData.planName} (${actualMonths} tháng)`,
+                    returnUrl: paymentService.getVNPayReturnUrl(),
+                    subscriptionMonths: actualMonths,
+                };
+
+                const result = await paymentService.createPayment(paymentData);
+                if (result.success && result.paymentUrl) {
+                    localStorage.setItem('pendingExtendMonths', actualMonths.toString());
+                    localStorage.setItem('pendingExtendSubscriptionId', extendData.subscriptionId);
+                    window.location.href = result.paymentUrl;
+                    return;
+                }
+
+                toast.error(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
+            }
+        } catch (error) {
+            console.error('Extend subscription error:', error.response?.data);
+            toast.error(error.response?.data?.message || 'Gia hạn gói dịch vụ thất bại');
+        } finally {
+            setPayingPlanId(null);
+        }
+    };
+
+    const handleConfirmExtendAfterPayment = async () => {
+        const pendingMonths = localStorage.getItem('pendingExtendMonths');
+        const pendingSubscriptionId = localStorage.getItem('pendingExtendSubscriptionId');
+        
+        if (!pendingMonths || !pendingSubscriptionId) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
+        const vnp_TransactionStatus = urlParams.get('vnp_TransactionStatus');
+
+        if (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
+            try {
+                await api.post('/admin/subscription/extend-confirm', {
+                    months: parseInt(pendingMonths),
+                    paymentRecordId: null
+                });
+
+                toast.success('Gia hạn gói dịch vụ thành công!');
+                
+                localStorage.removeItem('pendingExtendMonths');
+                localStorage.removeItem('pendingExtendSubscriptionId');
+
+                const [subResult, creditResult] = await Promise.all([
+                    api.get('/admin/subscription/current'),
+                    api.get('/admin/subscription/credit-balance')
+                ]);
+                setActiveSubscription(subResult.data || null);
+                if (creditResult.data) {
+                    setCreditBalance(creditResult.data.creditBalance || 0);
+                }
+            } catch (error) {
+                console.error('Confirm extend error:', error);
+                toast.error('Xác nhận gia hạn thất bại');
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (window.location.search.includes('vnp_ResponseCode')) {
+            handleConfirmExtendAfterPayment();
+        }
+    }, []);
 
     // Xử lý đổi gói - hiển thị modal xác nhận
     const handleChangePlanClick = (plan) => {
@@ -145,7 +290,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const calculateChangePlanAmount = (plan) => {
         if (!activeSubscription) {
             // Chưa có gói → trả giá gói
-            return plan.price;
+            return Math.round(plan.price);
         }
         
         // Kiểm tra grace period (7 ngày đầu)
@@ -154,7 +299,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         
         if (daysSinceStart > GRACE_PERIOD_DAYS) {
             // Ngoài grace period → không refund
-            return plan.price;
+            return Math.round(plan.price);
         }
         
         // Trong grace period → có thể refund
@@ -166,15 +311,21 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             const priceDiff = activeSubscription.planPrice - plan.price;
             const refundAmount = priceDiff * refundPercentage;
             
-            return Math.max(0, plan.price - refundAmount);
+            return Math.round(Math.max(0, plan.price - refundAmount));
         }
         
         // Upgrade → không refund
-        return plan.price;
+        return Math.round(plan.price);
     };
 
-    const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(price);
+    const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
     const formatDate = (value) => new Date(value).toLocaleDateString('vi-VN');
+
+    const formatLedgerNote = (entry) => {
+        const raw = (entry?.note || entry?.entryType || '').toString();
+        const [firstPart] = raw.split(' - ');
+        return firstPart || raw;
+    };
 
     return (
         <div className={hideSidebar ? "subscription-embedded" : "subscription-page"}>
@@ -189,6 +340,14 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                         <div className="subscription-credit-info">
                             <Wallet size={20} />
                             <span>Số dư: <strong>{formatPrice(creditBalance)} VNĐ</strong></span>
+                            <button
+                                type="button"
+                                className="subscription-credit-history-btn"
+                                onClick={loadCreditHistory}
+                                disabled={creditHistoryLoading}
+                            >
+                                {creditHistoryLoading ? 'Đang tải...' : 'Xem lịch sử giao dịch'}
+                            </button>
                         </div>
                     )}
                 </header>
@@ -258,6 +417,18 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         >
                                             <ArrowUpDown size={16} />
                                             Đổi gói
+                                        </button>
+                                    )}
+
+                                    {/* Nút Gia hạn gói - chỉ hiển thị cho gói đang hoạt động */}
+                                    {isActivePlan && activeSubscription && (
+                                        <button
+                                            className="subscription-extend-btn"
+                                            onClick={openExtendModal}
+                                            disabled={payingPlanId === plan.planId}
+                                        >
+                                            <Clock size={16} />
+                                            Gia hạn gói
                                         </button>
                                     )}
 
@@ -371,6 +542,160 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     ? 'Thanh toán qua VNPay' 
                                     : 'Xác nhận đổi gói'}
                             </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Modal gia hạn gói */}
+            {extendTarget && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => !payingPlanId && setExtendTarget(null)} />
+                    <div className="subscription-modal">
+                        <div className="subscription-modal-header">
+                            <h2>Gia hạn gói dịch vụ</h2>
+                            <button className="subscription-modal-close" onClick={() => !payingPlanId && setExtendTarget(null)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="subscription-modal-body">
+                            <div className="extend-current-plan">
+                                <span>Gói hiện tại:</span>
+                                <strong>{extendTarget.planName}</strong>
+                                {extendTarget.endDate && (
+                                    <span className="extend-end-date">Hết hạn: {formatDate(extendTarget.endDate)}</span>
+                                )}
+                            </div>
+                            
+                            <div className="subscription-modal-field">
+                                <label>Thời gian gia hạn</label>
+                                <select
+                                    value={extendDurationType}
+                                    onChange={(e) => setExtendDurationType(e.target.value)}
+                                    className="extend-duration-select"
+                                >
+                                    <option value="months">Theo tháng</option>
+                                    <option value="quarters">Theo quý</option>
+                                </select>
+                            </div>
+                            
+                            <div className="subscription-modal-field">
+                                <label>Số {extendDurationType === 'months' ? 'tháng' : 'quý'}</label>
+                                <select
+                                    value={extendMonths}
+                                    onChange={(e) => setExtendMonths(Number(e.target.value))}
+                                >
+                                    {extendDurationType === 'months' ? (
+                                        <>
+                                            {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
+                                                <option key={month} value={month}>{month} tháng</option>
+                                            ))}
+                                            {[15, 18, 24, 36].map(m => (
+                                                <option key={m} value={m}>{m} tháng</option>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <>
+                                            {[1, 2, 3, 4].map(q => (
+                                                <option key={q} value={q}>{q} quý ({q * 3} tháng)</option>
+                                            ))}
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+                            
+                            {activeSubscription && (
+                                <div className="subscription-modal-summary">
+                                    <span>
+                                        {extendDurationType === 'quarters' 
+                                            ? `${extendMonths} quý = ${extendMonths * 3} tháng`
+                                            : `Gia hạn ${extendMonths} tháng`}: 
+                                    </span>
+                                    <strong>
+                                        {formatPrice((activeSubscription.planPrice || 0) * (extendDurationType === 'quarters' ? extendMonths * 3 : extendMonths))} VNĐ
+                                    </strong>
+                                </div>
+                            )}
+                        </div>
+                        <div className="subscription-modal-actions">
+                            <button
+                                className="subscription-modal-submit"
+                                onClick={handleExtendSubscription}
+                                disabled={!!payingPlanId || !activeSubscription}
+                            >
+                                {payingPlanId === 'extend' 
+                                    ? 'Đang xử lý...' 
+                                    : 'Gia hạn ngay'}
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Modal lịch sử giao dịch credit */}
+            {showCreditHistory && (
+                <>
+                    <div
+                        className="subscription-modal-overlay"
+                        onClick={() => setShowCreditHistory(false)}
+                    />
+                    <div className="subscription-modal subscription-credit-history-modal">
+                        <div className="subscription-modal-header">
+                            <h2>Lịch sử giao dịch credit</h2>
+                            <button
+                                className="subscription-modal-close"
+                                onClick={() => setShowCreditHistory(false)}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="subscription-modal-body">
+                            {creditHistoryLoading ? (
+                                <div className="subscription-state">Đang tải lịch sử...</div>
+                            ) : creditLedger.length === 0 ? (
+                                <div className="subscription-state">
+                                    Chưa có lịch sử credit.
+                                </div>
+                            ) : (
+                                <div className="subscription-credit-history-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Ngày</th>
+                                                <th>Loại</th>
+                                                <th style={{ textAlign: 'right' }}>Số tiền</th>
+                                                <th style={{ textAlign: 'right' }}>Sau</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {creditLedger.map((entry) => (
+                                                <tr key={entry.ledgerId || entry.createdAt}>
+                                                    <td>{formatDate(entry.createdAt)}</td>
+                                                    <td>{formatLedgerNote(entry)}</td>
+                                                    <td
+                                                        style={{
+                                                            textAlign: 'right',
+                                                            color: entry.amount > 0 ? '#16a34a' : '#dc2626',
+                                                        }}
+                                                    >
+                                                        {entry.amount > 0 ? '+' : ''}
+                                                        {new Intl.NumberFormat('vi-VN', {
+                                                            style: 'currency',
+                                                            currency: 'VND',
+                                                        }).format(entry.amount)}
+                                                    </td>
+                                                    <td style={{ textAlign: 'right' }}>
+                                                        {new Intl.NumberFormat('vi-VN', {
+                                                            style: 'currency',
+                                                            currency: 'VND',
+                                                        }).format(entry.balanceAfter)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </>
