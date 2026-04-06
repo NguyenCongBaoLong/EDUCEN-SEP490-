@@ -4,16 +4,23 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
 
 namespace EducenAPI.Services
 {
     public class RoomService : IRoomService
     {
         private readonly EducenV2Context _context;
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
         public RoomService(EducenV2Context context)
         {
             _context = context;
+        }
+
+        private SemaphoreSlim GetLock(string key)
+        {
+            return _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         }
 
         public async Task<IEnumerable<RoomDto>> GetAllRoomsAsync()
@@ -45,25 +52,39 @@ namespace EducenAPI.Services
         {
             dto.RoomName = dto.RoomName?.Trim();
 
-            var exists = await _context.Rooms.AnyAsync(r => r.RoomName == dto.RoomName);
-            if (exists)
-                throw new InvalidOperationException("Tên phòng đã tồn tại.");
+            if (string.IsNullOrWhiteSpace(dto.RoomName))
+                throw new ArgumentException("Tên phòng không được chỉ chứa khoảng trắng.");
 
-            var room = new Room
+            var normalizedName = dto.RoomName.ToLowerInvariant();
+            var lockObj = GetLock($"room_{normalizedName}");
+            
+            await lockObj.WaitAsync();
+            try
             {
-                RoomName = dto.RoomName,
-                Status = dto.Status
-            };
+                var exists = await _context.Rooms.AnyAsync(r => r.RoomName.ToLower() == normalizedName);
+                if (exists)
+                    throw new InvalidOperationException("Tên phòng đã tồn tại.");
 
-            _context.Rooms.Add(room);
-            await _context.SaveChangesAsync();
+                var room = new Room
+                {
+                    RoomName = dto.RoomName,
+                    Status = dto.Status
+                };
 
-            return new RoomDto
+                _context.Rooms.Add(room);
+                await _context.SaveChangesAsync();
+
+                return new RoomDto
+                {
+                    RoomId = room.RoomId,
+                    RoomName = room.RoomName,
+                    Status = room.Status
+                };
+            }
+            finally
             {
-                RoomId = room.RoomId,
-                RoomName = room.RoomName,
-                Status = room.Status
-            };
+                lockObj.Release();
+            }
         }
 
         public async Task<bool> UpdateRoomAsync(int id, UpdateRoomDto dto)
@@ -71,7 +92,13 @@ namespace EducenAPI.Services
             var room = await _context.Rooms.FindAsync(id);
             if (room == null) return false;
 
-            room.RoomName = dto.RoomName;
+            var normalizedName = dto.RoomName?.Trim()?.ToLowerInvariant();
+            var duplicateExists = await _context.Rooms
+                .AnyAsync(r => r.RoomName.ToLower() == normalizedName && r.RoomId != id);
+            if (duplicateExists)
+                throw new InvalidOperationException("Tên phòng đã tồn tại.");
+
+            room.RoomName = dto.RoomName?.Trim();
             room.Status = dto.Status;
 
             _context.Rooms.Update(room);
