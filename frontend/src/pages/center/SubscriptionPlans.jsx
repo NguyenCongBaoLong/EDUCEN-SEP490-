@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock } from 'lucide-react';
+import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -237,8 +237,33 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         }
     }, []);
 
+    // Kiểm tra có được đổi gói không
+    const canChangePlan = (plan) => {
+        if (!activeSubscription) return true; // Lần đầu luôn được
+        
+        // Nâng gói -> luôn được
+        if (plan.price > activeSubscription.planPrice) {
+            return true;
+        }
+        
+        // Hạ gói -> chỉ trong 7 ngày đầu
+        if (plan.price < activeSubscription.planPrice) {
+            const daysSinceStart = Math.floor((new Date() - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
+            return daysSinceStart <= 7;
+        }
+        
+        return false; // Cùng giá gói -> không cần đổi
+    };
+
     // Xử lý đổi gói - hiển thị modal xác nhận
     const handleChangePlanClick = (plan) => {
+        if (!canChangePlan(plan)) {
+            const daysSinceStart = Math.floor((new Date() - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
+            if (daysSinceStart > 7) {
+                toast.error('Chỉ được hạ gói trong 7 ngày đầu tiên của gói dịch vụ');
+                return;
+            }
+        }
         setChangePlanTarget(plan);
     };
 
@@ -288,34 +313,40 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
     // Tính số tiền phải trả khi đổi gói (chính sách mới)
     const calculateChangePlanAmount = (plan) => {
+        let finalPrice = 0;
+        
         if (!activeSubscription) {
             // Chưa có gói → trả giá gói
-            return Math.round(plan.price);
-        }
-        
-        // Kiểm tra grace period (7 ngày đầu)
-        const daysSinceStart = Math.floor((new Date() - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
-        const GRACE_PERIOD_DAYS = 7;
-        
-        if (daysSinceStart > GRACE_PERIOD_DAYS) {
-            // Ngoài grace period → không refund
-            return Math.round(plan.price);
-        }
-        
-        // Trong grace period → có thể refund
-        if (plan.price < activeSubscription.planPrice) {
-            // Downgrade trong grace period → refund chênh lệch
-            const totalDays = Math.floor((new Date(activeSubscription.endDate) - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
-            const remainingDays = Math.floor((new Date(activeSubscription.endDate) - new Date()) / (1000 * 60 * 60 * 24));
-            const refundPercentage = remainingDays / totalDays;
-            const priceDiff = activeSubscription.planPrice - plan.price;
-            const refundAmount = priceDiff * refundPercentage;
+            finalPrice = Math.round(plan.price);
+        } else {
+            // Kiểm tra grace period (7 ngày đầu)
+            const daysSinceStart = Math.floor((new Date() - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
+            const GRACE_PERIOD_DAYS = 7;
             
-            return Math.round(Math.max(0, plan.price - refundAmount));
+            if (daysSinceStart > GRACE_PERIOD_DAYS) {
+                // Ngoài grace period → không refund
+                finalPrice = Math.round(plan.price);
+            } else {
+                // Trong grace period → có thể refund
+                if (plan.price < activeSubscription.planPrice) {
+                    // Downgrade trong grace period → refund chênh lệch
+                    const totalDays = Math.floor((new Date(activeSubscription.endDate) - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
+                    const remainingDays = Math.floor((new Date(activeSubscription.endDate) - new Date()) / (1000 * 60 * 60 * 24));
+                    const refundPercentage = remainingDays / totalDays;
+                    const priceDiff = activeSubscription.planPrice - plan.price;
+                    const refundAmount = priceDiff * refundPercentage;
+                    
+                    finalPrice = Math.round(Math.max(0, plan.price - refundAmount));
+                } else {
+                    // Upgrade → không refund
+                    finalPrice = Math.round(plan.price);
+                }
+            }
         }
         
-        // Upgrade → không refund
-        return Math.round(plan.price);
+        // Trừ đi số dư credit hiện có
+        const amountToPay = Math.max(0, finalPrice - creditBalance);
+        return Math.round(amountToPay);
     };
 
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
@@ -410,14 +441,24 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     
                                     {/* Nút đổi gói - chỉ hiển thị khi ĐÃ có gói và không phải gói đang dùng */}
                                     {!isActivePlan && activeSubscription && (
-                                        <button
-                                            className="subscription-change-btn"
-                                            onClick={() => handleChangePlanClick(plan)}
-                                            disabled={payingPlanId === plan.planId}
-                                        >
-                                            <ArrowUpDown size={16} />
-                                            Đổi gói
-                                        </button>
+                                        <>
+                                            {canChangePlan(plan) ? (
+                                                <button
+                                                    className="subscription-change-btn"
+                                                    onClick={() => handleChangePlanClick(plan)}
+                                                    disabled={payingPlanId === plan.planId}
+                                                >
+                                                    <ArrowUpDown size={16} />
+                                                    Đổi gói
+                                                </button>
+                                            ) : (
+                                                <div className="subscription-change-disabled">
+                                                    <ArrowUpDown size={16} />
+                                                    <span>Không thể hạ gói</span>
+                                                    <small>(Chỉ trong 7 ngày đầu)</small>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
 
                                     {/* Nút Gia hạn gói - chỉ hiển thị cho gói đang hoạt động */}
@@ -521,13 +562,22 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         <span>Giá gói mới:</span>
                                         <strong>{formatPrice(changePlanTarget.price)} VNĐ</strong>
                                     </div>
-                                    <div className="change-summary-divider"></div>
-                                    <div className="change-summary-row total">
+                                    <div className="change-summary-row">
                                         <span>Số tiền phải trả thêm:</span>
-                                        <strong className={calculateChangePlanAmount(changePlanTarget) === 0 ? 'free' : 'pay'}>
+                                        <strong className={
+                                            calculateChangePlanAmount(changePlanTarget) === 0 ? 'free' : 
+                                            (activeSubscription && changePlanTarget.price > activeSubscription.planPrice ? 'upgrade' : 'pay')
+                                        }>
                                             {calculateChangePlanAmount(changePlanTarget) === 0 
                                                 ? 'Miễn phí (đã trừ credit)' 
                                                 : formatPrice(calculateChangePlanAmount(changePlanTarget)) + ' VNĐ'}
+                                        </strong>
+                                    </div>
+                                    <div className="change-summary-divider"></div>
+                                    <div className="change-summary-row total">
+                                        <span>Credit còn lại sau đổi gói:</span>
+                                        <strong className="credit-remaining">
+                                            {formatPrice(Math.max(0, creditBalance - changePlanTarget.price))} VNĐ
                                         </strong>
                                     </div>
                                 </div>
@@ -560,60 +610,102 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                         </div>
                         <div className="subscription-modal-body">
                             <div className="extend-current-plan">
-                                <span>Gói hiện tại:</span>
-                                <strong>{extendTarget.planName}</strong>
-                                {extendTarget.endDate && (
-                                    <span className="extend-end-date">Hết hạn: {formatDate(extendTarget.endDate)}</span>
-                                )}
-                            </div>
-                            
-                            <div className="subscription-modal-field">
-                                <label>Thời gian gia hạn</label>
-                                <select
-                                    value={extendDurationType}
-                                    onChange={(e) => setExtendDurationType(e.target.value)}
-                                    className="extend-duration-select"
-                                >
-                                    <option value="months">Theo tháng</option>
-                                    <option value="quarters">Theo quý</option>
-                                </select>
-                            </div>
-                            
-                            <div className="subscription-modal-field">
-                                <label>Số {extendDurationType === 'months' ? 'tháng' : 'quý'}</label>
-                                <select
-                                    value={extendMonths}
-                                    onChange={(e) => setExtendMonths(Number(e.target.value))}
-                                >
-                                    {extendDurationType === 'months' ? (
-                                        <>
-                                            {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
-                                                <option key={month} value={month}>{month} tháng</option>
-                                            ))}
-                                            {[15, 18, 24, 36].map(m => (
-                                                <option key={m} value={m}>{m} tháng</option>
-                                            ))}
-                                        </>
-                                    ) : (
-                                        <>
-                                            {[1, 2, 3, 4].map(q => (
-                                                <option key={q} value={q}>{q} quý ({q * 3} tháng)</option>
-                                            ))}
-                                        </>
+                                <div className="extend-plan-info">
+                                    <div className="extend-plan-header">
+                                        <PackageOpen size={20} className="extend-plan-icon" />
+                                        <div>
+                                            <span className="extend-plan-label">Gói hiện tại</span>
+                                            <strong className="extend-plan-name">{extendTarget.planName}</strong>
+                                        </div>
+                                    </div>
+                                    {extendTarget.endDate && (
+                                        <div className="extend-expiry-info">
+                                            <Clock size={16} className="extend-expiry-icon" />
+                                            <span className="extend-end-date">Hết hạn: {formatDate(extendTarget.endDate)}</span>
+                                        </div>
                                     )}
-                                </select>
+                                </div>
                             </div>
                             
-                            {activeSubscription && (
-                                <div className="subscription-modal-summary">
-                                    <span>
-                                        {extendDurationType === 'quarters' 
-                                            ? `${extendMonths} quý = ${extendMonths * 3} tháng`
-                                            : `Gia hạn ${extendMonths} tháng`}: 
-                                    </span>
-                                    <strong>
-                                        {formatPrice((activeSubscription.planPrice || 0) * (extendDurationType === 'quarters' ? extendMonths * 3 : extendMonths))} VNĐ
-                                    </strong>
+                            <div className="extend-duration-section">
+                                <div className="extend-duration-header">
+                                    <Calendar size={18} className="extend-duration-icon" />
+                                    <span className="extend-duration-title">Thời gian gia hạn</span>
+                                </div>
+                                
+                                <div className="extend-duration-options">
+                                    <div className="duration-type-selector">
+                                        <button
+                                            type="button"
+                                            className={`duration-type-btn ${extendDurationType === 'months' ? 'active' : ''}`}
+                                            onClick={() => setExtendDurationType('months')}
+                                        >
+                                            Theo tháng
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`duration-type-btn ${extendDurationType === 'quarters' ? 'active' : ''}`}
+                                            onClick={() => setExtendDurationType('quarters')}
+                                        >
+                                            Theo quý
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="duration-selector">
+                                        <label className="duration-label">
+                                            Số {extendDurationType === 'months' ? 'tháng' : 'quý'}
+                                        </label>
+                                        <select
+                                            value={extendMonths}
+                                            onChange={(e) => setExtendMonths(Number(e.target.value))}
+                                            className="duration-select"
+                                        >
+                                            {extendDurationType === 'months' ? (
+                                                <>
+                                                    <option value="">Chọn số tháng</option>
+                                                    {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => (
+                                                        <option key={month} value={month}>{month} tháng</option>
+                                                    ))}
+                                                    <optgroup label="Gói dài hạn">
+                                                        {[15, 18, 24, 36].map(m => (
+                                                            <option key={m} value={m}>{m} tháng</option>
+                                                        ))}
+                                                    </optgroup>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="">Chọn số quý</option>
+                                                    {[1, 2, 3, 4].map(q => (
+                                                        <option key={q} value={q}>{q} quý ({q * 3} tháng)</option>
+                                                    ))}
+                                                </>
+                                            )}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {activeSubscription && extendMonths > 0 && (
+                                <div className="extend-summary">
+                                    <div className="extend-summary-header">
+                                        <CreditCard size={18} className="extend-summary-icon" />
+                                        <span className="extend-summary-title">Tổng chi phí</span>
+                                    </div>
+                                    <div className="extend-summary-content">
+                                        <div className="extend-summary-details">
+                                            <span className="extend-summary-period">
+                                                {extendDurationType === 'quarters' 
+                                                    ? `${extendMonths} quý = ${extendMonths * 3} tháng`
+                                                    : `Gia hạn ${extendMonths} tháng`}
+                                            </span>
+                                            <div className="extend-summary-price">
+                                                <span className="extend-summary-label">Thành tiền:</span>
+                                                <strong className="extend-summary-amount">
+                                                    {formatPrice((activeSubscription.planPrice || 0) * (extendDurationType === 'quarters' ? extendMonths * 3 : extendMonths))} VNĐ
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

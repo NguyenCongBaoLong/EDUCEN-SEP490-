@@ -359,6 +359,15 @@ namespace EducenAPI.Services
 
             if (currentSub != null)
             {
+                // Kiểm tra quy tắc đổi gói: nâng gói bất cứ lúc nào, hạ gói chỉ trong 7 ngày đầu
+                var daysSinceStart = (DateTime.UtcNow - currentSub.StartDate).Days;
+                const int GRACE_PERIOD_DAYS = 7;
+                
+                if (newPlan.Price < currentSub.Plan.Price && daysSinceStart > GRACE_PERIOD_DAYS)
+                {
+                    throw new Exception("Chỉ được hạ gói trong 7 ngày đầu tiên của gói dịch vụ. Nâng gói có thể thực hiện bất cứ lúc nào.");
+                }
+                
                 // Tính credit hoàn lại từ gói cũ (chỉ trong grace period)
                 creditFromOldPlan = CalculateUpgradeCredit(currentSub, newPlan);
                 
@@ -386,9 +395,6 @@ namespace EducenAPI.Services
                 if (request.EffectiveImmediately && newPlan.Price < currentSub.Plan.Price)
                 {
                     // Downgrade ngay chỉ được trong grace period
-                    var daysSinceStart = (DateTime.UtcNow - currentSub.StartDate).Days;
-                    const int GRACE_PERIOD_DAYS = 7;
-                    
                     if (daysSinceStart > GRACE_PERIOD_DAYS)
                     {
                         // Ngoài grace period → downgrade hiệu lực kỳ sau
