@@ -3,16 +3,23 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Concurrent;
 
 namespace EducenAPI.Services
 {
     public class GradeService : IGradeService
     {
         private readonly EducenV2Context _context;
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
         public GradeService(EducenV2Context context)
         {
             _context = context;
+        }
+
+        private SemaphoreSlim GetLock(string key)
+        {
+            return _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         }
 
         public async Task<IEnumerable<GradeDto>> GetAllGradesAsync()
@@ -42,23 +49,37 @@ namespace EducenAPI.Services
         {
             dto.GradeName = dto.GradeName?.Trim();
 
-            var exists = await _context.Grades.AnyAsync(g => g.GradeName == dto.GradeName);
-            if (exists)
-                throw new InvalidOperationException("Tên khối đã tồn tại.");
+            if (string.IsNullOrWhiteSpace(dto.GradeName))
+                throw new ArgumentException("Tên khối không được chỉ chứa khoảng trắng.");
 
-            var grade = new Grade
+            var normalizedName = dto.GradeName.ToLowerInvariant();
+            var lockObj = GetLock($"grade_{normalizedName}");
+            
+            await lockObj.WaitAsync();
+            try
             {
-                GradeName = dto.GradeName
-            };
+                var exists = await _context.Grades.AnyAsync(g => g.GradeName.ToLower() == normalizedName);
+                if (exists)
+                    throw new InvalidOperationException("Tên khối đã tồn tại.");
 
-            _context.Grades.Add(grade);
-            await _context.SaveChangesAsync();
+                var grade = new Grade
+                {
+                    GradeName = dto.GradeName
+                };
 
-            return new GradeDto
+                _context.Grades.Add(grade);
+                await _context.SaveChangesAsync();
+
+                return new GradeDto
+                {
+                    GradeId = grade.GradeId,
+                    GradeName = grade.GradeName
+                };
+            }
+            finally
             {
-                GradeId = grade.GradeId,
-                GradeName = grade.GradeName
-            };
+                lockObj.Release();
+            }
         }
 
         public async Task<bool> UpdateGradeAsync(int id, UpdateGradeDto dto)
@@ -66,7 +87,13 @@ namespace EducenAPI.Services
             var grade = await _context.Grades.FindAsync(id);
             if (grade == null) return false;
 
-            grade.GradeName = dto.GradeName;
+            var normalizedName = dto.GradeName?.Trim()?.ToLowerInvariant();
+            var duplicateExists = await _context.Grades
+                .AnyAsync(g => g.GradeName.ToLower() == normalizedName && g.GradeId != id);
+            if (duplicateExists)
+                throw new InvalidOperationException("Tên khối đã tồn tại.");
+
+            grade.GradeName = dto.GradeName?.Trim();
 
             _context.Grades.Update(grade);
             await _context.SaveChangesAsync();
@@ -78,7 +105,6 @@ namespace EducenAPI.Services
             var grade = await _context.Grades.FindAsync(id);
             if (grade == null) return false;
 
-            // Check if grade is used in any class
             var isUsed = await _context.Classes.AnyAsync(c => c.GradeId == id);
             if (isUsed)
             {
