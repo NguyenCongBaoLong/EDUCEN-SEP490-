@@ -404,6 +404,30 @@ const TuitionManagement = () => {
         }
     };
 
+    // Admin hủy hóa đơn
+    const handleCancelInvoice = async (invoiceId) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Hủy hóa đơn',
+            message: 'Bạn có chắc muốn hủy hóa đơn này? Hành động này không thể hoàn tác.',
+            onConfirm: () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                executeCancelInvoice(invoiceId);
+            },
+            type: 'warning'
+        });
+    };
+
+    const executeCancelInvoice = async (invoiceId) => {
+        try {
+            await tuitionService.cancelInvoice(invoiceId, 'Hủy bởi quản trị viên');
+            toast.success('Đã hủy hóa đơn thành công');
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi hủy hóa đơn');
+        }
+    };
+
     // Lấy status badge
     const getStatusBadge = (status) => {
         const styles = {
@@ -718,17 +742,39 @@ const TuitionManagement = () => {
                                                             <Send size={12} />
                                                             {sendingInvoice === invoice.invoiceId ? 'Đang gửi...' : 'Gửi'}
                                                         </button>
-                                                    )}
-                                                    {(invoice.status === 'Sent' || invoice.status === 'Overdue') && (
-                                                        <button 
-                                                            className="pay-btn"
-                                                            onClick={() => handleMarkAsPaid(invoice.invoiceId)}
-                                                        >
-                                                            <CreditCard size={14} />
-                                                            Đã thu tiền
-                                                        </button>
-                                                    )}
-                                                </td>
+)}
+                                                {(invoice.status === 'Sent' || invoice.status === 'Overdue') && (
+                                                    <button 
+                                                        className="pay-btn"
+                                                        onClick={() => handleMarkAsPaid(invoice.invoiceId)}
+                                                    >
+                                                        <CreditCard size={14} />
+                                                        Đã thu tiền
+                                                    </button>
+                                                )}
+                                                {(invoice.status !== 'Paid' && invoice.status !== 'Cancelled') && (
+                                                    <button 
+                                                        className="invoice-action-btn cancel"
+                                                        onClick={() => handleCancelInvoice(invoice.invoiceId)}
+                                                        style={{
+                                                            padding: '4px 10px',
+                                                            background: '#dc2626',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: 4,
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.8rem',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 4,
+                                                            marginLeft: 4
+                                                        }}
+                                                    >
+                                                        <X size={12} />
+                                                        Hủy
+                                                    </button>
+                                                )}
+                                            </td>
                                             </tr>
                                         ))}
                                     </tbody>
