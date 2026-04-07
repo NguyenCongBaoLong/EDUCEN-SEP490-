@@ -168,6 +168,25 @@ const AssignmentGrading = ({ isTA = false }) => {
         }
     };
 
+    const handlePublishGrade = async (isPublish) => {
+        if (!selectedStudent?.submission) return;
+
+        try {
+            setIsPublishing(true);
+            await api.put(`/Submissions/${selectedStudent.submission.subId}/publish`, {
+                isPublished: isPublish
+            });
+
+            toast.success(isPublish ? 'Đã công bố điểm cho học sinh' : 'Đã hủy công bố điểm');
+            await fetchGradingData();
+        } catch (error) {
+            console.error('Error publishing grade:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi khi thay đổi trạng thái công bố');
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
     const handleResetGrade = async () => {
         if (!selectedStudent?.submission) return;
         setShowResetModal(true);

@@ -217,7 +217,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
                                         <div>
                                             <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</div>
                                             <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-                                                {s.id} · Khối {s.grade}
+                                                ID: {s.id} {s.grade ? `· Khối ${s.grade}` : ''} {s.class ? `· Lớp ${s.class}` : ''}
                                             </div>
                                         </div>
                                     </label>

@@ -39,7 +39,7 @@ import SystemAdminDashboard from './pages/sysadmin/SystemAdminDashboard';
 import TenantManagement from './pages/sysadmin/TenantManagement';
 import PlansManagement from './pages/sysadmin/PlansManagement';
 import ZaloOAConfig from './pages/sysadmin/ZaloOAConfig';
-// import RefundManagement from './pages/sysadmin/RefundManagement';
+import RefundManagement from './pages/sysadmin/RefundManagement';
 import SystemAdminLogin from './pages/auth/SystemAdminLogin';
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
@@ -109,7 +109,6 @@ function App() {
                   <Route path="invoices" element={<PrivateRoute allowedRoles={['Parent']}><MyInvoices /></PrivateRoute>} />
                   <Route path="family-invoices" element={<PrivateRoute allowedRoles={['Parent']}><FamilyInvoices /></PrivateRoute>} />
                   <Route path="mailbox" element={<PrivateRoute allowedRoles={['Parent']}><ParentMailbox /></PrivateRoute>} />
-                  <Route path="feedback" element={<Navigate to="/parent/classes?panel=feedback" replace />} />
                   <Route path="*" element={<Navigate to="/parent/classes" replace />} />
                 </Routes>
               } />
@@ -121,9 +120,7 @@ function App() {
               <Route path="/sysadmin/tenants" element={<PrivateRoute allowedRoles={['SystemAdmin']}><TenantManagement /></PrivateRoute>} />
               <Route path="/sysadmin/plans" element={<PrivateRoute allowedRoles={['SystemAdmin']}><PlansManagement /></PrivateRoute>} />
               <Route path="/sysadmin/zalo-oa" element={<PrivateRoute allowedRoles={['SystemAdmin']}><ZaloOAConfig /></PrivateRoute>} />
-              {/* Hidden: refund functionality via backend only
               <Route path="/sysadmin/refunds" element={<PrivateRoute allowedRoles={['SystemAdmin']}><RefundManagement /></PrivateRoute>} />
-*/}
 
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
