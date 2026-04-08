@@ -13,6 +13,9 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import api from '../../services/api';
+import EnrollmentRequestsTable from '../../components/EnrollmentRequestsTable';
+import EnrollmentDetailModal from '../../components/EnrollmentDetailModal';
+import RejectEnrollmentModal from '../../components/RejectEnrollmentModal';
 import { useAuth } from '../../context/AuthContext';
 import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText, Wallet } from 'lucide-react';
 import zaloOAService from '../../services/zaloOAService';
@@ -96,6 +99,13 @@ const AdminDashboard = () => {
     const [creditLedger, setCreditLedger] = useState([]);
     const [ledgerLoading, setLedgerLoading] = useState(false);
     const [showLedger, setShowLedger] = useState(false);
+
+    // Enrollment Request States
+    const [requestsList, setRequestsList] = useState([]);
+    const [viewingRequest, setViewingRequest] = useState(null);
+    const [rejectingRequest, setRejectingRequest] = useState(null);
+    const [requestStatusFilter, setRequestStatusFilter] = useState('');
+
     const tenantId = useMemo(() => {
         const isValidTenantId = (value) => (
             !!value && value !== 'undefined' && value !== 'null'
@@ -155,6 +165,31 @@ const AdminDashboard = () => {
 
     const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
+    const fetchEnrollmentRequests = async () => {
+        try {
+            const res = await api.get('/enrollment-requests');
+            const data = res.data.map(r => ({
+                id: r.requestId?.toString() || '',
+                studentName: `${r.firstName || ''} ${r.lastName || ''}`.trim(),
+                firstName: r.firstName,
+                lastName: r.lastName,
+                email: r.email,
+                phone: r.phone,
+                address: r.address || '',
+                desiredCourse: r.preferredCourse || '', // Changed to desiredCourse to match table if needed, or keep as desiredGrade if that's what table expects
+                desiredGrade: r.preferredCourse || '',
+                requestDate: r.requestDate ? new Date(r.requestDate).toISOString().split('T')[0] : '',
+                status: r.status?.toLowerCase() || 'pending',
+                createdStudentId: r.createdStudentId
+            }));
+            setRequestsList(data);
+        } catch (error) {
+            console.error("Fetch enrollment requests error:", error);
+        }
+    };
+
+    const pendingRequestsCount = requestsList.filter(r => r.status === 'pending').length;
+
     const fetchSupportRequests = async () => {
         try {
             const res = await api.get('/admin/support-requests');
@@ -177,6 +212,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         fetchSupportRequests();
         fetchSystemNotifications();
+        fetchEnrollmentRequests();
     }, [tenantId]);
 
     const handleMarkAsRead = async (msg) => {
@@ -239,7 +275,7 @@ const AdminDashboard = () => {
         }
     };
 
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'revenue' | 'subscription'
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'requests' | 'revenue' | 'subscription'
 
     useEffect(() => {
         const fetchData = async () => {
@@ -466,6 +502,47 @@ const AdminDashboard = () => {
             </>
         );
     };
+
+    // Enrollment Request Handlers
+    const handleViewRequest = (request) => {
+        setViewingRequest(request);
+    };
+
+    const handleApproveClick = async (requestData) => {
+        try {
+            const res = await api.put(`/enrollment-requests/${requestData.id}/approve`);
+            if (res.status === 200 || res.status === 204) {
+                setRequestsList(requestsList.map(r =>
+                    r.id === requestData.id ? { ...r, status: 'approved' } : r
+                ));
+                toast.success('Đã duyệt yêu cầu và tạo tài khoản học sinh!');
+            }
+        } catch (error) {
+            console.error('Approve error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+        }
+    };
+
+    const handleRejectRequest = (request) => {
+        setRejectingRequest(request);
+    };
+
+    const handleConfirmReject = async (requestId) => {
+        try {
+            const res = await api.put(`/enrollment-requests/${requestId}/reject`);
+            if (res.status === 200 || res.status === 204) {
+                setRequestsList(requestsList.map(r =>
+                    r.id === requestId ? { ...r, status: 'rejected' } : r
+                ));
+                toast.success('Đã từ chối yêu cầu');
+            }
+        } catch (error) {
+            console.error('Reject error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+        }
+        setRejectingRequest(null);
+    };
+
     return (
         <div className="admin-dashboard">
             <Sidebar showNotifications={false} />
@@ -506,6 +583,14 @@ const AdminDashboard = () => {
                     >
                         <LayoutDashboard size={18} />
                         Tổng quan
+                    </button>
+                    <button
+                        className={`dashboard-tab-btn ${activeTab === 'requests' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('requests')}
+                    >
+                        <FileText size={18} />
+                        Yêu cầu đăng ký
+                        {pendingRequestsCount > 0 && <span className="inbox-trigger-badge" style={{ position: 'relative', top: '0', right: '-4px', marginLeft: '4px' }}>{pendingRequestsCount}</span>}
                     </button>
                     <button
                         className={`dashboard-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
@@ -793,6 +878,19 @@ const AdminDashboard = () => {
                     </>
                 )}
 
+                {activeTab === 'requests' && (
+                    <div className="dashboard-requests-container" style={{ padding: '0 0.5rem' }}>
+                        <EnrollmentRequestsTable
+                            requestsData={requestsList}
+                            statusFilter={requestStatusFilter}
+                            setStatusFilter={setRequestStatusFilter}
+                            onView={handleViewRequest}
+                            onApprove={handleApproveClick}
+                            onReject={handleRejectRequest}
+                        />
+                    </div>
+                )}
+
                 {activeTab === 'revenue' && <RevenueReport hideSidebar={true} />}
                 
                 {activeTab === 'subscription' && (
@@ -813,6 +911,20 @@ const AdminDashboard = () => {
                 onMarkAsRead={handleMarkAsRead}
                 onDelete={handleDeleteNotification}
                 renderDetailExtra={renderInboxDetailExtra}
+            />
+
+            {/* Enrollment Request Modals */}
+            <EnrollmentDetailModal
+                isOpen={!!viewingRequest}
+                onClose={() => setViewingRequest(null)}
+                request={viewingRequest}
+            />
+
+            <RejectEnrollmentModal
+                isOpen={!!rejectingRequest}
+                onClose={() => setRejectingRequest(null)}
+                onConfirm={handleConfirmReject}
+                request={rejectingRequest}
             />
 
         </div>

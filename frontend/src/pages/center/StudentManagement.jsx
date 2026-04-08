@@ -6,16 +6,10 @@ import api, { parseValidationErrors } from '../../services/api';
 import StudentTable from '../../components/StudentTable';
 import AddStudentModal from '../../components/AddStudentModal';
 import StudentDetailModal from '../../components/StudentDetailModal';
-import EnrollmentRequestsTable from '../../components/EnrollmentRequestsTable';
-import EnrollmentDetailModal from '../../components/EnrollmentDetailModal';
-import RejectEnrollmentModal from '../../components/RejectEnrollmentModal';
 import ImportStudentModal from '../../components/ImportStudentModal';
 import '../../css/pages/center/StudentManagement.css';
 
 const StudentManagement = () => {
-    // View Mode: 'list' (Student Management) or 'requests' (Enrollment Requests)
-    const [viewMode, setViewMode] = useState('list');
-
     const [isLoading, setIsLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -29,10 +23,6 @@ const StudentManagement = () => {
     // State for form validation errors
     const [errors, setErrors] = useState({});
 
-    // Enrollment Request States
-    const [viewingRequest, setViewingRequest] = useState(null);
-    const [rejectingRequest, setRejectingRequest] = useState(null);
-    const [requestStatusFilter, setRequestStatusFilter] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
 
     const [studentList, setStudentList] = useState([]);
@@ -141,45 +131,9 @@ const StudentManagement = () => {
         }
     };
 
-    // Enrollment Requests từ API
-    const [requestsList, setRequestsList] = useState([]);
-
-    const fetchEnrollmentRequests = async () => {
-        try {
-            const res = await api.get('/enrollment-requests');
-            const data = res.data.map(r => ({
-                id: r.requestId?.toString() || '',
-                studentName: `${r.firstName || ''} ${r.lastName || ''}`.trim(),
-                firstName: r.firstName,
-                lastName: r.lastName,
-                email: r.email,
-                phone: r.phone,
-                address: r.address || '',
-                desiredGrade: r.preferredCourse || '',
-                requestDate: r.requestDate ? new Date(r.requestDate).toISOString().split('T')[0] : '',
-                status: r.status?.toLowerCase() || 'pending',
-                createdStudentId: r.createdStudentId
-            }));
-            setRequestsList(data);
-        } catch (error) {
-            console.error("Fetch enrollment requests error:", error);
-        }
-    };
-
-    useEffect(() => {
-        fetchEnrollmentRequests();
-    }, []);
-
-    // Derived state for pending count
-    const pendingCount = requestsList.filter(r => r.status === 'pending').length;
-
     // Filter students
-    // We pass parentList as parentListData to the StudentTable to display actual parent info
-    
-    // Normalize grade for comparison - extract numeric part from grade (e.g., "Khối 6" -> "6", "6" -> "6")
     const normalizeGrade = (grade) => {
         if (!grade) return '';
-        // Extract numeric part: "Khối 6" -> "6", "6" -> "6", "Lớp 6" -> "6"
         const match = grade.toString().match(/\d+/);
         return match ? match[0] : grade.toString();
     };
@@ -248,10 +202,8 @@ const StudentManagement = () => {
             setIsModalOpen(false);
             setEditingStudent(null);
         } catch (error) {
-            // Parse validation errors using helper
             const parsed = parseValidationErrors(error);
             if (parsed.hasErrors && parsed.details) {
-                // Show errors on form fields
                 const formErrors = {};
                 if (parsed.details['Email']) {
                     formErrors.email = parsed.details['Email'][0];
@@ -260,11 +212,9 @@ const StudentManagement = () => {
                     formErrors.name = parsed.details['Họ tên'][0];
                 }
                 if (Object.keys(formErrors).length > 0) {
-                    // Mở modal và hiển thị lỗi
                     setEditingStudent(studentData);
                     setIsModalOpen(true);
                     setTimeout(() => {
-                        // Set errors on form fields
                         window.dispatchEvent(new CustomEvent('set-form-errors', { 
                             detail: formErrors 
                         }));
@@ -272,7 +222,6 @@ const StudentManagement = () => {
                     return;
                 }
             }
-            // Fallback: show toast
             toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
@@ -285,7 +234,6 @@ const StudentManagement = () => {
                 ? `/admin/users/${studentId}/lock`
                 : `/admin/users/${studentId}/unlock`;
 
-            // Re-use logic for Lock/Unlock admin API
             await api.put(endpoint);
 
             setStudentList(studentList.map(s =>
@@ -301,7 +249,6 @@ const StudentManagement = () => {
     };
 
     const handleSendAccount = async (studentId) => {
-        // Optimistic update: cập nhật UI ngay, gửi API sau
         setStudentList(prev => prev.map(s =>
             s.id === studentId
                 ? { ...s, accountSent: true, status: 'active' }
@@ -311,7 +258,6 @@ const StudentManagement = () => {
         try {
             await api.post(`/Students/send-account/${studentId}`);
         } catch (error) {
-            // Rollback nếu gửi thất bại
             setStudentList(prev => prev.map(s =>
                 s.id === studentId
                     ? { ...s, accountSent: false, status: 'inactive' }
@@ -332,166 +278,75 @@ const StudentManagement = () => {
                     .catch(() => { failCount++; })
             )
         );
-        fetchStudents(); // refresh để lấy trạng thái mới nhất
+        fetchStudents();
         setSelectedStudentIds([]);
         if (successCount > 0) toast.success(`Đã gửi tài khoản cho ${successCount} học sinh!`);
         if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
     };
 
     const handleImportStudents = (importResults) => {
-        // Just refresh the student list - do NOT close modal here
-        // User will manually close the modal after seeing results
         fetchStudents();
-    };
-
-    // Enrollment Request Handlers
-    const handleViewRequest = (request) => {
-        setViewingRequest(request);
-    };
-
-    const handleApproveClick = async (requestData) => {
-        try {
-            // Gọi API approve
-            const res = await api.put(`/enrollment-requests/${requestData.id}/approve`);
-            
-            if (res.status === 200 || res.status === 204) {
-                // Update local state
-                setRequestsList(requestsList.map(r =>
-                    r.id === requestData.id
-                        ? { ...r, status: 'approved' }
-                        : r
-                ));
-                
-                // Refresh student list to get the newly created student
-                fetchStudents();
-                
-                toast.success('Đã duyệt yêu cầu và tạo tài khoản học sinh!');
-            }
-        } catch (error) {
-            console.error('Approve error:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
-        }
-    };
-
-    const handleRejectRequest = (request) => {
-        setRejectingRequest(request);
-    };
-
-    const handleConfirmReject = async (requestId) => {
-        try {
-            // Gọi API reject
-            const res = await api.put(`/enrollment-requests/${requestId}/reject`);
-            
-            if (res.status === 200 || res.status === 204) {
-                setRequestsList(requestsList.map(r =>
-                    r.id === requestId
-                        ? { ...r, status: 'rejected' }
-                        : r
-                ));
-                toast.success('Đã từ chối yêu cầu');
-            }
-        } catch (error) {
-            console.error('Reject error:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
-        }
-        setRejectingRequest(null);
     };
 
     return (
         <div className="student-management">
             <Sidebar />
             <main className="student-content">
-                {/* Header */}
                 <div className="student-header">
                     <div className="header-left">
-                        <h1>{viewMode === 'list' ? 'Quản Lý Học Sinh' : 'Yêu Cầu Đăng Ký'}</h1>
+                        <h1>Quản Lý Học Sinh</h1>
                         <p>
-                            {viewMode === 'list'
-                                ? `Hiện thị 1 đến ${filteredStudents.length} của ${studentList.length} học sinh`
-                                : `Quản lý các yêu cầu nhập học từ phụ huynh`
-                            }
+                            Hiện thị 1 đến {filteredStudents.length} của {studentList.length} học sinh
                         </p>
                     </div>
-                    {viewMode === 'list' && (
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            {selectedStudentIds.length > 0 && (
-                                <button
-                                    className="btn-add-student"
-                                    style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
-                                    onClick={handleBulkSendAccount}
-                                >
-                                    <Mail size={18} />
-                                    Gửi TK ({selectedStudentIds.length})
-                                </button>
-                            )}
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        {selectedStudentIds.length > 0 && (
                             <button
-                                className="btn-import-student"
-                                onClick={() => setIsImportModalOpen(true)}
+                                className="btn-add-student"
+                                style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+                                onClick={handleBulkSendAccount}
                             >
-                                <Upload size={18} />
-                                Import File
+                                <Mail size={18} />
+                                Gửi TK ({selectedStudentIds.length})
                             </button>
-                            <button className="btn-add-student" onClick={handleAddStudent}>
-                                <Plus size={20} />
-                                Thêm Học Sinh
-                            </button>
-                        </div>
-                    )}
+                        )}
+                        <button
+                            className="btn-import-student"
+                            onClick={() => setIsImportModalOpen(true)}
+                        >
+                            <Upload size={18} />
+                            Import File
+                        </button>
+                        <button className="btn-add-student" onClick={handleAddStudent}>
+                            <Plus size={20} />
+                            Thêm Học Sinh
+                        </button>
+                    </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="student-tabs">
-                    <button
-                        className={`tab-btn ${viewMode === 'list' ? 'active' : ''}`}
-                        onClick={() => setViewMode('list')}
-                    >
-                        Danh Sách Học Sinh
-                    </button>
-                    <button
-                        className={`tab-btn ${viewMode === 'requests' ? 'active' : ''}`}
-                        onClick={() => setViewMode('requests')}
-                    >
-                        Yêu Cầu Đăng Ký
-                        {pendingCount > 0 && <span className="request-badge">{pendingCount}</span>}
-                    </button>
-                </div>
-
-                {/* Content */}
-                {viewMode === 'list' ? (
-                    <StudentTable
-                        studentData={filteredStudents}
-                        parentListData={parentList}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        gradeFilter={gradeFilter}
-                        setGradeFilter={setGradeFilter}
-                        classFilter={classFilter}
-                        setClassFilter={setClassFilter}
-                        statusFilter={statusFilter}
-                        setStatusFilter={setStatusFilter}
-                        onView={handleViewStudent}
-                        onEdit={handleEditStudent}
-                        onToggleStatus={handleToggleStatusStudent}
-                        onSendAccount={handleSendAccount}
-                        selectedIds={selectedStudentIds}
-                        setSelectedIds={setSelectedStudentIds}
-                        gradeList={gradeList}
-                        classList={classList}
-                    />
-                ) : (
-                    <EnrollmentRequestsTable
-                        requestsData={requestsList}
-                        statusFilter={requestStatusFilter}
-                        setStatusFilter={setRequestStatusFilter}
-                        onView={handleViewRequest}
-                        onApprove={handleApproveClick}
-                        onReject={handleRejectRequest}
-                    />
-                )}
+                <StudentTable
+                    studentData={filteredStudents}
+                    parentListData={parentList}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    gradeFilter={gradeFilter}
+                    setGradeFilter={setGradeFilter}
+                    classFilter={classFilter}
+                    setClassFilter={setClassFilter}
+                    statusFilter={statusFilter}
+                    setStatusFilter={setStatusFilter}
+                    onView={handleViewStudent}
+                    onEdit={handleEditStudent}
+                    onToggleStatus={handleToggleStatusStudent}
+                    onSendAccount={handleSendAccount}
+                    selectedIds={selectedStudentIds}
+                    setSelectedIds={setSelectedStudentIds}
+                    gradeList={gradeList}
+                    classList={classList}
+                />
             </main>
 
-            {/* Add/Edit Student Modal */}
-             <AddStudentModal
+            <AddStudentModal
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
@@ -508,29 +363,13 @@ const StudentManagement = () => {
                 setErrors={setErrors}
             />
 
-            {/* Student Detail Modal */}
             <StudentDetailModal
                 isOpen={!!viewingStudent}
                 onClose={() => setViewingStudent(null)}
                 student={viewingStudent}
             />
-            {/* Enrollment Request Modals */}
-            <EnrollmentDetailModal
-                isOpen={!!viewingRequest}
-                onClose={() => setViewingRequest(null)}
-                request={viewingRequest}
-            />
 
-            {/* Reject Confirmation Modal */}
-            <RejectEnrollmentModal
-                isOpen={!!rejectingRequest}
-                onClose={() => setRejectingRequest(null)}
-                onConfirm={handleConfirmReject}
-                request={rejectingRequest}
-            />
-
-            {/* Import Students Modal */}
-             <ImportStudentModal
+            <ImportStudentModal
                 isOpen={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
                 onImport={handleImportStudents}
