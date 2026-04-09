@@ -51,6 +51,20 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
         return '';
     };
 
+    const validatePhone = (phone, allUsersList = []) => {
+        if (!phone || phone.trim() === '') return ''; // optional
+        if (!/^(0[0-9]{9,10})$/.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
+        // Validate uniqueness within SAME ROLE only (Teacher / Assistant)
+        const currentRoleName = formData.role === 'assistant' ? 'assistant' : 'teacher';
+        const isDuplicate = allUsersList.some(user => {
+            if (!user.roleName || !user.roleName.toLowerCase().includes(currentRoleName)) return false;
+            if (editingStaff && user.userId && user.userId.toString() === editingStaff.id) return false;
+            return user.phoneNumber && user.phoneNumber === phone.trim();
+        });
+        if (isDuplicate) return `Số điện thoại này đã được sử dụng bởi nhân viên khác cùng vai trò`;
+        return '';
+    };
+
     const validateEmail = (email, allUsersList = []) => {
         if (!email || email.trim() === '') return 'Email là bắt buộc';
         
@@ -82,15 +96,13 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-
-        // Validate email realtime
+        setFormData(prev => ({ ...prev, [name]: value }));
         if (name === 'email') {
             const emailErr = validateEmail(value, allUsers);
             setErrors(prev => ({ ...prev, email: emailErr }));
+        } else if (name === 'phone') {
+            const phoneErr = validatePhone(value, allUsers);
+            setErrors(prev => ({ ...prev, phone: phoneErr }));
         } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -100,6 +112,8 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
         const { name, value } = e.target;
         if (name === 'email') {
             setErrors(prev => ({ ...prev, email: validateEmail(value, allUsers) }));
+        } else if (name === 'phone') {
+            setErrors(prev => ({ ...prev, phone: validatePhone(value, allUsers) }));
         }
     };
 
@@ -109,10 +123,10 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
         // Validate all fields
         const newErrors = {
             name: validateName(formData.name),
-            email: validateEmail(formData.email, allUsers)
+            email: validateEmail(formData.email, allUsers),
+            phone: validatePhone(formData.phone, allUsers)
         };
 
-        // Check if there are any errors
         const hasErrors = Object.values(newErrors).some(error => error !== '');
 
         if (hasErrors) {
@@ -181,8 +195,11 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                                 name="phone"
                                 value={formData.phone}
                                 onChange={handleChange}
+                                onBlur={handleBlur}
                                 placeholder="VD: 0912345678"
+                                className={errors.phone ? 'input-error' : ''}
                             />
+                            {errors.phone && <span className="error-message">{errors.phone}</span>}
                         </div>
                     </div>
 
