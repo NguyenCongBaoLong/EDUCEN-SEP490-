@@ -28,7 +28,7 @@ const CustomTooltip = ({ active, payload, label, suffix = '' }) => {
 
 const TeacherPerformanceReport = ({ isTA = false }) => {
     const [classes, setClasses] = useState([]);
-    const [filterClass, setFilterClass] = useState('');
+    const [filterClass, setFilterClass] = useState('all');
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -37,10 +37,12 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
         if (!classId) return;
         try {
             setLoading(true);
-            const response = await api.get(`/teacher/report/${classId}`);
+            const endpoint = classId === 'all' ? '/teacher/report/overall' : `/teacher/report/${classId}`;
+            const response = await api.get(endpoint);
             setReportData(response.data);
         } catch (error) {
             console.error("Lỗi khi tải báo cáo:", error);
+            setReportData(null);
         } finally {
             setLoading(false);
         }
@@ -55,11 +57,8 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
 
                 if (response.data && response.data.length > 0) {
                     setClasses(response.data);
-                    // Dùng classId theo đúng JSON bạn gửi
-                    const firstClassId = response.data[0].classId;
-                    if (firstClassId) {
-                        setFilterClass(firstClassId.toString());
-                    }
+                    // Mặc định xem tổng tất cả các lớp
+                    setFilterClass('all');
                 } else {
                     setLoading(false);
                 }
@@ -118,12 +117,21 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                     <div className="filter-group single-filter">
                         <label>CHỌN LỚP CỦA TÔI</label>
                         <select value={filterClass} onChange={e => setFilterClass(e.target.value)}>
+                            <option value="all">Tổng các lớp cá nhân</option>
                             {classes.map((cls) => (
                                 <option key={cls.classId} value={cls.classId}>
-                                    {cls.className} ({cls.classCode})
+                                    {cls.className}{cls.classCode ? ` (${cls.classCode})` : ''}
                                 </option>
                             ))}
                         </select>
+                    </div>
+
+                    <div className="filter-stat">
+                        <div className="filter-stat-icon"><CalendarIcon size={16} /></div>
+                        <div className="filter-stat-info">
+                            <span className="filter-stat-label">Lớp đang dạy</span>
+                            <span className="filter-stat-value">{classes.filter(c => c.status === 'Active').length}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -203,7 +211,7 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                         <div className="chart-header">
                             <div>
                                 <h3>Xu hướng chuyên cần</h3>
-                                <p>Tỷ lệ chuyên cần hàng tuần theo thời gian</p>
+                                <p>Tỷ lệ chuyên cần trong 7 buổi học gần nhất</p>
                             </div>
                             <div className="chart-legend">
                                 <span className="legend-item current"><span className="dot"></span> Hiện tại</span>
@@ -257,6 +265,7 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                             <tr>
                                 <th>XẾP HẠNG</th>
                                 <th>HỌC SINH</th>
+                                {filterClass === 'all' && <th>LỚP</th>}
                                 <th>ĐIỂM TRUNG BÌNH</th>
                                 <th>CHUYÊN CẦN</th>
                                 <th>TRẠNG THÁI</th>
@@ -277,6 +286,11 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                                             </div>
                                         </div>
                                     </td>
+                                    {filterClass === 'all' && (
+                                        <td>
+                                            <span className="class-name-value">{student.className || '-'}</span>
+                                        </td>
+                                    )}
                                     <td>
                                         <span className="score-value">{student.score}</span>
                                     </td>

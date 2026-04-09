@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Submissions;
+using EducenAPI.DTOs.Submissions;
 using EducenAPI.Enums;
 using EducenAPI.Exceptions;
 using EducenAPI.Models;
@@ -14,6 +14,7 @@ namespace EducenAPI.Services
         private readonly IFileUploadService _fileService;
         private readonly IPaymentReminderService _notificationService;
         private readonly IUserContextService _userContextService;
+
         public SubmissionService(EducenV2Context context, IFileUploadService fileService, IPaymentReminderService notificationService, IUserContextService userContextService)
         {
             _context = context;
@@ -26,18 +27,23 @@ namespace EducenAPI.Services
         {
             if (string.IsNullOrEmpty(fileUrl)) return;
 
-            var otherRefs = await _context.ResourceFiles
-                .AnyAsync(rf => rf.FilePath == fileUrl);
+            var filePaths = fileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
 
-            if (!otherRefs)
+            foreach (var path in filePaths)
             {
-                string normalizedPath = fileUrl.Replace("/", Path.DirectorySeparatorChar.ToString())
-                                              .Replace("\\", Path.DirectorySeparatorChar.ToString());
-                if (!normalizedPath.StartsWith("wwwroot" + Path.DirectorySeparatorChar))
-                    normalizedPath = Path.Combine("wwwroot", normalizedPath);
+                var otherRefs = await _context.ResourceFiles
+                    .AnyAsync(rf => rf.FilePath == path);
 
-                if (File.Exists(normalizedPath))
-                    File.Delete(normalizedPath);
+                if (!otherRefs)
+                {
+                    string normalizedPath = path.Replace("/", Path.DirectorySeparatorChar.ToString())
+                                                  .Replace("\\", Path.DirectorySeparatorChar.ToString());
+                    if (!normalizedPath.StartsWith("wwwroot" + Path.DirectorySeparatorChar))
+                        normalizedPath = Path.Combine("wwwroot", normalizedPath);
+
+                    if (File.Exists(normalizedPath))
+                        File.Delete(normalizedPath);
+                }
             }
         }
 
@@ -57,19 +63,17 @@ namespace EducenAPI.Services
                 throw new Exception("Bài tập này chưa mở");
             }
 
-            // Check if assignment has ended and handle late submission logic
             var now = DateTime.Now;
             bool isLate = false;
             if (assignment.EndTime.HasValue && now > assignment.EndTime.Value)
             {
-                // If late submission is not allowed, reject
                 if (!assignment.AllowLateSubmission)
                 {
                     throw new Exception("Đã hết hạn nộp bài. Giáo viên không cho phép nộp muộn.");
                 }
-
                 isLate = true;
             }
+
             var student = await _context.Students
                 .Include(s => s.StudentNavigation)
                 .FirstOrDefaultAsync(s => s.UserId == request.StudentId);
@@ -81,17 +85,22 @@ namespace EducenAPI.Services
 
             if (existing != null)
                 throw new Exception("Bài nộp đã tồn tại");
+
             if (!string.IsNullOrEmpty(request.FileUrl))
             {
                 fileUrl = request.FileUrl;
             }
-            if(request.File != null)
-            {
 
-                var files = new FormFileCollection { request.File };
-                var uploadedFiles = await _fileService.UploadResourceFile(files);
-                var uploadedFile = uploadedFiles.FirstOrDefault();
-                if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
+            if (request.Files != null && request.Files.Any())
+            {
+                var formFiles = new FormFileCollection();
+                foreach (var f in request.Files) formFiles.Add(f);
+
+                var uploadedFiles = await _fileService.UploadResourceFile(formFiles);
+                if (uploadedFiles.Any())
+                {
+                    fileUrl = string.Join(";", uploadedFiles.Select(f => f.FilePath));
+                }
             }
 
             var status = isLate ? SubmissionStatus.LateSubmitted : SubmissionStatus.Submitted;
@@ -156,17 +165,14 @@ namespace EducenAPI.Services
             if (submission.Score != null || submission.Status == "Graded" || submission.Status == "Published" || submission.IsPublished)
                 throw new Exception("Không thể cập nhật bài nộp vì nó đã được chấm hoặc công khai.");
 
-            // Check if assignment has ended and handle late submission logic for update
             var now = DateTime.Now;
             bool isLateUpdate = false;
             if (submission.Asm.EndTime.HasValue && now > submission.Asm.EndTime.Value)
             {
-                // If late submission is not allowed, reject
                 if (!submission.Asm.AllowLateSubmission)
                 {
                     throw new Exception("Đã hết hạn nộp bài. Giáo viên không cho phép nộp muộn.");
                 }
-
                 isLateUpdate = true;
             }
 
@@ -177,14 +183,18 @@ namespace EducenAPI.Services
                 fileUrl = request.FileUrl;
                 submission.FileUrl = fileUrl;
             }
-            if (request.File != null)
-            {
 
-                var files = new FormFileCollection { request.File };
-                var uploadedFiles = await _fileService.UploadResourceFile(files);
-                var uploadedFile = uploadedFiles.FirstOrDefault();
-                if (uploadedFile != null) fileUrl = uploadedFile.FilePath;
-                submission.FileUrl = fileUrl;
+            if (request.Files != null && request.Files.Any())
+            {
+                var formFiles = new FormFileCollection();
+                foreach (var f in request.Files) formFiles.Add(f);
+
+                var uploadedFiles = await _fileService.UploadResourceFile(formFiles);
+                if (uploadedFiles.Any())
+                {
+                    fileUrl = string.Join(";", uploadedFiles.Select(f => f.FilePath));
+                    submission.FileUrl = fileUrl;
+                }
             }
 
             submission.SubmittedAt = DateTime.Now;
@@ -197,8 +207,7 @@ namespace EducenAPI.Services
 
             await _context.SaveChangesAsync();
 
-            // Clean up old physical file if replaced
-            if (request.File != null && !string.IsNullOrEmpty(oldFileUrl) && oldFileUrl != fileUrl)
+            if (request.Files != null && request.Files.Any() && !string.IsNullOrEmpty(oldFileUrl) && oldFileUrl != fileUrl)
             {
                 await CleanupFileAsync(oldFileUrl);
             }
@@ -239,28 +248,61 @@ namespace EducenAPI.Services
         public async Task<SubmissionResponseDto> GradeSubmissionAsync(int subId, GradeSubmissionRequest request, string baseUrl)
         {
             var submission = await _context.Submissions
+                .Include(s => s.Asm)
                 .FirstOrDefaultAsync(x => x.SubId == subId);
 
             if (submission == null)
                 throw new NotFoundException("Không tìm thấy bài nộp");
 
-            if (string.IsNullOrWhiteSpace(submission.FileUrl))
-                throw new Exception("Không thể chấm điểm vì không tìm thấy file bài làm");
-
             var userId = _userContextService.GetUserId();
-
-            var isBelongOfTeacher = await _context.Assignments.AnyAsync(e => e.Submissions.Any(x=>x.AsmId==e.AsmId)&&e.UserId==userId);
-
-            if (!isBelongOfTeacher)
+            var assignment = await _context.Assignments.FirstOrDefaultAsync(a => a.AsmId == submission.AsmId);
+            if (assignment == null || assignment.UserId != userId)
             {
                 throw new BadRequestException("Bạn không thể chấm điểm vì bài này không thuộc về bạn");
             }
+
             submission.Score = request.Score;
             submission.TeacherComment = request.TeacherComment;
             submission.GradedAt = DateTime.Now;
             submission.Status = "Graded";
 
             await _context.SaveChangesAsync();
+            return MapToResponseDto(submission, baseUrl);
+        }
+
+        public async Task<SubmissionResponseDto> GradeWithoutSubmissionAsync(int assignmentId, int studentId, GradeSubmissionRequest request, string baseUrl)
+        {
+            var submission = await _context.Submissions
+                .FirstOrDefaultAsync(x => x.AsmId == assignmentId && x.StudentId == studentId);
+
+            if (submission != null)
+            {
+                return await GradeSubmissionAsync(submission.SubId, request, baseUrl);
+            }
+
+            var userId = _userContextService.GetUserId();
+            var assignment = await _context.Assignments.FirstOrDefaultAsync(a => a.AsmId == assignmentId);
+            if (assignment == null || assignment.UserId != userId)
+            {
+                throw new BadRequestException("Bạn không thể chấm điểm vì bài này không thuộc về bạn");
+            }
+
+            submission = new Submission
+            {
+                AsmId = assignmentId,
+                StudentId = studentId,
+                Score = request.Score,
+                TeacherComment = request.TeacherComment,
+                GradedAt = DateTime.Now,
+                SubmittedAt = DateTime.Now,
+                Status = "Graded",
+                IsPublished = false,
+                FileUrl = ""
+            };
+
+            _context.Submissions.Add(submission);
+            await _context.SaveChangesAsync();
+
             return MapToResponseDto(submission, baseUrl);
         }
 
@@ -281,7 +323,7 @@ namespace EducenAPI.Services
                 throw new Exception("Không thể công khai điểm trước khi chấm điểm");
 
             submission.IsPublished = isPublished;
-            submission.Status = isPublished ? "Published" : "Unpublished";
+            submission.Status = isPublished ? "Published" : "Graded";
 
             await _context.SaveChangesAsync();
 
@@ -373,14 +415,23 @@ namespace EducenAPI.Services
 
         private SubmissionResponseDto MapToResponseDto(Submission submission, string baseUrl)
         {
+            var fileUrls = new List<string>();
+            if (!string.IsNullOrEmpty(submission.FileUrl))
+            {
+                var paths = submission.FileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var p in paths)
+                {
+                    fileUrls.Add($"{baseUrl}/{p.Replace("\\", "/").Replace("wwwroot/", "")}");
+                }
+            }
+
             return new SubmissionResponseDto
             {
                 SubId = submission.SubId,
                 AsmId = submission.AsmId,
                 StudentId = submission.StudentId,
-                FileUrl = !string.IsNullOrEmpty(submission.FileUrl)
-                    ? $"{baseUrl}/{submission.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                    : null,
+                FileUrl = fileUrls.FirstOrDefault(),
+                FileUrls = fileUrls,
                 SubmittedAt = submission.SubmittedAt,
                 Status = submission.Status,
                 Score = submission.Score,

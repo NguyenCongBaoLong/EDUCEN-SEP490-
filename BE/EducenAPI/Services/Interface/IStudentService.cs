@@ -9,5 +9,7 @@ namespace EducenAPI.Services.Interface
         Task<StudentDto> CreateStudentAsync(CreateStudentDto dto);
         Task<bool> UpdateStudentAsync(int id, UpdateStudentDto dto);
         Task<bool> DeleteStudentAsync(int id);
+        Task<StudentDto?> GetStudentProfileAsync(int userId);
+        Task<StudentPerformanceReportDto?> GetStudentPerformanceReportAsync(int studentUserId);
     }
 }

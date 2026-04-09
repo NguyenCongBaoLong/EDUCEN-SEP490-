@@ -112,6 +112,7 @@ const ClassDetail = () => {
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [addingStudentId, setAddingStudentId] = useState(null);
     const [importResult, setImportResult] = useState(null); // { total, success, failed, errors[] }
 
     // ── Fetch class data ──
@@ -221,17 +222,19 @@ const ClassDetail = () => {
 
     // ── Actions ──
     const handleAddStudent = async (student) => {
-        setActionLoading(true);
+        setAddingStudentId(student.userId);
         try {
             await api.post(`/Classes/${classId}/students/${student.userId}`);
-            await fetchStudents();
+            // Optimistic update: close modal and reset search immediately for better UX
             setAddStudentModal(false);
             setStudentSearch('');
             toast.success(`Đã thêm ${student.fullName} vào lớp thành công!`);
+            // Fetch list in the background
+            fetchStudents();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Không thể thêm học sinh.');
         } finally {
-            setActionLoading(false);
+            setAddingStudentId(null);
         }
     };
 
@@ -677,9 +680,9 @@ const ClassDetail = () => {
                                                     <button
                                                         className="cd-btn-pick"
                                                         onClick={() => handleAddStudent(s)}
-                                                        disabled={actionLoading}
+                                                        disabled={addingStudentId === s.userId || actionLoading}
                                                     >
-                                                        {actionLoading ? <Loader2 size={14} /> : <><Plus size={14} /> Thêm</>}
+                                                        {addingStudentId === s.userId ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <><Plus size={14} /> Thêm</>}
                                                     </button>
                                                 </div>
                                             ))}

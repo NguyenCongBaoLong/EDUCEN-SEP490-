@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2 } from 'lucide-react';
+import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2, MessageSquare, TrendingUp, Award, FileCheck } from 'lucide-react';
 import ParentSidebar from '../../components/ParentSidebar';
 import ParentFeedbackDrawer from '../../components/ParentFeedbackDrawer';
 import { useChild } from '../../context/ChildContext';
@@ -40,7 +40,7 @@ const ClassDetailModal = ({ cls, onClose }) => {
         sessionNum: s.sessionNum,
     }))) || [];
 
-    const graded = allAssignments.filter(a => a.currentSubmission?.score !== null && a.currentSubmission?.score !== undefined);
+    const graded = allAssignments.filter(a => a.currentSubmission?.score !== null && a.currentSubmission?.score !== undefined && a.currentSubmission?.isPublished);
     const avg = graded.length ? (graded.reduce((s, a) => s + a.currentSubmission.score, 0) / graded.length).toFixed(1) : null;
 
     // Calculate attendance from sessions
@@ -136,7 +136,7 @@ const ClassDetailModal = ({ cls, onClose }) => {
                                                             </div>
                                                         </div>
                                                         <div className="pc-asm-right">
-                                                            {asm.currentSubmission?.score !== null && asm.currentSubmission?.score !== undefined ? (
+                                                            {asm.currentSubmission?.score !== null && asm.currentSubmission?.score !== undefined && asm.currentSubmission?.isPublished ? (
                                                                 <div className="pc-asm-grade-block">
                                                                     <span className={`pc-asm-grade ${asm.currentSubmission.score >= 8 ? 'high' : asm.currentSubmission.score >= 6.5 ? 'mid' : 'low'}`}>
                                                                         <Star size={12} /> {asm.currentSubmission.score}/10
@@ -170,6 +170,151 @@ const ClassDetailModal = ({ cls, onClose }) => {
     );
 };
 
+/* ── Performance Report Modal ── */
+const PerformanceReportModal = ({ onClose }) => {
+    const { selectedChild } = useChild();
+    const [report, setReport] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!selectedChild) return;
+        setLoading(true);
+        api.get(`/Parents/child/${selectedChild.studentId}/performance-report`)
+            .then(res => setReport(res.data))
+            .catch(() => toast.error('Không thể tải báo cáo học tập'))
+            .finally(() => setLoading(false));
+    }, [selectedChild]);
+
+    if (!selectedChild) return null;
+
+    const getRankColor = (rank) => {
+        switch (rank) {
+            case 'Xuất sắc': return { bg: '#dcfce7', text: '#15803d' };
+            case 'Giỏi': return { bg: '#f0fdf4', text: '#16a34a' };
+            case 'Khá': return { bg: '#fefce8', text: '#a16207' };
+            case 'Trung bình': return { bg: '#fff7ed', text: '#c2410c' };
+            case 'Yếu': return { bg: '#fef2f2', text: '#dc2626' };
+            default: return { bg: '#f1f5f9', text: '#64748b' };
+        }
+    };
+
+    return (
+        <div className="pc-modal-overlay" onClick={onClose}>
+            <div className="pc-modal pc-report-modal" onClick={e => e.stopPropagation()}>
+                <div className="pc-modal-header" style={{ borderTopColor: '#6366f1' }}>
+                    <div>
+                        <div className="pc-modal-subject" style={{ color: '#6366f1' }}>Học sinh: {selectedChild?.fullName}</div>
+                        <h2>Báo cáo học tập tổng kết</h2>
+                        <p>Dữ liệu tổng hợp từ tất cả các lớp đang theo học</p>
+                    </div>
+                    <button className="pc-modal-close" onClick={onClose}>✕</button>
+                </div>
+
+                {loading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem', gap: '1rem' }}>
+                        <Loader2 className="animate-spin" size={40} color="#6366f1" />
+                        <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Đang tổng hợp dữ liệu...</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="pc-report-summary">
+                            <div className="pc-report-metric">
+                                <span className="pc-report-metric-val">{report?.overallGPA || 0}</span>
+                                <span className="pc-report-metric-label">GPA Tổng</span>
+                            </div>
+                            <div className="pc-report-metric">
+                                <span className="pc-report-metric-val" style={{ color: (report?.overallAttendanceRate || 0) >= 80 ? '#16a34a' : '#dc2626' }}>
+                                    {report?.overallAttendanceRate || 0}%
+                                </span>
+                                <span className="pc-report-metric-label">Tỷ lệ chuyên cần</span>
+                            </div>
+                            <div className="pc-report-metric">
+                                <span className="pc-report-metric-val">{report?.totalAssignmentsSubmitted || 0}/{report?.totalAssignmentsAssigned || 0}</span>
+                                <span className="pc-report-metric-label">Bài tập đã nộp</span>
+                            </div>
+                            <div className="pc-report-metric">
+                                <span className="pc-report-metric-val">{report?.classSummaries?.length || 0}</span>
+                                <span className="pc-report-metric-label">Lớp đang học</span>
+                            </div>
+                        </div>
+
+                        <div className="pc-report-table-container">
+                            <table className="pc-report-table">
+                                <thead>
+                                    <tr>
+                                        <th>MÔN HỌC & LỚP</th>
+                                        <th>CHUYÊN CẦN</th>
+                                        <th>BÀI TẬP</th>
+                                        <th style={{ textAlign: 'center' }}>ĐIỂM TRUNG BÌNH</th>
+                                        <th style={{ textAlign: 'center' }}>XẾP LOẠI</th>
+                                        <th>NHẬN XÉT CỦA GIÁO VIÊN</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {report?.classSummaries?.map(row => {
+                                        const rankStyle = getRankColor(row.rank);
+                                        return (
+                                            <tr key={row.classId}>
+                                                <td>
+                                                    <span className="pc-report-class-name">{row.className}</span>
+                                                    <span className="pc-report-subject">{row.subjectName} • GV: {row.teacherName}</span>
+                                                </td>
+                                                <td>
+                                                    <div className="pc-report-att-cell">
+                                                        <span style={{ fontWeight: 600 }}>{row.attendanceRate}%</span>
+                                                        <div className="pc-report-att-bar">
+                                                            <div 
+                                                                className="pc-report-att-fill" 
+                                                                style={{ 
+                                                                    width: `${row.attendanceRate}%`, 
+                                                                    background: row.attendanceRate >= 80 ? '#16a34a' : (row.attendanceRate >= 50 ? '#f59e0b' : '#dc2626')
+                                                                }} 
+                                                            />
+                                                        </div>
+                                                        <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{row.attendedSessions}/{row.totalSessionsPassed} buổi</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span style={{ fontWeight: 600 }}>{row.submittedAssignments}/{row.totalAssignments}</span>
+                                                    <p style={{ margin: 0, fontSize: '0.7rem', color: '#94a3b8' }}>bài tập đã nộp</p>
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    {row.averageScore != null ? (
+                                                        <span className="pc-report-score" style={{ color: row.averageScore >= 8 ? '#16a34a' : (row.averageScore >= 5 ? '#d97706' : '#dc2626') }}>
+                                                            {row.averageScore}
+                                                        </span>
+                                                    ) : <span style={{ color: '#94a3b8' }}>—</span>}
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <span className="pc-report-rank" style={{ background: rankStyle.bg, color: rankStyle.text }}>
+                                                        {row.rank}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {row.latestFeedback ? (
+                                                        <div className="pc-report-feedback">
+                                                            <MessageSquare size={14} />
+                                                            <span>{row.latestFeedback}</span>
+                                                        </div>
+                                                    ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
+
+                <div className="pc-modal-footer">
+                    <button className="pc-btn-close" onClick={onClose}>Đóng báo cáo</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 /* ── Main ── */
 const ParentClasses = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -179,6 +324,7 @@ const ParentClasses = () => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [selectedClass, setSelectedClass] = useState(null);
+    const [showReportModal, setShowReportModal] = useState(false);
     const [feedbackOpenSignal, setFeedbackOpenSignal] = useState(0);
 
     useEffect(() => {
@@ -227,7 +373,14 @@ const ParentClasses = () => {
                             <p className="pc-subtitle">{selectedChild?.grade || ''}</p>
                         </div>
                     </div>
-                    <ParentFeedbackDrawer autoOpenSignal={feedbackOpenSignal} />
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {selectedChild && (
+                            <button className="pc-btn-report" onClick={() => setShowReportModal(true)}>
+                                <TrendingUp size={18} /> Báo cáo học tập
+                            </button>
+                        )}
+                        <ParentFeedbackDrawer autoOpenSignal={feedbackOpenSignal} />
+                    </div>
                 </div>
 
                 {childLoading || loading ? (
@@ -375,6 +528,10 @@ const ParentClasses = () => {
 
             {selectedClass && (
                 <ClassDetailModal cls={selectedClass} onClose={() => setSelectedClass(null)} />
+            )}
+
+            {showReportModal && (
+                <PerformanceReportModal onClose={() => setShowReportModal(false)} />
             )}
         </div>
     );

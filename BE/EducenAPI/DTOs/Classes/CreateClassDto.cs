@@ -41,9 +41,14 @@ namespace EducenAPI.DTOs.Classes
 
         public int? GradeId { get; set; }
 
-        public int? TeacherId { get; set; }
+        [Required(ErrorMessage = "TeacherId is required")]
+        public int TeacherId { get; set; }
 
         public int? AssistantId { get; set; }
+
+        [Required(ErrorMessage = "MaxStudents is required")]
+        [Range(1, 1000, ErrorMessage = "MaxStudents must be between 1 and 1000")]
+        public int MaxStudents { get; set; }
 
         public DateTime? StartDate { get; set; }
 
@@ -98,6 +103,8 @@ namespace EducenAPI.DTOs.Classes
 
         public int? AssistantId { get; set; }
 
+        public int? MaxStudents { get; set; }
+
         public DateTime? StartDate { get; set; }
 
         public DateTime? EndDate { get; set; }
@@ -130,6 +137,7 @@ namespace EducenAPI.DTOs.Classes
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? Status { get; set; }
+        public int MaxStudents { get; set; }
         public int StudentCount { get; set; }
         public int TotalSessions { get; set; }
         public int CompletedSessions { get; set; }

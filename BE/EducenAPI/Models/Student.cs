@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -16,6 +16,7 @@ public partial class Student
     public string? EnrollmentStatus { get; set; }
 
     public string? Grade { get; set; }
+    public int? GradeId { get; set; }
 
     public DateTime? DateOfBirth { get; set; }
 

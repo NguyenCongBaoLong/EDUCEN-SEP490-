@@ -352,20 +352,15 @@ const StaffTable = ({
 
                                             </button>
 
-                                            <button
-
-                                                className={`action-btn email ${staff.accountSent ? 'disabled' : ''}`}
-
-                                                title={staff.accountSent ? 'Đã gửi tài khoản' : 'Gửi email tài khoản'}
-
-                                                onClick={() => !staff.accountSent && onSendAccount(staff.id)}
-                                                disabled={staff.accountSent}
-
-                                            >
-
-                                                <Mail size={18} />
-
-                                            </button>
+                                            {!staff.accountSent && (
+                                                <button
+                                                    className="action-btn email"
+                                                    title="Gửi email tài khoản"
+                                                    onClick={() => onSendAccount(staff.id)}
+                                                >
+                                                    <Mail size={18} />
+                                                </button>
+                                            )}
 
                                             <button
 

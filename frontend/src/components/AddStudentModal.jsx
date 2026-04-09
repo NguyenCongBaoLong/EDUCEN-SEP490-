@@ -9,6 +9,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         name: '',
         avatar: null,
         email: '',
+        phone: '',
         grade: '',
         dateOfBirth: '',
         gender: 'male',
@@ -43,6 +44,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                     name: '',
                     avatar: null,
                     email: '',
+                    phone: '',
                     grade: '',
                     dateOfBirth: '',
                     gender: 'male',
@@ -96,20 +98,32 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         return '';
     };
 
-    const validatePhone = (phone) => {
-        if (!phone) return '';
+    const validatePhone = (phone, allUsersList = []) => {
+        if (!phone || phone.trim() === '') return ''; // optional
         const phoneRegex = /^(0[0-9]{9,10})$/;
         if (!phoneRegex.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
+
+        // Validate uniqueness within SAME ROLE only (roleId=3 for Student)
+        const STUDENT_ROLE_ID = 3;
+        const isDuplicate = allUsersList.some(user => {
+            if (user.roleId !== STUDENT_ROLE_ID) return false;
+            // Skip current user if editing
+            if (editingStudent && user.userId && user.userId.toString() === editingStudent.id) return false;
+            return user.phoneNumber && user.phoneNumber === phone.trim();
+        });
+        if (isDuplicate) return 'Số điện thoại này đã được sử dụng bởi học sinh khác trong hệ thống';
         return '';
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Validate email realtime khi user đang nhập
         if (name === 'email') {
             const emailErr = validateEmail(value, allUsers);
             setErrors(prev => ({ ...prev, email: emailErr }));
+        } else if (name === 'phone') {
+            const phoneErr = validatePhone(value, allUsers);
+            setErrors(prev => ({ ...prev, phone: phoneErr }));
         } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -119,6 +133,8 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         const { name, value } = e.target;
         if (name === 'email') {
             setErrors(prev => ({ ...prev, email: validateEmail(value, allUsers) }));
+        } else if (name === 'phone') {
+            setErrors(prev => ({ ...prev, phone: validatePhone(value, allUsers) }));
         }
     };
 
@@ -128,6 +144,7 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         const newErrors = {
             name: validateName(formData.name),
             email: validateEmail(formData.email, allUsers),
+            phone: validatePhone(formData.phone, allUsers),
             grade: !formData.grade ? 'Vui lòng chọn khối' : ''
         };
 
@@ -212,6 +229,20 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                             className={errors.email ? 'input-error' : ''}
                         />
                         {errors.email && <span className="error-message">{errors.email}</span>}
+                    </div>
+
+                    <div className="form-group">
+                        <label>Số điện thoại</label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone || ''}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            placeholder="VD: 0901234567"
+                            className={errors.phone ? 'input-error' : ''}
+                        />
+                        {errors.phone && <span className="error-message">{errors.phone}</span>}
                     </div>
 
                     <div className="form-row">

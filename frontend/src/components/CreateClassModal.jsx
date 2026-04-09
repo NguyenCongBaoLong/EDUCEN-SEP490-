@@ -23,6 +23,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         scheduleSlots: [{ day: '', startTime: '', endTime: '' }], // Array of time slots
         startDate: '', // Ngày bắt đầu lớp
         endDate: '', // Ngày kết thúc lớp
+        maxStudents: 30,
         status: 'active'
     });
 
@@ -107,6 +108,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 scheduleSlots,
                 startDate: editingClass.startDate || '',
                 endDate: editingClass.endDate || '',
+                maxStudents: editingClass.maxStudents || 30,
                 status: editingClass.status || 'active'
             });
         } else {
@@ -125,6 +127,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 scheduleSlots: [{ day: '', startTime: '', endTime: '', roomId: null }],
                 startDate: '',
                 endDate: '',
+                maxStudents: 30,
                 status: 'active'
             });
         }
@@ -202,6 +205,16 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
         if (invalidSlots.length > 0) {
             toast.error('❌ Vui lòng điền đầy đủ thông tin cho tất cả các buổi học!');
+            return;
+        }
+
+        if (!formData.mainTeacherId) {
+            toast.error('❌ Vui lòng chọn giáo viên chính cho lớp học!');
+            return;
+        }
+
+        if (!formData.maxStudents || formData.maxStudents <= 0) {
+            toast.error('❌ Sĩ số tối đa phải lớn hơn 0!');
             return;
         }
 
@@ -448,7 +461,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay">
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>{editingClass ? 'Chỉnh sửa lớp học' : 'Tạo lớp học mới'}</h2>
@@ -541,6 +554,20 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                 ? 'Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi'
                                 : 'Nhập đơn giá cho mỗi buổi học (VNĐ)'}
                         </small>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Sĩ số tối đa *</label>
+                        <input
+                            type="number"
+                            name="maxStudents"
+                            value={formData.maxStudents}
+                            onChange={handleChange}
+                            placeholder="VD: 30"
+                            min="1"
+                            required
+                        />
+                        <small className="field-hint">Số lượng học sinh tối đa có thể tham gia lớp học</small>
                     </div>
 
 

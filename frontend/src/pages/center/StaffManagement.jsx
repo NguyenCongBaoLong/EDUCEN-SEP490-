@@ -97,7 +97,7 @@ const StaffManagement = () => {
 
                 phone: t.phoneNumber || '',
 
-                dateOfBirth: '', 
+                dateOfBirth: '',
 
                 address: t.address || '',
 
@@ -142,7 +142,7 @@ const StaffManagement = () => {
 
 
             setStaffList([...teachers, ...assistants]);
-            
+
             // Also fetch all users for email validation
             await fetchAllUsers();
 
@@ -237,10 +237,10 @@ const StaffManagement = () => {
 
         try {
             const isTeacher = staff.role === 'teacher';
-            const sendFn = isTeacher 
-                ? accountService.sendTeacherAccount 
+            const sendFn = isTeacher
+                ? accountService.sendTeacherAccount
                 : accountService.sendAssistantAccount;
-            
+
             await sendFn(parseInt(staff.id));
             toast.success(`Đã gửi email tài khoản cho ${staff.name}`);
         } catch (error) {
@@ -267,10 +267,10 @@ const StaffManagement = () => {
 
             try {
                 const isTeacher = staff.role === 'teacher';
-                const sendFn = isTeacher 
-                    ? accountService.sendTeacherAccount 
+                const sendFn = isTeacher
+                    ? accountService.sendTeacherAccount
                     : accountService.sendAssistantAccount;
-                
+
                 await sendFn(parseInt(staff.id));
                 successCount++;
             } catch (error) {
@@ -293,7 +293,7 @@ const StaffManagement = () => {
 
     // Toggle chọn một nhân viên
     const handleToggleSelect = (staffId) => {
-        setSelectedStaff(prev => 
+        setSelectedStaff(prev =>
             prev.includes(staffId)
                 ? prev.filter(id => id !== staffId)
                 : [...prev, staffId]
@@ -484,7 +484,7 @@ const StaffManagement = () => {
 
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             {selectedStaff.length > 0 && (
-                                <button 
+                                <button
                                     className="btn-add-staff"
                                     style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
                                     onClick={handleSendBulkAccounts}
@@ -518,7 +518,7 @@ const StaffManagement = () => {
                     setRoleFilter={setFilterRole}
                     statusFilter={filterStatus}
                     setStatusFilter={setFilterStatus}
-                    
+
                     selectedStaff={selectedStaff}
                     onToggleSelect={handleToggleSelect}
                     onSelectAll={handleSelectAll}

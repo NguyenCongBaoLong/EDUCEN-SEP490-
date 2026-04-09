@@ -107,6 +107,7 @@ const StudentManagement = () => {
                     name: student.fullName,
                     avatar: null,
                     email: student.email,
+                    phone: student.phoneNumber || '',
                     grade: student.grade || '',
                     class: student.className || 'Chưa xếp lớp',
                     dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',

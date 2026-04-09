@@ -107,6 +107,13 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                                         {student.gender === 'male' ? 'Nam' : 'Nữ'}
                                     </span>
                                 </div>
+                                <div className="info-item">
+                                    <span className="info-label">Số điện thoại</span>
+                                    <span className="info-value">
+                                        <Phone size={16} className="info-icon" />
+                                        {student.phone || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
                                 <div className="info-item" style={{ gridColumn: '1 / -1' }}>
                                     <span className="info-label">Địa chỉ</span>
                                     <span className="info-value">

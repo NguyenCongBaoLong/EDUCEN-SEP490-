@@ -115,6 +115,7 @@ namespace EducenAPI.Services
                     .ThenInclude(t => t!.TeacherNavigation)
                 .Include(c => c.Schedules)
                 .Include(c => c.Students)
+                .Include(c => c.Grade)
                 .Where(c => c.Status != "Completed" && c.Status != "Cancelled")
                 .Where(c => c.EndDate >= now)
                 .OrderBy(c => c.StartDate)
@@ -129,6 +130,10 @@ namespace EducenAPI.Services
                 StartDate = c.StartDate,
                 Status = c.Status,
                 StudentCount = c.Students.Count,
+                GradeId = c.GradeId,
+                GradeName = c.Grade != null ? c.Grade.GradeName : null,
+                MaxStudents = c.MaxStudents,
+                PricePerSession = c.PricePerSession,
                 ScheduleSummary = FormatScheduleSummary(c.Schedules)
             });
         }

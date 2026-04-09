@@ -40,7 +40,18 @@ namespace EducenAPI.DTOs.Students
             { "birthdate", "DateOfBirth" },
             { "birth date", "DateOfBirth" },
             { "gender", "Gender" },
-            { "sex", "Gender" }
+            { "sex", "Gender" },
+            { "parentname", "ParentName" },
+            { "parent name", "ParentName" },
+            { "tên phụ huynh", "ParentName" },
+            { "phụ huynh", "ParentName" },
+            { "parentphone", "ParentPhone" },
+            { "parent phone", "ParentPhone" },
+            { "sdt phụ huynh", "ParentPhone" },
+            { "số điện thoại phụ huynh", "ParentPhone" },
+            { "parentemail", "ParentEmail" },
+            { "parent email", "ParentEmail" },
+            { "email phụ huynh", "ParentEmail" }
         };
 
         // Validate template headers

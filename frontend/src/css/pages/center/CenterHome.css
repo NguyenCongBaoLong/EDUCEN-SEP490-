@@ -765,16 +765,67 @@
     border: none;
     padding: 1.125rem;
     border-radius: 10px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s;
     box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2);
+    margin-top: 0.5rem;
 }
 
 .center-home .center-btn-submit:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 102, 255, 0.3);
+}
+
+.center-home .center-form-optional-toggle {
+    margin: 0.5rem 0;
+}
+
+.center-home .center-btn-toggle-optional {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f8fafc;
+    border: 1px dashed var(--border);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: var(--text-gray);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+    justify-content: center;
+}
+
+.center-home .center-btn-toggle-optional:hover {
+    background: white;
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.center-home .center-form-optional-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Testimonial Card */
@@ -851,8 +902,12 @@
     margin: 0 auto;
     padding: 0 2rem 3rem;
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1.2fr 1fr;
-    gap: 2rem;
+    grid-template-columns: 2fr 1fr 1.2fr 1fr;
+    gap: 3rem;
+}
+
+.center-home .center-footer-section {
+    min-width: 0;
 }
 
 .center-home .center-footer-section h3 {
@@ -863,6 +918,8 @@
     align-items: center;
     gap: 0.5rem;
     color: var(--text-dark);
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .center-home .center-footer-section h4 {
@@ -2271,7 +2328,7 @@
     border-top: 1px solid rgba(226, 232, 240, 0.6);
 }
 
-.center-home .class-enroll-link {
+.center-home .class-enroll-link-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.625rem;
@@ -2280,11 +2337,17 @@
     font-weight: 700;
     font-size: 1.0625rem;
     transition: all 0.3s;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-family: inherit;
 }
 
-.center-home .class-enroll-link:hover {
+.center-home .class-enroll-link-btn:hover {
     gap: 1rem;
     letter-spacing: 0.5px;
+    color: #0052cc;
 }
 
 /* View all button */

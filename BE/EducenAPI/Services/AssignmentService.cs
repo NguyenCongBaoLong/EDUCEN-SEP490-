@@ -558,25 +558,40 @@ namespace EducenAPI.Services
             {
                 var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.UserId);
                 
-                result.Students.Add(new StudentSubmissionDto
+                var submissionDto = (EducenAPI.DTOs.Submissions.SubmissionResponseDto?)null;
+                if (submission != null)
                 {
-                    StudentId = student.UserId,
-                    FullName = student.StudentNavigation?.FullName ?? "Unknown Student",
-                    Submission = submission == null ? null : new EducenAPI.DTOs.Submissions.SubmissionResponseDto
+                    var fileUrls = new List<string>();
+                    if (!string.IsNullOrEmpty(submission.FileUrl))
+                    {
+                        var paths = submission.FileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var p in paths)
+                        {
+                            fileUrls.Add($"{baseUrl}/{p.Replace("\\", "/").Replace("wwwroot/", "")}");
+                        }
+                    }
+
+                    submissionDto = new EducenAPI.DTOs.Submissions.SubmissionResponseDto
                     {
                         SubId = submission.SubId,
                         AsmId = submission.AsmId,
                         StudentId = submission.StudentId,
-                        FileUrl = !string.IsNullOrEmpty(submission.FileUrl)
-                            ? $"{baseUrl}/{submission.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                            : null,
+                        FileUrl = fileUrls.FirstOrDefault(),
+                        FileUrls = fileUrls,
                         SubmittedAt = submission.SubmittedAt,
                         Status = submission.Status,
                         Score = submission.Score,
                         TeacherComment = submission.TeacherComment,
                         GradedAt = submission.GradedAt,
                         IsPublished = submission.IsPublished
-                    }
+                    };
+                }
+
+                result.Students.Add(new StudentSubmissionDto
+                {
+                    StudentId = student.UserId,
+                    FullName = student.StudentNavigation?.FullName ?? "Unknown Student",
+                    Submission = submissionDto
                 });
             }
 

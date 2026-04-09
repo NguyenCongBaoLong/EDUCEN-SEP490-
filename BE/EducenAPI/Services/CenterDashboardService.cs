@@ -73,10 +73,10 @@ namespace EducenAPI.Services
             // Current usage
             var currentUsers = await _db.Users.CountAsync();
 
-            long totalKB = 0;
+            long totalBytes = 0;
             try
             {
-                totalKB = await _db.ResourceFiles
+                totalBytes = await _db.ResourceFiles
                     .Where(rf => rf.FileSize.HasValue)
                     .SumAsync(rf => rf.FileSize ?? 0);
             }
@@ -84,7 +84,7 @@ namespace EducenAPI.Services
             {
                 // ResourceFile table may not exist yet
             }
-            var currentStorageMB = Math.Round(totalKB / 1024.0, 2);
+            var currentStorageMB = Math.Round(totalBytes / (1024.0 * 1024.0), 2);
 
             // Plan limits from Admin DB
             int maxUsers = 0;
@@ -138,12 +138,12 @@ namespace EducenAPI.Services
             var now = DateTime.UtcNow;
             var startDate = now.AddMonths(-6);
 
-            var data = await _db.Students
-                .Where(s => s.StudentNavigation != null && s.StudentNavigation.CreatedAt >= startDate)
-                .GroupBy(s => new
+            var data = await _db.EnrollmentRequests
+                .Where(e => e.RequestDate >= startDate)
+                .GroupBy(e => new
                 {
-                    s.StudentNavigation!.CreatedAt.Year,
-                    s.StudentNavigation!.CreatedAt.Month
+                    e.RequestDate.Year,
+                    e.RequestDate.Month
                 })
                 .Select(g => new StudentRegistrationDto
                 {

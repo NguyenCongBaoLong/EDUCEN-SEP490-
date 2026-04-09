@@ -1,4 +1,4 @@
-﻿namespace EduCen.DTOs.TeacherDashboard
+namespace EduCen.DTOs.TeacherDashboard
 {
     public class TeacherPerformanceResponse
     {
@@ -36,5 +36,6 @@
         public string Status { get; set; }
         public string StatusColor { get; set; }
         public string Avatar { get; set; }
+        public string ClassName { get; set; }
     }
 }

@@ -152,5 +152,53 @@ namespace EducenAPI.Ultils
 
             await smtp.SendMailAsync(mail);
         }
+
+        public async Task SendStudentClassEnrollmentEmailAsync(string toEmail, string studentName, string className)
+        {
+            var subject = "Thông báo: Bạn đã được thêm vào lớp học mới";
+            var body = $@"
+                <div style='font-family: sans-serif; line-height: 1.6; color: #333;'>
+                    <h2>Chào mừng {studentName},</h2>
+                    <p>Bạn đã được ban quản trị thêm vào lớp học: <strong>{className}</strong>.</p>
+                    <p>Vui lòng đăng nhập vào hệ thống Educen để xem thời khóa biểu và tài liệu học tập.</p>
+                    <br/>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Educen.</p>
+                </div>
+            ";
+            await SendEmailAsync(toEmail, subject, body);
+        }
+
+        public async Task SendAssistantClassAssignmentEmailAsync(string toEmail, string assistantName, string className)
+        {
+            var subject = "Thông báo: Bạn đã được phân công hỗ trợ lớp học mới";
+            var body = $@"
+                <div style='font-family: sans-serif; line-height: 1.6; color: #333;'>
+                    <h2>Xin chào trợ giảng {assistantName},</h2>
+                    <p>Bạn đã được phân công hỗ trợ lớp học: <strong>{className}</strong>.</p>
+                    <p>Vui lòng đăng nhập vào hệ thống để kiểm tra danh sách học sinh và phối hợp cùng giáo viên chính.</p>
+                    <br/>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Educen.</p>
+                </div>
+            ";
+            await SendEmailAsync(toEmail, subject, body);
+        }
+
+        public async Task SendTeacherClassAssignmentEmailAsync(string toEmail, string teacherName, string className)
+        {
+            var subject = "Thông báo: Bạn đã được phân công giảng dạy lớp học mới";
+            var body = $@"
+                <div style='font-family: sans-serif; line-height: 1.6; color: #333;'>
+                    <h2>Xin chào giáo viên {teacherName},</h2>
+                    <p>Bạn đã được phân công giảng dạy lớp học: <strong>{className}</strong>.</p>
+                    <p>Vui lòng đăng nhập vào hệ thống Educen để xem danh sách học sinh, thời khóa biểu và chuẩn bị bài giảng.</p>
+                    <br/>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Educen.</p>
+                </div>
+            ";
+            await SendEmailAsync(toEmail, subject, body);
+        }
     }
 }
