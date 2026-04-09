@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.ZaloOA;
+﻿using EducenAPI.DTOs.ZaloOA;
 using EducenAPI.Models;
 using System.Text.Json.Serialization;
 
@@ -28,35 +28,29 @@ namespace EducenAPI.Services.Interface
 
     public class ZaloWebhookPayload
     {
-        [JsonPropertyName("challenge")]
-        public string? Challenge { get; set; }
-
         [JsonPropertyName("event_name")]
         public string? EventName { get; set; }
 
-        [JsonPropertyName("oa_id")]
+        [JsonPropertyName("oa_id")] // Dùng cho sự kiện 'follow'
         public string? OAId { get; set; }
 
-        // Tr??ng n�y th??ng kh�ng c� ? c?p ngo�i c�ng trong s? ki?n 'follow'
-        [JsonPropertyName("follower_id")]
-        public string? FollowerIdRaw { get; set; }
+        [JsonPropertyName("recipient")] // Dùng cho sự kiện 'user_send_text'
+        public ZaloIdData? Recipient { get; set; }
 
-        [JsonPropertyName("user_id")]
-        public string? UserId { get; set; }
+        [JsonPropertyName("sender")] // Chứa ID người dùng khi nhắn tin
+        public ZaloIdData? Sender { get; set; }
 
-        [JsonPropertyName("timestamp")]
-        public long Timestamp { get; set; }
+        [JsonPropertyName("follower")] // Chứa ID người dùng khi nhấn Quan tâm
+        public ZaloIdData? Follower { get; set; }
 
-        // ??I T??NG QUAN TR?NG NH?T
-        [JsonPropertyName("follower")]
-        public FollowerData? Follower { get; set; }
+        // THUỘC TÍNH THÔNG MINH: Tự động lấy OA ID chuẩn
+        public string? ActualOAId => OAId ?? Recipient?.Id;
 
-        // Th�m thu?c t�nh n�y ?? code x? l� b�n d??i g?n h?n
-        // v� ?? Console log hi?n ?�ng ID thay v� ?? tr?ng
-        public string? FollowerId => Follower?.Id ?? FollowerIdRaw;
+        // THUỘC TÍNH THÔNG MINH: Tự động lấy User ID chuẩn
+        public string? ActualFollowerId => Sender?.Id ?? Follower?.Id;
     }
 
-    public class FollowerData
+    public class ZaloIdData
     {
         [JsonPropertyName("id")]
         public string? Id { get; set; }

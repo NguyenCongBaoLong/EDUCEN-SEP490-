@@ -95,7 +95,7 @@ namespace EducenAPI.Controllers
         public async Task<IActionResult> Webhook([FromBody] ZaloWebhookPayload payload)
         {
             // LOG NGAY ĐỂ KIỂM TRA
-            Console.WriteLine($"==> WEBHOOK RECEIVED: Event={payload.EventName}, OA={payload.OAId}, User={payload.FollowerId}");
+            Console.WriteLine($"==> WEBHOOK RECEIVED: Event={payload.EventName}, OA={payload.OAId}, User={payload.ActualFollowerId}");
 
             try
             {
