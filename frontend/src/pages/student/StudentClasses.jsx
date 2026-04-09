@@ -572,7 +572,7 @@ const StudentClasses = () => {
                                 {availableClasses.map((cls) => {
                                     const accentColor = SUBJECT_COLORS[cls.subjectName] || '#6366f1';
                                     const isPending = pendingEnrollmentIds.has(cls.classId);
-                                    const isFull = cls.studentCount >= cls.maxStudents;
+                                    const isFull = cls.maxStudents > 0 && cls.studentCount >= cls.maxStudents;
                                     const status = isPending
                                         ? { key: 'notstarted', label: 'Đã đăng ký · Chờ duyệt' }
                                         : getStatusInfo(cls, true);
@@ -581,7 +581,7 @@ const StudentClasses = () => {
                                         <div
                                             key={cls.classId}
                                             className="sc-card"
-                                            style={{ '--accent': accentColor, opacity: isPending ? 0.85 : 1 }}
+                                            style={{ '--accent': accentColor, opacity: (isPending || isFull) ? 0.78 : 1 }}
                                         >
                                             <div className="sc-card-top">
                                                 <div className="sc-card-accent" style={{ background: isPending ? '#94a3b8' : accentColor }} />
@@ -625,13 +625,20 @@ const StudentClasses = () => {
                                                     <button className="sc-enroll-btn" disabled style={{ background: '#e2e8f0', color: '#64748b', cursor: 'default' }}>
                                                         ✓ Đã gửi đơn đăng ký
                                                     </button>
+                                                ) : isFull ? (
+                                                    <button
+                                                        className="sc-enroll-btn"
+                                                        disabled
+                                                        style={{ background: '#fee2e2', color: '#b91c1c', cursor: 'not-allowed', border: '1px solid #fecaca' }}
+                                                    >
+                                                        🔒 Lớp đã đầy
+                                                    </button>
                                                 ) : (
                                                     <button
                                                         className="sc-enroll-btn"
                                                         onClick={() => handleQuickEnroll(cls)}
-                                                        disabled={isFull}
                                                     >
-                                                        {isFull ? 'Lớp đã đầy' : (<>Đăng ký ngay <ArrowRight size={16} /></>)}
+                                                        Đăng ký ngay <ArrowRight size={16} />
                                                     </button>
                                                 )}
                                             </div>

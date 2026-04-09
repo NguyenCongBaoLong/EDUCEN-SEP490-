@@ -1409,13 +1409,27 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                         </div>
                                                     </div>
                                                     <div className="class-card-footer">
-                                                        <button 
-                                                            type="button"
-                                                            className="class-enroll-link-btn"
-                                                            onClick={() => handleClassSelect(cls)}
-                                                        >
-                                                            Đăng ký ngay <ArrowRight size={16} />
-                                                        </button>
+                                                        {(() => {
+                                                            const isFull = cls.maxStudents > 0 && cls.studentCount >= cls.maxStudents;
+                                                            return isFull ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="class-enroll-link-btn"
+                                                                    disabled
+                                                                    style={{ background: '#fee2e2', color: '#b91c1c', cursor: 'not-allowed', border: '1px solid #fecaca', opacity: 0.9 }}
+                                                                >
+                                                                    🔒 Lớp đã đầy
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    className="class-enroll-link-btn"
+                                                                    onClick={() => handleClassSelect(cls)}
+                                                                >
+                                                                    Đăng ký ngay <ArrowRight size={16} />
+                                                                </button>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
                                             ))}
