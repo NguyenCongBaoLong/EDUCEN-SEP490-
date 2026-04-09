@@ -20,7 +20,8 @@ import FamilyInvoices from '../parent/FamilyInvoices';
 import '../../css/pages/student/MyInvoices.css';
 
 const MyInvoices = () => {
-    const [allChildrenTab, setAllChildrenTab] = useState('all'); // 'all' | 'merge'
+    const [allChildrenTab, setAllChildrenTab] = useState('all'); // 'all' | 'merge' | 'history'
+    const [invoiceTab, setInvoiceTab] = useState('active'); // 'active' | 'history'
     const { user } = useAuth();
     const { selectedChild, childrenList } = useChild();
     const isParent = user?.role === 'Parent';
@@ -418,6 +419,24 @@ const MyInvoices = () => {
         }
     };
 
+    const getStatusClassName = (status) => {
+        switch (status) {
+            case 'Paid':
+                return 'paid';
+            case 'Sent':
+            case 'Pending':
+            case 'Draft':
+            case 'Processing':
+                return 'pending';
+            case 'Cancelled':
+            case 'Overdue':
+            case 'Failed':
+                return 'failed';
+            default:
+                return 'default';
+        }
+    };
+
     const getStudentDisplayName = (invoice) => {
         const fromInvoice = invoice?.studentName?.trim();
         if (fromInvoice) return fromInvoice;
@@ -489,7 +508,12 @@ const MyInvoices = () => {
         return false;
     };
 
-    const showAllInvoicesView = !isParent || !isAllChildren || allChildrenTab === 'all';
+    const activeInvoices = invoices.filter((invoice) => invoice.status !== 'Paid');
+    const paidInvoices = invoices.filter((invoice) => invoice.status === 'Paid');
+    const isHistoryView = isParent && isAllChildren
+        ? allChildrenTab === 'history'
+        : invoiceTab === 'history';
+    const showAllInvoicesView = !isHistoryView && (!isParent || !isAllChildren || allChildrenTab === 'all');
 
     return (
         <div className="my-invoices-container">
@@ -519,6 +543,32 @@ const MyInvoices = () => {
                             onClick={() => setAllChildrenTab('merge')}
                         >
                             Gộp hóa đơn
+                        </button>
+                        <button
+                            type="button"
+                            className={`invoice-subtab-btn ${allChildrenTab === 'history' ? 'active' : ''}`}
+                            onClick={() => setAllChildrenTab('history')}
+                        >
+                            Lịch sử giao dịch
+                        </button>
+                    </div>
+                )}
+
+                {(!isParent || !isAllChildren) && (
+                    <div className="invoices-subtabs">
+                        <button
+                            type="button"
+                            className={`invoice-subtab-btn ${invoiceTab === 'active' ? 'active' : ''}`}
+                            onClick={() => setInvoiceTab('active')}
+                        >
+                            Hóa đơn cần thanh toán
+                        </button>
+                        <button
+                            type="button"
+                            className={`invoice-subtab-btn ${invoiceTab === 'history' ? 'active' : ''}`}
+                            onClick={() => setInvoiceTab('history')}
+                        >
+                            Lịch sử giao dịch
                         </button>
                     </div>
                 )}
@@ -651,13 +701,13 @@ const MyInvoices = () => {
                     <div className="loading">Đang tải...</div>
                 ) : (
                     <div className="invoices-list">
-                        {invoices.length === 0 ? (
+                        {activeInvoices.length === 0 ? (
                             <div className="empty-state">
                                 <FileText />
-                                <p>Hiện tại bạn không có hóa đơn nào</p>
+                                <p>Hiện tại bạn không có hóa đơn cần thanh toán</p>
                             </div>
                         ) : (
-                            invoices.map((invoice) => (
+                            activeInvoices.map((invoice) => (
                                 <div
                                     key={invoice.invoiceId}
                                     className={`invoice-card ${invoice.status.toLowerCase()}`}
@@ -733,6 +783,54 @@ const MyInvoices = () => {
                                     </div>
                                 </div>
                             ))
+                        )}
+                    </div>
+                ))}
+
+                {isHistoryView && (loading ? (
+                    <div className="loading">Đang tải...</div>
+                ) : (
+                    <div className="history-table-wrapper">
+                        {paidInvoices.length === 0 ? (
+                            <div className="empty-state">
+                                <FileText />
+                                <p>Chưa có giao dịch thanh toán nào</p>
+                            </div>
+                        ) : (
+                            <table className="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Mã hóa đơn</th>
+                                        <th>Kỳ</th>
+                                        {isParent && <th>Học sinh</th>}
+                                        <th>Lớp học</th>
+                                        <th>Số buổi</th>
+                                        <th>Hạn thanh toán</th>
+                                        <th>Ngày thanh toán</th>
+                                        <th>Trạng thái</th>
+                                        <th>Số tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {paidInvoices.map((invoice) => (
+                                        <tr key={invoice.invoiceId}>
+                                            <td>#{invoice.invoiceId}</td>
+                                            <td>{invoice.invoiceMonth}/{invoice.invoiceYear}</td>
+                                            {isParent && <td>{getStudentDisplayName(invoice)}</td>}
+                                            <td>{invoice.class?.className || 'N/A'}</td>
+                                            <td>{invoice.attendedSessions ?? 0}</td>
+                                            <td>{formatDate(invoice.dueDate)}</td>
+                                            <td>{invoice.paidAt ? formatDate(invoice.paidAt) : (invoice.updatedAt ? formatDate(invoice.updatedAt) : '-')}</td>
+                                            <td>
+                                                <span className={`history-status-badge ${getStatusClassName(invoice.status)}`}>
+                                                    {getStatusText(invoice.status, invoice)}
+                                                </span>
+                                            </td>
+                                            <td>{formatCurrency(invoice.finalAmount)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         )}
                     </div>
                 ))}

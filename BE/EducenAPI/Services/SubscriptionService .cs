@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Subscription;
+﻿using EducenAPI.DTOs.Subscription;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -82,7 +82,7 @@ namespace EducenAPI.Services
             // Tạo credit cho tenant bằng với giá gói đã mua
             // Credit có thời hạn 12 tháng (có thể config trong appsettings)
             var creditExpirationMonths = 12; // Default 12 tháng
-            tenant.CreditBalance = plan.Price;
+            tenant.CreditBalance += plan.Price;
             var creditLedger = new TenantCreditLedger
             {
                 TenantId = tenant.TenantId,
@@ -126,35 +126,7 @@ namespace EducenAPI.Services
 
             foreach (var sub in activeSubs)
             {
-                // Chính sách mới: chỉ tạo credit trong grace period
-                if (immediate && createCredit)
-                {
-                    // Kiểm tra grace period
-                    var daysSinceStart = (DateTime.UtcNow - sub.StartDate).Days;
-                    const int GRACE_PERIOD_DAYS = 7;
-                    
-                    if (daysSinceStart <= GRACE_PERIOD_DAYS)
-                    {
-                        // Trong grace period → tạo credit
-                        var creditAmount = CalculateProrationCredit(sub);
-                        if (creditAmount > 0 && tenant != null)
-                        {
-                            tenant.CreditBalance += creditAmount;
-                            var ledger = new TenantCreditLedger
-                            {
-                                TenantId = tenantId,
-                                Amount = creditAmount,
-                                EntryType = "Credit",
-                                ReferenceType = "GracePeriodCancel",
-                                ReferenceId = sub.Id,
-                                BalanceAfter = tenant.CreditBalance,
-                                Note = $"Hủy gói trong grace period {sub.Plan?.PlanName} - Hoàn credit"
-                            };
-                            _context.TenantCreditLedgers.Add(ledger);
-                        }
-                    }
-                    // Ngoài grace period → không tạo credit
-                }
+                // Business rule: khong hoan credit khi huy/ha goi.
 
                 if (immediate)
                 {
@@ -170,21 +142,6 @@ namespace EducenAPI.Services
 
             await _context.SaveChangesAsync();
             return true;
-        }
-
-        private decimal CalculateProrationCredit(Subscription subscription)
-        {
-            if (subscription?.Plan == null) return 0;
-            if (subscription.EndDate <= DateTime.UtcNow) return 0;
-
-            var totalDays = (subscription.EndDate - subscription.StartDate).Days;
-            if (totalDays <= 0) return 0;
-
-            var remainingDays = (subscription.EndDate - DateTime.UtcNow).Days;
-            if (remainingDays < 0) remainingDays = 0;
-
-            var dailyRate = subscription.Plan.Price / totalDays;
-            return Math.Round(dailyRate * remainingDays, 0, MidpointRounding.AwayFromZero);
         }
 
         /// <summary>
@@ -208,45 +165,6 @@ namespace EducenAPI.Services
         public decimal CalculateUnusedCredit(Subscription subscription)
         {
             return CalculateUnusedCreditInternal(subscription);
-        }
-
-        /// <summary>
-        /// <summary>
-        /// Tính credit hoàn lại theo chính sách mới (chỉ trong grace period)
-        /// </summary>
-        private decimal CalculateUpgradeCredit(Subscription currentSub, Plan newPlan)
-        {
-            if (currentSub?.Plan == null || newPlan == null) return 0;
-            if (currentSub.EndDate <= DateTime.UtcNow) return 0;
-
-            // Chỉ refund trong grace period (7 ngày đầu)
-            var daysSinceStart = (DateTime.UtcNow - currentSub.StartDate).Days;
-            const int GRACE_PERIOD_DAYS = 7;
-            
-            if (daysSinceStart > GRACE_PERIOD_DAYS)
-            {
-                // Ngoài grace period → không refund
-                return 0;
-            }
-
-            // Trong grace period → refund theo chênh lệch giá
-            if (newPlan.Price >= currentSub.Plan.Price)
-            {
-                // Upgrade → không refund
-                return 0;
-            }
-
-            // Downgrade trong grace period → refund chênh lệch
-            var priceDiff = currentSub.Plan.Price - newPlan.Price;
-            var remainingDays = (currentSub.EndDate - DateTime.UtcNow).Days;
-            if (remainingDays < 0) remainingDays = 0;
-
-            // Refund = chênh lệch giá × % thời gian còn lại
-            var totalDays = (currentSub.EndDate - currentSub.StartDate).Days;
-            var refundPercentage = (double)remainingDays / totalDays;
-            var refundAmount = priceDiff * (decimal)refundPercentage;
-
-            return Math.Round(refundAmount, 0, MidpointRounding.AwayFromZero);
         }
 
         public async Task<SubscriptionResponseDTO?> GetActiveSubscriptionAsync(string tenantId)
@@ -391,9 +309,6 @@ namespace EducenAPI.Services
                 .Where(s => s.TenantId == request.TenantId && s.Status == "Active")
                 .FirstOrDefaultAsync();
 
-            var creditFromOldPlan = 0m;
-            var priceDiff = 0m;
-
             if (currentSub != null)
             {
                 // Kiểm tra quy tắc đổi gói: nâng gói bất cứ lúc nào, hạ gói chỉ trong 7 ngày đầu
@@ -405,28 +320,7 @@ namespace EducenAPI.Services
                     throw new Exception("Chỉ được hạ gói trong 7 ngày đầu tiên của gói dịch vụ. Nâng gói có thể thực hiện bất cứ lúc nào.");
                 }
                 
-                // Tính credit hoàn lại từ gói cũ (chỉ trong grace period)
-                creditFromOldPlan = CalculateUpgradeCredit(currentSub, newPlan);
-                
-                // Chênh lệch giá gói mới - gói cũ
-                priceDiff = newPlan.Price - currentSub.Plan.Price;
-
-                // Chính sách mới: chỉ refund trong grace period
-                if (creditFromOldPlan > 0)
-                {
-                    tenant.CreditBalance += creditFromOldPlan;
-                    var ledger = new TenantCreditLedger
-                    {
-                        TenantId = request.TenantId,
-                        Amount = creditFromOldPlan,
-                        EntryType = "Credit",
-                        ReferenceType = "GracePeriodRefund",
-                        ReferenceId = currentSub.Id,
-                        BalanceAfter = tenant.CreditBalance,
-                        Note = $"Refund trong grace period từ {currentSub.Plan?.PlanName} sang {newPlan.PlanName}"
-                    };
-                    _context.TenantCreditLedgers.Add(ledger);
-                }
+                // Business rule: changing plan does not create refund/top-up entries.
 
                 // Chính sách mới: downgrade hiệu lực kỳ sau (không hủy gói cũ ngay)
                 if (request.EffectiveImmediately && newPlan.Price < currentSub.Plan.Price)
@@ -467,95 +361,21 @@ namespace EducenAPI.Services
 
             _context.Subscriptions.Add(newSubscription);
 
-            // Tính số tiền cần thanh toán (chính sách mới)
-            var totalAmount = newPlan.Price * request.Months;
-            var amountToCharge = totalAmount;
-
-            // Chính sách mới: chỉ trừ credit cho thanh toán gói mới
-            // Credit từ refund chỉ được dùng cho các kỳ tiếp theo
-            if (request.EffectiveImmediately)
+            // Business rule: changing plan does not deduct credit immediately.
+            // Credit is deducted daily by CreditDeductionService with formula planPrice/30.
+            var payment = new PaymentRecord
             {
-                if (tenant.CreditBalance >= totalAmount)
-                {
-                    // Credit đủ → trù hết
-                    tenant.CreditBalance -= totalAmount;
-                    var creditLedger = new TenantCreditLedger
-                    {
-                        TenantId = request.TenantId,
-                        Amount = -totalAmount,
-                        EntryType = "Debit",
-                        ReferenceType = "PlanPayment",
-                        ReferenceId = newSubscription.Id,
-                        BalanceAfter = tenant.CreditBalance,
-                        Note = $"Sử dụng credit thanh toán gói {newPlan.PlanName}"
-                    };
-                    _context.TenantCreditLedgers.Add(creditLedger);
-                    amountToCharge = 0; // Đã trừ đủ credit
-                }
-                else
-                {
-                    // Credit không đủ → trù hết credit và thu thêm phần thiếu
-                    var remaining = totalAmount - tenant.CreditBalance;
-                    if (tenant.CreditBalance > 0)
-                    {
-                        var partialLedger = new TenantCreditLedger
-                        {
-                            TenantId = request.TenantId,
-                            Amount = -tenant.CreditBalance,
-                            EntryType = "Debit",
-                            ReferenceType = "PlanPayment",
-                            ReferenceId = newSubscription.Id,
-                            BalanceAfter = 0,
-                            Note = $"Sử dụng credit thanh toán gói {newPlan.PlanName}"
-                        };
-                        _context.TenantCreditLedgers.Add(partialLedger);
-                    }
-                    tenant.CreditBalance = 0;
-                    amountToCharge = remaining;
-                }
-            }
-            else
-            {
-                // Hiệu lực kỳ sau → không trừ credit ngay
-                amountToCharge = totalAmount;
-            }
-
-            amountToCharge = Math.Round(amountToCharge, 0, MidpointRounding.AwayFromZero);
-
-            // Nếu amountToCharge <= 0 thì không cần thanh toán, set payment là Paid luôn
-            if (amountToCharge <= 0)
-            {
-                var payment = new PaymentRecord
-                {
-                    TenantId = request.TenantId,
-                    Amount = Math.Abs(amountToCharge),
-                    Status = "Paid",
-                    PaymentDate = DateTime.UtcNow,
-                    TransactionType = "Subscription",
-                    ReferenceId = newSubscription.Id,
-                    PaymentMethod = "Credit",
-                    SubscriptionMonths = request.Months,
-                    Description = $"Thanh toán gói {newPlan.PlanName} ({request.Months} tháng) - Đã trừ credit"
-                };
-                _context.PaymentRecords.Add(payment);
-            }
-            else
-            {
-                // Tạo payment chờ thanh toán (sẽ xử lý sau khi VNPay callback)
-                var payment = new PaymentRecord
-                {
-                    TenantId = request.TenantId,
-                    Amount = amountToCharge,
-                    Status = "Pending",
-                    PaymentDate = DateTime.UtcNow,
-                    TransactionType = "Subscription",
-                    ReferenceId = newSubscription.Id,
-                    PaymentMethod = "VNPay",
-                    SubscriptionMonths = request.Months,
-                    Description = $"Thanh toán gói {newPlan.PlanName} ({request.Months} tháng) - Cần thanh toán {amountToCharge} VNĐ"
-                };
-                _context.PaymentRecords.Add(payment);
-            }
+                TenantId = request.TenantId,
+                Amount = 0,
+                Status = "Paid",
+                PaymentDate = DateTime.UtcNow,
+                TransactionType = "Subscription",
+                ReferenceId = newSubscription.Id,
+                PaymentMethod = "Credit",
+                SubscriptionMonths = request.Months,
+                Description = $"Changed to plan {newPlan.PlanName} ({request.Months} month(s)) - no immediate credit deduction"
+            };
+            _context.PaymentRecords.Add(payment);
 
             await _context.SaveChangesAsync();
 

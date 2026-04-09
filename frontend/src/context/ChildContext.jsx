@@ -16,8 +16,8 @@ export const ChildProvider = ({ children }) => {
             .then(res => {
                 const list = res.data || [];
                 setChildrenList(list);
-                // Thêm option "Tâ´t ca" vào danh sách và làm nó là default
-                const allOption = { studentId: 'all', fullName: 'Tâ´t ca' };
+                // Thêm option "Tất cả" vào danh sách và làm nó là default
+                const allOption = { studentId: 'all', fullName: 'Tất cả' };
                 if (list.length > 0) {
                     setSelectedChild(allOption);
                 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2, MessageSquare, TrendingUp, Award, FileCheck } from 'lucide-react';
 import ParentSidebar from '../../components/ParentSidebar';
@@ -393,11 +393,17 @@ const ParentClasses = () => {
             <main className="pc-main">
                 <div className="pc-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div className="pc-child-info">
-                        <div className="pc-child-avatar">
-                            {(selectedChild?.fullName || '?').trim().split(' ').pop().charAt(0).toUpperCase()}
-                        </div>
+                        {selectedChild?.studentId !== 'all' && (
+                            <div className="pc-child-avatar">
+                                {(selectedChild?.fullName || '?').trim().split(' ').pop().charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div>
-                            <h1 className="pc-title">Lớp học của {selectedChild?.fullName || '...'}</h1>
+                            <h1 className="pc-title">
+                                {selectedChild?.studentId === 'all'
+                                    ? 'Lớp học của tất cả con'
+                                    : `Lớp học của ${selectedChild?.fullName || '...'}`}
+                            </h1>
                             <p className="pc-subtitle">{selectedChild?.grade || ''}</p>
                         </div>
                     </div>
@@ -509,7 +515,7 @@ const ParentClasses = () => {
                                                     )}
                                                     {selectedChild?.studentId === 'all' && (
                                                         <p className="pc-card-code" style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 600 }}>
-                                                            Hoc sinh: {cls.studentName || `#${cls.studentId}`}
+                                                            Học sinh: {cls.studentName || `#${cls.studentId}`}
                                                         </p>
                                                     )}
                                                 </div>

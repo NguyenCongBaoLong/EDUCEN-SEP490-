@@ -116,10 +116,8 @@ namespace EducenAPI.Services.BackgroundServices
                 return;
             }
 
-            var totalDays = (subscription.EndDate - subscription.StartDate).Days;
-            if (totalDays <= 0) return;
-
-            var dailyRate = subscription.Plan.Price / totalDays;
+            // Business rule: fixed daily deduction = plan price / 30
+            var dailyRate = subscription.Plan.Price / 30m;
             dailyRate = Math.Round(dailyRate, 0, MidpointRounding.AwayFromZero);
 
             if (dailyRate <= 0) return;

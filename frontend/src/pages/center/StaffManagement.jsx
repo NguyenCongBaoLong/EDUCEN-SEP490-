@@ -104,6 +104,7 @@ const StaffManagement = () => {
                 notes: t.degree || '',
 
                 status: t.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive',
+
                 accountSent: t.isAccountSent ?? false
 
             }));
@@ -235,16 +236,42 @@ const StaffManagement = () => {
         const staff = staffList.find(s => s.id === staffId);
         if (!staff) return;
 
+        // Kiểm tra xem userId có tồn tại không
+        if (!staff.userId) {
+            toast.error(`Không thể gửi email tài khoản cho ${staff.name}: Không tìm thấy thông tin user. Vui lòng xóa và tạo lại nhân viên.`);
+            console.error('UserId is null/undefined for staff:', staff);
+            return;
+        }
+
         try {
+            const toastId = toast.loading(`Đang gửi tài khoản cho ${staff.name}...`);
             const isTeacher = staff.role === 'teacher';
             const sendFn = isTeacher
                 ? accountService.sendTeacherAccount
                 : accountService.sendAssistantAccount;
 
-            await sendFn(parseInt(staff.id));
+            console.log('Gửi email tài khoản cho:', staff.name, 'ID:', staff.id, 'Role:', staff.role, 'UserID:', staff.userId);
+            const numericId = parseInt(staff.id);
+            console.log('Numeric ID:', numericId, 'Is NaN:', isNaN(numericId));
+
+            if (isNaN(numericId)) {
+                toast.error(`ID nhân viên không hợp lệ: ${staff.id}`);
+                return;
+            }
+
+            await sendFn(numericId);
+            
+            // Refresh lại danh sách để lấy trạng thái mới từ backend
+            await fetchStaff();
+            
+            toast.dismiss(toastId);
             toast.success(`Đã gửi email tài khoản cho ${staff.name}`);
         } catch (error) {
             console.error("Lỗi khi gửi email:", error);
+            console.error("Error response:", error.response);
+            console.error("Error message:", error.response?.data?.message);
+            console.error("Error status:", error.response?.status);
+            toast.dismiss();
             toast.error(error.response?.data?.message || 'Không thể gửi email tài khoản');
         }
     };
@@ -278,6 +305,9 @@ const StaffManagement = () => {
                 console.error(`Lỗi gửi email cho ${staff.name}:`, error);
             }
         }
+
+        // Refresh lại danh sách để lấy trạng thái mới từ backend
+        await fetchStaff();
 
         if (successCount > 0) {
             toast.success(`Đã gửi email thành công cho ${successCount} nhân viên`);
@@ -325,10 +355,6 @@ const StaffManagement = () => {
 
 
             let payload = {
-
-                username: `staff_${Date.now()}`,
-
-                password: `Staff123!`,
 
                 fullName: staffData.name,
 

@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+﻿import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, Calendar, LogOut, ChevronDown, User, FileText, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChild } from '../context/ChildContext';
@@ -27,7 +27,7 @@ const ParentSidebar = () => {
             label: selectedChild?.studentId === 'all' ? 'Lịch học của tất cả con' : 'Lịch học của con' 
         },
         { path: '/parent/invoices', icon: FileText, label: 'Hóa đơn học phí' },
-        { path: '/parent/feedback', icon: MessageSquare, label: 'Gửi phản hồi' },
+        // { path: '/parent/feedback', icon: MessageSquare, label: 'Gửi phản hồi' },
     ];
 
     return (

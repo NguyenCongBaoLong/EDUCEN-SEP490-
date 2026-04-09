@@ -1,4 +1,4 @@
-using EducenAPI.Models;
+﻿using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -7,26 +7,26 @@ namespace EducenAPI.Services
 {
     public interface ISubscriptionChangeService
     {
-        // Center: Yêu cầu đổi gói
+        // Center: YÃªu cáº§u Ä‘á»•i gÃ³i
         Task<PackageChangeRequest> CreatePackageChangeRequestAsync(string tenantId, string requestedPlanId, int months, string? reason, string requestedBy);
 
-        // Center: Xem yêu cầu của mình
+        // Center: Xem yÃªu cáº§u cá»§a mÃ¬nh
         Task<List<PackageChangeRequest>> GetTenantPackageChangeRequestsAsync(string tenantId);
 
-        // SystemAdmin: Xem tất cả yêu cầu
+        // SystemAdmin: Xem táº¥t cáº£ yÃªu cáº§u
         Task<List<PackageChangeRequest>> GetAllPackageChangeRequestsAsync(string? status = null);
 
-        // SystemAdmin: Duyệt/Từ chối yêu cầu
+        // SystemAdmin: Duyá»‡t/Tá»« chá»‘i yÃªu cáº§u
         Task<PackageChangeRequest> ReviewPackageChangeRequestAsync(string requestId, bool approved, string? reviewNote, string reviewedBy);
 
-        // SystemAdmin: Tạo hoá đơn sau khi duyệt
+        // SystemAdmin: Táº¡o hoÃ¡ Ä‘Æ¡n sau khi duyá»‡t
         Task<Invoice> CreateInvoiceAsync(string requestId, int dueDays, string createdBy);
 
-        // SystemAdmin: Lấy hoá đơn theo tenant
+        // SystemAdmin: Láº¥y hoÃ¡ Ä‘Æ¡n theo tenant
         Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId);
         Task<List<Invoice>> GetAllInvoicesAsync(string? tenantId = null, string? status = null);
 
-        // SystemAdmin: Cập nhật trạng thái thanh toán
+        // SystemAdmin: Cáº­p nháº­t tráº¡ng thÃ¡i thanh toÃ¡n
         Task<Invoice> UpdateInvoicePaymentAsync(string invoiceId, string paymentMethod, string? paymentNote, string updatedBy);
         Task<Invoice> ConfirmInvoicePaidAndApplyAsync(
             string invoiceId,
@@ -35,7 +35,7 @@ namespace EducenAPI.Services
             string updatedBy,
             string? existingPaymentRecordId = null);
 
-        // Center: Gửi yêu cầu xác nhận thanh toán offline (tiền mặt/chuyển khoản)
+        // Center: Gá»­i yÃªu cáº§u xÃ¡c nháº­n thanh toÃ¡n offline (tiá»n máº·t/chuyá»ƒn khoáº£n)
         Task<Invoice> RequestOfflineInvoicePaymentAsync(string tenantId, string invoiceId, string paymentMethod, string? paymentNote, string requestedBy);
     }
 
@@ -63,27 +63,36 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(t => t.TenantId == tenantId);
 
             if (tenant == null)
-                throw new Exception("Không tìm thấy trung tâm.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y trung tÃ¢m.");
 
             var requestedPlan = await _context.Plans.FindAsync(requestedPlanId);
             if (requestedPlan == null || !requestedPlan.IsActive)
-                throw new Exception("Gói dịch vụ không hợp lệ.");
+                throw new Exception("GÃ³i dá»‹ch vá»¥ khÃ´ng há»£p lá»‡.");
 
-            var currentSubscription = tenant.Subscriptions?.FirstOrDefault();
+            var currentSubscription = await GetActiveSubscriptionAsync(tenantId);
             ValidateChangeRules(currentSubscription, requestedPlan);
-            var currentPlanId = currentSubscription?.PlanId ?? "";
 
-            // Kiểm tra yêu cầu đổi gói đang chờ
+            // CurrentPlanId has FK to Plans, so it must always reference an existing Plan.
+            // Fallback to requested plan when tenant has no active/valid current plan.
+            var currentPlanId = currentSubscription?.PlanId;
+            var hasCurrentPlan = !string.IsNullOrWhiteSpace(currentPlanId) &&
+                                 await _context.Plans.AnyAsync(p => p.PlanId == currentPlanId);
+            if (!hasCurrentPlan)
+            {
+                currentPlanId = requestedPlanId;
+            }
+
+            // Kiá»ƒm tra yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá»
             var pendingRequest = await _context.PackageChangeRequests
                 .AnyAsync(r => r.TenantId == tenantId && r.Status == "Pending");
 
             if (pendingRequest)
-                throw new Exception("Đã có yêu cầu đổi gói đang chờ xử lý.");
+                throw new Exception("ÄÃ£ cÃ³ yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá» xá»­ lÃ½.");
 
             var request = new PackageChangeRequest
             {
                 TenantId = tenantId,
-                CurrentPlanId = currentPlanId,
+                CurrentPlanId = currentPlanId!,
                 RequestedPlanId = requestedPlanId,
                 RequestedMonths = months,
                 Reason = reason?.Trim(),
@@ -132,10 +141,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(r => r.RequestId == requestId);
 
             if (request == null)
-                throw new Exception("Không tìm thấy yêu cầu.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y yÃªu cáº§u.");
 
             if (request.Status != "Pending")
-                throw new Exception("Yêu cầu đã được xử lý.");
+                throw new Exception("YÃªu cáº§u Ä‘Ã£ Ä‘Æ°á»£c xá»­ lÃ½.");
 
             request.Status = approved ? "Approved" : "Rejected";
             request.ReviewedAt = DateTime.UtcNow;
@@ -146,7 +155,7 @@ namespace EducenAPI.Services
 
             if (approved)
             {
-                // Auto gửi hóa đơn ngay sau khi duyệt, dùng cấu hình hạn đóng tiền mặc định.
+                // Auto gá»­i hÃ³a Ä‘Æ¡n ngay sau khi duyá»‡t, dÃ¹ng cáº¥u hÃ¬nh háº¡n Ä‘Ã³ng tiá»n máº·c Ä‘á»‹nh.
                 await CreateInvoiceAsync(requestId, 0, reviewedBy);
             }
 
@@ -163,10 +172,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(r => r.RequestId == requestId);
 
             if (request == null)
-                throw new Exception("Không tìm thấy yêu cầu.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y yÃªu cáº§u.");
 
             if (request.Status != "Approved")
-                throw new Exception("Yêu cầu phải được duyệt trước khi tạo hoá đơn.");
+                throw new Exception("YÃªu cáº§u pháº£i Ä‘Æ°á»£c duyá»‡t trÆ°á»›c khi táº¡o hoÃ¡ Ä‘Æ¡n.");
 
             var now = DateTime.UtcNow;
             var existingInvoices = await _context.Invoices
@@ -212,15 +221,21 @@ namespace EducenAPI.Services
                 PackageChangeRequestId = requestId,
                 InvoiceNumber = $"INV-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..6]}",
                 Amount = pricing.AmountToCharge,
-                Status = "Pending",
-                PaymentMethod = "Cash", // Default, will be updated on payment
+                Status = pricing.AmountToCharge <= 0 ? "Paid" : "Pending",
+                PaymentMethod = pricing.AmountToCharge <= 0 ? "Credit" : "Cash",
                 DueDate = now.AddDays(effectiveDueDays),
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy,
-                PaymentNote = $"Goi: {request.RequestedPlan.PlanName} | {request.RequestedMonths} thang | Gia goc: {pricing.TotalAmount:N0} VND | {BuildPricingNote(pricing)}"
+                PaidAt = pricing.AmountToCharge <= 0 ? now : null,
+                PaymentNote = $"Goi: {request.RequestedPlan.PlanName} | {request.RequestedMonths} thang | Gia goi: {pricing.TotalAmount:N0} VND | {BuildPricingNote(pricing)}"
             };
 
             _context.Invoices.Add(invoice);
+
+            if (pricing.AmountToCharge <= 0)
+            {
+                await ApplyPackageChangeForPaidInvoiceAsync(invoice, "Credit", createdBy, "SYSTEM-AUTO-CREDIT");
+            }
 
             await _context.SaveChangesAsync();
             return invoice;
@@ -273,7 +288,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
 
             if (invoice == null)
-                throw new Exception("Không tìm thấy hoá đơn.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y hoÃ¡ Ä‘Æ¡n.");
 
             if (invoice.Status == "Paid")
                 throw new Exception("Hoa don da thanh toan.");
@@ -339,13 +354,13 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId && i.TenantId == tenantId);
 
             if (invoice == null)
-                throw new Exception("Không tìm thấy hoá đơn.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y hoÃ¡ Ä‘Æ¡n.");
 
             if (invoice.Status == "Paid")
-                throw new Exception("Hoá đơn đã thanh toán.");
+                throw new Exception("HoÃ¡ Ä‘Æ¡n Ä‘Ã£ thanh toÃ¡n.");
 
             if (invoice.Status == "Cancelled")
-                throw new Exception("Hoá đơn đã bị huỷ.");
+                throw new Exception("HoÃ¡ Ä‘Æ¡n Ä‘Ã£ bá»‹ huá»·.");
 
             if (invoice.DueDate < DateTime.UtcNow)
             {
@@ -356,7 +371,7 @@ namespace EducenAPI.Services
 
             invoice.PaymentMethod = normalizedMethod!;
             invoice.PaymentNote = string.IsNullOrWhiteSpace(paymentNote)
-                ? $"Center gửi yêu cầu xác nhận thanh toán {normalizedMethod}. Người gửi: {requestedBy}"
+                ? $"Center gá»­i yÃªu cáº§u xÃ¡c nháº­n thanh toÃ¡n {normalizedMethod}. NgÆ°á»i gá»­i: {requestedBy}"
                 : paymentNote.Trim();
             invoice.Status = "AwaitingConfirmation";
 
@@ -398,53 +413,31 @@ namespace EducenAPI.Services
 
         private static decimal CalculateDowngradeCredit(Subscription? currentSub, Plan requestedPlan)
         {
-            if (currentSub?.Plan == null)
-                return 0;
-
-            if (requestedPlan.Price >= currentSub.Plan.Price)
-                return 0;
-
-            var daysSinceStart = (DateTime.UtcNow - currentSub.StartDate).Days;
-            if (daysSinceStart > GracePeriodDays)
-                return 0;
-
-            var totalDays = (currentSub.EndDate - currentSub.StartDate).Days;
-            if (totalDays <= 0)
-                return 0;
-
-            var remainingDays = Math.Max(0, (currentSub.EndDate - DateTime.UtcNow).Days);
-            if (remainingDays <= 0)
-                return 0;
-
-            var priceDiff = currentSub.Plan.Price - requestedPlan.Price;
-            var prorated = priceDiff * remainingDays / totalDays;
-            return Math.Round(prorated, 0, MidpointRounding.AwayFromZero);
+            return 0;
         }
 
         private static ChangePricingResult CalculateChangePricing(
             Plan requestedPlan,
             int months,
             decimal currentCreditBalance,
-            Subscription? currentSub)
+            Subscription? _currentSub)
         {
             var totalAmount = requestedPlan.Price * months;
-            var refundCredit = CalculateDowngradeCredit(currentSub, requestedPlan);
-            var creditAvailable = Math.Max(0, currentCreditBalance) + refundCredit;
-            var creditUsed = Math.Min(totalAmount, creditAvailable);
-            var amountToCharge = Math.Round(totalAmount - creditUsed, 0, MidpointRounding.AwayFromZero);
+            var creditAvailable = Math.Max(0, currentCreditBalance);
+            var creditShortage = Math.Max(0, totalAmount - creditAvailable);
+            var amountToCharge = Math.Round(creditShortage, 0, MidpointRounding.AwayFromZero);
 
             return new ChangePricingResult
             {
                 TotalAmount = totalAmount,
-                RefundCredit = refundCredit,
-                CreditUsed = creditUsed,
+                CurrentCredit = creditAvailable,
                 AmountToCharge = amountToCharge
             };
         }
 
         private static string BuildPricingNote(ChangePricingResult pricing)
         {
-            return $"Pricing: total={pricing.TotalAmount}; refundCredit={pricing.RefundCredit}; creditUsed={pricing.CreditUsed}; amountToCharge={pricing.AmountToCharge}";
+            return $"Pricing: total={pricing.TotalAmount}; currentCredit={pricing.CurrentCredit}; amountToCharge={pricing.AmountToCharge}";
         }
 
         private int ResolveDueDays(int requestedDueDays)
@@ -496,49 +489,20 @@ namespace EducenAPI.Services
             if (!AmountEquals(pricing.AmountToCharge, invoice.Amount))
                 throw new Exception("Hoa don khong con khop voi cong thuc bu tru credit hien tai.");
 
-            // Khi thanh toán bằng tiền mặt/VNPay: Cộng credit = giá gốc (totalAmount)
-            // Credit tượng trưng cho giá tiền của gói đăng ký
-                        if (pricing.RefundCredit > 0)
+            if (invoice.Amount > 0 &&
+                (string.Equals(paymentMethod, "Cash", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(paymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase)))
             {
-                tenant.CreditBalance += pricing.RefundCredit;
+                tenant.CreditBalance += invoice.Amount;
                 _context.TenantCreditLedgers.Add(new TenantCreditLedger
                 {
                     TenantId = tenant.TenantId,
-                    Amount = pricing.RefundCredit,
-                    EntryType = "Credit",
-                    ReferenceType = "DowngradeRefund",
-                    ReferenceId = request.RequestId,
-                    BalanceAfter = tenant.CreditBalance,
-                    Note = "Hoàn credit khi hạ gói trong grace period"
-                });
-            }
-
-            if (pricing.CreditUsed > 0)
-            {
-                tenant.CreditBalance -= pricing.CreditUsed;
-                _context.TenantCreditLedgers.Add(new TenantCreditLedger
-                {
-                    TenantId = tenant.TenantId,
-                    Amount = -pricing.CreditUsed,
-                    EntryType = "Debit",
-                    ReferenceType = "PackageChangeUseCredit",
-                    ReferenceId = request.RequestId,
-                    BalanceAfter = tenant.CreditBalance,
-                    Note = "Sử dụng credit bù trừ khi đổi gói"
-                });
-            }
-            if (pricing.TotalAmount > 0)
-            {
-                tenant.CreditBalance += pricing.TotalAmount;
-                _context.TenantCreditLedgers.Add(new TenantCreditLedger
-                {
-                    TenantId = tenant.TenantId,
-                    Amount = pricing.TotalAmount,
+                    Amount = invoice.Amount,
                     EntryType = "Credit",
                     ReferenceType = "PackageChangePayment",
                     ReferenceId = request.RequestId,
                     BalanceAfter = tenant.CreditBalance,
-                    Note = "Nạp credit khi thanh toán đổi gói bằng tiền mặt/VNPay"
+                    Note = "Nap credit khi thanh toan doi goi bang tien mat/VNPay"
                 });
             }
 
@@ -593,12 +557,13 @@ namespace EducenAPI.Services
         private sealed class ChangePricingResult
         {
             public decimal TotalAmount { get; set; }
-            public decimal RefundCredit { get; set; }
-            public decimal CreditUsed { get; set; }
+            public decimal CurrentCredit { get; set; }
             public decimal AmountToCharge { get; set; }
         }
     }
 }
+
+
 
 
 

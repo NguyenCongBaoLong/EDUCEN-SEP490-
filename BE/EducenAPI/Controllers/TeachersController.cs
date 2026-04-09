@@ -104,6 +104,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Teachers/send-account/5
         [HttpPost("send-account/{id:int}")]
+        [HttpPost("{id:int}/send-account")]
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> SendAccount(int id)
         {
