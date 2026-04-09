@@ -27,33 +27,56 @@ const ParentSchedule = () => {
     useEffect(() => {
         if (!selectedChild) return;
         setIsLoading(true);
-        Promise.all([
-            api.get(`/Schedules/parent/child/${selectedChild.studentId}`),
-            api.get(`/attendance/student/${selectedChild.studentId}`)
-        ]).then(([schedRes, attRes]) => {
+        const loadScheduleData = async () => {
+            const isAllChildren = selectedChild?.studentId === 'all';
+            const children = isAllChildren
+                ? (await api.get('/Parents/my-children')).data || []
+                : [selectedChild];
+
+            const responses = await Promise.all(
+                children.map(async (child) => {
+                    const [schedRes, attRes] = await Promise.all([
+                        api.get(`/Schedules/parent/child/${child.studentId}`),
+                        api.get(`/attendance/student/${child.studentId}`)
+                    ]);
+                    return { child, schedules: schedRes.data || [], attendance: attRes.data || [] };
+                })
+            );
+
             const colorMap = {};
             let ci = 0;
-            const mapped = schedRes.data.map(item => {
-                if (!colorMap[item.classId]) {
-                    colorMap[item.classId] = COLORS[ci++ % COLORS.length];
+            const mapped = responses.flatMap(({ child, schedules }) => schedules.map(item => {
+                const colorKey = `${child.studentId}-${item.classId}`;
+                if (!colorMap[colorKey]) {
+                    colorMap[colorKey] = COLORS[ci++ % COLORS.length];
                 }
                 return {
                     id: item.classId,
+                    studentId: child.studentId,
+                    studentName: child.fullName,
                     code: item.subjectName || 'N/A',
                     name: item.className,
                     day: item.dayOfWeek,
                     startTime: item.startTime.substring(0, 5),
                     endTime: item.endTime.substring(0, 5),
-                    color: colorMap[item.classId],
+                    color: colorMap[colorKey],
                     room: item.roomName || 'Phòng học',
                     startDate: item.startDate,
                     endDate: item.endDate
                 };
-            });
+            }));
+
+            const attendance = responses.flatMap(({ child, attendance }) =>
+                attendance.map(record => ({ ...record, _studentId: child.studentId }))
+            );
+
             setStudentClasses(mapped);
-            setAttendanceRecords(attRes.data || []);
-        }).catch(() => toast.error('Không thể tải lịch học'))
-          .finally(() => setIsLoading(false));
+            setAttendanceRecords(attendance);
+        };
+
+        loadScheduleData()
+            .catch(() => toast.error('Không thể tải lịch học'))
+            .finally(() => setIsLoading(false));
     }, [selectedChild]);
 
     /* ─ Date helpers ─ */
@@ -111,7 +134,7 @@ const ParentSchedule = () => {
         
         const found = attendanceRecords.find(a => {
             const sessDate = a.sessionDate?.split('T')[0];
-            return sessDate === dateStr && a.className === classItem.name;
+            return sessDate === dateStr && a.className === classItem.name && a._studentId === classItem.studentId;
         });
         return found?.status || 'unknown';
     };
@@ -196,6 +219,9 @@ const ParentSchedule = () => {
                                         <div className="ps-class-time">
                                             <Clock size={10} />{c.startTime} - {c.endTime}
                                         </div>
+                                        {selectedChild?.studentId === 'all' && (
+                                            <div className="ps-class-time">{c.studentName}</div>
+                                        )}
                                         <AttendanceBadge status={status} />
                                     </div>
                                 );
@@ -214,7 +240,7 @@ const ParentSchedule = () => {
             <main className="ps-main">
                 <div className="ps-header">
                     <div>
-                        <h1 className="ps-title">Lịch học của {selectedChild?.fullName || 'con'}</h1>
+                        <h1 className="ps-title">Lịch học của {selectedChild?.studentId === 'all' ? 'tất cả con' : (selectedChild?.fullName || 'con')}</h1>
                         <p className="ps-subtitle">Theo dõi lịch học và trạng thái điểm danh của con bạn</p>
                     </div>
                 </div>
@@ -326,3 +352,4 @@ const ParentSchedule = () => {
 };
 
 export default ParentSchedule;
+

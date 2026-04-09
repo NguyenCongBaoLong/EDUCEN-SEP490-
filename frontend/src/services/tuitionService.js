@@ -108,6 +108,36 @@ const tuitionService = {
         const response = await api.put(`/classes/${classId}/price`, { price });
         return response.data;
     },
+
+    // Khóa chỉnh sửa hóa đơn tháng
+    lockMonth: async (month, year) => {
+        const response = await api.post('/tuition/lock', { month, year });
+        return response.data;
+    },
+
+    // Mở khóa chỉnh sửa hóa đơn tháng
+    unlockMonth: async (month, year) => {
+        const response = await api.post('/tuition/unlock', { month, year });
+        return response.data;
+    },
+
+    // Lấy thông tin khóa của tháng
+    getLockInfo: async (month, year) => {
+        const response = await api.get(`/tuition/lock/${month}/${year}`);
+        return response.data;
+    },
+
+    // Preview hóa đơn trước khi tạo
+    previewInvoices: async (month, year) => {
+        const response = await api.get(`/InvoiceGeneration/preview?month=${month}&year=${year}`);
+        return response.data;
+    },
+
+    // Tạo hóa đơn hàng loạt
+    generateInvoices: async (month, year) => {
+        const response = await api.post('/InvoiceGeneration/generate', { month, year });
+        return response.data;
+    },
 };
 
 export default tuitionService;

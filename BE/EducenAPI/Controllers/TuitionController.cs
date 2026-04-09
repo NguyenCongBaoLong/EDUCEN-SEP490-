@@ -13,17 +13,20 @@ namespace EducenAPI.Controllers
     {
         private readonly ITuitionService _tuitionService;
         private readonly IInvoiceService _invoiceService;
+        private readonly IInvoiceLockService _invoiceLockService;
         private readonly EducenV2Context _tenantContext;
         private readonly ILogger<TuitionController> _logger;
 
         public TuitionController(
             ITuitionService tuitionService,
             IInvoiceService invoiceService,
+            IInvoiceLockService invoiceLockService,
             EducenV2Context tenantContext,
             ILogger<TuitionController> logger)
         {
             _tuitionService = tuitionService;
             _invoiceService = invoiceService;
+            _invoiceLockService = invoiceLockService;
             _tenantContext = tenantContext;
             _logger = logger;
         }
@@ -79,6 +82,15 @@ namespace EducenAPI.Controllers
         {
             try
             {
+                if (_invoiceLockService.IsEditingLocked(request.Month, request.Year))
+                {
+                    var lockInfo = await _invoiceLockService.GetLockInfoAsync(request.Month, request.Year);
+                    return BadRequest(new { 
+                        message = $"Đã hết thời gian chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}. Vui lòng chỉnh sửa trước ngày {lockInfo?.UnlockDate:dd/MM/yyyy}.",
+                        lockInfo = lockInfo
+                    });
+                }
+
                 var invoice = await _invoiceService.CreateInvoiceAsync(new CreateInvoiceRequest
                 {
                     StudentId = request.StudentId,
@@ -108,6 +120,15 @@ namespace EducenAPI.Controllers
         {
             try
             {
+                if (_invoiceLockService.IsEditingLocked(request.Month, request.Year))
+                {
+                    var lockInfo = await _invoiceLockService.GetLockInfoAsync(request.Month, request.Year);
+                    return BadRequest(new { 
+                        message = $"Đã hết thời gian chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}. Vui lòng chỉnh sửa trước ngày {lockInfo?.UnlockDate:dd/MM/yyyy}.",
+                        lockInfo = lockInfo
+                    });
+                }
+
                 // Log để debug validation
                 _logger.LogInformation("CreateBatchInvoices called: ClassId={ClassId}, Month={Month}, Year={Year}",
                     request?.ClassId, request?.Month, request?.Year);
@@ -224,6 +245,16 @@ namespace EducenAPI.Controllers
         {
             try
             {
+                var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
+                if (invoice != null && _invoiceLockService.IsEditingLocked(invoice.InvoiceMonth, invoice.InvoiceYear))
+                {
+                    var lockInfo = await _invoiceLockService.GetLockInfoAsync(invoice.InvoiceMonth, invoice.InvoiceYear);
+                    return BadRequest(new { 
+                        message = $"Đã hết thời gian chỉnh sửa hóa đơn tháng {invoice.InvoiceMonth}/{invoice.InvoiceYear}. Vui lòng chỉnh sửa trước ngày {lockInfo?.UnlockDate:dd/MM/yyyy}.",
+                        lockInfo = lockInfo
+                    });
+                }
+
                 var success = await _invoiceService.CancelInvoiceAsync(invoiceId, request.Reason);
                 if (!success)
                     return BadRequest(new { message = "Hủy hóa đơn thất bại." });
@@ -279,6 +310,69 @@ namespace EducenAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating overdue invoices");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Khóa chỉnh sửa hóa đơn tháng (thủ công)
+        /// </summary>
+        [HttpPost("lock")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> LockMonth([FromBody] LockMonthRequest request)
+        {
+            try
+            {
+                var success = await _invoiceLockService.LockMonthAsync(request.Month, request.Year, User.Identity?.Name ?? "Admin");
+                if (!success)
+                    return BadRequest(new { message = "Khóa tháng thất bại." });
+
+                return Ok(new { message = $"Đã khóa chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error locking month");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Mở khóa chỉnh sửa hóa đơn tháng
+        /// </summary>
+        [HttpPost("unlock")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UnlockMonth([FromBody] LockMonthRequest request)
+        {
+            try
+            {
+                var success = await _invoiceLockService.UnlockMonthAsync(request.Month, request.Year);
+                if (!success)
+                    return BadRequest(new { message = "Mở khóa thất bại." });
+
+                return Ok(new { message = $"Đã mở khóa chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error unlocking month");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy thông tin khóa của tháng
+        /// </summary>
+        [HttpGet("lock/{month}/{year}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetLockInfo(int month, int year)
+        {
+            try
+            {
+                var lockInfo = await _invoiceLockService.GetLockInfoAsync(month, year);
+                return Ok(lockInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting lock info");
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -462,6 +556,12 @@ namespace EducenAPI.Controllers
     public class CancelInvoiceRequest
     {
         public string Reason { get; set; } = string.Empty;
+    }
+
+    public class LockMonthRequest
+    {
+        public int Month { get; set; }
+        public int Year { get; set; }
     }
 
     #endregion

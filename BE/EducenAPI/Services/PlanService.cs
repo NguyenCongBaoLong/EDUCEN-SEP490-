@@ -17,7 +17,7 @@ namespace EducenAPI.Services
 
         public async Task<List<Plan>> GetAllPlansAsync()
         {
-            return await _context.Plans.Where(p => p.IsActive).ToListAsync();
+            return await _context.Plans.Where(p => p.IsActive).OrderByDescending(p => p.Price).ToListAsync();
         }
 
         public async Task<Plan?> GetPlanByIdAsync(string id)

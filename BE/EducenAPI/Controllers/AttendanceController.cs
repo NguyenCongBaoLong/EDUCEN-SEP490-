@@ -216,17 +216,16 @@ namespace EducenAPI.Controllers
                 if (session == null)
                     return NotFound(new { message = "Không tìm thấy buổi học" });
 
-                // Sử dụng giờ Việt Nam (UTC+7)
+                // Teacher chỉ được điểm danh trong ngày hôm đó
                 var now = DateTime.UtcNow.AddHours(7);
                 var sessionDate = session.SessionDate.Date;
                 var today = now.Date;
-                var cutoffDate = today.AddDays(-2);
 
                 if (sessionDate > today)
                     return Ok(new { canAttend = false, message = "Buổi học chưa diễn ra" });
 
-                if (sessionDate < cutoffDate)
-                    return Ok(new { canAttend = false, message = "Đã quá hạn điểm danh (quá 2 ngày kể từ ngày học)" });
+                if (sessionDate < today)
+                    return Ok(new { canAttend = false, message = "Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin." });
 
                 var schedule = await _context.Schedules.FindAsync(session.ScheduleId);
                 if (schedule != null && sessionDate == today)
@@ -237,6 +236,106 @@ namespace EducenAPI.Controllers
                 }
 
                 return Ok(new { canAttend = true, message = "Có thể điểm danh" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // === Yêu cầu sửa điểm danh ===
+
+        // POST: api/attendance/modification-request - Teacher gửi yêu cầu sửa điểm danh
+        [HttpPost("modification-request")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
+        public async Task<IActionResult> CreateModificationRequest([FromBody] DTOs.Attendance.CreateAttendanceModificationRequestDto dto)
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                var request = await _service.CreateModificationRequestAsync(
+                    dto.SessionId, 
+                    dto.StudentId, 
+                    dto.RequestedStatus, 
+                    dto.Reason, 
+                    currentUserId);
+                
+                return Ok(new { message = "Gửi yêu cầu sửa điểm danh thành công", requestId = request.RequestId });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/attendance/modification-requests/pending - Admin xem yêu cầu chờ duyệt
+        [HttpGet("modification-requests/pending")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPendingModificationRequests([FromQuery] int? classId = null)
+        {
+            try
+            {
+                var requests = await _service.GetPendingModificationRequestsAsync(classId);
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/attendance/modification-requests/my - Teacher xem yêu cầu của mình
+        [HttpGet("modification-requests/my")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
+        public async Task<IActionResult> GetMyModificationRequests()
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                var requests = await _service.GetMyModificationRequestsAsync(currentUserId);
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // PUT: api/attendance/modification-requests/{requestId}/approve - Admin duyệt yêu cầu
+        [HttpPut("modification-requests/{requestId:int}/approve")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ApproveModificationRequest(int requestId, [FromBody] DTOs.Attendance.ReviewAttendanceModificationRequestDto dto)
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                var success = await _service.ApproveModificationRequestAsync(requestId, currentUserId, dto.NewStatus ?? "present");
+                
+                if (!success)
+                    return NotFound(new { message = "Không tìm thấy yêu cầu" });
+
+                return Ok(new { message = "Duyệt yêu cầu và cập nhật điểm danh thành công" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // PUT: api/attendance/modification-requests/{requestId}/reject - Admin từ chối yêu cầu
+        [HttpPut("modification-requests/{requestId:int}/reject")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RejectModificationRequest(int requestId, [FromBody] DTOs.Attendance.ReviewAttendanceModificationRequestDto dto)
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                var success = await _service.RejectModificationRequestAsync(requestId, currentUserId, dto.ReviewNote);
+                
+                if (!success)
+                    return NotFound(new { message = "Không tìm thấy yêu cầu" });
+
+                return Ok(new { message = "Từ chối yêu cầu thành công" });
             }
             catch (Exception ex)
             {

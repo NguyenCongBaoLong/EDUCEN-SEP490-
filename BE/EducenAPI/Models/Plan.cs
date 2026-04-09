@@ -19,10 +19,15 @@ namespace EducenAPI.Models
         public string? Features { get; set; }
 
         public int StorageLimit { get; set; } // GB
-        public bool IsActive { get; set; } = true; 
+        public bool IsActive { get; set; } = true;
 
+        public bool IsTrial { get; set; } = false;
+        public int TrialDays { get; set; } = 30;
 
         // Navigation
         public ICollection<Subscription>? Subscriptions { get; set; }
+
+        public ICollection<PackageChangeRequest> CurrentPackageRequests { get; set; } = new List<PackageChangeRequest>();
+        public ICollection<PackageChangeRequest> RequestedPackageRequests { get; set; } = new List<PackageChangeRequest>();
     }
 }

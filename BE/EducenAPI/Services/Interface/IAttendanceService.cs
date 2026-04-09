@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using EducenAPI.Models;
+using EducenAPI.DTOs.Attendance;
 
 namespace EducenAPI.Services.Interface
 {
@@ -15,6 +16,13 @@ namespace EducenAPI.Services.Interface
         Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId);
         Task<AttendanceReportDto> GetClassAttendanceReportAsync(int classId);
         Task<IEnumerable<AttendanceSessionSummaryDto>> GetClassAttendanceSessionSummaryAsync(int classId);
+
+        // Modification requests
+        Task<AttendanceModificationRequest> CreateModificationRequestAsync(int sessionId, int studentId, string requestedStatus, string? reason, int requestedByUserId);
+        Task<List<AttendanceModificationRequestDto>> GetPendingModificationRequestsAsync(int? classId = null);
+        Task<bool> ApproveModificationRequestAsync(int requestId, int reviewedByUserId, string newStatus);
+        Task<bool> RejectModificationRequestAsync(int requestId, int reviewedByUserId, string? reviewNote);
+        Task<List<AttendanceModificationRequestDto>> GetMyModificationRequestsAsync(int userId);
     }
 
     public class AttendanceRecord

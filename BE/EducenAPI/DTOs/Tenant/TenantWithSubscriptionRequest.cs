@@ -29,5 +29,8 @@ namespace EducenAPI.DTOs.Tenant
         public int TotalStudents { get; set; }
         public int TotalClasses { get; set; }
         public double StorageMB { get; set; }
+
+        // Credit info
+        public decimal CreditBalance { get; set; }
     }
 }

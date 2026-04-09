@@ -3,6 +3,7 @@ using EducenAPI.DTOs.Subscription;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
+using EducenAPI.Services.Payment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,20 +16,29 @@ namespace EducenAPI.Controllers
     public class CenterSubscriptionController : ControllerBase
     {
         private readonly ISubscriptionService _subscriptionService;
+        private readonly ISubscriptionChangeService _subscriptionChangeService;
+        private readonly IContractService _contractService;
         private readonly ICurrentTenantService _currentTenantService;
         private readonly AdminDbContext _adminDbContext;
         private readonly IRefundService _refundService;
+        private readonly IPaymentService _paymentService;
 
         public CenterSubscriptionController(
-            ISubscriptionService subscriptionService, 
+            ISubscriptionService subscriptionService,
+            ISubscriptionChangeService subscriptionChangeService,
+            IContractService contractService,
             ICurrentTenantService currentTenantService,
             AdminDbContext adminDbContext,
-            IRefundService refundService)
+            IRefundService refundService,
+            IPaymentService paymentService)
         {
             _subscriptionService = subscriptionService;
+            _subscriptionChangeService = subscriptionChangeService;
+            _contractService = contractService;
             _currentTenantService = currentTenantService;
             _adminDbContext = adminDbContext;
             _refundService = refundService;
+            _paymentService = paymentService;
         }
 
         private string GetTenantId()
@@ -48,10 +58,14 @@ namespace EducenAPI.Controllers
         {
             var tenantId = GetTenantId();
 
+            Console.WriteLine($"[GetCurrentSubscription] tenantId: {tenantId}");
+
             if (string.IsNullOrWhiteSpace(tenantId))
                 return BadRequest(new { message = "Không xác định được trung tâm." });
 
             var subscription = await _subscriptionService.GetActiveSubscriptionAsync(tenantId);
+
+            Console.WriteLine($"[GetCurrentSubscription] subscription: {subscription?.PlanName}");
 
             return Ok(subscription);
         }
@@ -60,24 +74,12 @@ namespace EducenAPI.Controllers
         /// Đổi gói dịch vụ (upgrade/downgrade)
         /// </summary>
         [HttpPost("change-plan")]
-        public async Task<IActionResult> ChangePlan([FromBody] ChangePlanRequestDTO request)
+        public IActionResult ChangePlan([FromBody] ChangePlanRequestDTO request)
         {
-            var tenantId = GetTenantId();
-
-            if (string.IsNullOrWhiteSpace(tenantId))
-                return BadRequest(new { message = "Không xác định được trung tâm." });
-
-            request.TenantId = tenantId;
-
-            try
+            return BadRequest(new
             {
-                var result = await _subscriptionService.ChangePlan(request);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+                message = "Da ngung luong doi goi truc tiep. Vui long gui yeu cau doi goi de SystemAdmin duyet va thanh toan hoa don."
+            });
         }
 
         /// <summary>
@@ -306,53 +308,43 @@ namespace EducenAPI.Controllers
         /// Gia hạn/gói mở rộng (extend/renew với nhiều tháng hơn)
         /// </summary>
         [HttpPost("extend")]
-        public async Task<IActionResult> ExtendSubscription([FromBody] ExtendSubscriptionRequest request)
+        public IActionResult ExtendSubscription([FromBody] ExtendSubscriptionRequest request)
+        {
+            return BadRequest(new
+            {
+                message = "Da ngung luong gia han truc tiep. Vui long gui yeu cau doi goi voi cung goi hien tai de gia han va cho SystemAdmin duyet."
+            });
+        }
+
+
+        /// <summary>
+        /// Xác nhận gia hạn và thanh toán (sau khi thanh toán VNPay thành công)
+        /// </summary>
+        [HttpPost("extend-confirm")]
+        public IActionResult ConfirmExtend([FromBody] ExtendConfirmRequest request)
+        {
+            return BadRequest(new
+            {
+                message = "Da ngung luong xac nhan gia han truc tiep. Vui long thanh toan hoa don tu luong yeu cau doi goi."
+            });
+        }
+
+        /// <summary>
+        /// Yêu cầu đổi gói dịch vụ (luồng mới)
+        /// </summary>
+        [HttpPost("request-change")]
+        public async Task<IActionResult> RequestChangePackage([FromBody] CreateSubscriptionChangeRequestDto dto)
         {
             var tenantId = GetTenantId();
 
             if (string.IsNullOrWhiteSpace(tenantId))
                 return BadRequest(new { message = "Không xác định được trung tâm." });
 
-            if (request.Months < 1 || request.Months > 120)
-                return BadRequest(new { message = "Số tháng gia hạn phải từ 1 đến 120." });
-
             try
             {
-                var subscription = await _subscriptionService.GetActiveSubscriptionAsync(tenantId);
-                if (subscription == null)
-                {
-                    return BadRequest(new { message = "Không tìm thấy gói dịch vụ đang hoạt động. Vui lòng đăng ký gói mới." });
-                }
-
-                var subEntity = await _adminDbContext.Subscriptions
-                    .Include(s => s.Plan)
-                    .FirstOrDefaultAsync(s => s.Id == subscription.SubscriptionId && s.TenantId == tenantId);
-
-                if (subEntity == null || subEntity.Plan == null)
-                    return BadRequest(new { message = "Không tìm thấy gói dịch vụ." });
-
-                var totalAmount = subEntity.Plan.Price * request.Months;
-                var tenant = await _adminDbContext.Tenants.FindAsync(tenantId);
-                var creditBalance = tenant?.CreditBalance ?? 0;
-                var amountToCharge = Math.Max(0, totalAmount - creditBalance);
-
-                return Ok(new
-                {
-                    subscriptionId = subscription.SubscriptionId,
-                    planId = subEntity.PlanId,
-                    planName = subEntity.Plan.PlanName,
-                    planPrice = subEntity.Plan.Price,
-                    currentEndDate = subscription.EndDate,
-                    extendMonths = request.Months,
-                    newEndDate = subEntity.EndDate.AddMonths(request.Months),
-                    totalAmount = totalAmount,
-                    creditBalance = creditBalance,
-                    amountToCharge = amountToCharge,
-                    requiresPayment = amountToCharge > 0,
-                    message = amountToCharge > 0 
-                        ? $"Cần thanh toán {amountToCharge} VNĐ để gia hạn {request.Months} tháng."
-                        : $"Đủ credit để gia hạn {request.Months} tháng miễn phí."
-                });
+                var username = User.Identity?.Name ?? "CenterAdmin";
+                var result = await _subscriptionChangeService.CreatePackageChangeRequestAsync(tenantId, dto.RequestedPlanId, dto.Months, dto.Reason, username);
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -361,10 +353,10 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Xác nhận gia hạn và thanh toán (sau khi thanh toán VNPay thành công)
+        /// Xem yêu cầu đổi gói của mình
         /// </summary>
-        [HttpPost("extend-confirm")]
-        public async Task<IActionResult> ConfirmExtend([FromBody] ExtendConfirmRequest request)
+        [HttpGet("my-change-requests")]
+        public async Task<IActionResult> GetMyChangeRequests()
         {
             var tenantId = GetTenantId();
 
@@ -373,88 +365,225 @@ namespace EducenAPI.Controllers
 
             try
             {
-                var subscription = await _subscriptionService.GetActiveSubscriptionAsync(tenantId);
-                if (subscription == null)
-                    return BadRequest(new { message = "Không tìm thấy gói dịch vụ đang hoạt động." });
+                var requests = await _subscriptionChangeService.GetTenantPackageChangeRequestsAsync(tenantId);
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
-                var subEntity = await _adminDbContext.Subscriptions
-                    .Include(s => s.Plan)
-                    .Include(s => s.Tenant)
-                    .FirstOrDefaultAsync(s => s.Id == subscription.SubscriptionId && s.TenantId == tenantId);
+        /// <summary>
+        /// Xem hoá đơn của center
+        /// </summary>
+        [HttpGet("invoices")]
+        public async Task<IActionResult> GetMyInvoices()
+        {
+            var tenantId = GetTenantId();
 
-                if (subEntity == null || subEntity.Plan == null)
-                    return BadRequest(new { message = "Không tìm thấy gói dịch vụ." });
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
 
-                var totalAmount = subEntity.Plan.Price * request.Months;
-                var tenant = await _adminDbContext.Tenants.FindAsync(tenantId);
-                var creditBalance = tenant?.CreditBalance ?? 0;
-                var amountToCharge = Math.Max(0, totalAmount - creditBalance);
+            try
+            {
+                var invoices = await _subscriptionChangeService.GetInvoicesByTenantAsync(tenantId);
+                return Ok(invoices);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
 
-                if (amountToCharge > 0 && string.IsNullOrWhiteSpace(request.PaymentRecordId))
-                    return BadRequest(new { message = "Thiếu thông tin thanh toán." });
+        /// <summary>
+        /// Center gửi yêu cầu xác nhận thanh toán offline cho hoá đơn đổi gói
+        /// </summary>
+        [HttpPost("invoices/{invoiceId}/request-offline-payment")]
+        public async Task<IActionResult> RequestOfflinePayment(string invoiceId, [FromBody] RequestOfflineInvoicePaymentDto dto)
+        {
+            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
 
-                if (amountToCharge > 0 && !string.IsNullOrWhiteSpace(request.PaymentRecordId))
+            try
+            {
+                var requestedBy = User.Identity?.Name ?? "CenterAdmin";
+                var invoice = await _subscriptionChangeService.RequestOfflineInvoicePaymentAsync(
+                    tenantId,
+                    invoiceId,
+                    dto.PaymentMethod,
+                    dto.PaymentNote,
+                    requestedBy);
+                return Ok(invoice);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Center tạo giao dịch VNPay cho hoá đơn đổi gói
+        /// </summary>
+        [HttpPost("invoices/{invoiceId}/create-vnpay-payment")]
+        public async Task<IActionResult> CreateInvoiceVnPayPayment(string invoiceId, [FromBody] CreateInvoiceVnPayPaymentDto dto)
+        {
+            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
+
+            var invoice = await _adminDbContext.Invoices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId && i.TenantId == tenantId);
+
+            if (invoice == null)
+                return NotFound(new { message = "Không tìm thấy hoá đơn." });
+
+            if (invoice.Status == "Paid")
+                return BadRequest(new { message = "Hoá đơn đã thanh toán." });
+
+            if (invoice.Status == "Cancelled")
+                return BadRequest(new { message = "Hoá đơn đã bị huỷ." });
+
+            var paymentResult = await _paymentService.CreatePaymentAsync(new CreatePaymentDto
+            {
+                TenantId = tenantId,
+                Amount = invoice.Amount,
+                GatewayType = "VNPay",
+                TransactionType = "SubscriptionInvoice",
+                ReferenceId = invoice.InvoiceId,
+                Description = $"Thanh toán hoá đơn {invoice.InvoiceNumber}",
+                ReturnUrl = dto.ReturnUrl,
+                IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                CustomerName = User.Identity?.Name,
+                PaidBy = User.Identity?.Name
+            });
+
+            if (!paymentResult.Success)
+                return BadRequest(new { message = paymentResult.ErrorMessage ?? "Không thể tạo thanh toán VNPay." });
+
+            return Ok(paymentResult);
+        }
+
+        /// <summary>
+        /// Lịch sử giao dịch online (VNPay) của center cho hoá đơn đổi gói
+        /// </summary>
+        [HttpGet("payment-history")]
+        public async Task<IActionResult> GetPaymentHistory()
+        {
+            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
+
+            var records = await _adminDbContext.PaymentRecords
+                .Where(p => p.TenantId == tenantId
+                    && p.TransactionType == "SubscriptionInvoice"
+                    && p.PaymentMethod == "VNPay")
+                .OrderByDescending(p => p.PaymentDate)
+                .Select(p => new
                 {
-                    var payment = await _adminDbContext.PaymentRecords.FindAsync(request.PaymentRecordId);
-                    if (payment == null || payment.Status != "Paid")
-                        return BadRequest(new { message = "Thanh toán chưa hoàn tất." });
+                    p.PaymentId,
+                    p.Amount,
+                    p.Status,
+                    p.PaymentDate,
+                    p.Description,
+                    p.ReferenceId,
+                    p.TransactionType
+                })
+                .ToListAsync();
 
-                    var unusedCredit = _subscriptionService.CalculateUnusedCredit(subEntity);
-                    if (unusedCredit > 0)
-                    {
-                        tenant.CreditBalance = Math.Max(0, creditBalance - amountToCharge);
-                    }
-                    else
-                    {
-                        tenant.CreditBalance = Math.Max(0, creditBalance - totalAmount);
-                    }
-                }
-                else if (amountToCharge == 0)
+            return Ok(records);
+        }
+
+        /// <summary>
+        /// Xem hợp đồng của center
+        /// </summary>
+        [HttpGet("contracts")]
+        public async Task<IActionResult> GetMyContracts()
+        {
+            var tenantId = GetTenantId();
+
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
+
+            try
+            {
+                var contracts = await _contractService.GetContractsByTenantAsync(tenantId);
+                return Ok(contracts);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Xem chi tiết hợp đồng
+        /// </summary>
+        [HttpGet("contracts/{contractId}")]
+        public async Task<IActionResult> GetContract(string contractId)
+        {
+            try
+            {
+                var contract = await _contractService.GetContractByIdAsync(contractId);
+                if (contract == null)
+                    return NotFound(new { message = "Không tìm thấy hợp đồng" });
+                return Ok(contract);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Download/Tải file hợp đồng
+        /// </summary>
+        [HttpGet("contracts/{contractId}/download")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DownloadContract(string contractId)
+        {
+            try
+            {
+                var contract = await _contractService.GetContractByIdAsync(contractId);
+                if (contract == null)
+                    return NotFound(new { message = "Không tìm thấy hợp đồng" });
+
+                var webRoot = Directory.GetCurrentDirectory();
+                
+                var possiblePaths = new[]
                 {
-                    var unusedCredit = _subscriptionService.CalculateUnusedCredit(subEntity);
-                    if (unusedCredit > 0)
-                    {
-                        var daysRemaining = (subEntity.EndDate - DateTime.UtcNow).Days;
-                        if (daysRemaining > 0)
-                        {
-                            var dailyValue = subEntity.Plan.Price / 30;
-                            var remainingValue = dailyValue * daysRemaining;
-                            var newCredit = creditBalance - remainingValue;
-                            tenant.CreditBalance = Math.Max(0, newCredit);
-                        }
-                        else
-                        {
-                            tenant.CreditBalance = 0;
-                        }
-                    }
-                }
-
-                subEntity.EndDate = subEntity.EndDate.AddMonths(request.Months);
-
-                var paymentRecord = new Models.PaymentRecord
-                {
-                    TenantId = tenantId,
-                    Amount = request.Months > 0 ? subEntity.Plan.Price * request.Months : 0,
-                    Status = amountToCharge > 0 ? "Paid" : "Free",
-                    PaymentDate = DateTime.UtcNow,
-                    TransactionType = "SubscriptionExtend",
-                    ReferenceId = subEntity.Id,
-                    PaymentMethod = amountToCharge > 0 ? "VNPay" : "Credit",
-                    SubscriptionMonths = request.Months
+                    Path.Combine(webRoot, contract.FilePath),
+                    Path.Combine(webRoot, "wwwroot", contract.FilePath),
+                    Path.Combine(webRoot, contract.FilePath.Replace("/", Path.DirectorySeparatorChar.ToString())),
+                    Path.Combine(webRoot, "wwwroot", contract.FilePath.Replace("/", Path.DirectorySeparatorChar.ToString())),
                 };
-                _adminDbContext.PaymentRecords.Add(paymentRecord);
-
-                await _adminDbContext.SaveChangesAsync();
-
-                return Ok(new
+                
+                string? foundPath = null;
+                foreach (var p in possiblePaths)
                 {
-                    success = true,
-                    subscriptionId = subEntity.Id,
-                    planName = subEntity.Plan.PlanName,
-                    extendMonths = request.Months,
-                    newEndDate = subEntity.EndDate,
-                    message = "Gia hạn gói dịch vụ thành công!"
-                });
+                    if (System.IO.File.Exists(p))
+                    {
+                        foundPath = p;
+                        break;
+                    }
+                }
+
+                if (foundPath == null)
+                    return NotFound(new { message = "File không tồn tại" });
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(foundPath);
+                var contentType = contract.FileType.ToLower() switch
+                {
+                    "pdf" => "application/pdf",
+                    "jpg" => "image/jpeg",
+                    "jpeg" => "image/jpeg",
+                    "png" => "image/png",
+                    _ => "application/octet-stream"
+                };
+
+                return File(fileBytes, contentType, contract.ContractTitle + "." + contract.FileType.ToLower());
             }
             catch (Exception ex)
             {
@@ -502,4 +631,16 @@ namespace EducenAPI.Controllers
         [Range(1, 120, ErrorMessage = "Số tháng phải từ 1 đến 120")]
         public int Months { get; set; }
     }
+
+    public class RequestOfflineInvoicePaymentDto
+    {
+        public string PaymentMethod { get; set; } = "Cash"; // Cash
+        public string? PaymentNote { get; set; }
+    }
+
+    public class CreateInvoiceVnPayPaymentDto
+    {
+        public string ReturnUrl { get; set; } = string.Empty;
+    }
 }
+

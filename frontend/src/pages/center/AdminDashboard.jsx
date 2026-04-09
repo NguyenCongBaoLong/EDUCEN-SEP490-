@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
-    CheckCircle, AlertCircle, Info, ChevronRight, BookOpen,
+    CheckCircle, XCircle, AlertCircle, Info, ChevronRight, BookOpen,
     TrendingUp, MessageSquare, Inbox, ShieldAlert,
-    MessageCircle, Mail, HardDrive, Reply
+    MessageCircle, Mail, HardDrive, Reply, ClipboardCheck
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import RevenueReport from './RevenueReport';
@@ -239,7 +239,13 @@ const AdminDashboard = () => {
         }
     };
 
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'revenue' | 'subscription'
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'revenue' | 'subscription' | 'attendance-modifications'
+
+    // State for attendance modification requests
+    const [attendanceRequests, setAttendanceRequests] = useState([]);
+    const [attendanceRequestsLoading, setAttendanceRequestsLoading] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [processingRequest, setProcessingRequest] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -329,6 +335,70 @@ const AdminDashboard = () => {
             loadLedger();
         }
     }, [showLedger, tenantId]);
+
+    // Load attendance modification requests when tab is active
+    useEffect(() => {
+        if (activeTab === 'attendance-modifications') {
+            const loadAttendanceRequests = async () => {
+                setAttendanceRequestsLoading(true);
+                setSelectedRequest(null);
+                try {
+                    const res = await api.get('/attendance/modification-requests/pending');
+                    console.log('Attendance requests response:', res.data);
+                    
+                    // Ensure data is an array
+                    let data = res.data;
+                    if (!Array.isArray(data)) {
+                        data = data?.data || [];
+                    }
+                    
+                    setAttendanceRequests(data);
+                } catch (error) {
+                    console.error('Error loading attendance requests:', error);
+                    toast.error('Không thể tải yêu cầu sửa điểm danh');
+                } finally {
+                    setAttendanceRequestsLoading(false);
+                }
+            };
+            loadAttendanceRequests();
+        }
+    }, [activeTab]);
+
+    // Handle approve attendance modification request
+    const handleApproveAttendanceRequest = async (requestId, newStatus) => {
+        setProcessingRequest(true);
+        try {
+            await api.put(`/attendance/modification-requests/${requestId}/approve`, { newStatus });
+            toast.success('Đã duyệt yêu cầu và cập nhật điểm danh');
+            // Refresh list
+            const res = await api.get('/attendance/modification-requests/pending');
+            setAttendanceRequests(res.data || []);
+            setSelectedRequest(null);
+        } catch (error) {
+            console.error('Error approving request:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+        } finally {
+            setProcessingRequest(false);
+        }
+    };
+
+    // Handle reject attendance modification request
+    const handleRejectAttendanceRequest = async (requestId, note) => {
+        setProcessingRequest(true);
+        try {
+            await api.put(`/attendance/modification-requests/${requestId}/reject`, { reviewNote: note });
+            toast.success('Đã từ chối yêu cầu');
+            // Refresh list
+            const res = await api.get('/attendance/modification-requests/pending');
+            setAttendanceRequests(res.data || []);
+            setSelectedRequest(null);
+        } catch (error) {
+            console.error('Error rejecting request:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+        } finally {
+            setProcessingRequest(false);
+        }
+    };
 
     const handleSend = async () => {
         if (!form.title.trim() || !form.content.trim()) return;
@@ -520,6 +590,13 @@ const AdminDashboard = () => {
                     >
                         <CreditCard size={18} />
                         Gói dịch vụ
+                    </button>
+                    <button
+                        className={`dashboard-tab-btn ${activeTab === 'attendance-modifications' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('attendance-modifications')}
+                    >
+                        <ClipboardCheck size={18} />
+                        Sửa điểm danh
                     </button>
                 </div>
 
@@ -797,6 +874,204 @@ const AdminDashboard = () => {
                 
                 {activeTab === 'subscription' && (
                     <SubscriptionPlans hideSidebar={true} />
+                )}
+
+                {activeTab === 'attendance-modifications' && (
+                    <div style={{ padding: '20px' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '4px' }}>Yêu cầu sửa điểm danh</h2>
+                            <p style={{ color: '#6b7280', fontSize: '14px' }}>Danh sách yêu cầu sửa điểm danh từ Giáo viên chờ duyệt</p>
+                        </div>
+
+                        {attendanceRequestsLoading ? (
+                            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>Đang tải...</div>
+                        ) : attendanceRequests.length === 0 ? (
+                            <div style={{ 
+                                textAlign: 'center', 
+                                padding: '60px', 
+                                background: '#f9fafb', 
+                                borderRadius: '12px',
+                                border: '1px dashed #d1d5db'
+                            }}>
+                                <ClipboardCheck size={48} color="#9ca3af" style={{ marginBottom: '16px' }} />
+                                <h3 style={{ fontSize: '16px', color: '#374151', marginBottom: '8px' }}>Không có yêu cầu nào</h3>
+                                <p style={{ color: '#6b7280', fontSize: '14px' }}>Tất cả yêu cầu sửa điểm danh đã được xử lý</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', gap: '20px' }}>
+                                {/* Request List */}
+                                <div style={{ flex: 1, background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                                    <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                                        <span style={{ fontWeight: '600' }}>Danh sách yêu cầu ({attendanceRequests.length})</span>
+                                    </div>
+                                    <div style={{ maxHeight: '600px', overflow: 'auto' }}>
+                                        {attendanceRequests.map((req) => (
+                                            <div 
+                                                key={req?.requestId}
+                                                onClick={() => setSelectedRequest(req)}
+                                                style={{
+                                                    padding: '16px',
+                                                    borderBottom: '1px solid #e5e7eb',
+                                                    cursor: 'pointer',
+                                                    background: selectedRequest?.requestId === req?.requestId ? '#eff6ff' : 'white',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: '500', fontSize: '14px' }}>{req?.studentName || 'Không xác định'}</div>
+                                                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{req?.className || 'Không xác định'}</div>
+                                                    </div>
+                                                    <span style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        background: '#fef3c7',
+                                                        color: '#92400e'
+                                                    }}>
+                                                        Chờ duyệt
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                                                    Ngày: {req?.sessionDate || 'N/A'} | Yêu cầu: <strong>{req?.requestedStatus === 'present' ? 'Có mặt' : 'Vắng'}</strong>
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                                    Từ: {req?.requestedByUserName || 'N/A'} | {req?.requestedAt || ''}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Request Detail */}
+                                <div style={{ flex: 1, background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', padding: '20px' }}>
+                                    {selectedRequest && selectedRequest.requestId ? (
+                                        <>
+                                            <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>Chi tiết yêu cầu</h3>
+                                            
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Học sinh</div>
+                                                <div style={{ fontSize: '14px', fontWeight: '500' }}>{selectedRequest?.studentName || 'Không xác định'}</div>
+                                            </div>
+                                            
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Lớp</div>
+                                                <div style={{ fontSize: '14px' }}>{selectedRequest?.className || 'Không xác định'}</div>
+                                            </div>
+                                            
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Ngày học</div>
+                                                <div style={{ fontSize: '14px' }}>{selectedRequest?.sessionDate || 'Không xác định'}</div>
+                                            </div>
+                                            
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Trạng thái hiện tại</div>
+                                                <div style={{ fontSize: '14px' }}>
+                                                    <span style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        background: selectedRequest?.currentStatus === 'present' ? '#d1fae5' : selectedRequest?.currentStatus === 'absent' ? '#fee2e2' : '#f3f4f6',
+                                                        color: selectedRequest?.currentStatus === 'present' ? '#065f46' : selectedRequest?.currentStatus === 'absent' ? '#991b1b' : '#6b7280'
+                                                    }}>
+                                                        {selectedRequest?.currentStatus === 'present' ? 'Có mặt' : selectedRequest?.currentStatus === 'absent' ? 'Vắng' : 'Chưa điểm danh'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Yêu cầu sửa thành</div>
+                                                <div style={{ fontSize: '14px' }}>
+                                                    <span style={{
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        background: selectedRequest?.requestedStatus === 'present' ? '#d1fae5' : '#fee2e2',
+                                                        color: selectedRequest?.requestedStatus === 'present' ? '#065f46' : '#991b1b'
+                                                    }}>
+                                                        {selectedRequest?.requestedStatus === 'present' ? 'Có mặt' : 'Vắng'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ marginBottom: '16px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Lý do</div>
+                                                <div style={{ fontSize: '14px', background: '#f9fafb', padding: '12px', borderRadius: '6px' }}>
+                                                    {selectedRequest?.reason || 'Không có'}
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ marginBottom: '20px' }}>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Người gửi yêu cầu</div>
+                                                <div style={{ fontSize: '14px' }}>{selectedRequest?.requestedByUserName || 'Không xác định'} - {selectedRequest?.requestedAt || ''}</div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
+                                                <button 
+                                                    onClick={() => selectedRequest && handleApproveAttendanceRequest(selectedRequest.requestId, 'present')}
+                                                    disabled={processingRequest || !selectedRequest}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '12px',
+                                                        background: '#10b981',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        fontWeight: '500',
+                                                        cursor: processingRequest || !selectedRequest ? 'not-allowed' : 'pointer',
+                                                        opacity: processingRequest || !selectedRequest ? 0.7 : 1
+                                                    }}
+                                                >
+                                                    <CheckCircle size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                                    Duyệt (Có mặt)
+                                                </button>
+                                                <button 
+                                                    onClick={() => selectedRequest && handleApproveAttendanceRequest(selectedRequest.requestId, 'absent')}
+                                                    disabled={processingRequest || !selectedRequest}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '12px',
+                                                        background: '#ef4444',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        fontWeight: '500',
+                                                        cursor: processingRequest || !selectedRequest ? 'not-allowed' : 'pointer',
+                                                        opacity: processingRequest || !selectedRequest ? 0.7 : 1
+                                                    }}
+                                                >
+                                                    <XCircle size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                                                    Duyệt (Vắng)
+                                                </button>
+                                                <button 
+                                                    onClick={() => selectedRequest && handleRejectAttendanceRequest(selectedRequest.requestId, 'Yêu cầu không hợp lệ')}
+                                                    disabled={processingRequest || !selectedRequest}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '12px',
+                                                        background: 'white',
+                                                        color: '#6b7280',
+                                                        border: '1px solid #d1d5db',
+                                                        borderRadius: '8px',
+                                                        fontWeight: '500',
+                                                        cursor: processingRequest || !selectedRequest ? 'not-allowed' : 'pointer',
+                                                        opacity: processingRequest || !selectedRequest ? 0.7 : 1
+                                                    }}
+                                                >
+                                                    Từ chối
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                                            <ClipboardCheck size={48} style={{ marginBottom: '12px' }} />
+                                            <div>Chọn một yêu cầu để xem chi tiết</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 )}
 
             </main>

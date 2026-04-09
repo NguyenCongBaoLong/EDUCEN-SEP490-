@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar } from 'lucide-react';
+﻿import { useEffect, useState } from 'react';
+import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar, FileText, Send, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
+import ContractViewer from '../../components/ContractViewer';
 import api from '../../services/api';
 import paymentService from '../../services/paymentService';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +24,24 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [creditLedger, setCreditLedger] = useState([]);
     const [creditHistoryLoading, setCreditHistoryLoading] = useState(false);
     const { user } = useAuth();
+
+    // Contract & Change Request states
+    const [showContracts, setShowContracts] = useState(false);
+    const [contracts, setContracts] = useState([]);
+    const [loadingContracts, setLoadingContracts] = useState(false);
+    const [viewContractTarget, setViewContractTarget] = useState(null);
+    const [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
+    const [changeRequestPlanId, setChangeRequestPlanId] = useState('');
+    const [changeRequestMonths, setChangeRequestMonths] = useState(1);
+    const [changeRequestReason, setChangeRequestReason] = useState('');
+    const [submittingRequest, setSubmittingRequest] = useState(false);
+    const [myChangeRequests, setMyChangeRequests] = useState([]);
+    const [loadingRequests, setLoadingRequests] = useState(false);
+    const [myInvoices, setMyInvoices] = useState([]);
+    const [loadingInvoices, setLoadingInvoices] = useState(false);
+    const [submittingInvoicePayment, setSubmittingInvoicePayment] = useState(false);
+    const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
+    const [loadingOnlineHistory, setLoadingOnlineHistory] = useState(false);
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -79,36 +98,114 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         }
     };
 
-    const handlePay = async (plan, months = 1) => {
+    const loadContracts = async () => {
+        setLoadingContracts(true);
+        try {
+            const res = await api.get('/admin/subscription/contracts');
+            setContracts(res.data || []);
+            setShowContracts(true);
+        } catch (error) {
+            console.error('Load contracts error:', error?.response?.data || error);
+            toast.error('Không thể tải danh sách hợp đồng');
+        } finally {
+            setLoadingContracts(false);
+        }
+    };
+
+    const loadMyChangeRequests = async () => {
+        setLoadingRequests(true);
+        try {
+            const res = await api.get('/admin/subscription/my-change-requests');
+            setMyChangeRequests(res.data || []);
+        } catch (error) {
+            console.error('Load change requests error:', error?.response?.data || error);
+        } finally {
+            setLoadingRequests(false);
+        }
+    };
+
+    const loadMyInvoices = async () => {
+        setLoadingInvoices(true);
+        try {
+            const res = await api.get('/admin/subscription/invoices');
+            setMyInvoices(res.data || []);
+        } catch (error) {
+            console.error('Load invoices error:', error?.response?.data || error);
+        } finally {
+            setLoadingInvoices(false);
+        }
+    };
+
+    const loadOnlinePaymentHistory = async () => {
+        setLoadingOnlineHistory(true);
+        try {
+            const res = await api.get('/admin/subscription/payment-history');
+            setOnlinePaymentHistory(res.data || []);
+        } catch (error) {
+            console.error('Load payment history error:', error?.response?.data || error);
+        } finally {
+            setLoadingOnlineHistory(false);
+        }
+    };
+
+    const submitChangeRequestByPlan = async (planId, months = 1, reason = '') => {
+        await api.post('/admin/subscription/request-change', {
+            requestedPlanId: planId,
+            months,
+            reason
+        });
+    };
+
+    const submitChangeRequest = async (e) => {
+        e.preventDefault();
+        if (!changeRequestPlanId) {
+            toast.error('Vui lòng chọn gói dịch vụ');
+            return;
+        }
+
         const tenantId = user?.tenantId || localStorage.getItem('tenantId');
         if (!tenantId) {
             toast.error('Không tìm thấy thông tin trung tâm');
             return;
         }
 
+        setSubmittingRequest(true);
+        try {
+            await submitChangeRequestByPlan(changeRequestPlanId, changeRequestMonths, changeRequestReason);
+            toast.success('Đã gửi yêu cầu đổi gói. Vui lòng chờ SystemAdmin duyệt.');
+            setShowChangeRequestModal(false);
+            setChangeRequestPlanId('');
+            setChangeRequestMonths(1);
+            setChangeRequestReason('');
+            loadMyChangeRequests();
+            loadMyInvoices();
+        } catch (error) {
+            console.error('Submit change request error:', error?.response?.data || error);
+            toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu đổi gói');
+        } finally {
+            setSubmittingRequest(false);
+        }
+    };
+
+    const handleViewContract = (contract) => {
+        setViewContractTarget(contract);
+    };
+
+    const handlePay = async (plan, months = 1) => {
         setPayingPlanId(plan.planId);
         try {
             const normalizedMonths = Math.max(1, Number(months) || 1);
-            const paymentData = {
-                tenantId,
-                amount: plan.price * normalizedMonths,
-                gatewayType: 'VNPay',
-                transactionType: 'Subscription',
-                referenceId: plan.planId,
-                description: `Thanh toán gói ${plan.planName} (${normalizedMonths} tháng)`,
-                returnUrl: paymentService.getVNPayReturnUrl(),
-                subscriptionMonths: normalizedMonths,
-            };
-
-            const result = await paymentService.createPayment(paymentData);
-            if (result.success && result.paymentUrl) {
-                window.location.href = result.paymentUrl;
-                return;
-            }
-
-            toast.error(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
+            await submitChangeRequestByPlan(
+                plan.planId,
+                normalizedMonths,
+                `Yêu cầu đăng ký gói ${plan.planName} (${normalizedMonths} tháng)`
+            );
+            toast.success('Đã gửi yêu cầu đăng ký gói. Vui lòng chờ SystemAdmin duyệt.');
+            loadMyChangeRequests();
+            loadMyInvoices();
+            setShowChangeRequestModal(true);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Thanh toán thất bại');
+            toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu đăng ký gói');
         } finally {
             setPayingPlanId(null);
         }
@@ -129,113 +226,27 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const handleExtendSubscription = async () => {
         if (!extendTarget) return;
 
-        const tenantId = user?.tenantId || localStorage.getItem('tenantId');
-        if (!tenantId) {
-            toast.error('Không tìm thấy thông tin trung tâm');
-            return;
-        }
-
         setPayingPlanId('extend');
         try {
             const actualMonths = extendDurationType === 'quarters' ? extendMonths * 3 : extendMonths;
-            
-            const extendResponse = await api.post('/admin/subscription/extend', {
-                months: actualMonths
-            });
-
-            const extendData = extendResponse.data;
-
-            if (!extendData.requiresPayment) {
-                const confirmResponse = await api.post('/admin/subscription/extend-confirm', {
-                    months: actualMonths,
-                    paymentRecordId: null
-                });
-
-                if (confirmResponse.data.success) {
-                    toast.success('Gia hạn gói dịch vụ thành công!');
-                    setExtendTarget(null);
-                    
-                    const [subResult, creditResult] = await Promise.all([
-                        api.get('/admin/subscription/current'),
-                        api.get('/admin/subscription/credit-balance')
-                    ]);
-                    setActiveSubscription(subResult.data || null);
-                    if (creditResult.data) {
-                        setCreditBalance(creditResult.data.creditBalance || 0);
-                    }
-                }
-            } else {
-                const paymentData = {
-                    tenantId,
-                    amount: extendData.amountToCharge,
-                    gatewayType: 'VNPay',
-                    transactionType: 'SubscriptionExtend',
-                    referenceId: extendData.subscriptionId,
-                    description: `Gia hạn gói ${extendData.planName} (${actualMonths} tháng)`,
-                    returnUrl: paymentService.getVNPayReturnUrl(),
-                    subscriptionMonths: actualMonths,
-                };
-
-                const result = await paymentService.createPayment(paymentData);
-                if (result.success && result.paymentUrl) {
-                    localStorage.setItem('pendingExtendMonths', actualMonths.toString());
-                    localStorage.setItem('pendingExtendSubscriptionId', extendData.subscriptionId);
-                    window.location.href = result.paymentUrl;
-                    return;
-                }
-
-                toast.error(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
-            }
+            await submitChangeRequestByPlan(
+                extendTarget.planId,
+                actualMonths,
+                `Yêu cầu gia hạn gói ${extendTarget.planName} (${actualMonths} tháng)`
+            );
+            toast.success('Đã gửi yêu cầu gia hạn. Vui lòng chờ SystemAdmin duyệt.');
+            setExtendTarget(null);
+            loadMyChangeRequests();
+            loadMyInvoices();
+            setShowChangeRequestModal(true);
         } catch (error) {
-            console.error('Extend subscription error:', error.response?.data);
-            toast.error(error.response?.data?.message || 'Gia hạn gói dịch vụ thất bại');
+            console.error('Extend request error:', error.response?.data);
+            toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu gia hạn');
         } finally {
             setPayingPlanId(null);
         }
     };
 
-    const handleConfirmExtendAfterPayment = async () => {
-        const pendingMonths = localStorage.getItem('pendingExtendMonths');
-        const pendingSubscriptionId = localStorage.getItem('pendingExtendSubscriptionId');
-        
-        if (!pendingMonths || !pendingSubscriptionId) return;
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
-        const vnp_TransactionStatus = urlParams.get('vnp_TransactionStatus');
-
-        if (vnp_ResponseCode === '00' && vnp_TransactionStatus === '00') {
-            try {
-                await api.post('/admin/subscription/extend-confirm', {
-                    months: parseInt(pendingMonths),
-                    paymentRecordId: null
-                });
-
-                toast.success('Gia hạn gói dịch vụ thành công!');
-                
-                localStorage.removeItem('pendingExtendMonths');
-                localStorage.removeItem('pendingExtendSubscriptionId');
-
-                const [subResult, creditResult] = await Promise.all([
-                    api.get('/admin/subscription/current'),
-                    api.get('/admin/subscription/credit-balance')
-                ]);
-                setActiveSubscription(subResult.data || null);
-                if (creditResult.data) {
-                    setCreditBalance(creditResult.data.creditBalance || 0);
-                }
-            } catch (error) {
-                console.error('Confirm extend error:', error);
-                toast.error('Xác nhận gia hạn thất bại');
-            }
-        }
-    };
-
-    useEffect(() => {
-        if (window.location.search.includes('vnp_ResponseCode')) {
-            handleConfirmExtendAfterPayment();
-        }
-    }, []);
 
     // Kiểm tra có được đổi gói không
     const canChangePlan = (plan) => {
@@ -267,47 +278,57 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         setChangePlanTarget(plan);
     };
 
-    // Xác nhận đổi gói
+    // Xác nhận đổi gói: Center chỉ gửi yêu cầu, không đổi trực tiếp
     const confirmChangePlan = async () => {
         if (!changePlanTarget) return;
-
-        const amountToPay = calculateChangePlanAmount(changePlanTarget);
-
-        // Nếu cần trả thêm tiền → chuyển sang VNPay thanh toán
-        if (amountToPay > 0) {
-            setChangePlanTarget(null);
-            handlePay(changePlanTarget, 1);
-            return;
-        }
-
-        // Nếu không cần trả thêm → đổi gói trực tiếp
         try {
-            const tenantId = user?.tenantId || localStorage.getItem('tenantId');
-            console.log('[DEBUG] Frontend tenantId:', tenantId);
-            console.log('[DEBUG] Frontend user:', user);
-            
-            await api.post('/admin/subscription/change-plan', {
-                tenantId: tenantId,  // ← Thêm TenantId với fallback
-                newPlanId: changePlanTarget.planId,
-                months: 1,
-                effectiveImmediately: true
-            });
-            
-            toast.success('Đổi gói dịch vụ thành công!');
+            await submitChangeRequestByPlan(
+                changePlanTarget.planId,
+                1,
+                `Yêu cầu đổi sang gói ${changePlanTarget.planName}`
+            );
+            toast.success('Đã gửi yêu cầu đổi gói. Vui lòng chờ SystemAdmin duyệt.');
             setChangePlanTarget(null);
-            
-            // Refresh data
-            const [subResult, creditResult] = await Promise.all([
-                api.get('/admin/subscription/current'),
-                api.get('/admin/subscription/credit-balance')
-            ]);
-            setActiveSubscription(subResult.data || null);
-            if (creditResult.data) {
-                setCreditBalance(creditResult.data.creditBalance || 0);
-            }
+            loadMyChangeRequests();
+            loadMyInvoices();
+            setShowChangeRequestModal(true);
         } catch (error) {
-            console.error('Change plan error:', error.response?.data);
-            toast.error(error.response?.data?.message || 'Đổi gói dịch vụ thất bại');
+            console.error('Request change plan error:', error.response?.data);
+            toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu đổi gói');
+        }
+    };
+
+    const requestOfflineInvoicePayment = async (invoiceId, paymentMethod) => {
+        setSubmittingInvoicePayment(true);
+        try {
+            await api.post(`/admin/subscription/invoices/${invoiceId}/request-offline-payment`, {
+                paymentMethod,
+                paymentNote: 'Center xác nhận sẽ thanh toán tiền mặt.'
+            });
+            toast.success('Đã gửi yêu cầu xác nhận thanh toán tới SystemAdmin.');
+            loadMyInvoices();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu thanh toán.');
+        } finally {
+            setSubmittingInvoicePayment(false);
+        }
+    };
+
+    const payInvoiceByVnPay = async (invoice) => {
+        setSubmittingInvoicePayment(true);
+        try {
+            const payload = { returnUrl: paymentService.getVNPayReturnUrl() };
+            const res = await api.post(`/admin/subscription/invoices/${invoice.invoiceId}/create-vnpay-payment`, payload);
+            const paymentUrl = res?.data?.paymentUrl;
+            if (!paymentUrl) {
+                toast.error('Không thể tạo link thanh toán VNPay');
+                return;
+            }
+            window.location.href = paymentUrl;
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tạo thanh toán VNPay');
+        } finally {
+            setSubmittingInvoicePayment(false);
         }
     };
 
@@ -354,8 +375,10 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
     const formatLedgerNote = (entry) => {
         const raw = (entry?.note || entry?.entryType || '').toString();
-        const [firstPart] = raw.split(' - ');
-        return firstPart || raw;
+        // Bỏ phần Request: ... nếu có
+        const cleaned = raw.replace(/Request:\s*[a-f0-9-]+/gi, '').trim();
+        const [firstPart] = cleaned.split(' - ');
+        return firstPart || cleaned;
     };
 
     return (
@@ -365,22 +388,45 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 <header className="subscription-header">
                     <div>
                         <h1>Chọn gói dịch vụ</h1>
-                        <p>Có thể gia hạn gói hiện tại hoặc chọn gói mới để thanh toán qua VNPay.</p>
+                        <p>Đăng ký, đổi gói, gia hạn đều theo luồng yêu cầu duyệt và thanh toán hóa đơn.</p>
                     </div>
-                    {creditBalance > 0 && (
-                        <div className="subscription-credit-info">
-                            <Wallet size={20} />
-                            <span>Số dư: <strong>{formatPrice(creditBalance)} VNĐ</strong></span>
-                            <button
-                                type="button"
-                                className="subscription-credit-history-btn"
-                                onClick={loadCreditHistory}
-                                disabled={creditHistoryLoading}
-                            >
-                                {creditHistoryLoading ? 'Đang tải...' : 'Xem lịch sử giao dịch'}
-                            </button>
-                        </div>
-                    )}
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <button
+                            type="button"
+                            className="subscription-credit-history-btn"
+                            onClick={loadContracts}
+                            style={{ background: '#fef3c7', border: '1px solid #f59e0b', color: '#b45309' }}
+                        >
+                            <FileText size={16} /> Hợp đồng
+                        </button>
+                        <button
+                            type="button"
+                            className="subscription-credit-history-btn"
+                            onClick={() => {
+                                loadMyChangeRequests();
+                                loadMyInvoices();
+                                loadOnlinePaymentHistory();
+                                setShowChangeRequestModal(true);
+                            }}
+                            style={{ background: '#e0e7ff', border: '1px solid #6366f1', color: '#4338ca' }}
+                        >
+                            <Send size={16} /> Lịch sử đổi gói & giao dịch
+                        </button>
+                        {creditBalance > 0 && (
+                            <div className="subscription-credit-info">
+                                <Wallet size={20} />
+                                <span>Số dư: <strong>{formatPrice(creditBalance)} VNĐ</strong></span>
+                                <button
+                                    type="button"
+                                    className="subscription-credit-history-btn"
+                                    onClick={loadCreditHistory}
+                                    disabled={creditHistoryLoading}
+                                >
+                                    {creditHistoryLoading ? 'Đang tải...' : 'Lịch sử'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </header>
 
                 {loading ? (
@@ -435,11 +481,11 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                             disabled={payingPlanId === plan.planId}
                                         >
                                             <CreditCard size={16} />
-                                            {isPaying ? 'Đang chuyển đến VNPay...' : 'Đăng ký ngay'}
+                                            {isPaying ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu đăng ký'}
                                         </button>
                                     )}
                                     
-                                    {/* Nút đổi gói - chỉ hiển thị khi ĐÃ có gói và không phải gói đang dùng */}
+                                    {/* Nút đổi gói - hiển thị cho tất cả gói không phải gói đang dùng */}
                                     {!isActivePlan && activeSubscription && (
                                         <>
                                             {canChangePlan(plan) ? (
@@ -461,8 +507,16 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         </>
                                     )}
 
-                                    {/* Nút Gia hạn gói - chỉ hiển thị cho gói đang hoạt động */}
-                                    {isActivePlan && activeSubscription && (
+                                    {/* Hiển thị thông báo 7 ngày cho tất cả gói rẻ hơn gói hiện tại (hạ gói) */}
+                                    {!isActivePlan && activeSubscription && plan.price < activeSubscription.planPrice && (
+                                        <div className="subscription-grace-period-notice">
+                                            <Clock size={14} />
+                                            <span>Chỉ được hạ gói trong 7 ngày đầu</span>
+                                        </div>
+                                    )}
+
+                                    {/* Nút Gia hạn gói - chỉ hiển thị cho gói đang hoạt động và không phải gói Trial (giá = 0) */}
+                                    {isActivePlan && activeSubscription && plan.price > 0 && (
                                         <button
                                             className="subscription-extend-btn"
                                             onClick={openExtendModal}
@@ -546,39 +600,17 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                             </button>
                         </div>
                         <div className="subscription-modal-body">
-                            <p>Bạn đang đổi sang gói <strong>{changePlanTarget.planName}</strong></p>
+                            <p>Bạn đang gửi yêu cầu đổi sang gói <strong>{changePlanTarget.planName}</strong></p>
                             
                             {activeSubscription && (
                                 <div className="subscription-change-summary">
                                     <div className="change-summary-row">
-                                        <span>Gói hiện tại:</span>
+                                        <span>Gói hiện tại</span>
                                         <strong>{activeSubscription.planName}</strong>
                                     </div>
                                     <div className="change-summary-row">
-                                        <span>Số dư hiện có:</span>
-                                        <strong className="credit-value">{formatPrice(creditBalance)} VNĐ</strong>
-                                    </div>
-                                    <div className="change-summary-row">
-                                        <span>Giá gói mới:</span>
-                                        <strong>{formatPrice(changePlanTarget.price)} VNĐ</strong>
-                                    </div>
-                                    <div className="change-summary-row">
-                                        <span>Số tiền phải trả thêm:</span>
-                                        <strong className={
-                                            calculateChangePlanAmount(changePlanTarget) === 0 ? 'free' : 
-                                            (activeSubscription && changePlanTarget.price > activeSubscription.planPrice ? 'upgrade' : 'pay')
-                                        }>
-                                            {calculateChangePlanAmount(changePlanTarget) === 0 
-                                                ? 'Miễn phí (đã trừ credit)' 
-                                                : formatPrice(calculateChangePlanAmount(changePlanTarget)) + ' VNĐ'}
-                                        </strong>
-                                    </div>
-                                    <div className="change-summary-divider"></div>
-                                    <div className="change-summary-row total">
-                                        <span>Credit còn lại sau đổi gói:</span>
-                                        <strong className="credit-remaining">
-                                            {formatPrice(Math.max(0, creditBalance - changePlanTarget.price))} VNĐ
-                                        </strong>
+                                        <span>Giá gói mới</span>
+                                        <strong>{formatPrice(changePlanTarget.price)} VNĐ/tháng</strong>
                                     </div>
                                 </div>
                             )}
@@ -588,9 +620,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                 className="subscription-modal-submit"
                                 onClick={confirmChangePlan}
                             >
-                                {calculateChangePlanAmount(changePlanTarget) > 0 
-                                    ? 'Thanh toán qua VNPay' 
-                                    : 'Xác nhận đổi gói'}
+                                Gửi yêu cầu đổi gói
                             </button>
                         </div>
                     </div>
@@ -792,8 +822,267 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                     </div>
                 </>
             )}
+
+            {/* Contracts Modal */}
+            {showContracts && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => setShowContracts(false)} />
+                    <div className="subscription-modal" style={{ maxWidth: '1200px', width: '90vw', maxHeight: '90vh', height: 'auto' }}>
+                        <div className="subscription-modal-header">
+                            <h2>Hợp đồng</h2>
+                            <button className="subscription-modal-close" onClick={() => setShowContracts(false)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ padding: '1rem', maxHeight: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+                            {loadingContracts ? (
+                                <div className="subscription-state">Đang tải...</div>
+                            ) : contracts.length === 0 ? (
+                                <div className="subscription-state">
+                                    <FileText size={40} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                                    <p>Chưa có hợp đồng nào.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', flexShrink: 0 }}>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem', background: '#f8fafc' }}>Tiêu đề</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem', background: '#f8fafc' }}>Loại</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem', background: '#f8fafc' }}>Ngày tải</th>
+                                                <th style={{ textAlign: 'center', padding: '0.75rem', background: '#f8fafc' }}>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {contracts.map(c => (
+                                                <tr key={c.contractId}>
+                                                    <td style={{ padding: '0.75rem' }}>{c.contractTitle}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{c.fileType}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                                        <button 
+                                                            style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }}
+                                                            onClick={() => handleViewContract(c)}
+                                                        >
+                                                            Xem
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {viewContractTarget && (
+                                        <div style={{ flex: 1, minHeight: '400px', background: '#f1f1f1', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <ContractViewer contract={viewContractTarget} isCenter={true} />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Change Request Modal */}
+            {showChangeRequestModal && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => setShowChangeRequestModal(false)} />
+                    <div className="subscription-modal" style={{ maxWidth: '1600px', width: '98vw', maxHeight: '90vh' }}>
+                        <div className="subscription-modal-header">
+                            <h2>Lịch sử đổi gói & giao dịch</h2>
+                            <button className="subscription-modal-close" onClick={() => setShowChangeRequestModal(false)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: 'calc(90vh - 120px)', overflow: 'auto', padding: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'nowrap', alignItems: 'flex-start', minHeight: '500px' }}>
+                                {/* Côt 1: Hóa dôn dôi gói */}
+                                <div style={{ flex: 1, minWidth: '350px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#ffffff' }}>
+                                    <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Hóa đơn đổi gói</h4>
+                                    {loadingInvoices ? (
+                                        <div className="subscription-state">Đang tải...</div>
+                                    ) : myInvoices.length === 0 ? (
+                                        <div className="subscription-state">Chưa có hoá đơn nào.</div>
+                                    ) : (
+                                        // <div style={{ maxHeight: '800px', overflow: 'auto' }}>
+                                         <div style={{ maxHeight: '800px', overflow: 'visible' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Mã</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Số tiền</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Loại</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {myInvoices.map(i => {
+                                                        const isPending = i.status === 'Pending' || i.status === 'AwaitingConfirmation';
+                                                        return (
+                                                            <tr key={i.invoiceId}>
+                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{i.invoiceNumber}</td>
+                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(i.amount)} VNĐ</td>
+                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                    {i.paymentMethod === 'Cash' ? 'Tiền mặt' : i.paymentMethod === 'VNPay' ? 'VNPay' : '-'}
+                                                                </td>
+                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                    {isPending ? (
+                                                                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={submittingInvoicePayment}
+                                                                                onClick={() => requestOfflineInvoicePayment(i.invoiceId, 'Cash')}
+                                                                                style={{ padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                                            >
+                                                                                Tiền mặt
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={submittingInvoicePayment}
+                                                                                onClick={() => payInvoiceByVnPay(i)}
+                                                                                style={{ padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #4f46e5', color: '#4338ca', cursor: 'pointer', fontSize: '0.75rem' }}
+                                                                            >
+                                                                                VNPay
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span style={{
+                                                                            color: i.status === 'Paid' ? '#16a34a' : '#6b7280',
+                                                                            fontWeight: 500
+                                                                        }}>
+                                                                            {i.status === 'Paid' ? 'Đã thanh toán' : i.status === 'Pending' ? 'Chờ thanh toán' : i.status}
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Côt 2: Lich su giao dich online (VNPay) */}
+                                <div style={{ flex: 1, minWidth: '350px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#ffffff' }}>
+                                    <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Lịch sử giao dịch online (VNPay)</h4>
+                                    {loadingOnlineHistory ? (
+                                        <div className="subscription-state">Đang tải...</div>
+                                    ) : onlinePaymentHistory.length === 0 ? (
+                                        <div className="subscription-state">Chưa có giao dịch online.</div>
+                                    ) : (
+                                        // <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+                                         <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Mã GD</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Số tiền</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Ngày</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {onlinePaymentHistory.map(h => (
+                                                        <tr key={h.paymentId}>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: '#f3f4f6', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>
+                                                                    {h.paymentId?.slice(-8)}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(h.amount)} VNĐ</td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                <span style={{
+                                                                    color: h.status === 'Success' ? '#16a34a' : h.status === 'Failed' ? '#dc2626' : '#f59e0b',
+                                                                    fontWeight: 500
+                                                                }}>
+                                                                    {h.status === 'Success' ? 'Thành công' : h.status === 'Failed' ? 'Thất bại' : h.status}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                                {h.paymentDate ? new Date(h.paymentDate).toLocaleString('vi-VN') : '—'}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Côt 3: Lich su dôi gói */}
+                                <div style={{ flex: 1, minWidth: '350px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#ffffff' }}>
+                                    <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Lịch sử đổi gói</h4>
+                                    {loadingRequests ? (
+                                        <div className="subscription-state">Đang tải...</div>
+                                    ) : myChangeRequests.length === 0 ? (
+                                        <div className="subscription-state">Chưa có yêu cầu đổi gói nào.</div>
+                                    ) : (
+                                        <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Ngày</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói ban đầu</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói yêu cầu</th>
+                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {myChangeRequests.map(r => (
+                                                        <tr key={r.requestId}>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                                {r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('vi-VN') : '—'}
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                {r.currentPlan?.planName || '—'}
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                {r.requestedPlan?.planName || '—'}
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                                <span style={{
+                                                                    color: r.status === 'Approved' ? '#16a34a' : r.status === 'Rejected' ? '#dc2626' : '#f59e0b',
+                                                                    fontWeight: 500
+                                                                }}>
+                                                                    {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Rejected' ? 'Từ chối' : r.status}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* View Contract Modal */}
+            {viewContractTarget && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => setViewContractTarget(null)} />
+                    <div className="subscription-modal" style={{ maxWidth: '1200px', width: '90vw', maxHeight: '90vh', height: 'auto' }}>
+                        <div className="subscription-modal-header">
+                            <h2>{viewContractTarget.contractTitle}</h2>
+                            <button className="subscription-modal-close" onClick={() => setViewContractTarget(null)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f1f1' }}>
+                            <ContractViewer contract={viewContractTarget} isCenter={true} />
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 };
 
 export default SubscriptionPlans;
+
+
+

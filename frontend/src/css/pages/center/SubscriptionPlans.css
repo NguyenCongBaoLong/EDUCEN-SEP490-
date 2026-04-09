@@ -355,6 +355,21 @@
     font-weight: 400;
 }
 
+/* Thông báo grace period 7 ngày */
+.subscription-grace-period-notice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    color: #92400e;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 8px;
+}
+
 /* Nút gia hạn gói */
 .subscription-extend-btn {
     width: 100%;

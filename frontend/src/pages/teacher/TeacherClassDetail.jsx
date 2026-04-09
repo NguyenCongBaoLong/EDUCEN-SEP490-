@@ -337,6 +337,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [attendanceOpen, setAttendanceOpen] = useState(false);
     const [selectedSession, setSelectedSession] = useState(null);
     const [attendanceData, setAttendanceData] = useState({});
+    const [canAttend, setCanAttend] = useState(true);
 
     // Import Modal
     const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
@@ -603,7 +604,23 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
     // Removed getSessionSummary as counts are now in session object
 
-    const handleOpen = (session) => { setSelectedSession(session); setAttendanceOpen(true); };
+    const handleOpen = async (session) => {
+        setSelectedSession(session);
+        
+        if (session.sessionId) {
+            try {
+                const res = await api.get(`/attendance/session/${session.sessionId}/can-attend`);
+                setCanAttend(res.data.canAttend !== false);
+            } catch (err) {
+                console.error('Error checking canAttend:', err);
+                setCanAttend(true); // Default to allow
+            }
+        } else {
+            setCanAttend(true);
+        }
+        
+        setAttendanceOpen(true);
+    };
     const handleClose = () => { setAttendanceOpen(false); setSelectedSession(null); };
     
     // Refresh all data after attendance is saved
@@ -1215,6 +1232,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         students={students}
                         existingRecords={attendanceData[selectedSession.sessionId]}
                         sessionId={selectedSession.sessionId}
+                        canAttend={canAttend}
+                        onRequestModification={() => fetchClassData(true)}
                     />
                 )
             }
