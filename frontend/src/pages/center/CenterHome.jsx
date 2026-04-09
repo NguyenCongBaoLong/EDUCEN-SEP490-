@@ -90,7 +90,7 @@ const dayToColumnIndex = (day) => (day === 0 ? 6 : day - 1);
 
 
 /* ── Inline edit helper ── */
-const InlineEditField = ({ draft, set, field, className, placeholder, multiline, rows = 3 }) =>
+const InlineEditField = ({ draft, set, field, className, placeholder, multiline, rows = 3, maxLength }) =>
     multiline ? (
         <textarea
             className={`admin-edit-textarea${className ? ' ' + className : ''}`}
@@ -98,6 +98,7 @@ const InlineEditField = ({ draft, set, field, className, placeholder, multiline,
             onChange={e => set(field, e.target.value)}
             rows={rows}
             placeholder={placeholder}
+            maxLength={maxLength}
         />
     ) : (
         <input
@@ -105,6 +106,7 @@ const InlineEditField = ({ draft, set, field, className, placeholder, multiline,
             value={draft[field] || ''}
             onChange={e => set(field, e.target.value)}
             placeholder={placeholder}
+            maxLength={maxLength}
         />
     );
 
@@ -249,11 +251,17 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     const [scrolled, setScrolled] = useState(false);
 
     // 3. Enrollment Form State
-    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
+    const [form, setForm] = useState({ 
+        firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '',
+        parentName: '', parentPhone: '', parentEmail: '',
+        gradeId: '', classId: ''
+    });
     const [isSubmittingEnrollment, setIsSubmittingEnrollment] = useState(false);
     const [availableSubjects, setAvailableSubjects] = useState([]);
+    const [grades, setGrades] = useState([]);
     const [upcomingClasses, setUpcomingClasses] = useState([]);
     const [showAllClasses, setShowAllClasses] = useState(false);
+    const [showParentInfo, setShowParentInfo] = useState(false);
 
     // 4. File State
     const [logoFile, setLogoFile] = useState(null);
@@ -316,24 +324,39 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             let classes = resp.data || [];
             
             // Sắp xếp: Ưu tiên lớp sắp khai giảng (ngày bắt đầu học lớn hơn ngày hiện tại)
-            // Hoặc đơn giản là sắp xếp theo ngày bắt đầu tăng dần
             const now = new Date();
             classes.sort((a, b) => {
                 const dateA = new Date(a.startDate || 0);
                 const dateB = new Date(b.startDate || 0);
                 
-                // Đưa các lớp chưa khai giảng (tương lai) lên trước
                 const isUpcomingA = dateA > now;
                 const isUpcomingB = dateB > now;
                 
                 if (isUpcomingA && !isUpcomingB) return -1;
                 if (!isUpcomingA && isUpcomingB) return 1;
                 
-                // Nếu cùng tương lai hoặc cùng quá khứ, sắp xếp theo ngày gần nhất
                 return dateA - dateB;
             });
 
             setUpcomingClasses(classes);
+            
+            // Extract unique grades and subjects
+            const extGrades = [];
+            const gradeIds = new Set();
+            const extSubjects = new Set();
+            
+            classes.forEach(c => {
+                if (c.gradeId && !gradeIds.has(c.gradeId)) {
+                    gradeIds.add(c.gradeId);
+                    extGrades.push({ gradeId: c.gradeId, gradeName: c.gradeName || `Khối ${c.gradeId}` });
+                }
+                if (c.subjectName) {
+                    extSubjects.add(c.subjectName);
+                }
+            });
+            
+            setGrades(extGrades.sort((a,b) => a.gradeId - b.gradeId));
+            setAvailableSubjects(Array.from(extSubjects).sort());
         } catch (err) {
             console.error("Failed to fetch upcoming classes:", err);
         }
@@ -341,18 +364,6 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
     useEffect(() => {
         fetchUpcomingClasses();
-    }, []);
-
-    useEffect(() => {
-        const fetchSubjects = async () => {
-            try {
-                const res = await api.get('/tenantadmin/Subjects');
-                setAvailableSubjects(res.data || []);
-            } catch (err) {
-                console.error('Cannot fetch subjects:', err);
-            }
-        };
-        fetchSubjects();
     }, []);
 
     /* --- Scroll & Sticky Header Animations --- */
@@ -397,13 +408,31 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
             if (response.status === 200 || response.status === 201) {
                 toast.success(response.data.message || 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
-                setForm({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '' });
+                setForm({ 
+                    firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '',
+                    parentName: '', parentPhone: '', parentEmail: ''
+                });
             }
         } catch (error) {
             console.error('Enrollment error:', error);
             toast.error(error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
         } finally {
             setIsSubmittingEnrollment(false);
+        }
+    };
+
+    const handleClassSelect = (cls) => {
+        setForm(prev => ({
+            ...prev,
+            gradeId: cls.gradeId || '',
+            classId: cls.classId,
+            preferredCourse: cls.subjectName || ''
+        }));
+        
+        // Scroll to form
+        const element = document.getElementById('enrollment');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
         }
     };
 
@@ -903,7 +932,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                         <X size={12} />
                                     </button>
                                 )}
-                                <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="logo-name-field" />
+                                <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="logo-name-field" maxLength={50} />
                             </div>
                         ) : (
                             <LogoDisplay logoSrc={d.logo} name={d.name} />
@@ -973,6 +1002,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                                 className="hero-name-field"
                                                                 placeholder="Tiêu đề Slide (Để trống dùng tên trung tâm)"
                                                                 value={draft.heroImages[idx]?.title || ''}
+                                                                maxLength={50}
                                                                 onChange={e => {
                                                                     const newImg = [...draft.heroImages];
                                                                     newImg[idx] = { ...newImg[idx], title: e.target.value };
@@ -1374,11 +1404,32 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                         <div className="home-class-info-row">
                                                             <Clock size={14} /> <span>Lịch học: <i>{cls.scheduleSummary}</i></span>
                                                         </div>
+                                                        <div className="home-class-info-row">
+                                                            <Users size={14} /> <span>Sĩ số: {cls.studentCount} / {cls.maxStudents || '-'}</span>
+                                                        </div>
                                                     </div>
                                                     <div className="class-card-footer">
-                                                        <a href="#enrollment" className="class-enroll-link">
-                                                            Đăng ký ngay <ArrowRight size={16} />
-                                                        </a>
+                                                        {(() => {
+                                                            const isFull = cls.maxStudents > 0 && cls.studentCount >= cls.maxStudents;
+                                                            return isFull ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="class-enroll-link-btn"
+                                                                    disabled
+                                                                    style={{ background: '#fee2e2', color: '#b91c1c', cursor: 'not-allowed', border: '1px solid #fecaca', opacity: 0.9 }}
+                                                                >
+                                                                    🔒 Lớp đã đầy
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    className="class-enroll-link-btn"
+                                                                    onClick={() => handleClassSelect(cls)}
+                                                                >
+                                                                    Đăng ký ngay <ArrowRight size={16} />
+                                                                </button>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1418,29 +1469,108 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                             <input type="text" name="lastName" value={form.lastName} onChange={handleFormChange} placeholder="Nhập tên" required />
                                                         </div>
                                                     </div>
-                                                    <div className="center-form-group">
-                                                        <label>Địa chỉ Email</label>
-                                                        <input type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="email@example.com" required />
+                                                    
+                                                    <div className="center-form-row">
+                                                        <div className="center-form-group">
+                                                            <label>Địa chỉ Email</label>
+                                                            <input type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="email@example.com" required />
+                                                        </div>
+                                                        <div className="center-form-group">
+                                                            <label>Số điện thoại</label>
+                                                            <input type="tel" name="phone" value={form.phone} onChange={handleFormChange} placeholder="0912345678" required />
+                                                        </div>
                                                     </div>
-                                                    <div className="center-form-group">
-                                                        <label>Số điện thoại</label>
-                                                        <input type="tel" name="phone" value={form.phone} onChange={handleFormChange} placeholder="0912345678" required />
+
+                                                    <div className="center-form-row">
+                                                        <div className="center-form-group">
+                                                            <label>Khối lớp *</label>
+                                                            <select 
+                                                                name="gradeId" 
+                                                                value={form.gradeId} 
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setForm(p => ({ ...p, gradeId: val, classId: '' }));
+                                                                }} 
+                                                                required
+                                                            >
+                                                                <option value="">Chọn khối lớp</option>
+                                                                {grades.map(g => (
+                                                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="center-form-group">
+                                                            <label>Môn học *</label>
+                                                            <select 
+                                                                name="preferredCourse" 
+                                                                value={form.preferredCourse || ''} 
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setForm(p => ({ ...p, preferredCourse: val, classId: '' }));
+                                                                }} 
+                                                                required
+                                                            >
+                                                                <option value="">Chọn môn học</option>
+                                                                {availableSubjects.map((s, idx) => (
+                                                                    <option key={idx} value={s}>{s}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
                                                     </div>
+                                                    
                                                     <div className="center-form-group">
-                                                        <label>Khóa học mong muốn</label>
-                                                        <select name="preferredCourse" value={form.preferredCourse} onChange={handleFormChange} required>
-                                                            <option value="">Chọn khóa học</option>
-                                                            {availableSubjects.map(s => (
-                                                                <option key={s.subjectId} value={s.subjectName}>
-                                                                    {s.subjectName}
-                                                                </option>
-                                                            ))}
+                                                        <label>Lớp học mong muốn (Tùy chọn)</label>
+                                                        <select 
+                                                            name="classId" 
+                                                            value={form.classId} 
+                                                            onChange={handleFormChange}
+                                                        >
+                                                            <option value="">Chọn lớp học</option>
+                                                            {upcomingClasses
+                                                                .filter(c => !form.gradeId || (c.gradeId && c.gradeId.toString() === form.gradeId.toString()))
+                                                                .filter(c => !form.preferredCourse || c.subjectName === form.preferredCourse)
+                                                                .map(c => (
+                                                                    <option key={c.classId} value={c.classId}>{c.className} ({c.teacherName || 'Chưa XL'})</option>
+                                                                ))
+                                                            }
                                                         </select>
                                                     </div>
+
                                                     <div className="center-form-group">
                                                         <label>Địa chỉ</label>
                                                         <input type="text" name="address" value={form.address} onChange={handleFormChange} placeholder="Nhập địa chỉ" />
                                                     </div>
+
+                                                    <div className="center-form-optional-toggle">
+                                                        <button 
+                                                            type="button" 
+                                                            className="center-btn-toggle-optional"
+                                                            onClick={() => setShowParentInfo(!showParentInfo)}
+                                                        >
+                                                            {showParentInfo ? <ChevronUp size={18} /> : <Plus size={18} />}
+                                                            Thông tin phụ huynh (Không bắt buộc)
+                                                        </button>
+                                                    </div>
+
+                                                    {showParentInfo && (
+                                                        <div className="center-form-optional-content">
+                                                            <div className="center-form-group">
+                                                                <label>Họ tên phụ huynh</label>
+                                                                <input type="text" name="parentName" value={form.parentName} onChange={handleFormChange} placeholder="Nhập họ tên phụ huynh" />
+                                                            </div>
+                                                            <div className="center-form-row">
+                                                                <div className="center-form-group">
+                                                                    <label>SĐT phụ huynh</label>
+                                                                    <input type="tel" name="parentPhone" value={form.parentPhone} onChange={handleFormChange} placeholder="09xxxxxxxx" />
+                                                                </div>
+                                                                <div className="center-form-group">
+                                                                    <label>Email phụ huynh</label>
+                                                                    <input type="email" name="parentEmail" value={form.parentEmail} onChange={handleFormChange} placeholder="parent@example.com" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
                                                     <button type="submit" className="center-btn-submit" disabled={isSubmittingEnrollment}>
                                                         {isSubmittingEnrollment ? 'Đang gửi...' : 'Gửi đăng ký'}
                                                     </button>

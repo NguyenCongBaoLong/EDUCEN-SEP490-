@@ -260,15 +260,7 @@ namespace EducenAPI.Services
             // Generate Username if not exists
             if (string.IsNullOrEmpty(user.Username))
             {
-                // Ensure unique username
-                string baseUsername = user.Email.Trim().Split('@')[0].ToLower();
-                string uniqueUsername = baseUsername;
-                int counter = 1;
-                while (await _context.Users.AnyAsync(u => u.Username == uniqueUsername))
-                {
-                    uniqueUsername = $"{baseUsername}{counter++}";
-                }
-                user.Username = uniqueUsername;
+                user.Username = user.Email;
             }
 
             // Generate Secure Password
@@ -304,6 +296,129 @@ namespace EducenAPI.Services
                 Gender = s.Gender,
                 EnrollmentStatus = s.EnrollmentStatus
             }).ToList();
+        }
+
+        public async Task<ChildPerformanceReportDto?> GetChildPerformanceReportAsync(int childId)
+        {
+            var student = await _context.Students
+                .Include(s => s.StudentNavigation)
+                .Include(s => s.Classes)
+                    .ThenInclude(c => c.Teacher)
+                        .ThenInclude(t => t.TeacherNavigation)
+                .Include(s => s.Classes)
+                    .ThenInclude(c => c.Subject)
+                .FirstOrDefaultAsync(s => s.UserId == childId);
+
+            if (student == null) return null;
+
+            var report = new ChildPerformanceReportDto
+            {
+                StudentId = student.UserId,
+                ChildName = student.StudentNavigation?.FullName ?? student.StudentNavigation?.Username ?? "N/A",
+                ClassSummaries = new List<ClassPerformanceSummaryDto>()
+            };
+
+            decimal totalGpaSum = 0;
+            int gpaClassCount = 0;
+            decimal totalAttendanceRateSum = 0;
+            int attendanceClassCount = 0;
+            int totalSubmissionsCount = 0;
+            int totalAssignmentsCount = 0;
+
+            foreach (var cls in student.Classes)
+            {
+                // Attendance
+                var sessions = await _context.ClassSessions
+                    .Where(cs => cs.ClassId == cls.ClassId)
+                    .ToListAsync();
+
+                var pastSessions = sessions.Where(s => s.SessionDate <= DateTime.Now).ToList();
+                var attendanceRecords = await _context.Attendances
+                    .Where(a => a.StudentId == childId && pastSessions.Select(ps => ps.SessionId).Contains(a.SessionId))
+                    .ToListAsync();
+
+                int attended = attendanceRecords.Count(a => 
+                    a.Status.ToLower() == "present" || 
+                    a.Status.ToLower() == "attended" || 
+                    a.Status.ToLower() == "có mặt");
+                
+                int totalPast = pastSessions.Count();
+                decimal attRate = totalPast > 0 ? (decimal)attended / totalPast * 100 : 0;
+
+                // Assignments & Grades
+                var classAssignments = await _context.Assignments
+                    .Where(a => a.Session.ClassId == cls.ClassId)
+                    .Include(a => a.Submissions)
+                    .ToListAsync();
+
+                var mySubmissions = classAssignments
+                    .SelectMany(a => a.Submissions)
+                    .Where(sub => sub.StudentId == childId)
+                    .ToList();
+
+                var publishedGrades = mySubmissions
+                    .Where(sub => sub.Score != null && sub.IsPublished)
+                    .ToList();
+
+                decimal avgScore = publishedGrades.Any() ? publishedGrades.Average(s => s.Score!.Value) : 0;
+                int submittedCount = mySubmissions.Count();
+                int totalAsms = classAssignments.Count();
+
+                // Latest Feedback
+                var latestFeedback = publishedGrades
+                    .OrderByDescending(s => s.GradedAt ?? s.SubmittedAt)
+                    .Select(s => s.TeacherComment)
+                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+
+                // Ranking
+                string rank = "—";
+                if (publishedGrades.Any())
+                {
+                    rank = avgScore >= 9.0m ? "Xuất sắc" :
+                           avgScore >= 8.0m ? "Giỏi" :
+                           avgScore >= 6.5m ? "Khá" :
+                           avgScore >= 5.0m ? "Trung bình" : "Yếu";
+                }
+
+                report.ClassSummaries.Add(new ClassPerformanceSummaryDto
+                {
+                    ClassId = cls.ClassId,
+                    ClassName = cls.ClassName ?? "N/A",
+                    SubjectName = cls.Subject?.SubjectName ?? "N/A",
+                    TeacherName = cls.Teacher?.TeacherNavigation?.FullName ?? "N/A",
+                    TotalSessionsPassed = totalPast,
+                    AttendedSessions = attended,
+                    AttendanceRate = Math.Round(attRate, 1),
+                    TotalAssignments = totalAsms,
+                    SubmittedAssignments = submittedCount,
+                    AverageScore = publishedGrades.Any() ? Math.Round(avgScore, 1) : null,
+                    LatestFeedback = latestFeedback,
+                    Rank = rank,
+                    Status = cls.Status ?? "Active"
+                });
+
+                if (publishedGrades.Any())
+                {
+                    totalGpaSum += avgScore;
+                    gpaClassCount++;
+                }
+
+                if (totalPast > 0)
+                {
+                    totalAttendanceRateSum += attRate;
+                    attendanceClassCount++;
+                }
+
+                totalSubmissionsCount += submittedCount;
+                totalAssignmentsCount += totalAsms;
+            }
+
+            report.OverallGPA = gpaClassCount > 0 ? Math.Round(totalGpaSum / gpaClassCount, 1) : 0;
+            report.OverallAttendanceRate = attendanceClassCount > 0 ? Math.Round(totalAttendanceRateSum / attendanceClassCount, 1) : 0;
+            report.TotalAssignmentsSubmitted = totalSubmissionsCount;
+            report.TotalAssignmentsAssigned = totalAssignmentsCount;
+
+            return report;
         }
     }
 }

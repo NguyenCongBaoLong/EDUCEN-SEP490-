@@ -14,6 +14,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
 }
 
 .enrollment-requests-table td {
@@ -36,6 +37,7 @@
     border-radius: 9999px;
     font-size: 0.8125rem;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .enrollment-status-badge.pending {
@@ -80,4 +82,63 @@
     display: flex;
     gap: 0.5rem;
     justify-content: flex-end;
+}
+/* Enrollment Request Tabs */
+.sc-tabs {
+    display: flex;
+    gap: 8px;
+    background: #f1f5f9;
+    padding: 6px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
+.sc-tab {
+    padding: 10px 24px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sc-tab:hover {
+    color: #334155;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.sc-tab.active {
+    background: #fff;
+    color: #3b82f6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.course-intent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.class-intent-label {
+    font-size: 0.8125rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.grade-badge {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 0.25rem 0.625rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    width: fit-content;
+    white-space: nowrap;
+    display: inline-block;
 }

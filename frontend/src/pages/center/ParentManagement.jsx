@@ -73,7 +73,9 @@ const ParentManagement = () => {
             // Map Student Data for linking
             const students = studentsRes.data.map(s => ({
                 id: s.userId.toString(),
-                name: s.fullName
+                name: s.fullName,
+                grade: s.grade || '',
+                class: s.className || ''
             }));
 
             setParentList(parents);

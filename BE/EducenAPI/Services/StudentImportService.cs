@@ -7,6 +7,7 @@ using ExcelDataReader;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.Models;
+using BCrypt.Net;
 
 namespace EducenAPI.Services;
 
@@ -15,15 +16,18 @@ public class StudentImportService : IStudentImportService
     private readonly EducenV2Context _context;
     private readonly IStudentService _studentService;
     private readonly IClassService _classService;
+    private readonly IParentService _parentService;
 
     public StudentImportService(
         EducenV2Context context,
         IStudentService studentService,
-        IClassService classService)
+        IClassService classService,
+        IParentService parentService)
     {
         _context = context;
         _studentService = studentService;
         _classService = classService;
+        _parentService = parentService;
     }
 
     private sealed class ImportResults
@@ -202,6 +206,11 @@ public class StudentImportService : IStudentImportService
                 
                 var dateOfBirthRaw = GetValue("DateOfBirth");
                 var gender = GetValue("Gender");
+                
+                // Parent Info
+                var parentName = GetValue("ParentName");
+                var parentPhone = GetValue("ParentPhone");
+                var parentEmail = GetValue("ParentEmail");
 
                 // Validate DateOfBirth
                 DateTime? parsedDateOfBirth = null;
@@ -306,6 +315,12 @@ public class StudentImportService : IStudentImportService
                 {
                     studentId = existingUserByEmail!.Student!.UserId;
                     importResults.Skipped++;
+                }
+
+                // --- Link Parent if info provided ---
+                if (!string.IsNullOrWhiteSpace(parentName) && studentId > 0)
+                {
+                    await EnsureParentLinkedAsync(studentId, parentName, parentPhone, parentEmail);
                 }
 
                 // Add to class if classId provided
@@ -413,5 +428,83 @@ public class StudentImportService : IStudentImportService
                 worksheetsFound = validWorksheets.Count
             }
         };
+    }
+
+    private async Task EnsureParentLinkedAsync(int studentId, string parentName, string? parentPhone, string? parentEmail)
+    {
+        // 1. Tìm phụ huynh đã tồn tại theo Phone hoặc Email
+        User? parentUser = null;
+        
+        if (!string.IsNullOrWhiteSpace(parentPhone))
+        {
+            parentUser = await _context.Users
+                .Include(u => u.Parent)
+                .ThenInclude(p => p.Students)
+                .FirstOrDefaultAsync(u => u.PhoneNumber == parentPhone && u.RoleId == 4);
+        }
+        
+        if (parentUser == null && !string.IsNullOrWhiteSpace(parentEmail))
+        {
+            parentUser = await _context.Users
+                .Include(u => u.Parent)
+                .ThenInclude(p => p.Students)
+                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == 4);
+        }
+
+        // 2. Nếu không tìm thấy, tạo mới
+        if (parentUser == null)
+        {
+            // Generate username cho phụ huynh
+            var usernameBase = !string.IsNullOrWhiteSpace(parentEmail) 
+                ? parentEmail.Split('@')[0] 
+                : $"par_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}_{new Random().Next(100, 999)}";
+            
+            var username = usernameBase;
+            int counter = 1;
+            while (await _context.Users.AnyAsync(u => u.Username == username))
+            {
+                username = $"{usernameBase}_{counter++}";
+            }
+
+            parentUser = new User
+            {
+                Username = username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Edu123456"),
+                FullName = parentName,
+                Email = parentEmail,
+                PhoneNumber = parentPhone,
+                RoleId = 4, // Parent role
+                AccountStatus = "Active",
+                IsAccountSent = false
+            };
+
+            _context.Users.Add(parentUser);
+            await _context.SaveChangesAsync();
+
+            var parent = new Parent
+            {
+                UserId = parentUser.UserId
+            };
+            _context.Parents.Add(parent);
+            await _context.SaveChangesAsync();
+            
+            parentUser.Parent = parent;
+        }
+
+        // 3. Liên kết Student
+        if (parentUser.Parent != null)
+        {
+            var student = await _context.Students.FindAsync(studentId);
+            if (student != null)
+            {
+                if (parentUser.Parent.Students == null) parentUser.Parent.Students = new List<Student>();
+                
+                if (!parentUser.Parent.Students.Any(s => s.UserId == studentId))
+                {
+                    parentUser.Parent.Students.Add(student);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
     }
 }

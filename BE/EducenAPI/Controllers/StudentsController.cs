@@ -168,10 +168,10 @@ namespace EducenAPI.Controllers
             if (string.IsNullOrEmpty(user.Email))
                 return BadRequest("Người dùng chưa có email");
 
-            // Nếu chưa có username thì tạo từ email
+            // Nếu chưa có username thì mặc định dùng email luôn
             if (string.IsNullOrEmpty(user.Username))
             {
-                user.Username = user.Email?.Split('@')[0] ?? $"stu_{user.UserId}";
+                user.Username = user.Email;
             }
 
             // tạo password mới
@@ -249,6 +249,48 @@ namespace EducenAPI.Controllers
                 await _mailService.SendStudentAccount(userEmail ?? "", request.Username, request.Password);
 
                 return Ok(new { message = "Tài khoản đã được tạo và gửi thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("profile")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetProfile()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+                int studentUserId = int.Parse(userIdClaim.Value);
+
+                var student = await _studentService.GetStudentProfileAsync(studentUserId);
+                if (student == null) return NotFound(new { message = "Không tìm thấy hồ sơ học sinh." });
+
+                return Ok(student);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("performance-report")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetPerformanceReport()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+                int studentUserId = int.Parse(userIdClaim.Value);
+
+                var report = await _studentService.GetStudentPerformanceReportAsync(studentUserId);
+                if (report == null) return NotFound(new { message = "Không tìm thấy dữ liệu học sinh." });
+
+                return Ok(report);
             }
             catch (Exception ex)
             {

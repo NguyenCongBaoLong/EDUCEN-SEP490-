@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.SupportRequestDTOs;
+using EducenAPI.DTOs.SupportRequestDTOs;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -46,6 +46,7 @@ namespace EducenAPI.Services
             var userId = _userContext.GetUserId();
             var list = await _context.SupportRequests
                 .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
                 .Include(x => x.Receiver)
                 .Where(x => x.SenderId == userId)
                 .OrderByDescending(x => x.CreatedAt)
@@ -59,6 +60,7 @@ namespace EducenAPI.Services
             var userId = _userContext.GetUserId();
             var entity = await _context.SupportRequests
                 .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
                 .Include(x => x.Receiver)
                 .FirstOrDefaultAsync(x => x.Id == id && x.SenderId == userId);
 
@@ -72,6 +74,7 @@ namespace EducenAPI.Services
         {
             var list = await _context.SupportRequests
                 .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
                 .Include(x => x.Receiver)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
@@ -83,6 +86,7 @@ namespace EducenAPI.Services
         {
             var entity = await _context.SupportRequests
                 .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
                 .Include(x => x.Receiver)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -96,6 +100,7 @@ namespace EducenAPI.Services
         {
             var entity = await _context.SupportRequests
                 .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
                 .Include(x => x.Receiver)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -131,6 +136,7 @@ namespace EducenAPI.Services
                 Id = x.Id,
                 SenderId = x.SenderId,
                 SenderName = x.Sender?.FullName ?? "",
+                SenderRoleName = x.Sender?.Role?.RoleName ?? "",
                 ReceiverId = x.ReceiverId,
                 ReceiverName = x.Receiver?.FullName,
                 Title = x.Title,

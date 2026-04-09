@@ -66,6 +66,22 @@ namespace EducenAPI.Controllers
             }
         }
 
+        [HttpPut("assignment/{assignmentId}/student/{studentId}/grade")]
+        [Authorize(Roles = "Teacher,Assistant,Admin")]
+        public async Task<IActionResult> GradeWithoutSubmission(int assignmentId, int studentId, [FromBody] GradeSubmissionRequest request)
+        {
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _submissionService.GradeWithoutSubmissionAsync(assignmentId, studentId, request, baseUrl);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("{subId}/publish")]
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> PublishGrade(int subId, [FromBody] PublishGradeRequest request)

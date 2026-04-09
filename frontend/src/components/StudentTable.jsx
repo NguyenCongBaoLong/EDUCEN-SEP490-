@@ -263,14 +263,15 @@ const StudentTable = ({
                                             >
                                                 <Edit2 size={18} />
                                             </button>
-                                            <button
-                                                className={`action-btn send-account ${student.accountSent ? 'disabled' : ''}`}
-                                                title={student.accountSent ? 'Đã gửi tài khoản' : 'Gửi tài khoản qua email'}
-                                                onClick={() => !student.accountSent && handleSendAccountClick(student)}
-                                                disabled={student.accountSent}
-                                            >
-                                                <Mail size={18} />
-                                            </button>
+                                            {!student.accountSent && (
+                                                <button
+                                                    className="action-btn send-account"
+                                                    title="Gửi tài khoản qua email"
+                                                    onClick={() => handleSendAccountClick(student)}
+                                                >
+                                                    <Mail size={18} />
+                                                </button>
+                                            )}
                                             <button
                                                 className={`action-btn ${student.status === 'active' ? 'lock' : 'unlock'} ${!student.accountSent ? 'disabled' : ''}`}
                                                 title={!student.accountSent ? 'Cần gửi tài khoản để kích hoạt' : (student.status === 'active' ? 'Tạm ngưng học' : 'Kích hoạt lại')}

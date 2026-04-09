@@ -32,6 +32,16 @@ namespace EducenAPI.Models
         [MaxLength(1000)]
         public string? Address { get; set; }
 
+        [MaxLength(100)]
+        public string? ParentName { get; set; }
+
+        [MaxLength(20)]
+        public string? ParentPhone { get; set; }
+
+        [MaxLength(100)]
+        [EmailAddress]
+        public string? ParentEmail { get; set; }
+
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;
 
         /// <summary>
@@ -44,5 +54,14 @@ namespace EducenAPI.Models
         /// Student ID created if approved
         /// </summary>
         public int? CreatedStudentId { get; set; }
+
+        public int? GradeId { get; set; }
+        public int? ClassId { get; set; }
+
+        /// <summary>
+        /// RequestType: GuestRegistration, ExistingStudentEnrollment
+        /// </summary>
+        [MaxLength(50)]
+        public string RequestType { get; set; } = "GuestRegistration";
     }
 }

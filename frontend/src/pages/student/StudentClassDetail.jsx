@@ -68,14 +68,23 @@ const statusConfig = {
 /* ─── Submission Modal ─── */
 const SubmitModal = ({ assignment, onClose, onSubmit, isSubmitting }) => {
     const fileRef = useRef(null);
-    const [file, setFile] = useState(null);
-    const [note, setNote] = useState('');
+    const [files, setFiles] = useState([]);
 
-    const handleFileChange = (e) => setFile(e.target.files[0] || null);
+    const handleFileChange = (e) => {
+        const selectedFiles = Array.from(e.target.files);
+        if (selectedFiles.length > 0) {
+            setFiles(prev => [...prev, ...selectedFiles]);
+        }
+    };
+
+    const removeFile = (index, e) => {
+        e.stopPropagation();
+        setFiles(prev => prev.filter((_, i) => i !== index));
+    }
 
     const handleSubmit = () => {
-        if (!file) return toast.error('Vui lòng chọn file để nộp bài.');
-        onSubmit({ file, note });
+        if (files.length === 0) return toast.error('Vui lòng chọn ít nhất một file để nộp bài.');
+        onSubmit({ files });
     };
 
     return (
@@ -92,25 +101,53 @@ const SubmitModal = ({ assignment, onClose, onSubmit, isSubmitting }) => {
                     <div className="scd-modal-field">
                         <label>File bài làm <span className="req">*</span></label>
                         <div
-                            className={`scd-upload-zone ${file ? 'has-file' : ''}`}
+                            className="scd-upload-zone"
                             onClick={() => fileRef.current.click()}
                         >
-                            {file ? (
-                                <>
-                                    <Paperclip size={20} />
-                                    <span className="scd-upload-filename">{file.name}</span>
-                                    <span className="scd-upload-size">{(file.size / 1024).toFixed(0)} KB</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Upload size={24} />
-                                    <span>Nhấp để chọn file hoặc kéo thả vào đây</span>
-                                    <span className="scd-upload-hint">PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (tối đa 10MB)</span>
-                                </>
-                            )}
+                            <Upload size={24} />
+                            <span>Nhấp để chọn file hoặc kéo thả vào đây</span>
+                            <span className="scd-upload-hint">Bạn có thể chọn nhiều file cùng lúc (tối đa 10MB/file)</span>
                         </div>
-                        <input ref={fileRef} type="file" hidden onChange={handleFileChange}
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />
+                        <input 
+                            ref={fileRef} 
+                            type="file" 
+                            hidden 
+                            multiple
+                            onChange={handleFileChange}
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" 
+                        />
+
+                        {files.length > 0 && (
+                            <div className="scd-file-list" style={{ marginTop: '1rem' }}>
+                                {files.map((f, idx) => (
+                                    <div key={idx} className="scd-file-item" style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '0.75rem',
+                                        padding: '0.5rem',
+                                        background: '#f8fafc',
+                                        borderRadius: '8px',
+                                        marginBottom: '0.5rem'
+                                    }}>
+                                        <Paperclip size={18} color="#64748b" />
+                                        <span style={{ 
+                                            flex: 1, 
+                                            fontSize: '0.9rem',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>{f.name}</span>
+                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{(f.size / 1024).toFixed(0)} KB</span>
+                                        <button 
+                                            onClick={(e) => removeFile(idx, e)}
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444' }}
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="scd-modal-footer">
@@ -181,9 +218,13 @@ const StudentClassDetail = () => {
         try {
             setIsSubmitting(true);
             const formData = new FormData();
-            const submissionFile = payload.file; // Assuming payload.file is the file to submit
-
-            formData.append('File', submissionFile);
+            
+            // Append multiple files
+            if (payload.files && payload.files.length > 0) {
+                payload.files.forEach(f => {
+                    formData.append('Files', f);
+                });
+            }
 
             let response;
             if (submitTarget.asm.currentSubmission) { // Check if a submission already exists for this assignment
@@ -692,8 +733,23 @@ const StudentClassDetail = () => {
                                             <tbody>
                                                 <tr>
                                                     <td>
-                                                        <div className="scd-sub-file" onClick={() => handleDownload(sub.fileUrl, "Bai_lam.pdf")} style={{ cursor: 'pointer', color: '#3b82f6' }}>
-                                                            <Paperclip size={14} /><span>Xem bài làm</span>
+                                                        <div className="scd-sub-files-list">
+                                                            {sub.fileUrls && sub.fileUrls.length > 0 ? (
+                                                                sub.fileUrls.map((url, i) => (
+                                                                    <div 
+                                                                        key={i} 
+                                                                        className="scd-sub-file" 
+                                                                        onClick={() => handleDownload(url, `File_${i+1}`)} 
+                                                                        style={{ cursor: 'pointer', color: '#3b82f6', marginBottom: '4px' }}
+                                                                    >
+                                                                        <Paperclip size={14} /><span>File {i + 1}</span>
+                                                                    </div>
+                                                                ))
+                                                            ) : (
+                                                                <div className="scd-sub-file" onClick={() => handleDownload(sub.fileUrl, "Bai_lam.pdf")} style={{ cursor: 'pointer', color: '#3b82f6' }}>
+                                                                    <Paperclip size={14} /><span>Xem bài làm</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="scd-sub-date">{formatDate(sub.submittedAt, true)}</td>

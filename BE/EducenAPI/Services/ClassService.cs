@@ -9,6 +9,8 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EducenAPI.Services
 {
@@ -23,11 +25,15 @@ namespace EducenAPI.Services
 
         private readonly EducenV2Context _context;
         private readonly IPaymentReminderService _notificationService;
+        private readonly MailService _mailService;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public ClassService(EducenV2Context context, IPaymentReminderService notificationService)
+        public ClassService(EducenV2Context context, IPaymentReminderService notificationService, MailService mailService, IServiceScopeFactory scopeFactory)
         {
             _context = context;
             _notificationService = notificationService;
+            _mailService = mailService;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<IEnumerable<ClassDto>> GetAllClassesAsync()
@@ -66,6 +72,7 @@ namespace EducenAPI.Services
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    MaxStudents = c.MaxStudents,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
@@ -120,6 +127,7 @@ namespace EducenAPI.Services
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    MaxStudents = c.MaxStudents,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
@@ -145,18 +153,15 @@ namespace EducenAPI.Services
             if (subject == null)
                 throw new Exception("Không tìm thấy môn học");
 
-            // Validate Teacher exists (if provided)
-            if (dto.TeacherId.HasValue)
+            // Validate Teacher exists (bắt buộc)
+            var teacher = await _context.Teachers.FindAsync(dto.TeacherId);
+            if (teacher == null)
+                throw new Exception("Không tìm thấy giáo viên");
+
+            // Check if teacher is already assigned to another active class at this time
+            if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
             {
-                var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
-                if (teacher == null)
-                    throw new Exception("Không tìm thấy giáo viên");
-                
-                // Check if teacher is already assigned to another active class at this time
-                if (dto.ScheduleSlots != null && dto.ScheduleSlots.Any())
-                {
-                    await ValidateTeacherAvailability(dto.TeacherId.Value, dto.ScheduleSlots, dto.StartDate, dto.EndDate);
-                }
+                await ValidateTeacherAvailability(dto.TeacherId, dto.ScheduleSlots, dto.StartDate, dto.EndDate);
             }
 
             // Validate Assistant exists (if provided)
@@ -227,7 +232,8 @@ namespace EducenAPI.Services
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Status = dto.Status ?? "Active",
-                PricePerSession = dto.PricePerSession
+                PricePerSession = dto.PricePerSession,
+                MaxStudents = dto.MaxStudents
             };
 
             Console.WriteLine($"[DEBUG] CreateClassAsync: PricePerSession = {dto.PricePerSession}");
@@ -246,6 +252,61 @@ namespace EducenAPI.Services
                 }
 
                 await transaction.CommitAsync();
+
+                // Send Email Notification in Background (Post-Commit) to avoid blocking
+                if (newClass.TeacherId.HasValue || newClass.AssistantId.HasValue)
+                {
+                    var teacherId = newClass.TeacherId;
+                    var assistantId = newClass.AssistantId;
+                    var className = newClass.ClassName ?? "Lớp học mới";
+
+                    _ = Task.Run(async () =>
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var mailSvc = scope.ServiceProvider.GetRequiredService<MailService>();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+                        if (teacherId.HasValue)
+                        {
+                            try
+                            {
+                                var teacherWithUser = await dbContext.Teachers
+                                    .Include(t => t.TeacherNavigation)
+                                    .FirstOrDefaultAsync(t => t.UserId == teacherId.Value);
+
+                                if (teacherWithUser?.TeacherNavigation?.Email != null)
+                                {
+                                    await mailSvc.SendTeacherClassAssignmentEmailAsync(
+                                        teacherWithUser.TeacherNavigation.Email,
+                                        teacherWithUser.TeacherNavigation.FullName ?? teacherWithUser.TeacherNavigation.Username,
+                                        className
+                                    );
+                                }
+                            }
+                            catch (Exception ex) { Console.WriteLine($"Background Email Error (Teacher): {ex.Message}"); }
+                        }
+
+                        if (assistantId.HasValue)
+                        {
+                            try
+                            {
+                                var assistantWithUser = await dbContext.Assistants
+                                    .Include(a => a.AssistantNavigation)
+                                    .FirstOrDefaultAsync(a => a.UserId == assistantId.Value);
+
+                                if (assistantWithUser?.AssistantNavigation?.Email != null)
+                                {
+                                    await mailSvc.SendAssistantClassAssignmentEmailAsync(
+                                        assistantWithUser.AssistantNavigation.Email,
+                                        assistantWithUser.AssistantNavigation.FullName ?? assistantWithUser.AssistantNavigation.Username,
+                                        className
+                                    );
+                                }
+                            }
+                            catch (Exception ex) { Console.WriteLine($"Background Email Error (Assistant): {ex.Message}"); }
+                        }
+                    });
+                }
             }
             catch (Exception)
             {
@@ -416,8 +477,8 @@ namespace EducenAPI.Services
                 if (startTime >= endTime)
                     throw new Exception("Thời gian kết thúc phải lớn hơn thời gian bắt đầu");
 
-                if ((endTime - startTime).TotalMinutes < 90)
-                    throw new Exception("Mỗi buổi học phải kéo dài ít nhất 1 tiếng 30 phút (90 phút)");
+                if ((endTime - startTime).TotalMinutes < 60)
+                    throw new Exception("Mỗi buổi học phải kéo dài ít nhất 60 phút");
             }
 
             // Check for duplicate slots
@@ -581,6 +642,7 @@ namespace EducenAPI.Services
                     existingClass.SubjectId = dto.SubjectId.Value;
                 }
 
+                int? oldTeacherId = existingClass.TeacherId;
                 if (dto.TeacherId.HasValue)
                 {
                     var teacher = await _context.Teachers.FindAsync(dto.TeacherId.Value);
@@ -606,6 +668,31 @@ namespace EducenAPI.Services
                     existingClass.TeacherId = null;
                 }
 
+                // Send email if teacher changed and is not null
+                if (existingClass.TeacherId.HasValue && existingClass.TeacherId != oldTeacherId)
+                {
+                    try
+                    {
+                        var teacherWithUser = await _context.Teachers
+                            .Include(t => t.TeacherNavigation)
+                            .FirstOrDefaultAsync(t => t.UserId == existingClass.TeacherId.Value);
+
+                        if (teacherWithUser?.TeacherNavigation?.Email != null)
+                        {
+                            await _mailService.SendTeacherClassAssignmentEmailAsync(
+                                teacherWithUser.TeacherNavigation.Email,
+                                teacherWithUser.TeacherNavigation.FullName ?? teacherWithUser.TeacherNavigation.Username,
+                                existingClass.ClassName ?? "Lớp học"
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error sending teacher update email: {ex.Message}");
+                    }
+                }
+
+                int? oldAssistantId = existingClass.AssistantId;
                 if (dto.AssistantId.HasValue)
                 {
                     var assistant = await _context.Assistants.FindAsync(dto.AssistantId.Value);
@@ -629,6 +716,30 @@ namespace EducenAPI.Services
                 else if (dto.AssistantId == null)
                 {
                     existingClass.AssistantId = null;
+                }
+
+                // Send email if assistant changed and is not null
+                if (existingClass.AssistantId.HasValue && existingClass.AssistantId != oldAssistantId)
+                {
+                    try
+                    {
+                        var assistantWithUser = await _context.Assistants
+                            .Include(a => a.AssistantNavigation)
+                            .FirstOrDefaultAsync(a => a.UserId == existingClass.AssistantId.Value);
+
+                        if (assistantWithUser?.AssistantNavigation?.Email != null)
+                        {
+                            await _mailService.SendAssistantClassAssignmentEmailAsync(
+                                assistantWithUser.AssistantNavigation.Email,
+                                assistantWithUser.AssistantNavigation.FullName ?? assistantWithUser.AssistantNavigation.Username,
+                                existingClass.ClassName ?? "Lớp học"
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error sending assistant update email: {ex.Message}");
+                    }
                 }
 
                 if (dto.RoomId.HasValue || dto.ScheduleSlots != null)
@@ -661,17 +772,17 @@ namespace EducenAPI.Services
                 }
 
                 // Validate Room status when only RoomId is provided without schedule slots
-                if (dto.RoomId.HasValue && dto.ScheduleSlots == null)
+                if (dto.RoomId != null && dto.ScheduleSlots == null)
                 {
                     await ValidateRoomStatus(dto.RoomId.Value);
                 }
 
-                if (dto.GradeId.HasValue)
+                if (dto.GradeId != null)
                 {
-                    var grade = await _context.Grades.FindAsync(dto.GradeId.Value);
+                    var grade = await _context.Grades.FindAsync(dto.GradeId);
                     if (grade == null)
                         throw new Exception("Không tìm thấy khối/lớp");
-                    existingClass.GradeId = dto.GradeId.Value;
+                    existingClass.GradeId = dto.GradeId;
                 }
                 else if (dto.GradeId == null)
                 {
@@ -695,6 +806,13 @@ namespace EducenAPI.Services
                     if (!validStatuses.Contains(dto.Status))
                         throw new Exception($"Trạng thái phải là một trong: {string.Join(", ", validStatuses)}");
                     existingClass.Status = dto.Status;
+                }
+
+                if (dto.MaxStudents.HasValue)
+                {
+                    if (dto.MaxStudents.Value < existingClass.Students.Count)
+                        throw new Exception($"Sĩ số tối đa không thể nhỏ hơn số học sinh hiện có ({existingClass.Students.Count})");
+                    existingClass.MaxStudents = dto.MaxStudents.Value;
                 }
 
                 if (dto.PricePerSession.HasValue)
@@ -887,6 +1005,39 @@ namespace EducenAPI.Services
 
             existingClass.AssistantId = assistantId;
             await _context.SaveChangesAsync();
+
+            // Send Email Notification in Background
+            if (assistantId > 0)
+            {
+                var className = existingClass.ClassName ?? "Lớp học";
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var mailSvc = scope.ServiceProvider.GetRequiredService<MailService>();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+                        var assistantWithUser = await dbContext.Assistants
+                            .Include(a => a.AssistantNavigation)
+                            .FirstOrDefaultAsync(a => a.UserId == assistantId);
+
+                        if (assistantWithUser?.AssistantNavigation?.Email != null)
+                        {
+                            await mailSvc.SendAssistantClassAssignmentEmailAsync(
+                                assistantWithUser.AssistantNavigation.Email,
+                                assistantWithUser.AssistantNavigation.FullName ?? assistantWithUser.AssistantNavigation.Username,
+                                className
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Background Email Error (AssignAssistant): {ex.Message}");
+                    }
+                });
+            }
+
             return true;
         }
 
@@ -910,6 +1061,39 @@ namespace EducenAPI.Services
 
             existingClass.Students.Add(student);
             await _context.SaveChangesAsync();
+
+            // Send Email Notification in Background
+            if (studentId > 0)
+            {
+                var className = existingClass.ClassName ?? "Lớp học mới";
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var mailSvc = scope.ServiceProvider.GetRequiredService<MailService>();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+                        var studentWithUser = await dbContext.Students
+                            .Include(s => s.StudentNavigation)
+                            .FirstOrDefaultAsync(s => s.UserId == studentId);
+
+                        if (studentWithUser?.StudentNavigation?.Email != null)
+                        {
+                            await mailSvc.SendStudentClassEnrollmentEmailAsync(
+                                studentWithUser.StudentNavigation.Email,
+                                studentWithUser.StudentNavigation.FullName ?? studentWithUser.StudentNavigation.Username,
+                                className
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Background Email Error (AddStudentToClass): {ex.Message}");
+                    }
+                });
+            }
+
             return true;
         }
 
@@ -1003,6 +1187,39 @@ namespace EducenAPI.Services
 
             existingClass.Students.Add(student);
             await _context.SaveChangesAsync();
+
+            // Send Email Notification in Background
+            if (student.UserId > 0)
+            {
+                var className = existingClass.ClassName ?? "Lớp học mới";
+                var studentUserId = student.UserId;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var mailSvc = scope.ServiceProvider.GetRequiredService<MailService>();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<EducenV2Context>();
+
+                        var studentWithUser = await dbContext.Students
+                            .Include(s => s.StudentNavigation)
+                            .FirstOrDefaultAsync(s => s.UserId == studentUserId);
+
+                        if (studentWithUser?.StudentNavigation?.Email != null)
+                        {
+                            await mailSvc.SendStudentClassEnrollmentEmailAsync(
+                                studentWithUser.StudentNavigation.Email,
+                                studentWithUser.StudentNavigation.FullName ?? studentWithUser.StudentNavigation.Username,
+                                className
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Background Email Error (ImportStudentToClass): {ex.Message}");
+                    }
+                });
+            }
 
             return new ImportStudentToClassResult { Success = true };
         }
@@ -1128,26 +1345,36 @@ namespace EducenAPI.Services
                     Assignments = s.Assignments.Select(a => new StudentAssignmentDto
                     {
                         AsmId = a.AsmId,
-                        Title = a.Title,
-                        Description = a.Description,
+                        Title = a.Title ?? string.Empty,
+                        Description = a.Description ?? string.Empty,
                         DueDate = a.EndTime,
                         FileUrl = !string.IsNullOrEmpty(a.FileUrl)
                             ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
                             : null,
-                        CurrentSubmission = a.Submissions.Select(sub => new SubmissionResponseDto
-                        {
-                            SubId = sub.SubId,
-                            AsmId = sub.AsmId,
-                            StudentId = sub.StudentId,
-                            FileUrl = !string.IsNullOrEmpty(sub.FileUrl)
-                                ? $"{baseUrl}/{sub.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                                : null,
-                            SubmittedAt = sub.SubmittedAt,
-                            Status = sub.Status,
-                            Score = sub.Score,
-                            TeacherComment = sub.TeacherComment,
-                            GradedAt = sub.GradedAt,
-                            IsPublished = sub.IsPublished
+                        CurrentSubmission = a.Submissions.Select(sub => {
+                            var fileUrls = new List<string>();
+                            if (!string.IsNullOrEmpty(sub.FileUrl))
+                            {
+                                var paths = sub.FileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                                foreach (var p in paths)
+                                {
+                                    fileUrls.Add($"{baseUrl}/{p.Replace("\\", "/").Replace("wwwroot/", "")}");
+                                }
+                            }
+                            return new SubmissionResponseDto
+                            {
+                                SubId = sub.SubId,
+                                AsmId = sub.AsmId,
+                                StudentId = sub.StudentId,
+                                FileUrl = fileUrls.FirstOrDefault(),
+                                FileUrls = fileUrls,
+                                SubmittedAt = sub.SubmittedAt,
+                                Status = sub.Status,
+                                Score = sub.Score,
+                                TeacherComment = sub.TeacherComment,
+                                GradedAt = sub.GradedAt,
+                                IsPublished = sub.IsPublished
+                            };
                         }).FirstOrDefault()
                     }).ToList()
                     };
@@ -1241,6 +1468,7 @@ namespace EducenAPI.Services
                     EndDate = c.EndDate,
                     Status = c.Status,
                     StudentCount = c.Students.Count,
+                    MaxStudents = c.MaxStudents,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,

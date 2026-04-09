@@ -119,7 +119,8 @@ const ClassesManagement = () => {
                 gradeName: c.gradeName || c.GradeName,
                 roomId: c.roomId || c.RoomId,
                 roomName: c.roomName || c.RoomName,
-                pricePerSession: c.pricePerSession ?? c.PricePerSession ?? ''
+                pricePerSession: c.pricePerSession ?? c.PricePerSession ?? '',
+                maxStudents: c.maxStudents || c.MaxStudents || 0
             }));
             setClasses(mappedClasses);
         } catch (error) {
@@ -280,6 +281,7 @@ const ClassesManagement = () => {
                 scheduleSlots: scheduleSlots,
                 roomId: classData.roomId || null,
                 gradeId: classData.gradeId || null,
+                maxStudents: parseInt(classData.maxStudents) || 30,
                 pricePerSession: classData.pricePerSession ? parseFloat(classData.pricePerSession) : null
             };
 

@@ -4,6 +4,7 @@ using EducenAPI.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EducenAPI.Persistence.Migrations.TenantDb
 {
     [DbContext(typeof(EducenV2Context))]
-    partial class EducenV2ContextModelSnapshot : ModelSnapshot
+    [Migration("20260408170143_AddParentInfoToEnrollment")]
+    partial class AddParentInfoToEnrollment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -133,67 +136,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasIndex("UpdatedByUserId");
 
                     b.ToTable("Attendances");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.AttendanceModificationRequest", b =>
-                {
-                    b.Property<int>("RequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
-
-                    b.Property<string>("CurrentStatus")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("RequestedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RequestedStatus")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("ReviewNote")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ReviewedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SessionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int>("StudentId")
-                        .HasColumnType("int");
-
-                    b.HasKey("RequestId");
-
-                    b.HasIndex("RequestedByUserId");
-
-                    b.HasIndex("ReviewedByUserId");
-
-                    b.HasIndex("SessionId");
-
-                    b.HasIndex("StudentId");
-
-                    b.ToTable("AttendanceModificationRequests");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.CenterHeroImage", b =>
@@ -415,9 +357,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<int?>("GradeId")
                         .HasColumnType("int");
 
-                    b.Property<int>("MaxStudents")
-                        .HasColumnType("int");
-
                     b.Property<decimal?>("PricePerSession")
                         .HasColumnType("decimal(18,2)");
 
@@ -497,9 +436,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int?>("ClassId")
-                        .HasColumnType("int");
-
                     b.Property<int?>("CreatedStudentId")
                         .HasColumnType("int");
 
@@ -512,9 +448,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int?>("GradeId")
-                        .HasColumnType("int");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -544,11 +477,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
 
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("RequestType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -669,37 +597,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.HasKey("GradeId");
 
                     b.ToTable("Grades");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.InvoiceLock", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsLocked")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LockedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("LockedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UnlockedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("InvoiceLocks");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.LessonMaterial", b =>
@@ -1127,9 +1024,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Property<string>("Grade")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("GradeId")
-                        .HasColumnType("int");
-
                     b.HasKey("UserId");
 
                     b.ToTable("Students");
@@ -1545,39 +1439,6 @@ namespace EducenAPI.Persistence.Migrations.TenantDb
                     b.Navigation("Student");
 
                     b.Navigation("UpdatedBy");
-                });
-
-            modelBuilder.Entity("EducenAPI.Models.AttendanceModificationRequest", b =>
-                {
-                    b.HasOne("EducenAPI.Models.User", "RequestedByUser")
-                        .WithMany()
-                        .HasForeignKey("RequestedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EducenAPI.Models.User", "ReviewedByUser")
-                        .WithMany()
-                        .HasForeignKey("ReviewedByUserId");
-
-                    b.HasOne("EducenAPI.Models.ClassSession", "Session")
-                        .WithMany()
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EducenAPI.Models.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RequestedByUser");
-
-                    b.Navigation("ReviewedByUser");
-
-                    b.Navigation("Session");
-
-                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("EducenAPI.Models.CenterHeroImage", b =>

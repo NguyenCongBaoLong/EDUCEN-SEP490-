@@ -8,6 +8,7 @@ namespace EducenAPI.DTOs.Submissions
         public int AsmId { get; set; }
         public int StudentId { get; set; }
         public string? FileUrl { get; set; }
+        public List<string>? FileUrls { get; set; }
         public DateTime? SubmittedAt { get; set; }
         public string? Status { get; set; }
         public decimal? Score { get; set; }

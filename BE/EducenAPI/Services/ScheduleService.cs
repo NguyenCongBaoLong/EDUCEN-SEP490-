@@ -140,6 +140,9 @@ namespace EducenAPI.Services
             if (dto.StartTime >= dto.EndTime)
                 throw new Exception("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
+            if ((dto.EndTime - dto.StartTime).TotalMinutes < 60)
+                throw new Exception("Thời gian buổi học tối thiểu phải là 60 phút.");
+
             // Validate room exists if RoomId is provided
             if (dto.RoomId.HasValue && dto.RoomId.Value > 0)
             {
@@ -256,6 +259,9 @@ namespace EducenAPI.Services
             // ✅ FIX: Validate time order
             if (schedule.StartTime >= schedule.EndTime)
                 throw new Exception("Thời gian bắt đầu phải trước thời gian kết thúc.");
+
+            if ((schedule.EndTime - schedule.StartTime).TotalMinutes < 60)
+                throw new Exception("Thời gian buổi học tối thiểu phải là 60 phút.");
 
             // ✅ FIX: Validate overlap with other schedules in same class
             var newDayOfWeek = schedule.DayOfWeek;

@@ -31,6 +31,7 @@ const AssignmentGrading = ({ isTA = false }) => {
     const [showResetModal, setShowResetModal] = useState(false);
     const [gradeError, setGradeError] = useState('');
     const [isDirty, setIsDirty] = useState(false);
+    const [activeFileUrl, setActiveFileUrl] = useState(null);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
         return localStorage.getItem('teacher-sidebar-collapsed') === 'true';
     });
@@ -63,15 +64,15 @@ const AssignmentGrading = ({ isTA = false }) => {
         fetchGradingData();
     }, [assignmentId]);
 
-    // Calculate if form is dirty
+    // Check if form is dirty
     useEffect(() => {
-        if (!selectedStudent || !selectedStudent.submission) {
+        if (!selectedStudent) {
             setIsDirty(false);
             return;
         }
 
-        const originalScore = selectedStudent.submission.score != null ? selectedStudent.submission.score.toString() : '';
-        const originalFeedback = selectedStudent.submission.teacherComment || '';
+        const originalScore = selectedStudent.submission?.score != null ? selectedStudent.submission.score.toString() : '';
+        const originalFeedback = selectedStudent.submission?.teacherComment || '';
 
         const scoreChanged = gradeInput.toString() !== originalScore;
         const feedbackChanged = feedbackInput !== originalFeedback;
@@ -85,9 +86,14 @@ const AssignmentGrading = ({ isTA = false }) => {
             if (selectedStudent.submission) {
                 setGradeInput(selectedStudent.submission.score != null ? selectedStudent.submission.score : '');
                 setFeedbackInput(selectedStudent.submission.teacherComment || '');
+                
+                // Set default active file
+                const firstFile = selectedStudent.submission.fileUrls?.[0] || selectedStudent.submission.fileUrl;
+                setActiveFileUrl(firstFile);
             } else {
                 setGradeInput('');
                 setFeedbackInput('');
+                setActiveFileUrl(null);
             }
             setGradeError('');
         }
@@ -110,10 +116,10 @@ const AssignmentGrading = ({ isTA = false }) => {
         return matchesSearch && matchesStatus;
     });
 
-    const isScoreRequired = selectedStudent?.submission && selectedStudent?.submission?.score === null && gradeInput === '';
+    const isScoreRequired = (selectedStudent?.submission?.score === null || !selectedStudent?.submission) && gradeInput === '';
 
     const handleSaveGrade = async () => {
-        if (!isDirty || isScoreRequired || !selectedStudent?.submission) return;
+        if (!isDirty || isScoreRequired || !selectedStudent) return;
 
         if (gradeInput !== '') {
             const numGrade = parseFloat(gradeInput);
@@ -127,10 +133,17 @@ const AssignmentGrading = ({ isTA = false }) => {
             setGradeError('');
             setIsSaving(true);
             
-            await api.put(`/Submissions/${selectedStudent.submission.subId}/grade`, {
-                score: parseFloat(gradeInput),
-                teacherComment: feedbackInput
-            });
+            if (selectedStudent.submission) {
+                await api.put(`/Submissions/${selectedStudent.submission.subId}/grade`, {
+                    score: parseFloat(gradeInput),
+                    teacherComment: feedbackInput
+                });
+            } else {
+                await api.put(`/Submissions/assignment/${assignmentId}/student/${selectedStudent.studentId}/grade`, {
+                    score: parseFloat(gradeInput),
+                    teacherComment: feedbackInput
+                });
+            }
 
             toast.success('Đã lưu điểm thành công');
             setIsDirty(false);
@@ -165,6 +178,25 @@ const AssignmentGrading = ({ isTA = false }) => {
             toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi công bố hàng loạt');
         } finally {
             setIsPublishingAll(false);
+        }
+    };
+
+    const handlePublishGrade = async (isPublish) => {
+        if (!selectedStudent?.submission) return;
+
+        try {
+            setIsPublishing(true);
+            await api.put(`/Submissions/${selectedStudent.submission.subId}/publish`, {
+                isPublished: isPublish
+            });
+
+            toast.success(isPublish ? 'Đã công bố điểm cho học sinh' : 'Đã hủy công bố điểm');
+            await fetchGradingData();
+        } catch (error) {
+            console.error('Error publishing grade:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi khi thay đổi trạng thái công bố');
+        } finally {
+            setIsPublishing(false);
         }
     };
 
@@ -373,36 +405,6 @@ const AssignmentGrading = ({ isTA = false }) => {
                     <div className="grading-workspace">
                         {selectedStudent ? (
                             <>
-                                {/* Workspace Header */}
-                                <div className="workspace-header">
-                                    <div className="workspace-student">
-                                        <div className="workspace-avatar">
-                                            {selectedStudent.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
-                                        </div>
-                                        <div>
-                                            <h2>{selectedStudent.fullName}</h2>
-                                            <p className="submission-time">
-                                                {selectedStudent.submission 
-                                                    ? `Nộp lúc: ${formatDate(selectedStudent.submission.submittedAt)}`
-                                                    : 'Chưa có bài nộp'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="workspace-actions">
-                                        {selectedStudent.submission?.fileUrl && (
-                                            <a 
-                                                href={selectedStudent.submission.fileUrl} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="btn-download"
-                                                style={{ textDecoration: 'none' }}
-                                            >
-                                                <Download size={16} /> Tải file bài làm
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-
                                 <div className="workspace-body">
                                     {/* Submission Viewer */}
                                     <div className="submission-viewer">
@@ -413,15 +415,46 @@ const AssignmentGrading = ({ isTA = false }) => {
                                             </div>
                                         ) : (
                                             <div className="submission-file">
-                                                {getFileType(selectedStudent.submission.fileUrl) === 'pdf' ? (
+                                                {selectedStudent.submission.fileUrls && selectedStudent.submission.fileUrls.length > 1 && (
+                                                    <div className="file-selector-tabs" style={{ 
+                                                        display: 'flex', 
+                                                        gap: '8px', 
+                                                        marginBottom: '6px', /* Reduced from 12px */
+                                                        padding: '2px', /* Reduced from 4px */
+                                                        background: '#f1f5f9',
+                                                        borderRadius: '6px'
+                                                    }}>
+                                                        {selectedStudent.submission.fileUrls.map((url, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => setActiveFileUrl(url)}
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    border: 'none',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.85rem',
+                                                                    fontWeight: '500',
+                                                                    cursor: 'pointer',
+                                                                    background: activeFileUrl === url ? '#fff' : 'transparent',
+                                                                    color: activeFileUrl === url ? '#3b82f6' : '#64748b',
+                                                                    boxShadow: activeFileUrl === url ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                                                                }}
+                                                            >
+                                                                File {i + 1}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {activeFileUrl && getFileType(activeFileUrl) === 'pdf' ? (
                                                     <iframe
-                                                        src={selectedStudent.submission.fileUrl}
+                                                        src={activeFileUrl}
                                                         className="document-preview-iframe"
                                                         title="PDF Preview"
                                                     ></iframe>
-                                                ) : getFileType(selectedStudent.submission.fileUrl) === 'image' ? (
+                                                ) : activeFileUrl && getFileType(activeFileUrl) === 'image' ? (
                                                     <div className="image-preview-container">
-                                                        <img src={selectedStudent.submission.fileUrl} alt="Bài làm" className="image-preview" />
+                                                        <img src={activeFileUrl} alt="Bài làm" className="image-preview" />
                                                     </div>
                                                 ) : (
                                                     <div className="unsupported-file-preview">
@@ -430,7 +463,7 @@ const AssignmentGrading = ({ isTA = false }) => {
                                                         <p>Định dạng không hỗ trợ xem trực tiếp</p>
                                                         <div className="viewer-placeholder">
                                                             Trình duyệt không hỗ trợ xem trước định dạng file này.<br />
-                                                            Vui lòng bấm <strong>Tải file bài làm</strong> để xem chi tiết.
+                                                            Vui lòng bấm vào các nút <strong>Tải file</strong> để xem chi tiết.
                                                         </div>
                                                     </div>
                                                 )}
@@ -440,12 +473,54 @@ const AssignmentGrading = ({ isTA = false }) => {
 
                                     {/* Grading Form Panel */}
                                     <div className="grading-panel">
+                                        {/* New Student Context Section */}
+                                        <div className="grading-student-context">
+                                            <div className="context-student-info">
+                                                <div className="context-avatar">
+                                                    {selectedStudent.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                                                </div>
+                                                <div className="context-name-box">
+                                                    <h3>{selectedStudent.fullName}</h3>
+                                                    <p className="context-time">
+                                                        {selectedStudent.submission 
+                                                            ? `Nộp: ${formatDate(selectedStudent.submission.submittedAt)}`
+                                                            : 'Chưa có bài nộp'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="context-file-actions">
+                                                {selectedStudent.submission?.fileUrls && selectedStudent.submission.fileUrls.length > 0 ? (
+                                                    selectedStudent.submission.fileUrls.map((url, i) => (
+                                                        <a 
+                                                            key={i}
+                                                            href={url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="btn-mini-download"
+                                                            title={`Tải file ${i + 1}`}
+                                                        >
+                                                            <Download size={14} /> File {i + 1}
+                                                        </a>
+                                                    ))
+                                                ) : selectedStudent.submission?.fileUrl && (
+                                                    <a 
+                                                        href={selectedStudent.submission.fileUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="btn-mini-download"
+                                                    >
+                                                        <Download size={14} /> Tải bài làm
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+
                                         <div className="panel-header">
                                             <h3>Chấm điểm & Nhận xét</h3>
                                             {selectedStudent.submission?.isPublished && (
-                                                <span className="published-badge">
-                                                    <Send size={12} /> Đã công bố
-                                                </span>
+                                                <div className="published-badge">
+                                                    <Check size={12} /> Đã công bố
+                                                </div>
                                             )}
                                         </div>
 
@@ -455,7 +530,7 @@ const AssignmentGrading = ({ isTA = false }) => {
                                                 <input
                                                     type="number"
                                                     min="0" max="10" step="0.25"
-                                                    disabled={!selectedStudent.submission || isSaving}
+                                                    disabled={isSaving}
                                                     value={gradeInput}
                                                     onChange={(e) => {
                                                         setGradeInput(e.target.value);
@@ -471,7 +546,7 @@ const AssignmentGrading = ({ isTA = false }) => {
                                                 <label>Nhận xét cho học sinh</label>
                                                 <textarea
                                                     rows={4}
-                                                    disabled={!selectedStudent.submission || isSaving}
+                                                    disabled={isSaving}
                                                     value={feedbackInput}
                                                     onChange={(e) => setFeedbackInput(e.target.value)}
                                                     placeholder="Nhập nhận xét chi tiết..."
@@ -482,7 +557,7 @@ const AssignmentGrading = ({ isTA = false }) => {
                                                 <button
                                                     className="btn-save-grade"
                                                     onClick={handleSaveGrade}
-                                                    disabled={!selectedStudent.submission || !isDirty || isSaving || isScoreRequired}
+                                                    disabled={!isDirty || isSaving || isScoreRequired}
                                                 >
                                                     {isSaving ? (
                                                         <>

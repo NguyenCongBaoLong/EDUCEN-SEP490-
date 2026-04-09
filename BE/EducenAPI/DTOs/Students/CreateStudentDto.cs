@@ -103,6 +103,7 @@ namespace EducenAPI.DTOs.Students
         public string? PhoneNumber { get; set; }
         public string? Address { get; set; }
         public string? Grade { get; set; }
+        public int? GradeId { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
         public string EnrollmentStatus { get; set; } = string.Empty;

@@ -66,20 +66,28 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         if (isDuplicate) return 'Email này đã được sử dụng bởi người dùng khác trong hệ thống';
         return '';
     };
-    const validatePhone = (val) => {
+    const validatePhone = (val, allUsersList = []) => {
         if (!val || val.trim() === '') return 'Số điện thoại bắt buộc';
         if (!/^(0[0-9]{9,10})$/.test(val)) return 'SĐT không hợp lệ (10-11 số, bắt đầu bằng 0)';
+        // Validate uniqueness within SAME ROLE only (Parent)
+        const isDuplicate = allUsersList.some(user => {
+            if (!user.roleName || !user.roleName.toLowerCase().includes('parent')) return false;
+            if (editingParent && user.userId && user.userId.toString() === editingParent.id) return false;
+            return user.phoneNumber && user.phoneNumber === val.trim();
+        });
+        if (isDuplicate) return 'Số điện thoại này đã được sử dụng bởi phụ huynh khác trong hệ thống';
         return '';
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(p => ({ ...p, [name]: value }));
-        
-        // Validate email realtime
         if (name === 'email') {
             const emailErr = validateEmail(value, allUsers);
             setErrors(p => ({ ...p, email: emailErr }));
+        } else if (name === 'phone') {
+            const phoneErr = validatePhone(value, allUsers);
+            setErrors(p => ({ ...p, phone: phoneErr }));
         } else if (errors[name]) {
             setErrors(p => ({ ...p, [name]: '' }));
         }
@@ -89,6 +97,8 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         const { name, value } = e.target;
         if (name === 'email') {
             setErrors(p => ({ ...p, email: validateEmail(value, allUsers) }));
+        } else if (name === 'phone') {
+            setErrors(p => ({ ...p, phone: validatePhone(value, allUsers) }));
         }
     };
 
@@ -106,7 +116,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
         const errs = {
             name: validateName(formData.name),
             email: validateEmail(formData.email, allUsers),
-            phone: validatePhone(formData.phone)
+            phone: validatePhone(formData.phone, allUsers)
         };
         Object.keys(errs).forEach(k => { if (!errs[k]) delete errs[k]; });
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -217,7 +227,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
                                         <div>
                                             <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</div>
                                             <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-                                                {s.id} · Khối {s.grade}
+                                                ID: {s.id} {s.grade ? `· Khối ${s.grade}` : ''} {s.class ? `· Lớp ${s.class}` : ''}
                                             </div>
                                         </div>
                                     </label>

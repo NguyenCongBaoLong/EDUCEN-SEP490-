@@ -8,7 +8,7 @@ namespace EducenAPI.Models
         public string InvoiceId { get; set; } = Guid.NewGuid().ToString();
         
         [Required]
-        public string ParentId { get; set; }
+        public string ParentId { get; set; } = null!;
 
         /// <summary>
         /// Loại hóa đơn gộp:
@@ -51,16 +51,16 @@ namespace EducenAPI.Models
         public string ItemId { get; set; } = Guid.NewGuid().ToString();
         
         [Required]
-        public string FamilyInvoiceId { get; set; }
+        public string FamilyInvoiceId { get; set; } = null!;
         
         [Required]
-        public string StudentInvoiceId { get; set; }
+        public string StudentInvoiceId { get; set; } = null!;
         
         [Required]
         public int StudentId { get; set; }
         
         [Required]
-        public string StudentName { get; set; }
+        public string StudentName { get; set; } = null!;
         
         [Required]
         public decimal Amount { get; set; }
@@ -73,6 +73,6 @@ namespace EducenAPI.Models
         public DateTime? PaidAt { get; set; }
         
         // Navigation property
-        public virtual FamilyInvoice FamilyInvoice { get; set; }
+        public virtual FamilyInvoice FamilyInvoice { get; set; } = null!;
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace EducenAPI.Models;
@@ -21,6 +21,7 @@ namespace EducenAPI.Models;
         public string? Description { get; set; }
 
         public string? Status { get; set; }
+        public int MaxStudents { get; set; } // Mandatory
         public DateTime? StartDate { get; set; }
 
         public DateTime? EndDate { get; set; }

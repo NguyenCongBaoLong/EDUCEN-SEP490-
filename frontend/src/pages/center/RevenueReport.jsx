@@ -9,8 +9,23 @@ import {
     Download,
     Calendar,
     Filter,
-    PieChart
+    PieChart as LucidePieChart
 } from 'lucide-react';
+import { 
+    AreaChart, 
+    Area, 
+    XAxis, 
+    YAxis, 
+    CartesianGrid, 
+    Tooltip, 
+    ResponsiveContainer, 
+    BarChart, 
+    Bar, 
+    PieChart, 
+    Pie, 
+    Cell, 
+    Legend 
+} from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
@@ -27,8 +42,8 @@ const RevenueReport = ({ hideSidebar = false }) => {
     // Data states
     const [summary, setSummary] = useState(null);
     const [monthlyData, setMonthlyData] = useState([]);
-    const [classData, setClassData] = useState([]);
     const [outstandingData, setOutstandingData] = useState([]);
+    const [debtSearch, setDebtSearch] = useState('');
 
     const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
     const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }));
@@ -127,6 +142,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
         switch (activeTab) {
             case 'summary':
                 fetchSummary();
+                fetchMonthlyData(); // Fetch for the trend chart
                 break;
             case 'monthly':
                 fetchMonthlyData();
@@ -155,65 +171,45 @@ const RevenueReport = ({ hideSidebar = false }) => {
         <div className={hideSidebar ? "revenue-report-embedded" : "revenue-report-container"}>
             {!hideSidebar && <Sidebar />}
             <div className="report-content">
-                <div className="page-header">
-                    <h1>Báo cáo doanh thu</h1>
-                    <button className="export-btn" onClick={handleExport}>
-                        <Download size={18} />
-                        Xuất báo cáo
-                    </button>
-                </div>
-
-                <div className="report-actions-row">
-                    <div className="tab-navigation">
-                        <button 
-                            className={activeTab === 'summary' ? 'active' : ''}
-                            onClick={() => setActiveTab('summary')}
-                        >
-                            <PieChart size={18} />
-                            Tổng quan
-                        </button>
-                        <button 
-                            className={activeTab === 'monthly' ? 'active' : ''}
-                            onClick={() => setActiveTab('monthly')}
-                        >
-                            <BarChart3 size={18} />
-                            Theo tháng
-                        </button>
-                        <button 
-                            className={activeTab === 'by-class' ? 'active' : ''}
-                            onClick={() => setActiveTab('by-class')}
-                        >
-                            <Users size={18} />
-                            Theo lớp
-                        </button>
-                        <button 
-                            className={activeTab === 'outstanding' ? 'active' : ''}
-                            onClick={() => setActiveTab('outstanding')}
-                        >
-                            <FileText size={18} />
-                            Công nợ
-                        </button>
-                    </div>
-
-                    <div className="action-filters">
-                        <div className="filter-group">
-                            <Calendar size={16} />
-                            <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
-                                {years.map(y => <option key={y} value={y}>{y}</option>)}
-                            </select>
+                <div className="report-header-section">
+                    {!hideSidebar && (
+                        <div className="page-title-row">
+                            <h1>Báo cáo doanh thu</h1>
                         </div>
-                        {activeTab === 'by-class' && (
-                            <div className="filter-group">
-                                <Filter size={16} />
-                                <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))}>
-                                    {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    )}
+                    
+                    <div className="report-controls-row">
+                        <div className="header-filters-prominent">
+                            <div className="filter-group-modern">
+                                <Calendar size={14} />
+                                <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}>
+                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
                                 </select>
                             </div>
-                        )}
-                        <button className="export-btn" onClick={handleExport}>
-                            <Download size={18} />
-                            Xuất báo cáo
-                        </button>
+                        </div>
+
+                        <div className="header-actions">
+                            <div className="tab-navigation-compact">
+                                <button 
+                                    className={activeTab === 'summary' ? 'active' : ''}
+                                    onClick={() => setActiveTab('summary')}
+                                >
+                                    <LucidePieChart size={14} />
+                                    Tổng quan
+                                </button>
+                                <button 
+                                    className={activeTab === 'outstanding' ? 'active' : ''}
+                                    onClick={() => setActiveTab('outstanding')}
+                                >
+                                    <FileText size={14} />
+                                    Công nợ
+                                </button>
+                            </div>
+                            <button className="export-btn-compact" onClick={handleExport}>
+                                <Download size={14} />
+                                Xuất báo cáo
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -222,7 +218,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
                 ) : (
                     <>
                         {activeTab === 'summary' && summary && (
-                            <div className="summary-content-grid">
+                            <div className="summary-dashboard">
                                 <div className="stats-grid">
                                     <div className="stat-card primary">
                                         <div className="stat-icon-box">
@@ -262,99 +258,147 @@ const RevenueReport = ({ hideSidebar = false }) => {
                                     </div>
                                 </div>
 
-                                <div className="invoice-status-breakdown">
-                                    <h3>Trạng thái hóa đơn</h3>
-                                    <div className="status-items">
-                                        <div className="status-item">
-                                            <span className="status-circle paid"></span>
-                                            <span className="status-label">Đã thanh toán</span>
-                                            <span className="status-count">{summary.paidInvoices}</span>
+                                <div className="dashboard-charts-row">
+                                    <div className="chart-container main-trend">
+                                        <div className="chart-header-compact">
+                                            <h3>Xu hướng doanh thu {year}</h3>
                                         </div>
-                                        <div className="status-item">
-                                            <span className="status-circle unpaid"></span>
-                                            <span className="status-label">Chưa thanh toán</span>
-                                            <span className="status-count">{summary.unpaidInvoices}</span>
+                                        <div className="chart-body-compact">
+                                            <ResponsiveContainer width="100%" height={220}>
+                                                <AreaChart data={monthlyData}>
+                                                    <defs>
+                                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                    <XAxis 
+                                                        dataKey="month" 
+                                                        tickFormatter={(val) => `T${val}`} 
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: '#64748b', fontSize: 11 }}
+                                                    />
+                                                    <YAxis 
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fill: '#64748b', fontSize: 11 }}
+                                                        tickFormatter={(val) => val >= 1000000 ? `${(val/1000000).toFixed(0)}M` : val}
+                                                    />
+                                                    <Tooltip 
+                                                        formatter={(value) => formatCurrency(value)}
+                                                        labelFormatter={(label) => `Tháng ${label}`}
+                                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                                    />
+                                                    <Area 
+                                                        type="monotone" 
+                                                        dataKey="totalRevenue" 
+                                                        stroke="#3b82f6" 
+                                                        strokeWidth={2}
+                                                        fillOpacity={1} 
+                                                        fill="url(#colorRevenue)" 
+                                                        animationDuration={1000}
+                                                    />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
                                         </div>
-                                        <div className="status-item">
-                                            <span className="status-circle overdue"></span>
-                                            <span className="status-label">Quá hạn</span>
-                                            <span className="status-count">{summary.overdueInvoices}</span>
+                                    </div>
+
+                                    <div className="chart-container status-pie">
+                                        <div className="chart-header-compact">
+                                            <h3>Trạng thái hóa đơn</h3>
+                                        </div>
+                                        <div className="chart-body-compact">
+                                            <ResponsiveContainer width="100%" height={220}>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={[
+                                                            { name: 'Đã thanh toán', value: summary.paidInvoices },
+                                                            { name: 'Chưa thanh toán', value: summary.unpaidInvoices },
+                                                            { name: 'Quá hạn', value: summary.overdueInvoices }
+                                                        ]}
+                                                        innerRadius={45}
+                                                        outerRadius={65}
+                                                        paddingAngle={5}
+                                                        dataKey="value"
+                                                        animationDuration={1000}
+                                                    >
+                                                        <Cell fill="#10b981" />
+                                                        <Cell fill="#3b82f6" />
+                                                        <Cell fill="#ef4444" />
+                                                    </Pie>
+                                                    <Tooltip 
+                                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                                    />
+                                                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} verticalAlign="bottom" align="center" />
+                                                </PieChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {activeTab === 'monthly' && (
-                            <div className="monthly-section">
-                                <div className="monthly-table">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Tháng</th>
-                                                <th>Doanh thu</th>
-                                                <th>Số hóa đơn</th>
-                                                <th>Tỷ lệ tăng trưởng</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {monthlyData.map((data, index) => {
-                                                const prevMonth = index > 0 ? monthlyData[index - 1].totalRevenue : 0;
-                                                const growth = prevMonth > 0 ? ((data.totalRevenue - prevMonth) / prevMonth * 100) : 0;
-                                                
-                                                return (
-                                                    <tr key={data.month}>
-                                                        <td>Tháng {data.month}</td>
-                                                        <td className="amount">{formatCurrency(data.totalRevenue)}</td>
-                                                        <td>{data.invoiceCount}</td>
-                                                        <td className={growth >= 0 ? 'positive' : 'negative'}>
-                                                            {growth > 0 ? '+' : ''}{growth.toFixed(1)}%
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'by-class' && (
-                            <div className="by-class-section">
-                                <div className="class-table">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Lớp</th>
-                                                <th>Số học sinh</th>
-                                                <th>Số buổi học</th>
-                                                <th>Tổng doanh thu</th>
-                                                <th>Đã thu</th>
-                                                <th>Chưa thu</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {classData.map((data) => (
-                                                <tr key={data.classId}>
-                                                    <td>{data.className}</td>
-                                                    <td>{data.studentCount}</td>
-                                                    <td>{data.totalSessions}</td>
-                                                    <td className="amount">{formatCurrency(data.totalRevenue)}</td>
-                                                    <td className="paid">{formatCurrency(data.paidAmount)}</td>
-                                                    <td className="outstanding">{formatCurrency(data.outstandingAmount)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
                         {activeTab === 'outstanding' && (
                             <div className="outstanding-section">
-                                <div className="outstanding-summary">
-                                    <h3>Tổng công nợ: {formatCurrency(outstandingData.reduce((sum, item) => sum + item.amount, 0))}</h3>
+                                <div className="debt-dashboard-row">
+                                    <div className="chart-container debt-chart">
+                                        <div className="chart-header-compact">
+                                            <h3>Phân bổ nợ năm {year}</h3>
+                                        </div>
+                                        <div className="chart-body-compact">
+                                            <ResponsiveContainer width="100%" height={200}>
+                                                <BarChart 
+                                                    data={Object.values(outstandingData
+                                                        .filter(item => item.invoiceYear === year)
+                                                        .reduce((acc, item) => {
+                                                            if (!acc[item.className]) acc[item.className] = { className: item.className, amount: 0 };
+                                                            acc[item.className].amount += item.amount;
+                                                            return acc;
+                                                        }, {}))}
+                                                    layout="vertical"
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                                    <XAxis type="number" hide />
+                                                    <YAxis dataKey="className" type="category" width={100} tick={{ fontSize: 11 }} />
+                                                    <Tooltip 
+                                                        formatter={(value) => formatCurrency(value)}
+                                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '11px' }}
+                                                    />
+                                                    <Bar dataKey="amount" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                    <div className="debt-stats">
+                                        <div className="debt-stat-box">
+                                            <span className="label">Tổng nợ chưa thu ({year})</span>
+                                            <span className="value overdue">
+                                                {formatCurrency(outstandingData
+                                                    .filter(item => item.invoiceYear === year)
+                                                    .reduce((sum, item) => sum + item.amount, 0))}
+                                            </span>
+                                        </div>
+                                        <div className="debt-stat-box">
+                                            <span className="label">Số học sinh còn nợ</span>
+                                            <span className="value">
+                                                {new Set(outstandingData
+                                                    .filter(item => item.invoiceYear === year)
+                                                    .map(d => d.studentName)).size}
+                                            </span>
+                                        </div>
+                                        <div className="search-filter-debt">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Tìm tên học sinh, lớp..." 
+                                                value={debtSearch}
+                                                onChange={(e) => setDebtSearch(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div className="outstanding-table">
                                     <table>
                                         <thead>
@@ -364,19 +408,27 @@ const RevenueReport = ({ hideSidebar = false }) => {
                                                 <th>Tháng/Năm</th>
                                                 <th>Số tiền</th>
                                                 <th>Hạn thanh toán</th>
-                                                <th>Quá hạn</th>
+                                                <th>Trạng thái</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {outstandingData.map((item) => (
+                                            {outstandingData
+                                                .filter(item => item.invoiceYear === year)
+                                                .filter(item => 
+                                                    item.studentName.toLowerCase().includes(debtSearch.toLowerCase()) ||
+                                                    item.className.toLowerCase().includes(debtSearch.toLowerCase())
+                                                )
+                                                .map((item) => (
                                                 <tr key={item.invoiceId}>
                                                     <td>{item.studentName}</td>
                                                     <td>{item.className}</td>
                                                     <td>{item.invoiceMonth}/{item.invoiceYear}</td>
                                                     <td className="amount">{formatCurrency(item.amount)}</td>
                                                     <td>{new Date(item.dueDate).toLocaleDateString('vi-VN')}</td>
-                                                    <td className={item.daysOverdue > 0 ? 'overdue' : ''}>
-                                                        {item.daysOverdue > 0 ? `${item.daysOverdue} ngày` : 'Chưa quá hạn'}
+                                                    <td>
+                                                        <span className={`status-pill ${item.daysOverdue > 0 ? 'pill-error' : 'pill-warning'}`}>
+                                                            {item.daysOverdue > 0 ? `Quá hạn ${item.daysOverdue} ngày` : 'Sắp đến hạn'}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             ))}

@@ -77,7 +77,12 @@ namespace EducenAPI.Controllers
                     Email = dto.Email,
                     Phone = dto.Phone ?? string.Empty,
                     Address = dto.Address,
-                    PreferredCourse = dto.PreferredCourse
+                    PreferredCourse = dto.PreferredCourse,
+                    ParentPhone = dto.ParentPhone,
+                    ParentEmail = dto.ParentEmail,
+                    GradeId = dto.GradeId,
+                    ClassId = dto.ClassId,
+                    RequestType = "GuestRegistration"
                 };
 
                 var created = await _service.CreateRequestAsync(request);
@@ -117,7 +122,6 @@ namespace EducenAPI.Controllers
             }
         }
 
-        // PUT: api/enrollment-requests/{id}/reject
         [HttpPut("{id:int}/reject")]
         [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> RejectRequest(int id)
@@ -136,5 +140,43 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // GET: api/enrollment-requests/my-requests (Student only)
+        [HttpGet("my-requests")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetMyRequests()
+        {
+            var userId = GetCurrentUserId();
+            var requests = await _service.GetMyRequestsAsync(userId);
+            return Ok(requests);
+        }
+
+        // POST: api/enrollment-requests/student-enroll
+        [HttpPost("student-enroll")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> CreateStudentEnrollmentRequest([FromBody] StudentEnrollmentRequestDto dto)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var created = await _service.CreateStudentEnrollmentRequestAsync(userId, dto.GradeId, dto.ClassId);
+
+                return Ok(new 
+                { 
+                    message = "Gửi yêu cầu đăng ký lớp học thành công! Vui lòng chờ Admin duyệt.",
+                    requestId = created.RequestId
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+    }
+
+    public class StudentEnrollmentRequestDto
+    {
+        public int GradeId { get; set; }
+        public int ClassId { get; set; }
     }
 }

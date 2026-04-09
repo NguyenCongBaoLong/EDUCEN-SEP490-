@@ -122,5 +122,34 @@ namespace EducenAPI.Controllers
             var children = await _parentService.GetMyChildrenAsync(parentUserId);
             return Ok(children);
         }
+
+        // GET: api/Parents/child/{childId}/performance-report
+        [HttpGet("child/{childId:int}/performance-report")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetChildPerformanceReport(int childId)
+        {
+            try
+            {
+                var parentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (parentUserIdClaim == null) return Unauthorized();
+                int parentUserId = int.Parse(parentUserIdClaim.Value);
+
+                // Verify this child belongs to the parent
+                var myChildren = await _parentService.GetMyChildrenAsync(parentUserId);
+                if (!myChildren.Any(c => c.StudentId == childId))
+                {
+                    return StatusCode(403, new { message = "Bạn không có quyền xem báo cáo của học sinh này." });
+                }
+
+                var report = await _parentService.GetChildPerformanceReportAsync(childId);
+                if (report == null) return NotFound(new { message = "Không tìm thấy dữ liệu học sinh." });
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
-    Inbox, X, ArrowLeft, Clock, MailOpen, Star, Trash2
+    Inbox, X, ArrowLeft, Clock, MailOpen, Star, Trash2, Search, Filter,
+    ShieldAlert
 } from 'lucide-react';
 import '../css/components/NotificationMailbox.css';
 
@@ -40,7 +41,26 @@ const NotificationMailbox = ({
     const setSelectedMessage = onSelectedMessageChange ?? setInternalSelected;
     const getSenderInitial = (name) => (name || '').trim().charAt(0) || '?';
 
+    // Filters
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterType, setFilterType] = useState('all'); // all, unread, system, feedback
+
     const unreadCount = useMemo(() => messages.filter(m => !m.isRead).length, [messages]);
+
+    const filteredMessages = useMemo(() => {
+        return messages.filter(m => {
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const textTarget = `${m.subject} ${m.senderName} ${m.preview}`.toLowerCase();
+                if (!textTarget.includes(query)) return false;
+            }
+            if (filterType === 'unread') return !m.isRead;
+            if (filterType === 'system') return m.type === 'system';
+            if (filterType === 'support') return m.type === 'support';
+            if (filterType === 'feedback') return m.type === 'feedback';
+            return true;
+        });
+    }, [messages, searchQuery, filterType]);
 
     const handleSelectMessage = (msg) => {
         setSelectedMessage(msg);
@@ -109,12 +129,39 @@ const NotificationMailbox = ({
                     </div>
                 </div>
 
+                {!selectedMessage && (
+                    <div className="inbox-filters-bar">
+                        <div className="inbox-search-box">
+                            <Search size={14} className="inbox-search-icon" />
+                            <input 
+                                type="text" 
+                                placeholder="Tìm kiếm tin nhắn..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button className="clear-search-btn" onClick={() => setSearchQuery('')}>
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="inbox-filter-tabs">
+                            <button className={filterType === 'all' ? 'active' : ''} onClick={() => setFilterType('all')}>Tất cả</button>
+                            <button className={filterType === 'unread' ? 'active' : ''} onClick={() => setFilterType('unread')}>Chưa đọc</button>
+                            <button className={filterType === 'system' ? 'active' : ''} onClick={() => setFilterType('system')}>Hệ thống</button>
+                            <button className={filterType === 'support' ? 'active' : ''} onClick={() => setFilterType('support')}>Yêu cầu</button>
+                            <button className={filterType === 'feedback' ? 'active' : ''} onClick={() => setFilterType('feedback')}>Nhận xét</button>
+                        </div>
+                    </div>
+                )}
+
                 {selectedMessage ? (
                     <div className="inbox-drawer-detail">
                         <div className="drawer-detail-sender-row">
                             <div className={`inbox-avatar ${selectedMessage.type} ${selectedMessage.priority === 'high' ? 'warning' : ''}`}>
                                 {selectedMessage.type === 'system'
                                     ? (selectedMessage.priority === 'high' ? '⚠️' : '📢')
+                                    : selectedMessage.type === 'support' ? <ShieldAlert size={18} /> 
                                     : getSenderInitial(selectedMessage.senderName)}
                             </div>
                             <div className="drawer-detail-sender-info">
@@ -142,20 +189,22 @@ const NotificationMailbox = ({
                         {!loading && error && (
                             <div className="mailbox-state error">{error}</div>
                         )}
-                        {!loading && !error && messages.length === 0 && (
+                        {!loading && !error && filteredMessages.length === 0 && (
                             <div className="inbox-empty">
                                 <MailOpen size={36} />
-                                <p>{emptyText}</p>
+                                <p>{messages.length === 0 ? emptyText : 'Không tìm thấy tin nhắn phù hợp'}</p>
                             </div>
                         )}
-                        {!loading && !error && messages.length > 0 && messages.map(msg => (
+                        {!loading && !error && filteredMessages.length > 0 && filteredMessages.map(msg => (
                             <div
                                 key={msg.id}
                                 className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''} ${msg.priority === 'high' ? 'high-priority' : ''}`}
                                 onClick={() => handleSelectMessage(msg)}
                             >
                                 <div className={`inbox-avatar ${msg.type} ${msg.priority === 'high' ? 'warning' : ''}`}>
-                                    {msg.type === 'system' ? (msg.priority === 'high' ? '⚠️' : '📢') : getSenderInitial(msg.senderName)}
+                                    {msg.type === 'system' ? (msg.priority === 'high' ? '⚠️' : '📢') 
+                                        : msg.type === 'support' ? <ShieldAlert size={16} /> 
+                                        : getSenderInitial(msg.senderName)}
                                 </div>
                                 <div className="drawer-msg-body">
                                     <div className="drawer-msg-top">

@@ -307,15 +307,7 @@ namespace EducenAPI.Services
             // Generate username nếu chưa có
             if (string.IsNullOrWhiteSpace(user.Username))
             {
-                var emailPrefix = user.Email.Split('@')[0];
-                var baseUsername = $"gv_{emailPrefix}";
-                var username = baseUsername;
-                int counter = 1;
-                while (await _context.Users.AnyAsync(u => u.Username == username))
-                {
-                    username = $"{baseUsername}_{counter++}";
-                }
-                user.Username = username;
+                user.Username = user.Email;
             }
 
             // Generate password

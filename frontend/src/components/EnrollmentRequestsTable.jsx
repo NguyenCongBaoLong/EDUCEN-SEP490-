@@ -15,9 +15,16 @@ const EnrollmentRequestsTable = ({
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 6;
     const [sortOrder, setSortOrder] = useState('newest');
+    const [requestTypeTab, setRequestTypeTab] = useState('GuestRegistration');
 
     // Filter Logic
     const filteredRequests = requestsData.filter(request => {
+        const isExisting = request.requestType === 'ExistingStudentEnrollment';
+        const isTabGuest = requestTypeTab === 'GuestRegistration';
+
+        if (isTabGuest && isExisting) return false;
+        if (!isTabGuest && !isExisting) return false;
+
         if (statusFilter && request.status !== statusFilter) return false;
         return true;
     }).sort((a, b) => {
@@ -42,6 +49,22 @@ const EnrollmentRequestsTable = ({
 
     return (
         <div className="student-table-container">
+            {/* Sub Tabs */}
+            <div className="sc-tabs" style={{ marginBottom: '1.5rem' }}>
+                <button
+                    className={`sc-tab ${requestTypeTab === 'GuestRegistration' ? 'active' : ''}`}
+                    onClick={() => { setRequestTypeTab('GuestRegistration'); setCurrentPage(1); }}
+                >
+                    Đăng ký mới
+                </button>
+                <button
+                    className={`sc-tab ${requestTypeTab === 'ExistingStudentEnrollment' ? 'active' : ''}`}
+                    onClick={() => { setRequestTypeTab('ExistingStudentEnrollment'); setCurrentPage(1); }}
+                >
+                    Đăng ký lớp học
+                </button>
+            </div>
+
             {/* Filters Bar */}
             <div className="filters-bar">
                 <select
@@ -75,7 +98,9 @@ const EnrollmentRequestsTable = ({
                     <thead>
                         <tr>
                             <th>Học Sinh</th>
-                            <th>Khóa Học Mong Muốn</th>
+                            <th>Lớp Đăng Ký</th>
+                            <th>Khối</th>
+                            <th>SĐT</th>
                             <th>Email</th>
                             <th>Ngày Gửi</th>
                             <th>Trạng Thái</th>
@@ -88,15 +113,27 @@ const EnrollmentRequestsTable = ({
                                 <tr key={request.id}>
                                     <td>
                                         <div style={{ fontWeight: 600 }}>{request.studentName}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                            SĐT: {request.phone}
-                                        </div>
                                     </td>
                                     <td>
-                                        <span className="grade-badge">{request.desiredGrade || 'Chưa chọn'}</span>
+                                        {request.className ? (
+                                            <span className="grade-badge" style={{ background: '#ede9fe', color: '#7c3aed' }}>
+                                                {request.className}
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: '#9ca3af' }}>—</span>
+                                        )}
                                     </td>
                                     <td>
-                                        <div className="email-info" style={{ wordBreak: 'break-all' }}>
+                                        <span className="grade-badge">{request.gradeName || (request.gradeId ? `Lớp ${request.gradeId}` : '—')}</span>
+                                    </td>
+
+                                    <td>
+                                        <span style={{ fontSize: '0.85rem', color: '#374151', whiteSpace: 'nowrap' }}>
+                                            {request.phone || <span style={{ color: '#9ca3af' }}>—</span>}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div className="email-info" style={{ wordBreak: 'break-word', minWidth: '150px' }}>
                                             {request.email}
                                         </div>
                                     </td>
@@ -143,8 +180,8 @@ const EnrollmentRequestsTable = ({
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className="text-center py-8 text-gray-500">
-                                    Không có yêu cầu đăng ký nào.
+                                <td colSpan="7" className="text-center py-8 text-gray-500">
+                                    Không có yêu cầu nào.
                                 </td>
                             </tr>
                         )}
@@ -160,7 +197,8 @@ const EnrollmentRequestsTable = ({
                     </span>
                     <div className="pagination-controls">
                         <button
-                            className="pagination-btn"
+                            className={`pagination-btn${currentPage === 1 ? ' disabled' : ''}`}
+                            style={{ padding: '4px 10px', fontSize: '0.8rem', minWidth: 'unset' }}
                             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                             disabled={currentPage === 1}
                         >
@@ -170,13 +208,15 @@ const EnrollmentRequestsTable = ({
                             <button
                                 key={index + 1}
                                 className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}
+                                style={{ padding: '4px 8px', fontSize: '0.8rem', minWidth: '28px' }}
                                 onClick={() => setCurrentPage(index + 1)}
                             >
                                 {index + 1}
                             </button>
                         ))}
                         <button
-                            className="pagination-btn"
+                            className={`pagination-btn${currentPage === totalPages ? ' disabled' : ''}`}
+                            style={{ padding: '4px 10px', fontSize: '0.8rem', minWidth: 'unset' }}
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                             disabled={currentPage === totalPages}
                         >

@@ -139,14 +139,15 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                                         <button className="action-btn edit" title="Sửa thông tin" onClick={() => onEdit(p)}>
                                             <Edit2 size={18} />
                                         </button>
-                                        <button 
-                                            className={`action-btn send-account ${p.accountSent ? 'disabled' : ''}`}
-                                            title={p.accountSent ? 'Đã gửi tài khoản' : 'Gửi tài khoản'}
-                                            onClick={() => !p.accountSent && setSendModal({ show: true, parent: p })}
-                                            disabled={p.accountSent}
-                                        >
-                                            <Mail size={18} />
-                                        </button>
+                                        {!p.accountSent && (
+                                            <button 
+                                                className="action-btn send-account"
+                                                title="Gửi tài khoản"
+                                                onClick={() => setSendModal({ show: true, parent: p })}
+                                            >
+                                                <Mail size={18} />
+                                            </button>
+                                        )}
                                         <button
                                             className={`action-btn ${p.status === 'active' ? 'lock' : 'unlock'} ${!p.accountSent ? 'disabled' : ''}`}
                                             title={!p.accountSent ? 'Cần gửi tài khoản để kích hoạt' : (p.status === 'active' ? 'Khoá tài khoản' : 'Kích hoạt lại')}

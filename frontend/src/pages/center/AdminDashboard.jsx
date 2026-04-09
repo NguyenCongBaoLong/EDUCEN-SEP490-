@@ -13,6 +13,9 @@ import {
     ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import api from '../../services/api';
+import EnrollmentRequestsTable from '../../components/EnrollmentRequestsTable';
+import EnrollmentDetailModal from '../../components/EnrollmentDetailModal';
+import RejectEnrollmentModal from '../../components/RejectEnrollmentModal';
 import { useAuth } from '../../context/AuthContext';
 import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText, Wallet } from 'lucide-react';
 import zaloOAService from '../../services/zaloOAService';
@@ -96,6 +99,13 @@ const AdminDashboard = () => {
     const [creditLedger, setCreditLedger] = useState([]);
     const [ledgerLoading, setLedgerLoading] = useState(false);
     const [showLedger, setShowLedger] = useState(false);
+
+    // Enrollment Request States
+    const [requestsList, setRequestsList] = useState([]);
+    const [viewingRequest, setViewingRequest] = useState(null);
+    const [rejectingRequest, setRejectingRequest] = useState(null);
+    const [requestStatusFilter, setRequestStatusFilter] = useState('');
+
     const tenantId = useMemo(() => {
         const isValidTenantId = (value) => (
             !!value && value !== 'undefined' && value !== 'null'
@@ -133,13 +143,17 @@ const AdminDashboard = () => {
         // Support requests
         ...supportRequests.map(sr => {
             const content = sr.content || '';
+            const isParent = sr.senderRoleName?.toLowerCase().includes('parent') || sr.senderRoleName?.toLowerCase().includes('phụ huynh');
+            const msgType = isParent ? 'feedback' : 'support';
+            const roleLabel = isParent ? 'Nhận xét / Đánh giá' : 'Yêu cầu hỗ trợ';
+
             return {
                 id: `sr-${sr.id}`,
                 srId: sr.id,
-                type: 'feedback',
+                type: msgType,
                 senderName: sr.senderName || 'Người dùng',
-                senderRole: 'Yêu cầu hỗ trợ',
-                subject: sr.title || 'Yêu cầu hỗ trợ',
+                senderRole: sr.senderRoleName ? `${roleLabel} (${sr.senderRoleName})` : roleLabel,
+                subject: sr.title || roleLabel,
                 preview: content.substring(0, 80) + (content.length > 80 ? '...' : ''),
                 content,
                 sentAt: sr.createdAt,
@@ -154,6 +168,41 @@ const AdminDashboard = () => {
     ].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
 
     const unreadCount = inboxMessages.filter(m => !m.isRead).length;
+
+    const fetchEnrollmentRequests = async () => {
+        try {
+            const res = await api.get('/enrollment-requests');
+            const data = res.data.map(r => ({
+                id: r.requestId?.toString() || '',
+                studentName: `${r.firstName || ''} ${r.lastName || ''}`.trim(),
+                firstName: r.firstName,
+                lastName: r.lastName,
+                email: r.email,
+                phone: r.phone,
+                address: r.address || '',
+                preferredCourse: r.preferredCourse || '',
+                gradeName: r.gradeName || '',
+                gradeId: r.gradeId,
+                classId: r.classId,
+                className: r.className,
+                requestType: r.requestType,
+                requestDate: r.requestDate ? new Date(r.requestDate).toISOString().split('T')[0] : '',
+                status: r.status?.toLowerCase() || 'pending',
+                createdStudentId: r.createdStudentId,
+                parentName: r.parentName || '',
+                parentPhone: r.parentPhone || '',
+                parentEmail: r.parentEmail || '',
+                dateOfBirth: r.dateOfBirth,
+                gender: r.gender,
+                notes: r.message || r.notes || ''
+            }));
+            setRequestsList(data);
+        } catch (error) {
+            console.error("Fetch enrollment requests error:", error);
+        }
+    };
+
+    const pendingRequestsCount = requestsList.filter(r => r.status === 'pending').length;
 
     const fetchSupportRequests = async () => {
         try {
@@ -177,6 +226,7 @@ const AdminDashboard = () => {
     useEffect(() => {
         fetchSupportRequests();
         fetchSystemNotifications();
+        fetchEnrollmentRequests();
     }, [tenantId]);
 
     const handleMarkAsRead = async (msg) => {
@@ -441,11 +491,31 @@ const AdminDashboard = () => {
         { label: 'Nhân viên', value: overview.totalStaff, icon: UserCheck, color: 'orange', change: `${overview.activeStaff} đang làm việc` },
     ];
 
-    // Mapping dữ liệu cho Biểu đồ đường (Dữ liệu từ StudentRegistrationDto)
-    const enrollmentData = studentRegistrationChart.map(item => ({
-        month: `Tháng ${item.month}`,
-        students: item.students
-    }));
+    // Mapping dữ liệu cho Biểu đồ học sinh đăng ký (7 tháng gần đây)
+    const enrollmentData = useMemo(() => {
+        const dataMap = {};
+        const now = new Date();
+        // Khởi tạo 7 tháng gần nhất với 0 học sinh
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthLabel = `Tháng ${d.getMonth() + 1}`;
+            dataMap[d.getMonth() + 1] = { month: monthLabel, students: 0, sortKey: d.getTime() };
+        }
+
+        // Đắp số liệu thật từ API vào
+        if (studentRegistrationChart) {
+            studentRegistrationChart.forEach(item => {
+                if (dataMap[item.month]) {
+                    dataMap[item.month].students = item.students;
+                }
+            });
+        }
+
+        return Object.values(dataMap).sort((a, b) => a.sortKey - b.sortKey).map(item => ({
+            month: item.month,
+            students: item.students
+        }));
+    }, [studentRegistrationChart]);
 
     // Mapping dữ liệu cho Biểu đồ tròn (Dữ liệu từ SubjectDistributionDto)
     const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
@@ -536,6 +606,47 @@ const AdminDashboard = () => {
             </>
         );
     };
+
+    // Enrollment Request Handlers
+    const handleViewRequest = (request) => {
+        setViewingRequest(request);
+    };
+
+    const handleApproveClick = async (requestData) => {
+        try {
+            const res = await api.put(`/enrollment-requests/${requestData.id}/approve`);
+            if (res.status === 200 || res.status === 204) {
+                setRequestsList(requestsList.map(r =>
+                    r.id === requestData.id ? { ...r, status: 'approved' } : r
+                ));
+                toast.success('Đã duyệt yêu cầu và tạo tài khoản học sinh!');
+            }
+        } catch (error) {
+            console.error('Approve error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+        }
+    };
+
+    const handleRejectRequest = (request) => {
+        setRejectingRequest(request);
+    };
+
+    const handleConfirmReject = async (requestId) => {
+        try {
+            const res = await api.put(`/enrollment-requests/${requestId}/reject`);
+            if (res.status === 200 || res.status === 204) {
+                setRequestsList(requestsList.map(r =>
+                    r.id === requestId ? { ...r, status: 'rejected' } : r
+                ));
+                toast.success('Đã từ chối yêu cầu');
+            }
+        } catch (error) {
+            console.error('Reject error:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+        }
+        setRejectingRequest(null);
+    };
+
     return (
         <div className="admin-dashboard">
             <Sidebar showNotifications={false} />
@@ -576,6 +687,14 @@ const AdminDashboard = () => {
                     >
                         <LayoutDashboard size={18} />
                         Tổng quan
+                    </button>
+                    <button
+                        className={`dashboard-tab-btn ${activeTab === 'requests' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('requests')}
+                    >
+                        <FileText size={18} />
+                        Yêu cầu đăng ký
+                        {pendingRequestsCount > 0 && <span className="inbox-trigger-badge" style={{ position: 'relative', top: '0', right: '-4px', marginLeft: '4px' }}>{pendingRequestsCount}</span>}
                     </button>
                     <button
                         className={`dashboard-tab-btn ${activeTab === 'revenue' ? 'active' : ''}`}
@@ -644,21 +763,35 @@ const AdminDashboard = () => {
                             </div>
 
                             {/* Storage Usage */}
-                            <div className="kpi-card kpi-purple" style={{ flex: 1 }}>
-                                <div className="kpi-icon-wrap"><HardDrive size={22} /></div>
-                                <div className="kpi-info" style={{ flex: 1 }}>
-                                    <div className="kpi-value">{loading ? '...' : `${(overview.currentStorageMB || 0).toFixed(1)} / ${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}</div>
-                                    <div className="kpi-label">Dung Lượng</div>
-                                    <div style={{
-                                        marginTop: '8px', height: '8px', borderRadius: '4px',
-                                        background: '#e5e7eb', overflow: 'hidden'
-                                    }}>
-                                        <div style={{
-                                            height: '100%', borderRadius: '4px', transition: 'width 0.5s',
-                                            width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / ((overview.maxStorageMB || 1))) * 100, 100)}%`,
-                                            background: ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.9 ? '#ef4444' :
-                                                ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.7 ? '#f59e0b' : '#8b5cf6'
-                                        }} />
+                            <div className="kpi-card storage-card">
+                                <div className="storage-icon-container">
+                                    <HardDrive size={24} />
+                                </div>
+                                <div className="storage-content">
+                                    <div className="storage-value">
+                                        <span className="storage-number">
+                                            {loading ? '...' : (
+                                                <>
+                                                    {overview.currentStorageMB < 1024 
+                                                        ? `${parseFloat((overview.currentStorageMB || 0).toFixed(1))} MB` 
+                                                        : `${parseFloat(((overview.currentStorageMB || 0) / 1024).toFixed(1))} GB`
+                                                    }
+                                                    <span style={{ fontSize: '0.9rem', color: '#9ca3af', fontWeight: 500, margin: '0 8px' }}>/</span>
+                                                    {`${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}
+                                                </>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="storage-label">Dung Lượng</div>
+                                    <div className="storage-progress-container">
+                                        <div 
+                                            className="storage-progress-bar" 
+                                            style={{ 
+                                                width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) * 100, 100)}%`,
+                                                background: ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.9 ? '#ef4444' :
+                                                           ((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) > 0.7 ? '#f59e0b' : '#8b5cf6'
+                                            }} 
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -683,11 +816,12 @@ const AdminDashboard = () => {
                                         <LineChart data={enrollmentData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                             <XAxis dataKey="month" tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                            <YAxis tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                                             <Tooltip content={<CustomTooltip />} />
                                             <Line
                                                 type="monotone"
                                                 dataKey="students"
+                                                name="Học sinh mới"
                                                 stroke="#3b82f6"
                                                 strokeWidth={2.5}
                                                 dot={{ fill: '#3b82f6', r: 4 }}
@@ -870,8 +1004,21 @@ const AdminDashboard = () => {
                     </>
                 )}
 
+                {activeTab === 'requests' && (
+                    <div className="dashboard-requests-container">
+                        <EnrollmentRequestsTable
+                            requestsData={requestsList}
+                            statusFilter={requestStatusFilter}
+                            setStatusFilter={setRequestStatusFilter}
+                            onView={handleViewRequest}
+                            onApprove={handleApproveClick}
+                            onReject={handleRejectRequest}
+                        />
+                    </div>
+                )}
+
                 {activeTab === 'revenue' && <RevenueReport hideSidebar={true} />}
-                
+
                 {activeTab === 'subscription' && (
                     <SubscriptionPlans hideSidebar={true} />
                 )}
@@ -1088,6 +1235,20 @@ const AdminDashboard = () => {
                 onMarkAsRead={handleMarkAsRead}
                 onDelete={handleDeleteNotification}
                 renderDetailExtra={renderInboxDetailExtra}
+            />
+
+            {/* Enrollment Request Modals */}
+            <EnrollmentDetailModal
+                isOpen={!!viewingRequest}
+                onClose={() => setViewingRequest(null)}
+                request={viewingRequest}
+            />
+
+            <RejectEnrollmentModal
+                isOpen={!!rejectingRequest}
+                onClose={() => setRejectingRequest(null)}
+                onConfirm={handleConfirmReject}
+                request={rejectingRequest}
             />
 
         </div>

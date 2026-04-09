@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.DTOs.Submissions
 {
@@ -12,6 +12,6 @@ namespace EducenAPI.DTOs.Submissions
 
         public string? FileUrl { get; set; }
 
-        public IFormFile? File { get; set; }
+        public List<IFormFile>? Files { get; set; }
     }
 }

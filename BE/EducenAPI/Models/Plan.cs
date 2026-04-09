@@ -5,11 +5,11 @@ namespace EducenAPI.Models
     public class Plan
     {
         [Key]
-        public string PlanId { get; set; }
+        public string PlanId { get; set; } = null!;
 
         [Required]
         [MaxLength(100)]
-        public string PlanName { get; set; }
+        public string PlanName { get; set; } = null!;
 
         [Required]
         public decimal Price { get; set; }
