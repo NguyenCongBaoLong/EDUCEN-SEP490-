@@ -332,10 +332,8 @@ namespace EducenAPI.Services.BackgroundServices
                 
                 try
                 {
-                    var userIds = adminUsers.Select(u => u.UserId).ToList();
-                    // Kiểm tra bảng có tồn tại không trước
                     zaloRecipients = await tenantDbContext.ZaloOARecipients
-                        .Where(r => userIds.Contains(r.UserId) && r.IsFollowing)
+                        .Where(r => r.IsFollowing)
                         .Select(r => r.ZaloUserId)
                         .ToListAsync();
                 }
@@ -455,13 +453,15 @@ namespace EducenAPI.Services.BackgroundServices
             }
         }
 
-        private async Task<ZaloTokenResult?> RefreshZaloTokenAsync(HttpClient httpClient, string oaId, string secretKey, string refreshToken)
+        private async Task<ZaloTokenResult?> RefreshZaloTokenAsync(HttpClient httpClient, string appId, string secretKey, string refreshToken)
         {
             try
             {
+                refreshToken = refreshToken?.Trim().TrimEnd('\0');
+
                 var content = new FormUrlEncodedContent(new[]
                 {
-                    new KeyValuePair<string, string>("app_id", oaId),
+                new KeyValuePair<string, string>("app_id", appId),
                     new KeyValuePair<string, string>("grant_type", "refresh_token"),
                     new KeyValuePair<string, string>("refresh_token", refreshToken)
                 });

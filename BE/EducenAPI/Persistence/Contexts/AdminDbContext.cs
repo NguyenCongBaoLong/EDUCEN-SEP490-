@@ -137,6 +137,9 @@ namespace EducenAPI.Persistence.Contexts
                 .IsUnique();
 
             builder.Entity<TenantZaloOAConfig>()
+                .HasIndex(z => z.AppId);
+
+            builder.Entity<TenantZaloOAConfig>()
                 .HasIndex(z => z.OAId);
 
             builder.Entity<TenantZaloOAConfig>()

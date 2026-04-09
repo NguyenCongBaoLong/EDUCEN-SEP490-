@@ -1,5 +1,6 @@
 using EducenAPI.DTOs.ZaloOA;
 using EducenAPI.Models;
+using System.Text.Json.Serialization;
 
 namespace EducenAPI.Services.Interface
 {
@@ -27,11 +28,37 @@ namespace EducenAPI.Services.Interface
 
     public class ZaloWebhookPayload
     {
-        public string EventName { get; set; } = string.Empty;
-        public string OAId { get; set; } = string.Empty;
-        public string? FollowerId { get; set; }
+        [JsonPropertyName("challenge")]
+        public string? Challenge { get; set; }
+
+        [JsonPropertyName("event_name")]
+        public string? EventName { get; set; }
+
+        [JsonPropertyName("oa_id")]
+        public string? OAId { get; set; }
+
+        // Tr??ng này th??ng không có ? c?p ngoài cùng trong s? ki?n 'follow'
+        [JsonPropertyName("follower_id")]
+        public string? FollowerIdRaw { get; set; }
+
+        [JsonPropertyName("user_id")]
         public string? UserId { get; set; }
-        public string? Message { get; set; }
+
+        [JsonPropertyName("timestamp")]
         public long Timestamp { get; set; }
+
+        // ??I T??NG QUAN TR?NG NH?T
+        [JsonPropertyName("follower")]
+        public FollowerData? Follower { get; set; }
+
+        // Thêm thu?c tính này ?? code x? lý bên d??i g?n h?n
+        // và ?? Console log hi?n ?úng ID thay vì ?? tr?ng
+        public string? FollowerId => Follower?.Id ?? FollowerIdRaw;
+    }
+
+    public class FollowerData
+    {
+        [JsonPropertyName("id")]
+        public string? Id { get; set; }
     }
 }

@@ -958,7 +958,7 @@ const AdminDashboard = () => {
                                         <button
                                             className="zalo-send-btn"
                                             onClick={handleSend}
-                                            disabled={sending || !form.title.trim() || !form.content.trim() || !oaStatus?.isActive}
+                                            disabled={sending || !form.title.trim() || !form.content.trim()}
                                         >
                                             {sending ? (
                                                 <span className="zalo-sending-dot" />

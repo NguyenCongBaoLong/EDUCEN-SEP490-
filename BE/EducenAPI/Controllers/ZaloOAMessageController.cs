@@ -90,17 +90,23 @@ namespace EducenAPI.Controllers
         }
 
         [AllowAnonymous]
+        [IgnoreAntiforgeryToken]
         [HttpPost("webhook")]
         public async Task<IActionResult> Webhook([FromBody] ZaloWebhookPayload payload)
         {
+            // LOG NGAY ĐỂ KIỂM TRA
+            Console.WriteLine($"==> WEBHOOK RECEIVED: Event={payload.EventName}, OA={payload.OAId}, User={payload.FollowerId}");
+
             try
             {
+                // Kiểm tra xem Service có bị chết vì thiếu TenantId không
                 await _zaloService.HandleWebhookAsync(payload);
                 return Ok(new { error = 0, message = "Thành công" });
             }
             catch (Exception ex)
             {
-                return Ok(new { error = 1, message = ex.Message });
+                Console.WriteLine($"==> WEBHOOK ERROR: {ex.Message}");
+                return Ok(new { error = 1, message = ex.Message }); // Trả về 200 cho Zalo nhưng log lỗi cho mình
             }
         }
     }

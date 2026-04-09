@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EducenAPI.Models
 {
@@ -7,9 +6,6 @@ namespace EducenAPI.Models
     {
         [Key]
         public int Id { get; set; }
-
-        [Required]
-        public int UserId { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -20,9 +16,5 @@ namespace EducenAPI.Models
         public DateTime? FollowedAt { get; set; }
 
         public DateTime? UnfollowedAt { get; set; }
-
-        // Navigation
-        [ForeignKey(nameof(UserId))]
-        public User User { get; set; } = null!;
     }
 }

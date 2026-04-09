@@ -417,16 +417,6 @@ public partial class EducenV2Context : DbContext
 
         // === ZaloOARecipient Configuration ===
         modelBuilder.Entity<ZaloOARecipient>()
-            .HasOne(z => z.User)
-            .WithMany()
-            .HasForeignKey(z => z.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<ZaloOARecipient>()
-            .HasIndex(z => z.UserId)
-            .IsUnique();
-
-        modelBuilder.Entity<ZaloOARecipient>()
             .HasIndex(z => z.ZaloUserId);
 
         // === FamilyInvoice Configuration ===
