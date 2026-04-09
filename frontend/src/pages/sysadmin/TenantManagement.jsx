@@ -10,7 +10,7 @@ import adminApi from '../../services/adminApi';
 import '../../css/pages/sysadmin/TenantManagement.css';
 
 const EMPTY_FORM = {
-    tenantId: '', tenantName: '', subDomain: '',
+    tenantName: '', subDomain: '',
     contactPerson: '', email: '', phoneNumber: '', address: '',
     adminUsername: '', adminPassword: '',
 };
@@ -864,18 +864,6 @@ const TenantManagement = () => {
                             </div>
                             <form onSubmit={handleSubmit} className="sa-modal-form">
                                 <div className="sa-form-row">
-                                    <div className="sa-form-group">
-                                        <label>Mã Trung Tâm (ID) *</label>
-                                        <input
-                                            name="tenantId"
-                                            value={form.tenantId}
-                                            onChange={handleChange}
-                                            placeholder="vd: center-hanoi"
-                                            required
-                                            disabled={!!editTarget}
-                                        />
-                                        {!editTarget && <span className="sa-form-hint">Dùng làm key DB cho trung tâm</span>}
-                                    </div>
                                     <div className="sa-form-group">
                                         <label>Tên Trung Tâm *</label>
                                         <input
