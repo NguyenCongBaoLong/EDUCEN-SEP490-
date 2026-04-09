@@ -33,6 +33,7 @@ namespace EducenAPI.Services.Payment
         private readonly ILogger<PaymentService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ISubscriptionChangeService _subscriptionChangeService;
 
         private async Task<CreditPaymentResult> UseCreditForPaymentAsync(string tenantId, decimal amount)
         {
@@ -121,7 +122,8 @@ namespace EducenAPI.Services.Payment
             PaymentGatewayFactory gatewayFactory,
             ILogger<PaymentService> logger,
             IConfiguration configuration,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            ISubscriptionChangeService subscriptionChangeService)
         {
             _adminDbContext = adminDbContext;
             _tenantDbContext = tenantDbContext;
@@ -129,6 +131,7 @@ namespace EducenAPI.Services.Payment
             _logger = logger;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _subscriptionChangeService = subscriptionChangeService;
         }
 
         /// <summary>
@@ -151,6 +154,16 @@ namespace EducenAPI.Services.Payment
 
                 var isTuition = string.Equals(dto.TransactionType, "Tuition", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(dto.TransactionType, "FamilyTuition", StringComparison.OrdinalIgnoreCase);
+                var isSubscriptionInvoice = !isTuition
+                    && string.Equals(dto.TransactionType?.Trim(), "SubscriptionInvoice", StringComparison.OrdinalIgnoreCase);
+                if (!isTuition && !isSubscriptionInvoice)
+                {
+                    return new PaymentResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Da ngung thanh toan goi truc tiep. Vui long gui yeu cau doi goi va thanh toan hoa don SubscriptionInvoice."
+                    };
+                }
                 var tenantContext = await ResolveCreateTenantContextAsync(dto, isTuition);
                 if (string.IsNullOrWhiteSpace(tenantContext.TenantId))
                 {
@@ -225,19 +238,67 @@ namespace EducenAPI.Services.Payment
                         return new PaymentResult
                         {
                             Success = false,
-                            ErrorMessage = "Thiếu PlanId cho giao dịch thanh toán gói dịch vụ"
+                            ErrorMessage = isSubscriptionInvoice
+                                ? "Thiếu InvoiceId cho giao dịch thanh toán hóa đơn đổi gói"
+                                : "Thiếu PlanId cho giao dịch thanh toán gói dịch vụ"
                         };
                     }
 
-                    var plan = await _adminDbContext.Plans
-                        .FirstOrDefaultAsync(p => p.PlanId == dto.ReferenceId && p.IsActive);
-                    if (plan == null)
+                    if (isSubscriptionInvoice)
                     {
-                        return new PaymentResult
+                        var invoice = await _adminDbContext.Invoices
+                            .FirstOrDefaultAsync(i => i.InvoiceId == dto.ReferenceId && i.TenantId == tenantContext.TenantId);
+
+                        if (invoice == null)
                         {
-                            Success = false,
-                            ErrorMessage = "Gói dịch vụ đã chọn không khả dụng"
-                        };
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = "Không tìm thấy hoá đơn đổi gói"
+                            };
+                        }
+
+                        if (invoice.Status == "Paid")
+                        {
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = "Hoá đơn đã thanh toán"
+                            };
+                        }
+
+                        if (invoice.Status == "Cancelled")
+                        {
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = "Hoá đơn đã bị huỷ"
+                            };
+                        }
+
+                        if (!AmountEquals(dto.Amount, invoice.Amount))
+                        {
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = "Số tiền thanh toán không khớp với hoá đơn"
+                            };
+                        }
+
+                        resolvedAmount = invoice.Amount;
+                    }
+                    else
+                    {
+                        var plan = await _adminDbContext.Plans
+                            .FirstOrDefaultAsync(p => p.PlanId == dto.ReferenceId && p.IsActive);
+                        if (plan == null)
+                        {
+                            return new PaymentResult
+                            {
+                                Success = false,
+                                ErrorMessage = "Gói dịch vụ đã chọn không khả dụng"
+                            };
+                        }
                     }
                 }
 
@@ -447,7 +508,7 @@ namespace EducenAPI.Services.Payment
                     {
                         PaymentId = Guid.NewGuid().ToString(),
                         TenantId = tenantContext.TenantId,
-                        Amount = dto.Amount,
+                        Amount = resolvedAmount,
                         Status = "Pending",
                         PaymentDate = DateTime.UtcNow,
                         TransactionType = dto.TransactionType,
@@ -465,15 +526,24 @@ namespace EducenAPI.Services.Payment
                     {
                         PaymentRecordId = paymentRecord.PaymentId,
                         GatewayType = dto.GatewayType,
-                        Amount = dto.Amount,
+                        Amount = resolvedAmount,
                         Status = "Pending",
                         CreatedAt = DateTime.UtcNow
                     };
 
                     _adminDbContext.PaymentTransactions.Add(transaction);
 
-                    var creditResult = await UseCreditForPaymentAsync(tenantContext.TenantId, dto.Amount);
-                    var gatewayAmount = creditResult.RemainingAmount;
+                    var creditUsed = 0m;
+                    var gatewayAmount = resolvedAmount;
+                    if (!isSubscriptionInvoice)
+                    {
+                        var creditResult = await UseCreditForPaymentAsync(tenantContext.TenantId, resolvedAmount);
+                        creditUsed = creditResult.CreditUsed;
+                        gatewayAmount = creditResult.RemainingAmount;
+                    }
+                    string? paymentUrl = null;
+                    string? qrCodeUrl = null;
+                    string? deeplink = null;
 
                     if (gatewayAmount > 0)
                     {
@@ -508,6 +578,9 @@ namespace EducenAPI.Services.Payment
                         }
 
                         transaction.GatewayTransactionId = gatewayResponse.TransactionId;
+                        paymentUrl = gatewayResponse.PaymentUrl;
+                        qrCodeUrl = gatewayResponse.QrCodeUrl;
+                        deeplink = gatewayResponse.Deeplink;
                     }
                     else
                     {
@@ -516,16 +589,19 @@ namespace EducenAPI.Services.Payment
                         paymentRecord.Status = "Paid";
                         paymentRecord.PaymentDate = DateTime.UtcNow;
                         await _adminDbContext.SaveChangesAsync();
-                        await ActivateSubscriptionFromPaymentAsync(paymentRecord);
+                        if (!isSubscriptionInvoice)
+                        {
+                            await ActivateSubscriptionFromPaymentAsync(paymentRecord);
+                        }
                     }
 
                     await _adminDbContext.SaveChangesAsync();
 
-                    if (creditResult.CreditUsed > 0)
+                    if (creditUsed > 0)
                     {
                         _logger.LogInformation(
                             "Subscription payment {PaymentId} used credit: {CreditUsed}, remaining gateway: {GatewayAmount}",
-                            paymentRecord.PaymentId, creditResult.CreditUsed, gatewayAmount);
+                            paymentRecord.PaymentId, creditUsed, gatewayAmount);
                     }
 
                     return new PaymentResult
@@ -533,9 +609,9 @@ namespace EducenAPI.Services.Payment
                         Success = true,
                         PaymentRecordId = paymentRecord.PaymentId,
                         TransactionId = transaction.TransactionId,
-                        PaymentUrl = gatewayAmount > 0 ? $"credit-used-{paymentRecord.PaymentId}" : null,
-                        QrCodeUrl = null,
-                        Deeplink = null
+                        PaymentUrl = paymentUrl,
+                        QrCodeUrl = qrCodeUrl,
+                        Deeplink = deeplink
                     };
                 }
             }
@@ -741,6 +817,14 @@ namespace EducenAPI.Services.Payment
                             }
                         }
                         await ActivateSubscriptionFromPaymentAsync(adminTransaction.PaymentRecord);
+                    }
+                    else if (adminTransaction.PaymentRecord.TransactionType == "SubscriptionInvoice"
+                        && !string.IsNullOrWhiteSpace(adminTransaction.PaymentRecord.ReferenceId))
+                    {
+                        await UpdateSubscriptionInvoiceAsync(
+                            adminTransaction.PaymentRecord.ReferenceId,
+                            adminTransaction.PaymentRecord.PaymentId,
+                            "VNPay");
                     }
                 }
                 await _adminDbContext.SaveChangesAsync();
@@ -1211,6 +1295,14 @@ namespace EducenAPI.Services.Payment
                     }
                     await ActivateSubscriptionFromPaymentAsync(transaction.PaymentRecord);
                 }
+                else if (transaction.PaymentRecord?.TransactionType == "SubscriptionInvoice"
+                    && !string.IsNullOrEmpty(transaction.PaymentRecord.ReferenceId))
+                {
+                    await UpdateSubscriptionInvoiceAsync(
+                        transaction.PaymentRecord.ReferenceId,
+                        transaction.PaymentRecord.PaymentId,
+                        "VNPay");
+                }
             }
             else
             {
@@ -1460,6 +1552,23 @@ namespace EducenAPI.Services.Payment
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to update FamilyInvoice {InvoiceId} after payment", familyInvoiceId);
+            }
+        }
+
+        private async Task UpdateSubscriptionInvoiceAsync(string invoiceId, string paymentRecordId, string paymentMethod)
+        {
+            try
+            {
+                await _subscriptionChangeService.ConfirmInvoicePaidAndApplyAsync(
+                    invoiceId,
+                    paymentMethod,
+                    $"Thanh toan online thanh cong. PaymentRecordId: {paymentRecordId}",
+                    "VNPayCallback",
+                    paymentRecordId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update subscription invoice {InvoiceId} after payment", invoiceId);
             }
         }
     }

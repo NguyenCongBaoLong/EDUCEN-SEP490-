@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.DTOs.Attendance;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
@@ -311,11 +312,11 @@ namespace EducenAPI.Services
 
         private void ValidateSessionForAttendance(ClassSession session)
         {
-            // Sử dụng giờ Việt Nam (UTC+7)
+            // Teacher chỉ được điểm danh trong ngày hôm đó (không được quá hạn)
+            // Nếu quá hạn phải gửi yêu cầu sửa điểm danh cho Admin
             var now = DateTime.UtcNow.AddHours(7);
             var sessionDate = session.SessionDate.Date;
             var today = now.Date;
-            var cutoffDate = today.AddDays(-2);
 
             if (sessionDate > today)
             {
@@ -323,14 +324,15 @@ namespace EducenAPI.Services
                 throw new Exception("Buổi học chưa diễn ra, chưa thể điểm danh");
             }
 
-            if (sessionDate < cutoffDate)
+            if (sessionDate < today)
             {
-                _logger.LogWarning("Attendance denied. Session {SessionId} exceeds 2-day window. SessionDate: {SessionDate}, Today: {Today}", session.SessionId, sessionDate, today);
-                throw new Exception("Chỉ được điểm danh trong vòng 2 ngày kể từ ngày học");
+                _logger.LogWarning("Attendance denied. Session {SessionId} is in past: {SessionDate}. Teacher must submit modification request.", session.SessionId, sessionDate);
+                throw new Exception("Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.");
             }
 
+            // Nếu là hôm nay: chỉ điểm danh sau giờ bắt đầu
             var schedule = _context.Schedules.Find(session.ScheduleId);
-            if (schedule != null && sessionDate == today)
+            if (schedule != null)
             {
                 var sessionStart = sessionDate.Add(schedule.StartTime.ToTimeSpan());
                 if (now < sessionStart)
@@ -340,7 +342,7 @@ namespace EducenAPI.Services
 
         private void ValidateAttendanceModification(Attendance attendance)
         {
-            // Sử dụng giờ Việt Nam (UTC+7)
+            // Teacher không được sửa điểm danh quá ngày - phải gửi yêu cầu cho Admin
             var now = DateTime.UtcNow.AddHours(7);
             var sessionDate = attendance.Session?.SessionDate.Date ??
                 _context.ClassSessions
@@ -348,7 +350,6 @@ namespace EducenAPI.Services
                     .Select(s => s.SessionDate.Date)
                     .FirstOrDefault();
             var today = now.Date;
-            var cutoffDate = today.AddDays(-2);
 
             if (sessionDate == default)
                 throw new Exception("Không tìm thấy thông tin buổi học để kiểm tra điểm danh");
@@ -356,12 +357,185 @@ namespace EducenAPI.Services
             if (sessionDate > today)
                 throw new Exception("Buổi học chưa diễn ra, chưa thể chỉnh sửa điểm danh");
 
-            if (sessionDate < cutoffDate)
+            if (sessionDate < today)
             {
-                _logger.LogWarning("Attendance modification denied. AttendanceId: {AttendanceId}, SessionDate: {SessionDate}, Today: {Today}",
+                _logger.LogWarning("Attendance modification denied. AttendanceId: {AttendanceId}, SessionDate: {SessionDate}, Today: {Today}. Teacher must submit modification request.",
                     attendance.AttendanceId, sessionDate, today);
-                throw new Exception("Chỉ được chỉnh sửa điểm danh trong vòng 2 ngày kể từ ngày học");
+                throw new Exception("Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.");
             }
+        }
+
+        // === Yêu cầu sửa điểm danh ===
+
+        public async Task<AttendanceModificationRequest> CreateModificationRequestAsync(int sessionId, int studentId, string requestedStatus, string? reason, int requestedByUserId)
+        {
+            var session = await _context.ClassSessions.FindAsync(sessionId);
+            if (session == null)
+                throw new Exception("Không tìm thấy buổi học");
+
+            // Kiểm tra đã có yêu cầu đang chờ chưa
+            var existingRequest = await _context.AttendanceModificationRequests
+                .FirstOrDefaultAsync(r => r.SessionId == sessionId && r.StudentId == studentId && r.Status == "Pending");
+            if (existingRequest != null)
+                throw new Exception("Đã có yêu cầu sửa điểm danh đang chờ duyệt cho học sinh này");
+
+            // Lấy trạng thái hiện tại
+            var currentAttendance = await _context.Attendances
+                .FirstOrDefaultAsync(a => a.SessionId == sessionId && a.StudentId == studentId);
+            var currentStatus = currentAttendance?.Status ?? "notYet";
+
+            var request = new AttendanceModificationRequest
+            {
+                SessionId = sessionId,
+                StudentId = studentId,
+                CurrentStatus = currentStatus,
+                RequestedStatus = requestedStatus,
+                Reason = reason,
+                RequestedByUserId = requestedByUserId,
+                Status = "Pending",
+                RequestedAt = DateTime.UtcNow
+            };
+
+            _context.AttendanceModificationRequests.Add(request);
+            await _context.SaveChangesAsync();
+
+            return request;
+        }
+
+        public async Task<List<AttendanceModificationRequestDto>> GetPendingModificationRequestsAsync(int? classId = null)
+        {
+            var query = _context.AttendanceModificationRequests
+                .Include(r => r.Student).ThenInclude(s => s.StudentNavigation)
+                .Include(r => r.Session).ThenInclude(s => s.Schedule).ThenInclude(sc => sc.Class)
+                .Include(r => r.RequestedByUser)
+                .Where(r => r.Status == "Pending")
+                .AsQueryable();
+
+            if (classId.HasValue)
+            {
+                query = query.Where(r => r.Session != null && r.Session.Schedule != null && r.Session.Schedule.ClassId == classId.Value);
+            }
+
+            var requests = await query
+                .OrderByDescending(r => r.RequestedAt)
+                .ToListAsync();
+
+            return requests.Select(r => new AttendanceModificationRequestDto
+            {
+                RequestId = r.RequestId,
+                SessionId = r.SessionId,
+                StudentId = r.StudentId,
+                StudentName = r.Student?.StudentNavigation?.FullName,
+                ClassName = r.Session?.Schedule?.Class?.ClassName ?? r.Session?.Class?.ClassName,
+                SessionDate = r.Session != null ? r.Session.SessionDate.ToString("dd/MM/yyyy") : null,
+                Status = r.Status,
+                CurrentStatus = r.CurrentStatus,
+                RequestedStatus = r.RequestedStatus,
+                Reason = r.Reason,
+                RequestedByUserId = r.RequestedByUserId,
+                RequestedByUserName = r.RequestedByUser?.FullName,
+                RequestedAt = r.RequestedAt.ToString("dd/MM/yyyy HH:mm")
+            }).ToList();
+        }
+
+        public async Task<bool> ApproveModificationRequestAsync(int requestId, int reviewedByUserId, string newStatus)
+        {
+            var request = await _context.AttendanceModificationRequests
+                .Include(r => r.Session)
+                .FirstOrDefaultAsync(r => r.RequestId == requestId);
+
+            if (request == null)
+                return false;
+
+            if (request.Status != "Pending")
+                throw new Exception("Yêu cầu đã được xử lý trước đó");
+
+            // Cập nhật điểm danh
+            var attendance = await _context.Attendances
+                .FirstOrDefaultAsync(a => a.SessionId == request.SessionId && a.StudentId == request.StudentId);
+
+            var reviewer = await _context.Users.FindAsync(reviewedByUserId);
+
+            if (attendance != null)
+            {
+                attendance.Status = newStatus;
+                attendance.RecordedAt = DateTime.UtcNow;
+                attendance.UpdatedBy = reviewer;
+            }
+            else
+            {
+                var newAttendance = new Attendance
+                {
+                    SessionId = request.SessionId,
+                    StudentId = request.StudentId,
+                    Status = newStatus,
+                    RecordedAt = DateTime.UtcNow,
+                    UpdatedBy = reviewer
+                };
+                _context.Attendances.Add(newAttendance);
+            }
+
+            // Cập nhật yêu cầu
+            request.Status = "Approved";
+            request.ReviewedByUserId = reviewedByUserId;
+            request.ReviewedAt = DateTime.UtcNow;
+            request.RequestedStatus = newStatus; // Cập nhật theo status đã duyệt
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RejectModificationRequestAsync(int requestId, int reviewedByUserId, string? reviewNote)
+        {
+            var request = await _context.AttendanceModificationRequests.FindAsync(requestId);
+            if (request == null)
+                return false;
+
+            if (request.Status != "Pending")
+                throw new Exception("Yêu cầu đã được xử lý trước đó");
+
+            var reviewer = await _context.Users.FindAsync(reviewedByUserId);
+
+            request.Status = "Rejected";
+            request.ReviewedByUserId = reviewedByUserId;
+            request.ReviewedAt = DateTime.UtcNow;
+            request.ReviewNote = reviewNote;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<AttendanceModificationRequestDto>> GetMyModificationRequestsAsync(int userId)
+        {
+            var requests = await _context.AttendanceModificationRequests
+                .Include(r => r.Student).ThenInclude(s => s.StudentNavigation)
+                .Include(r => r.Session).ThenInclude(s => s.Schedule).ThenInclude(sc => sc.Class)
+                .Include(r => r.RequestedByUser)
+                .Include(r => r.ReviewedByUser)
+                .Where(r => r.RequestedByUserId == userId)
+                .OrderByDescending(r => r.RequestedAt)
+                .ToListAsync();
+
+            return requests.Select(r => new AttendanceModificationRequestDto
+            {
+                RequestId = r.RequestId,
+                SessionId = r.SessionId,
+                StudentId = r.StudentId,
+                StudentName = r.Student?.StudentNavigation?.FullName,
+                ClassName = r.Session?.Schedule?.Class?.ClassName,
+                SessionDate = r.Session != null ? r.Session.SessionDate.ToString("dd/MM/yyyy") : null,
+                Status = r.Status,
+                CurrentStatus = r.CurrentStatus,
+                RequestedStatus = r.RequestedStatus,
+                Reason = r.Reason,
+                RequestedByUserId = r.RequestedByUserId,
+                RequestedByUserName = r.RequestedByUser?.FullName,
+                ReviewedByUserId = r.ReviewedByUserId,
+                ReviewedByUserName = r.ReviewedByUser?.FullName,
+                RequestedAt = r.RequestedAt.ToString("dd/MM/yyyy HH:mm"),
+                ReviewedAt = r.ReviewedAt?.ToString("dd/MM/yyyy HH:mm"),
+                ReviewNote = r.ReviewNote
+            }).ToList();
         }
     }
 }

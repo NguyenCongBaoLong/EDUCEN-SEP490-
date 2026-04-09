@@ -16,7 +16,11 @@ export const ChildProvider = ({ children }) => {
             .then(res => {
                 const list = res.data || [];
                 setChildrenList(list);
-                if (list.length > 0) setSelectedChild(list[0]);
+                // Thêm option "Tâ´t ca" vào danh sách và làm nó là default
+                const allOption = { studentId: 'all', fullName: 'Tâ´t ca' };
+                if (list.length > 0) {
+                    setSelectedChild(allOption);
+                }
             })
             .catch(console.error)
             .finally(() => setLoading(false));

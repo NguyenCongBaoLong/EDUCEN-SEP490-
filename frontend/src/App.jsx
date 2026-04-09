@@ -22,6 +22,7 @@ import TeacherAssignments from './pages/teacher/TeacherAssignments';
 import AssignmentGrading from './pages/teacher/AssignmentGrading';
 import TeacherPerformanceReport from './pages/teacher/TeacherPerformanceReport';
 import TeacherMailbox from './pages/teacher/TeacherMailbox';
+import TeacherAttendanceRequests from './pages/teacher/TeacherAttendanceRequests';
 import StudentClasses from './pages/student/StudentClasses';
 import StudentSchedule from './pages/student/StudentSchedule';
 import StudentClassDetail from './pages/student/StudentClassDetail';
@@ -87,12 +88,14 @@ function App() {
               <Route path="/teacher/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Teacher']}><AssignmentGrading /></PrivateRoute>} />
               <Route path="/teacher/performance" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherPerformanceReport /></PrivateRoute>} />
               <Route path="/teacher/mailbox" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherMailbox /></PrivateRoute>} />
+              <Route path="/teacher/attendance-requests" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherAttendanceRequests /></PrivateRoute>} />
 
               {/* ── TA Routes (chỉ Assistant) ── */}
               <Route path="/ta/classes" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClasses isTA={true} /></PrivateRoute>} />
               <Route path="/ta/classes/:classId" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClassDetail isTA={true} /></PrivateRoute>} />
               <Route path="/ta/schedules" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherSchedule isTA={true} /></PrivateRoute>} />
               <Route path="/ta/performance" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherPerformanceReport isTA={true} /></PrivateRoute>} />
+              <Route path="/ta/attendance-requests" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherAttendanceRequests isTA={true} /></PrivateRoute>} />
 
               {/* ── Student Routes (chỉ Student) ── */}
               <Route path="/student/classes" element={<PrivateRoute allowedRoles={['Student']}><StudentClasses /></PrivateRoute>} />

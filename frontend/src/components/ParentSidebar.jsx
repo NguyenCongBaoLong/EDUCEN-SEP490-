@@ -16,10 +16,18 @@ const ParentSidebar = () => {
     };
 
     const menuItems = [
-        { path: '/parent/classes', icon: GraduationCap, label: 'Lớp học của con' },
-        { path: '/parent/schedule', icon: Calendar, label: 'Lịch học của con' },
+        { 
+            path: '/parent/classes', 
+            icon: GraduationCap, 
+            label: selectedChild?.studentId === 'all' ? 'Lớp học của tất cả con' : 'Lớp học của con' 
+        },
+        { 
+            path: '/parent/schedule', 
+            icon: Calendar, 
+            label: selectedChild?.studentId === 'all' ? 'Lịch học của tất cả con' : 'Lịch học của con' 
+        },
         { path: '/parent/invoices', icon: FileText, label: 'Hóa đơn học phí' },
-        { path: '/parent/family-invoices', icon: FileText, label: 'Hóa đơn gia đình' },
+        { path: '/parent/feedback', icon: MessageSquare, label: 'Gửi phản hồi' },
     ];
 
     return (
@@ -71,7 +79,11 @@ const ParentSidebar = () => {
                             <select
                                 value={selectedChild?.studentId || ''}
                                 onChange={e => {
-                                    const child = childrenList.find(c => c.studentId === Number(e.target.value));
+                                    if (e.target.value === 'all') {
+                                        setSelectedChild({ studentId: 'all', fullName: 'Tất cả', grade: '' });
+                                        return;
+                                    }
+                                    const child = childrenList.find(c => String(c.studentId) === e.target.value);
                                     if (child) setSelectedChild(child);
                                 }}
                                 style={{
@@ -82,6 +94,7 @@ const ParentSidebar = () => {
                                     appearance: 'none', cursor: 'pointer'
                                 }}
                             >
+                                <option value="all">Tất cả</option>
                                 {childrenList.map(child => (
                                     <option key={child.studentId} value={child.studentId}>
                                         {child.fullName}
@@ -136,4 +149,5 @@ const ParentSidebar = () => {
     );
 };
 
+export { ParentSidebar };
 export default ParentSidebar;

@@ -619,6 +619,7 @@ namespace EducenAPI.Services
                 return false;
 
             EnsureClassNotEnded(existingClass, "chỉnh sửa");
+            var classHasStarted = HasClassStarted(existingClass);
 
             // Use transaction for updating class and schedules
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -789,7 +790,12 @@ namespace EducenAPI.Services
                 }
 
                 if (dto.StartDate.HasValue)
+                {
+                    if (classHasStarted && existingClass.StartDate.HasValue && dto.StartDate.Value.Date != existingClass.StartDate.Value.Date)
+                        throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa ngày bắt đầu.");
+
                     existingClass.StartDate = dto.StartDate;
+                }
 
                 if (dto.EndDate.HasValue)
                     existingClass.EndDate = dto.EndDate;
@@ -811,11 +817,15 @@ namespace EducenAPI.Services
 
                 if (dto.PricePerSession.HasValue)
                 {
-                    if (HasClassStarted(existingClass))
-                        throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi.");
+                    // Chỉ kiểm tra nếu giá thực sự thay đổi
+                    if (existingClass.PricePerSession != dto.PricePerSession.Value)
+                    {
+                        if (classHasStarted)
+                            throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi.");
 
-                    Console.WriteLine($"[DEBUG] UpdateClassAsync: PricePerSession = {dto.PricePerSession}");
-                    existingClass.PricePerSession = dto.PricePerSession;
+                        Console.WriteLine($"[DEBUG] UpdateClassAsync: PricePerSession = {dto.PricePerSession}");
+                        existingClass.PricePerSession = dto.PricePerSession;
+                    }
                 }
 
                 // Update schedules only if slots have actually changed
@@ -1601,8 +1611,11 @@ namespace EducenAPI.Services
             if (existingClass == null) return false;
 
             EnsureClassNotEnded(existingClass, "cập nhật đơn giá");
-            if (HasClassStarted(existingClass))
-                throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi.");
+            if (existingClass.PricePerSession != price)
+            {
+                if (HasClassStarted(existingClass))
+                    throw new Exception("Lớp đã bắt đầu học, không thể chỉnh sửa đơn giá theo buổi.");
+            }
 
             existingClass.PricePerSession = price;
             await _context.SaveChangesAsync();
@@ -1636,7 +1649,7 @@ namespace EducenAPI.Services
             }
 
             var today = GetVietnamToday();
-            return classEntity.StartDate.Value.Date <= today;
+            return classEntity.StartDate.Value.Date < today;
         }
 
         private static void EnsureClassNotEnded(EducenAPI.Models.Class classEntity, string action)

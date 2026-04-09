@@ -26,8 +26,10 @@ const ClassDetailModal = ({ cls, onClose }) => {
 
     useEffect(() => {
         if (!cls || !selectedChild) return;
+        const studentId = cls?.studentId || selectedChild?.studentId;
+        if (!studentId || studentId === 'all') return;
         setLoading(true);
-        api.get(`/Classes/parent/child/${selectedChild.studentId}/class/${cls.classId}/detail`)
+        api.get(`/Classes/parent/child/${studentId}/class/${cls.classId}/detail`)
             .then(res => setDetail(res.data))
             .catch((error) => showValidationError(error, 'Không thể tải chi tiết lớp học'))
             .finally(() => setLoading(false));
@@ -341,8 +343,34 @@ const ParentClasses = () => {
         if (!selectedChild) return;
         setLoading(true);
         setClasses([]);
-        api.get(`/Classes/parent/child/${selectedChild.studentId}/classes`)
-            .then(res => setClasses(res.data || []))
+        const loadClasses = async () => {
+            const isAllChildren = selectedChild?.studentId === 'all';
+            if (!isAllChildren) {
+                const res = await api.get(`/Classes/parent/child/${selectedChild.studentId}/classes`);
+                return (res.data || []).map(item => ({
+                    ...item,
+                    studentId: selectedChild.studentId,
+                    studentName: selectedChild.fullName
+                }));
+            }
+
+            const childrenRes = await api.get('/Parents/my-children');
+            const allChildren = childrenRes.data || [];
+            const results = await Promise.all(
+                allChildren.map(async (child) => {
+                    const res = await api.get(`/Classes/parent/child/${child.studentId}/classes`);
+                    return (res.data || []).map(item => ({
+                        ...item,
+                        studentId: child.studentId,
+                        studentName: child.fullName
+                    }));
+                })
+            );
+            return results.flat();
+        };
+
+        loadClasses()
+            .then(data => setClasses(data))
             .catch((error) => showValidationError(error, 'Không thể tải dữ liệu lớp học'))
             .finally(() => setLoading(false));
     }, [selectedChild]);
@@ -480,6 +508,11 @@ const ParentClasses = () => {
                                                             📅 {dateRange}
                                                         </p>
                                                     )}
+                                                    {selectedChild?.studentId === 'all' && (
+                                                        <p className="pc-card-code" style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 600 }}>
+                                                            Hoc sinh: {cls.studentName || `#${cls.studentId}`}
+                                                        </p>
+                                                    )}
                                                 </div>
 
                                                 <div className="pc-card-body">
@@ -539,3 +572,5 @@ const ParentClasses = () => {
 };
 
 export default ParentClasses;
+
+

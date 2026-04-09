@@ -251,12 +251,48 @@ namespace EducenAPI.Services
 
         public async Task<SubscriptionResponseDTO?> GetActiveSubscriptionAsync(string tenantId)
         {
+            Console.WriteLine($"[GetActiveSubscriptionAsync] tenantId: {tenantId}");
+            
+            // First try to find valid active subscription
+            var query1 = _context.Subscriptions
+                .Include(s => s.Plan)
+                .Include(s => s.Tenant)
+                .Where(s => s.TenantId == tenantId && s.Status == "Active" && s.EndDate > DateTime.UtcNow)
+                .OrderByDescending(s => s.EndDate)
+                .ToQueryString();
+            Console.WriteLine($"[GetActiveSubscriptionAsync] Query 1: {query1}");
+            
             var subscription = await _context.Subscriptions
                 .Include(s => s.Plan)
                 .Include(s => s.Tenant)
                 .Where(s => s.TenantId == tenantId && s.Status == "Active" && s.EndDate > DateTime.UtcNow)
                 .OrderByDescending(s => s.EndDate)
                 .FirstOrDefaultAsync();
+
+            Console.WriteLine($"[GetActiveSubscriptionAsync] Found valid: {subscription?.Plan?.PlanName}, Status: {subscription?.Status}, EndDate: {subscription?.EndDate}");
+
+            // If no valid subscription found, check if there's any subscription at all (even expired)
+            if (subscription == null)
+            {
+                var allSubs = await _context.Subscriptions
+                    .Where(s => s.TenantId == tenantId)
+                    .ToListAsync();
+                Console.WriteLine($"[GetActiveSubscriptionAsync] All subscriptions for tenant: {allSubs.Count}");
+                
+                foreach (var s in allSubs)
+                {
+                    Console.WriteLine($"  - Sub Id: {s.Id}, PlanId: {s.PlanId}, Status: {s.Status}, EndDate: {s.EndDate}");
+                }
+
+                subscription = await _context.Subscriptions
+                    .Include(s => s.Plan)
+                    .Include(s => s.Tenant)
+                    .Where(s => s.TenantId == tenantId)
+                    .OrderByDescending(s => s.EndDate)
+                    .FirstOrDefaultAsync();
+
+                Console.WriteLine($"[GetActiveSubscriptionAsync] Fallback found: {subscription?.Plan?.PlanName}");
+            }
 
             if (subscription == null)
                 return null;
@@ -265,14 +301,15 @@ namespace EducenAPI.Services
             {
                 SubscriptionId = subscription.Id,
                 TenantId = subscription.TenantId,
-                TenantName = subscription.Tenant.TenantName,
+                TenantName = subscription.Tenant?.TenantName ?? "",
 
                 PlanId = subscription.PlanId,
-                PlanName = subscription.Plan.PlanName,
-                PlanPrice = subscription.Plan.Price,
+                PlanName = subscription.Plan?.PlanName ?? "Unknown",
+                PlanPrice = subscription.Plan?.Price ?? 0,
 
                 StartDate = subscription.StartDate,
                 EndDate = subscription.EndDate,
+
                 Status = subscription.Status
             };
         }

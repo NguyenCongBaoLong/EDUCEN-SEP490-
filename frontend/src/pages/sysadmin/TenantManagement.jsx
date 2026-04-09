@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
     Building2, Plus, Search, Edit2, Eye, Lock, Unlock, Package,
     X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter, TrendingUp,
-    UserPlus
+    UserPlus, FileText
 } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
+import ContractViewer from '../../components/ContractViewer';
 import adminApi from '../../services/adminApi';
 import '../../css/pages/sysadmin/TenantManagement.css';
 
@@ -52,6 +53,27 @@ const TenantManagement = () => {
     // Custom Confirm Modal State
     const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
+    // Contract Modal State
+    const [contractModalTarget, setContractModalTarget] = useState(null);
+    const [contracts, setContracts] = useState([]);
+    const [loadingContracts, setLoadingContracts] = useState(false);
+    const [uploadContractModal, setUploadContractModal] = useState(null);
+    const [uploadingContract, setUploadingContract] = useState(false);
+    const [viewContractTarget, setViewContractTarget] = useState(null);
+    const [deleteContractTarget, setDeleteContractTarget] = useState(null);
+
+    // Subscription Change Request State
+    const [showChangeRequests, setShowChangeRequests] = useState(false);
+    const [changeRequests, setChangeRequests] = useState([]);
+    const [loadingChangeRequests, setLoadingChangeRequests] = useState(false);
+    const [reviewRequestTarget, setReviewRequestTarget] = useState(null);
+    const [createInvoiceTarget, setCreateInvoiceTarget] = useState(null);
+    const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
+    const [invoiceHistory, setInvoiceHistory] = useState([]);
+    const [loadingInvoiceHistory, setLoadingInvoiceHistory] = useState(false);
+    const [viewCreditLedger, setViewCreditLedger] = useState([]);
+    const [loadingCreditLedger, setLoadingCreditLedger] = useState(false);
+
     const fetchTenants = () => {
         setLoading(true);
         adminApi.get('/admin/Tenants')
@@ -72,6 +94,61 @@ const TenantManagement = () => {
             .then(res => setRegistrations(res.data))
             .catch(() => showToast('Không thể tải danh sách đăng ký.', 'error'))
             .finally(() => setLoadingReg(false));
+    };
+
+    const fetchChangeRequests = (status = null) => {
+        setLoadingChangeRequests(true);
+        const url = status
+            ? `/admin/tenants/subscription-change-requests?status=${status}`
+            : '/admin/tenants/subscription-change-requests';
+        adminApi.get(url)
+            .then(res => setChangeRequests(res.data || []))
+            .catch(() => showToast('Không thể tải danh sách yêu cầu đổi gói.', 'error'))
+            .finally(() => setLoadingChangeRequests(false));
+    };
+
+    const handleReviewRequest = async (requestId, approved, reviewNote = '') => {
+        setSaving(true);
+        try {
+            await adminApi.put(`/admin/tenants/subscription-change-requests/${requestId}/review`, {
+                approved,
+                reviewNote
+            });
+            showToast(approved ? 'Đã duyệt yêu cầu và tự động gửi hóa đơn.' : 'Đã từ chối yêu cầu.');
+            setReviewRequestTarget(null);
+            fetchChangeRequests();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể xử lý yêu cầu.', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    
+    const openInvoiceHistory = async () => {
+        setShowInvoiceHistory(true);
+        setLoadingInvoiceHistory(true);
+        try {
+            const res = await adminApi.get('/admin/tenants/invoices-history');
+            setInvoiceHistory(res.data || []);
+        } catch {
+            showToast('Không thể tải lịch sử hóa đơn.', 'error');
+        } finally {
+            setLoadingInvoiceHistory(false);
+        }
+    };
+    const handleCreateInvoice = async (requestId, dueDays = 7) => {
+        setSaving(true);
+        try {
+            await adminApi.post(`/admin/tenants/subscription-change-requests/${requestId}/invoice`, { dueDays });
+            showToast('Đã tạo hoá đơn.');
+            setCreateInvoiceTarget(null);
+            fetchChangeRequests();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể tạo hoá đơn.', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     useEffect(() => {
@@ -192,8 +269,42 @@ const TenantManagement = () => {
         }
     };
 
-    const openViewDetails = (tenant) => {
+    const openViewDetails = async (tenant) => {
         setViewTarget(tenant);
+        setLoadingCreditLedger(true);
+        setViewCreditLedger([]);
+        try {
+            const [detailsRes, ledgerRes] = await Promise.all([
+                adminApi.get(`/admin/Tenants/${tenant.tenantId}/details`),
+                adminApi.get(`/admin/Tenants/${tenant.tenantId}/credit-ledger`, { params: { page: 1, pageSize: 20 } })
+            ]);
+
+            setViewTarget(detailsRes.data || tenant);
+            setViewCreditLedger(Array.isArray(ledgerRes.data) ? ledgerRes.data : []);
+        } catch {
+            showToast('Không thể tải chi tiết credit của trung tâm.', 'error');
+        } finally {
+            setLoadingCreditLedger(false);
+        }
+    };
+
+    const handleConfirmCashInvoice = async (invoice) => {
+        setSaving(true);
+        try {
+            await adminApi.put(`/admin/tenants/invoices/${invoice.invoiceId}/payment`, {
+                paymentMethod: 'Cash',
+                paymentNote: `SystemAdmin xác nhận đã nhận tiền mặt cho hóa đơn ${invoice.invoiceNumber}`
+            });
+
+            showToast('Đã xác nhận thanh toán tiền mặt và áp dụng đổi gói.');
+            await openInvoiceHistory();
+            fetchChangeRequests();
+            fetchTenants();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể xác nhận thanh toán tiền mặt.', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const openSubscribe = (tenant) => {
@@ -209,6 +320,68 @@ const TenantManagement = () => {
             .then(res => setHistoryRecords(res.data || []))
             .catch(() => showToast('Không thể tải lịch sử mua gói.', 'error'))
             .finally(() => setHistoryLoading(false));
+    };
+
+    const openContracts = (tenant) => {
+        setContractModalTarget(tenant);
+        setLoadingContracts(true);
+        setContracts([]);
+        adminApi.get(`/admin/tenants/${tenant.tenantId}/contracts`)
+            .then(res => setContracts(res.data || []))
+            .catch(() => showToast('Không thể tải danh sách hợp đồng.', 'error'))
+            .finally(() => setLoadingContracts(false));
+    };
+
+    const handleUploadContract = async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('contract-file');
+        const titleInput = document.getElementById('contract-title');
+        const descInput = document.getElementById('contract-desc');
+        
+        if (!fileInput?.files?.[0]) {
+            showToast('Vui lòng chọn file hợp đồng', 'error');
+            return;
+        }
+        if (!titleInput?.value) {
+            showToast('Vui lòng nhập tiêu đề hợp đồng', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('title', titleInput.value);
+        if (descInput?.value) formData.append('description', descInput.value);
+
+        setUploadingContract(true);
+        try {
+            await adminApi.post(`/admin/tenants/${uploadContractModal.tenantId}/contract`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            showToast('Tải lên hợp đồng thành công!');
+            setUploadContractModal(null);
+            openContracts(uploadContractModal);
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể tải lên hợp đồng.', 'error');
+        } finally {
+            setUploadingContract(false);
+        }
+    };
+
+    const handleViewContract = (contract) => {
+        setViewContractTarget(contract);
+    };
+
+    const handleDeleteContract = async (contractId) => {
+        if (!confirm('Bạn có chắc chắn muốn xóa hợp đồng này?')) return;
+        
+        try {
+            await adminApi.delete(`/admin/tenants/contracts/${contractId}`);
+            showToast('Xóa hợp đồng thành công!');
+            setDeleteContractTarget(null);
+            openContracts(contractModalTarget);
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể xóa hợp đồng.', 'error');
+        }
     };
 
     const handleSubscribeSubmit = async (e) => {
@@ -318,9 +491,15 @@ const TenantManagement = () => {
                 {/* Header */}
                 <div className="sa-page-header">
                     <div>
-                        <h1 className="sa-page-title">{activeTab === 'tenants' ? 'Quản Lý Trung Tâm' : 'Yêu Cầu Đăng Ký'}</h1>
+                        <h1 className="sa-page-title">
+                            {activeTab === 'tenants' ? 'Quản Lý Trung Tâm' : 
+                             activeTab === 'registrations' ? 'Yêu Cầu Đăng Ký' : 
+                             'Yêu Cầu Đổi Gói'}
+                        </h1>
                         <p className="sa-page-subtitle">
-                            {activeTab === 'tenants' ? 'Tạo và quản lý các trung tâm gia sư trong hệ thống' : 'Kiểm duyệt các yêu cầu đăng ký mở trung tâm mới'}
+                            {activeTab === 'tenants' ? 'Tạo và quản lý các trung tâm gia sư trong hệ thống' : 
+                             activeTab === 'registrations' ? 'Kiểm duyệt các yêu cầu đăng ký mở trung tâm mới' : 
+                             'Quản lý các yêu cầu đổi gói dịch vụ'}
                         </p>
                     </div>
                     {activeTab === 'tenants' && (
@@ -346,6 +525,12 @@ const TenantManagement = () => {
                         {pendingCount > 0 && (
                             <span className="sa-tab-badge">{pendingCount}</span>
                         )}
+                    </button>
+                    <button 
+                        className={`sa-tab-btn ${activeTab === 'package-requests' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('package-requests'); fetchChangeRequests(); }}
+                    >
+                        <Package size={18} /> Yêu Cầu Đổi Gói
                     </button>
                 </div>
 
@@ -377,11 +562,18 @@ const TenantManagement = () => {
                             </select>
                         </div>
                     )}
+                                        {activeTab === 'package-requests' && (
+                        <button className="sa-btn-primary" onClick={openInvoiceHistory}>
+                            <FileText size={16} /> Lịch Sử Gửi Hóa Đơn
+                        </button>
+                    )}
                     <span className="sa-count-badge">
                         {activeTab === 'tenants' ? (
                             <><Building2 size={14} /> {filtered.length} trung tâm</>
-                        ) : (
+                        ) : activeTab === 'registrations' ? (
                             <><ClipboardList size={14} /> {filteredRegistrations.length} yêu cầu</>
+                        ) : (
+                            <><Package size={14} /> {changeRequests.length} yêu cầu đổi gói</>
                         )}
                     </span>
                 </div>
@@ -461,6 +653,14 @@ const TenantManagement = () => {
                                                     onClick={() => openHistory(t)}
                                                 >
                                                     <Package size={18} />
+                                                </button>
+                                                <button
+                                                    className="sa-action-btn"
+                                                    title="Xem hợp đồng"
+                                                    onClick={() => openContracts(t)}
+                                                    style={{ background: '#fef3c7', border: '1px solid #f59e0b', color: '#f59e0b' }}
+                                                >
+                                                    <FileText size={18} />
                                                 </button>
                                                 <button
                                                     className="sa-action-btn edit"
@@ -819,6 +1019,7 @@ const TenantManagement = () => {
                                         { label: 'Người liên hệ', value: viewTarget.contactPerson },
                                         { label: 'Email', value: viewTarget.email },
                                         { label: 'Số điện thoại', value: viewTarget.phoneNumber },
+                                        { label: 'Credit hiện có', value: `${(viewTarget.creditBalance || 0).toLocaleString('vi-VN')} VNĐ` },
                                         { label: 'Địa chỉ', value: viewTarget.address, span: true },
                                     ].map(({ label, value, span }) => (
                                         <div key={label} style={{
@@ -864,6 +1065,46 @@ const TenantManagement = () => {
                                         Chưa đăng ký gói dịch vụ — Sử dụng nút Package để cấp gói.
                                     </div>
                                 )}
+
+                                <div style={{
+                                    marginTop: '0.75rem',
+                                    borderTop: '1px solid #f0f0f0',
+                                    paddingTop: '0.75rem'
+                                }}>
+                                    <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '0.5rem' }}>Lịch sử credit (20 giao dịch gần nhất)</div>
+                                    {loadingCreditLedger ? (
+                                        <div className="sa-loading"><Loader2 size={18} className="spin" /> Đang tải...</div>
+                                    ) : viewCreditLedger.length === 0 ? (
+                                        <div style={{ color: '#64748b', fontSize: '0.9rem' }}>Chưa có giao dịch credit.</div>
+                                    ) : (
+                                        <div className="sa-table-card" style={{ marginTop: 0, maxHeight: '240px', overflowY: 'auto' }}>
+                                            <table className="sa-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Thời gian</th>
+                                                        <th>Loại</th>
+                                                        <th>Số tiền</th>
+                                                        <th>Số dư</th>
+                                                        <th>Ghi chú</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {viewCreditLedger.map((l) => (
+                                                        <tr key={l.ledgerId}>
+                                                            <td>{l.createdAt ? new Date(l.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                                                            <td>{l.entryType || '—'}</td>
+                                                            <td style={{ color: Number(l.amount || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+                                                                {Number(l.amount || 0).toLocaleString('vi-VN')} VNĐ
+                                                            </td>
+                                                            <td>{Number(l.balanceAfter || 0).toLocaleString('vi-VN')} VNĐ</td>
+                                                            <td>{l.note || '—'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </>
@@ -1239,9 +1480,361 @@ const TenantManagement = () => {
                     </>
                 )}
 
+                {/* Contracts Modal */}
+                {contractModalTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => !loadingContracts && setContractModalTarget(null)} />
+                        <div className="sa-modal" style={{ maxWidth: '800px' }}>
+                            <div className="sa-modal-header">
+                                <h2>Quản Lý Hợp Đồng</h2>
+                                <button className="sa-modal-close" onClick={() => setContractModalTarget(null)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form">
+                                <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                                    <strong>Trung tâm:</strong> {contractModalTarget.tenantName}
+                                </div>
+                                <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                                    <button 
+                                        className="sa-btn-primary" 
+                                        style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+                                        onClick={() => setUploadContractModal(contractModalTarget)}
+                                    >
+                                        <Plus size={16} /> Tải lên hợp đồng
+                                    </button>
+                                </div>
+                                {loadingContracts ? (
+                                    <div className="sa-loading"><Loader2 size={20} className="spin" /> Đang tải...</div>
+                                ) : contracts.length === 0 ? (
+                                    <div className="sa-empty" style={{ padding: '2rem' }}>
+                                        <FileText size={40} />
+                                        <p>Chưa có hợp đồng nào.</p>
+                                    </div>
+                                ) : (
+                                    <div className="sa-table-card" style={{ marginTop: 0 }}>
+                                        <table className="sa-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tiêu đề</th>
+                                                    <th>Loại file</th>
+                                                    <th>Dung lượng</th>
+                                                    <th>Ngày tải lên</th>
+                                                    <th>Thao tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {contracts.map(c => (
+                                                    <tr key={c.contractId}>
+                                                        <td>{c.contractTitle}</td>
+                                                        <td>{c.fileType}</td>
+                                                        <td>{(c.fileSize / 1024).toFixed(1)} KB</td>
+                                                        <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                        <td>
+                                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                                <button 
+                                                                    className="sa-btn-primary"
+                                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
+                                                                    onClick={() => handleViewContract(c)}
+                                                                >
+                                                                    Xem
+                                                                </button>
+                                                                <button 
+                                                                    className="sa-btn-cancel"
+                                                                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5' }}
+                                                                    onClick={() => handleDeleteContract(c.contractId)}
+                                                                >
+                                                                    Xóa
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Upload Contract Modal */}
+                {uploadContractModal && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => !uploadingContract && setUploadContractModal(null)} />
+                        <div className="sa-modal">
+                            <div className="sa-modal-header">
+                                <h2>Tải Lên Hợp Đồng</h2>
+                                <button className="sa-modal-close" onClick={() => setUploadContractModal(null)}><X size={20} /></button>
+                            </div>
+                            <form onSubmit={handleUploadContract} className="sa-modal-form">
+                                <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                                    <strong>Trung tâm:</strong> {uploadContractModal.tenantName}
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Chọn file (PDF, JPG, PNG) *</label>
+                                    <input type="file" id="contract-file" accept=".pdf,.jpg,.jpeg,.png" required />
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Tiêu đề hợp đồng *</label>
+                                    <input type="text" id="contract-title" placeholder="Hợp đồng dịch vụ 2024" required />
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Mô tả</label>
+                                    <textarea id="contract-desc" rows="2" placeholder="Mô tả thêm..." />
+                                </div>
+                                <div className="sa-modal-footer">
+                                    <button type="button" className="sa-btn-cancel" onClick={() => setUploadContractModal(null)}>
+                                        Hủy
+                                    </button>
+                                    <button type="submit" className="sa-btn-primary" disabled={uploadingContract}>
+                                        {uploadingContract ? <><Loader2 size={16} className="spin" /> Đang tải...</> : 'Tải lên'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </>
+                )}
+
+                {/* Package Change Requests Tab */}
+                {activeTab === 'package-requests' && (
+                    <div className="sa-table-card">
+                        {loadingChangeRequests ? (
+                            <div className="sa-loading"><Loader2 size={24} className="spin" /> Đang tải...</div>
+                        ) : changeRequests.length === 0 ? (
+                            <div className="sa-empty">
+                                <Package size={40} />
+                                <p>Chưa có yêu cầu đổi gói nào.</p>
+                            </div>
+                        ) : (
+                            <table className="sa-table">
+                                <thead>
+                                    <tr>
+                                        <th>Trung tâm</th>
+                                        <th>Gói hiện tại</th>
+                                        <th>Gói yêu cầu</th>
+                                        <th>Số tháng</th>
+                                        <th>Lý do</th>
+                                        <th>Ngày yêu cầu</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {changeRequests.map(r => (
+                                        <tr key={r.requestId}>
+                                            <td>{r.tenant?.tenantName || '—'}</td>
+                                            <td>{r.currentPlan?.planName || '—'}</td>
+                                            <td>{r.requestedPlan?.planName || '—'}</td>
+                                            <td>{r.requestedMonths}</td>
+                                            <td>{r.reason || '—'}</td>
+                                            <td>{r.requestedAt ? new Date(r.requestedAt).toLocaleString('vi-VN') : '—'}</td>
+                                            <td>
+                                                <span className={`sa-status-badge ${
+                                                    r.status === 'Pending' ? 'pending' : 
+                                                    r.status === 'Approved' ? 'active' : 
+                                                    r.status === 'Rejected' ? 'inactive' : ''
+                                                }`}>
+                                                    {r.status === 'Pending' ? 'Chờ duyệt' : 
+                                                     r.status === 'Approved' ? 'Đã duyệt' : 
+                                                     r.status === 'Rejected' ? 'Từ chối' : r.status}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div className="sa-action-buttons">
+                                                    {r.status === 'Pending' && (
+                                                        <>
+                                                            <button
+                                                                className="sa-action-btn"
+                                                                title="Duyệt"
+                                                                onClick={() => setReviewRequestTarget(r)}
+                                                                style={{ background: '#ecfdf5', border: '1px solid #10b981', color: '#10b981' }}
+                                                            >
+                                                                <Check size={18} />
+                                                            </button>
+                                                            <button
+                                                                className="sa-action-btn"
+                                                                title="Từ chối"
+                                                                onClick={() => handleReviewRequest(r.requestId, false, '')}
+                                                                style={{ background: '#fef2f2', border: '1px solid #ef4444', color: '#ef4444' }}
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+                )}
+
+                {/* Review Request Modal */}
+                {reviewRequestTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => setReviewRequestTarget(null)} />
+                        <div className="sa-modal">
+                            <div className="sa-modal-header">
+                                <h2>Duyệt Yêu Cầu Đổi Gói</h2>
+                                <button className="sa-modal-close" onClick={() => setReviewRequestTarget(null)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form">
+                                <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                                    <p><strong>Trung tâm:</strong> {reviewRequestTarget.tenant?.tenantName}</p>
+                                    <p><strong>Đổi từ:</strong> {reviewRequestTarget.currentPlan?.planName}</p>
+                                    <p><strong>Đổi sang:</strong> {reviewRequestTarget.requestedPlan?.planName}</p>
+                                    <p><strong>Lý do:</strong> {reviewRequestTarget.reason || 'Không có'}</p>
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Ghi chú (tùy chọn)</label>
+                                    <input type="text" id="review-note" placeholder="Nhập ghi chú..." />
+                                </div>
+                                <div className="sa-modal-footer">
+                                    <button className="sa-btn-cancel" onClick={() => setReviewRequestTarget(null)}>Hủy</button>
+                                    <button 
+                                        className="sa-btn-primary" 
+                                        style={{ background: '#10b981' }}
+                                        onClick={() => {
+                                            const note = document.getElementById('review-note')?.value || '';
+                                            handleReviewRequest(reviewRequestTarget.requestId, true, note);
+                                        }}
+                                    >
+                                        <Check size={16} /> Duyệt & Gửi Hóa Đơn
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {/* Create Invoice Modal */}
+                {createInvoiceTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => setCreateInvoiceTarget(null)} />
+                        <div className="sa-modal">
+                            <div className="sa-modal-header">
+                                <h2>Tạo Hóa Đơn</h2>
+                                <button className="sa-modal-close" onClick={() => setCreateInvoiceTarget(null)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form">
+                                <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                                    <p><strong>Trung tâm:</strong> {createInvoiceTarget.tenant?.tenantName}</p>
+                                    <p><strong>Gói:</strong> {createInvoiceTarget.requestedPlan?.planName}</p>
+                                    <p><strong>Số tháng:</strong> {createInvoiceTarget.requestedMonths}</p>
+                                    <p><strong>Số tiền:</strong> {(createInvoiceTarget.requestedPlan?.price || 0) * createInvoiceTarget.requestedMonths} VNĐ</p>
+                                </div>
+                                <div className="sa-form-group">
+                                    <label>Hạn thanh toán (ngày)</label>
+                                    <input type="number" id="due-days" defaultValue={7} min={1} max={30} />
+                                </div>
+                                <div className="sa-modal-footer">
+                                    <button className="sa-btn-cancel" onClick={() => setCreateInvoiceTarget(null)}>Hủy</button>
+                                    <button 
+                                        className="sa-btn-primary" 
+                                        onClick={() => {
+                                            const dueDays = parseInt(document.getElementById('due-days')?.value || '7');
+                                            handleCreateInvoice(createInvoiceTarget.requestId, dueDays);
+                                        }}
+                                    >
+                                        Tạo Hóa Đơn
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+
+                {showInvoiceHistory && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => setShowInvoiceHistory(false)} />
+                        <div className="sa-modal" style={{ maxWidth: '1000px', width: '90vw' }}>
+                            <div className="sa-modal-header">
+                                <h2>Lịch Sử Gửi Hóa Đơn</h2>
+                                <button className="sa-modal-close" onClick={() => setShowInvoiceHistory(false)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form">
+                                {loadingInvoiceHistory ? (
+                                    <div className="sa-loading"><Loader2 size={20} className="spin" /> Đang tải...</div>
+                                ) : invoiceHistory.length === 0 ? (
+                                    <div className="sa-empty"><FileText size={36} /><p>Chưa có hóa đơn nào.</p></div>
+                                ) : (
+                                    <div className="sa-table-card" style={{ marginTop: 0 }}>
+                                        <table className="sa-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Mã hóa đơn</th>
+                                                    <th>Trung tâm</th>
+                                                    <th>Gói</th>
+                                                    <th>Số tiền</th>
+                                                    <th>Trạng thái</th>
+                                                    <th>Hạn thanh toán</th>
+                                                    <th>Ngày tạo</th>
+                                                    <th>Thao tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {invoiceHistory.map(inv => (
+                                                    <tr key={inv.invoiceId}>
+                                                        <td>{inv.invoiceNumber}</td>
+                                                        <td>{inv.tenant?.tenantName || inv.tenantId}</td>
+                                                        <td>{inv.packageChangeRequest?.requestedPlan?.planName || '—'}</td>
+                                                        <td>{inv.amount?.toLocaleString('vi-VN')} VNĐ</td>
+                                                        <td>{inv.status}</td>
+                                                        <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('vi-VN') : '—'}</td>
+                                                        <td>{inv.createdAt ? new Date(inv.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                                                        <td>
+                                                            {inv.status === 'AwaitingConfirmation' && inv.paymentMethod === 'Cash' ? (
+                                                                <button
+                                                                    className="sa-btn-primary"
+                                                                    style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                                                                    disabled={saving}
+                                                                    onClick={() => handleConfirmCashInvoice(inv)}
+                                                                >
+                                                                    Duyệt tiền mặt
+                                                                </button>
+                                                            ) : (
+                                                                <span>—</span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+                {/* View Contract Modal */}
+                {viewContractTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => setViewContractTarget(null)} />
+                        <div className="sa-modal" style={{ maxWidth: '900px', maxHeight: '90vh' }}>
+                            <div className="sa-modal-header">
+                                <h2>{viewContractTarget.contractTitle}</h2>
+                                <button className="sa-modal-close" onClick={() => setViewContractTarget(null)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form" style={{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f1f1' }}>
+                                <iframe 
+                                    src={null}
+                                    style={{ display: 'none' }}
+                                    title="hidden"
+                                />
+                                <ContractViewer contract={viewContractTarget} />
+                            </div>
+                        </div>
+                    </>
+                )}
+
             </main>
         </div>
     );
 };
 
 export default TenantManagement;
+

@@ -34,15 +34,44 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
     const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
     const [activeSlotIndex, setActiveSlotIndex] = useState(null);
 
+    const isClassLocked = (() => {
+        if (!editingClass?.startDate) return false;
+        const startDate = new Date(editingClass.startDate);
+        if (Number.isNaN(startDate.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+
+        const isCompleted = editingClass?.status === 'completed' || editingClass?.status === 'cancelled';
+        const endDate = editingClass?.endDate ? new Date(editingClass.endDate) : null;
+        if (endDate && !Number.isNaN(endDate.getTime())) {
+            endDate.setHours(0, 0, 0, 0);
+        }
+
+        return isCompleted || (!!endDate && endDate < today);
+    })();
+
     const isPriceLocked = (() => {
         if (!editingClass?.startDate) return false;
         const startDate = new Date(editingClass.startDate);
         if (Number.isNaN(startDate.getTime())) return false;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        return startDate <= today;
+        startDate.setHours(0, 0, 0, 0);
+
+        return isClassLocked || startDate < today;
     })();
 
+    const isStartDateLocked = (() => {
+        if (!editingClass?.startDate) return false;
+        const startDate = new Date(editingClass.startDate);
+        if (Number.isNaN(startDate.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+
+        return isClassLocked || startDate < today;
+    })();
     useEffect(() => {
         console.log('CreateClassModal: editingClass changed:', editingClass);
         if (editingClass) {
@@ -706,6 +735,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                     readOnly
                                     style={{ cursor: 'pointer', backgroundColor: '#f8fafc' }}
                                     onClick={() => handleOpenTeacherModal('main')}
+                                    disabled={isClassLocked}
                                 />
                                 {formData.mainTeacher && (
                                     <button
@@ -713,6 +743,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                         onClick={() => setFormData(prev => ({ ...prev, mainTeacher: '', mainTeacherId: null }))}
                                         title="Hủy phân công giáo viên"
                                         style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', padding: '0 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        disabled={isClassLocked}
                                     >
                                         <X size={18} />
                                     </button>
@@ -722,6 +753,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                     className="btn-check-teacher"
                                     onClick={() => handleOpenTeacherModal('main')}
                                     title="Kiểm tra lịch giáo viên"
+                                    disabled={isClassLocked}
                                 >
                                     <UserCheck size={18} />
                                 </button>
@@ -740,6 +772,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                     readOnly
                                     style={{ cursor: 'pointer', backgroundColor: '#f8fafc' }}
                                     onClick={() => handleOpenTeacherModal('assistant')}
+                                    disabled={isClassLocked}
                                 />
                                 {formData.assistant && (
                                     <button
@@ -747,6 +780,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                         onClick={() => setFormData(prev => ({ ...prev, assistant: '', assistantId: null }))}
                                         title="Hủy phân công trợ giảng"
                                         style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', padding: '0 12px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        disabled={isClassLocked}
                                     >
                                         <X size={18} />
                                     </button>
@@ -756,6 +790,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                     className="btn-check-teacher"
                                     onClick={() => handleOpenTeacherModal('assistant')}
                                     title="Kiểm tra lịch trợ giảng"
+                                    disabled={isClassLocked}
                                 >
                                     <UserCheck size={18} />
                                 </button>
@@ -795,6 +830,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                                 value={formData.startDate}
                                 onChange={handleChange}
                                 required
+                                disabled={isStartDateLocked}
                             />
                             <small className="field-hint">Ngày bắt đầu lớp học đầu tiên</small>
                         </div>
@@ -873,3 +909,4 @@ CreateClassModal.propTypes = {
 };
 
 export default CreateClassModal;
+

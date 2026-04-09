@@ -17,7 +17,11 @@ import {
     Globe,
     Edit3,
     Save,
-    X
+    X,
+    Lock,
+    Unlock,
+    ShieldAlert,
+    Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { showValidationError } from '../../services/toastHelper';
@@ -76,6 +80,14 @@ const TuitionManagement = () => {
         type: 'warning'
     });
 
+    // State cho khóa hóa đơn
+    const [lockInfo, setLockInfo] = useState(null);
+    const [loadingLockInfo, setLoadingLockInfo] = useState(false);
+
+    // State cho auto generate
+    const [autoGenerating, setAutoGenerating] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
+
     // Lấy tenantId - chấp nhận cả default-tenant
     const getValidTenantId = () => {
         const stored = localStorage.getItem('tenantId');
@@ -106,6 +118,13 @@ const TuitionManagement = () => {
         fetchClasses();
     }, []);
 
+    // Kiểm tra trạng thái khóa khi chọn tháng/năm mới
+    useEffect(() => {
+        if (activeTab === 'calculate') {
+            checkLockStatus(selectedMonth, selectedYear);
+        }
+    }, [selectedMonth, selectedYear, activeTab]);
+
     const fetchClasses = async () => {
         setLoadingClasses(true);
         try {
@@ -115,6 +134,94 @@ const TuitionManagement = () => {
             showValidationError(error, 'Không thể tải danh sách lớp');
         } finally {
             setLoadingClasses(false);
+        }
+    };
+
+    // Kiểm tra trạng thái khóa của tháng
+    const checkLockStatus = async (month, year) => {
+        setLoadingLockInfo(true);
+        try {
+            const data = await tuitionService.getLockInfo(month, year);
+            setLockInfo(data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching lock info:', error);
+            return null;
+        } finally {
+            setLoadingLockInfo(false);
+        }
+    };
+
+    // Khóa tháng
+    const handleLockMonth = async (month, year) => {
+        try {
+            await tuitionService.lockMonth(month, year);
+            toast.success(`Đã khóa chỉnh sửa hóa đơn tháng ${month}/${year}`);
+            checkLockStatus(month, year);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Khóa thất bại');
+        }
+    };
+
+    // Mở khóa tháng
+    const handleUnlockMonth = async (month, year) => {
+        try {
+            await tuitionService.unlockMonth(month, year);
+            toast.success(`Đã mở khóa chỉnh sửa hóa đơn tháng ${month}/${year}`);
+            checkLockStatus(month, year);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Mở khóa thất bại');
+        }
+    };
+
+    // Kiểm tra xem có thể tạo hóa đơn không
+    const canCreateInvoice = () => {
+        if (!lockInfo) return true;
+        return !lockInfo.isLocked;
+    };
+
+    // Preview hóa đơn tự động
+    const handlePreviewAutoGenerate = async () => {
+        try {
+            const data = await tuitionService.previewInvoices(selectedMonth, selectedYear);
+            setPreviewData(data);
+            if (data.totalStudents === 0) {
+                toast.error('Không có học sinh nào trong các lớp có giá');
+            }
+        } catch (error) {
+            console.error('Preview error:', error);
+            const message = error.response?.data?.message || error.message || 'Lỗi preview';
+            toast.error(message);
+        }
+    };
+
+    // Tạo hóa đơn tự động
+    const handleAutoGenerate = async () => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'Tự động tạo hóa đơn',
+            message: `Hệ thống sẽ tự động tạo hóa đơn cho tất cả học sinh trong các lớp có đơn giá cho tháng ${selectedMonth}/${selectedYear}. Tiếp tục?`,
+            onConfirm: () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                executeAutoGenerate();
+            },
+            type: 'info'
+        });
+    };
+
+    const executeAutoGenerate = async () => {
+        setAutoGenerating(true);
+        try {
+            const result = await tuitionService.generateInvoices(selectedMonth, selectedYear);
+            toast.success(`Đã tạo ${result.invoicesCreated} hóa đơn thành công`);
+            setPreviewData(null);
+            fetchInvoices();
+        } catch (error) {
+            console.error('Generate error:', error);
+            const message = error.response?.data?.message || error.message || 'Lỗi tạo hóa đơn tự động';
+            toast.error(message);
+        } finally {
+            setAutoGenerating(false);
         }
     };
 
@@ -244,7 +351,19 @@ const TuitionManagement = () => {
                 showValidationError(`${result.failedCount} hóa đơn thất bại${errorDetails ? ':\n' + errorDetails : ''}`);
             }
         } catch (error) {
-            showValidationError(error, 'Lỗi tạo hóa đơn');
+        } catch (error) {
+            const data = error.response?.data;
+            if (data?.lockInfo) {
+                setLockInfo(data.lockInfo);
+                showValidationError(error, data.message);
+            } else if (data?.errors) {
+                const errorDetails = data.errors.map(e => 
+                    `${e.field}: ${e.errors?.join(', ')}`
+                ).join('\n');
+                showValidationError(`Validation lỗi:\n${errorDetails}`);
+            } else {
+                showValidationError(error, 'Lỗi tạo hóa đơn');
+            }
         } finally {
             setGenerating(false);
         }
@@ -407,7 +526,15 @@ const TuitionManagement = () => {
             toast.success('Đã hủy hóa đơn thành công');
             fetchInvoices();
         } catch (error) {
-            showValidationError(error, 'Có lỗi xảy ra khi hủy hóa đơn');
+        } catch (error) {
+            const data = error.response?.data;
+            if (data?.lockInfo) {
+                setLockInfo(data.lockInfo);
+                showValidationError(error, data.message);
+            } else {
+                showValidationError(error, 'Có lỗi xảy ra khi hủy hóa đơn');
+            }
+        }
         }
     };
 
@@ -473,7 +600,130 @@ const TuitionManagement = () => {
                 {activeTab === 'calculate' && (
                     <div className="calculate-section">
                         <div className="filter-card">
-                            <h3>Tính toán học phí theo tháng</h3>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                                <div>
+                                    <h3>Tính toán học phí theo tháng</h3>
+                                    <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: 4 }}>
+                                        Hệ thống sẽ tự động tạo hóa đơn vào ngày 1 mỗi tháng
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <button 
+                                        onClick={handlePreviewAutoGenerate}
+                                        disabled={autoGenerating}
+                                        style={{
+                                            padding: '8px 12px',
+                                            background: '#6366f1',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        <Zap size={16} />
+                                        Xem trước
+                                    </button>
+                                    <button 
+                                        onClick={handleAutoGenerate}
+                                        disabled={autoGenerating || lockInfo?.isLocked}
+                                        style={{
+                                            padding: '8px 12px',
+                                            background: lockInfo?.isLocked ? '#9ca3af' : '#059669',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: 6,
+                                            cursor: lockInfo?.isLocked ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        <Zap size={16} />
+                                        {autoGenerating ? 'Đang tạo...' : 'Tạo tự động'}
+                                    </button>
+                                    {lockInfo && (
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: 8,
+                                            padding: '8px 12px',
+                                            borderRadius: 8,
+                                            background: lockInfo.isLocked ? '#fee2e2' : '#d1fae5',
+                                            color: lockInfo.isLocked ? '#dc2626' : '#059669'
+                                        }}>
+                                            {lockInfo.isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                                                {lockInfo.isLocked ? 'Đã khóa' : 'Mở khóa'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {lockInfo?.isLocked && (
+                                <div style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 8, 
+                                    padding: '10px 14px', 
+                                    background: '#fef3c7', 
+                                    borderRadius: 8, 
+                                    marginBottom: 16,
+                                    color: '#92400e',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    <ShieldAlert size={18} />
+                                    <span>{lockInfo.message}</span>
+                                </div>
+                            )}
+
+                            {previewData && (
+                                <div style={{ 
+                                    marginBottom: 16,
+                                    padding: '12px 16px', 
+                                    background: '#f0f9ff', 
+                                    borderRadius: 8,
+                                    border: '1px solid #bae6fd'
+                                }}>
+                                    <h4 style={{ margin: '0 0 8px 0', color: '#0369a1' }}>
+                                        Preview hóa đơn tháng {previewData.month}/{previewData.year}
+                                    </h4>
+                                    <div style={{ display: 'flex', gap: 24, fontSize: '0.9rem', color: '#075985' }}>
+                                        <span>Tổng lớp: <strong>{previewData.totalClasses}</strong></span>
+                                        <span>Tổng học sinh: <strong>{previewData.totalStudents}</strong></span>
+                                    </div>
+                                    {previewData.classes.length > 0 && (
+                                        <table style={{ marginTop: 12, width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{ background: '#e0f2fe' }}>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'left' }}>Lớp</th>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Đơn giá</th>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>HS</th>
+                                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Đã có HĐ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {previewData.classes.map(cls => (
+                                                    <tr key={cls.classId} style={{ borderBottom: '1px solid #e0f2fe' }}>
+                                                        <td style={{ padding: '6px 8px' }}>{cls.className}</td>
+                                                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>{formatCurrency(cls.pricePerSession)}</td>
+                                                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>{cls.studentCount}</td>
+                                                        <td style={{ padding: '6px 8px', textAlign: 'right', color: cls.existingInvoices > 0 ? '#dc2626' : '#059669' }}>
+                                                            {cls.existingInvoices}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="filter-row">
                                 <div className="filter-group">
                                     <label>Lớp học</label>
@@ -518,9 +768,9 @@ const TuitionManagement = () => {
                                 <button 
                                     className="calculate-btn"
                                     onClick={handleCalculate}
-                                    disabled={loading}
+                                    disabled={loading || (lockInfo?.isLocked)}
                                 >
-                                    {loading ? 'Đang tính...' : 'Tính toán'}
+                                    {loading ? 'Đang tính...' : (lockInfo?.isLocked ? 'Đã khóa chỉnh sửa' : 'Tính toán')}
                                 </button>
                             </div>
                         </div>
@@ -539,11 +789,52 @@ const TuitionManagement = () => {
                                         <button 
                                             className="generate-btn"
                                             onClick={handleGenerateInvoices}
-                                            disabled={generating || selectedStudentIds.length === 0}
+                                            disabled={generating || selectedStudentIds.length === 0 || lockInfo?.isLocked}
                                         >
                                             <FileText size={18} />
                                             {generating ? 'Đang tạo...' : `Tạo hóa đơn (${selectedStudentIds.length})`}
                                         </button>
+                                        <div style={{ display: 'flex', gap: 8, marginLeft: 8 }}>
+                                            {lockInfo?.isLocked ? (
+                                                <button 
+                                                    onClick={() => handleUnlockMonth(selectedMonth, selectedYear)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        background: '#059669',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: 6,
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 6,
+                                                        fontSize: '0.85rem'
+                                                    }}
+                                                >
+                                                    <Unlock size={16} />
+                                                    Mở khóa
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => handleLockMonth(selectedMonth, selectedYear)}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        background: '#dc2626',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: 6,
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 6,
+                                                        fontSize: '0.85rem'
+                                                    }}
+                                                >
+                                                    <Lock size={16} />
+                                                    Khóa tháng
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="calculation-table">

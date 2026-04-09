@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { GraduationCap, Calendar, ClipboardList, LogOut, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
+import { GraduationCap, Calendar, ClipboardList, LogOut, ChevronLeft, ChevronRight, BarChart2, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/components/Sidebar.css';
 
@@ -41,6 +41,7 @@ const TeacherSidebar = ({ isTA = false, onCollapseChange }) => {
         { path: isTA ? '/ta/classes' : '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
         { path: isTA ? '/ta/schedules' : '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
         { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Thư viện' },
+        { path: isTA ? '/ta/attendance-requests' : '/teacher/attendance-requests', icon: ClipboardCheck, label: 'Yêu cầu sửa điểm danh' },
         { path: isTA ? '/ta/performance' : '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
     ].filter(item => !(isTA && (item.label === 'Thư viện' || item.hideForTA)));
 

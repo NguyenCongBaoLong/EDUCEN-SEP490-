@@ -21,5 +21,7 @@ namespace EducenAPI.Services.TenantService
         Task<List<object>> GetTenantAdminsAsync(string tenantId);
 
         Task<List<TenantCreditLedger>> GetCreditLedgerAsync(string tenantId, int page, int pageSize);
+        Task<TenantCreditLedger> AdjustTenantCreditAsync(string tenantId, decimal amount, string note, string referenceType = "ManualAdjustment", string? referenceId = null);
+        Task<TenantCreditLedger> SetTenantCreditBalanceAsync(string tenantId, decimal newBalance, string note, string? referenceId = null);
     }
 }

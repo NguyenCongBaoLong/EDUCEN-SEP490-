@@ -167,6 +167,8 @@ builder.Services.AddScoped<ILessonMaterialService, LessonMaterialService>();
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<IParentService, ParentService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IContractService, ContractService>();
+builder.Services.AddScoped<ISubscriptionChangeService, SubscriptionChangeService>();
 builder.Services.AddScoped<ITenantRegistrationService, TenantRegistrationService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
@@ -189,6 +191,7 @@ builder.Services.AddScoped<PaymentGatewayFactory>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ITuitionService, TuitionService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IInvoiceLockService, InvoiceLockService>();
 builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
 builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
@@ -196,6 +199,8 @@ builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
 // ── Background Services ───────────────────────────────────────────────────────
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.OverdueInvoiceService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.SubscriptionExpirationService>();
+builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.CreditDeductionService>();
+builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.MonthlyInvoiceGenerationService>();
 
 // === Zalo OA ===
 builder.Services.AddHttpClient("ZaloAPI", client =>
@@ -283,5 +288,8 @@ app.UseAuthentication();
 app.UseMiddleware<SystemApiKeyMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+
+// === Seed Plans ===
+
 
 app.Run();

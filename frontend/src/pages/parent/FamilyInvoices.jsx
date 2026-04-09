@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useChild } from '../../context/ChildContext';
 import '../../css/pages/parent/FamilyInvoices.css';
 
-const FamilyInvoices = () => {
+const FamilyInvoices = ({ embedded = false }) => {
     const { user } = useAuth();
     const { childrenList } = useChild();
     const [invoices, setInvoices] = useState([]);
@@ -281,11 +281,119 @@ const FamilyInvoices = () => {
         }
 
         setCancellingInvoiceId(invoiceId);
+        let invoiceDetails = null;
+        
         try {
+            // Lấy chi tiết hóa đơn gộp trước khi huỷ để có thông tin tuitionInvoiceIds
+            try {
+                invoiceDetails = await familyInvoiceService.getFamilyInvoiceById(invoiceId);
+                console.log('Invoice details before cancel:', invoiceDetails);
+            } catch (detailError) {
+                console.log('Could not get invoice details, proceeding with cancel:', detailError);
+            }
+            
             const response = await familyInvoiceService.cancelFamilyInvoice(
                 invoiceId,
                 'Parent cancel to regroup tuition invoices'
             );
+
+            // Xóa các ID hóa đơn đã gộp khỏi localStorage
+            console.log('Using invoice details for cancel:', invoiceDetails);
+            console.log('All invoice details keys:', invoiceDetails ? Object.keys(invoiceDetails) : 'No invoice details found');
+            
+            if (invoiceDetails) {
+                let tuitionIds = [];
+                
+                // Kiểm tra các field có thể chứa ID của hóa đơn gốc
+                console.log('Checking tuitionInvoiceIds:', invoiceDetails.tuitionInvoiceIds);
+                console.log('Checking selectedTuitionInvoiceIds:', invoiceDetails.selectedTuitionInvoiceIds);
+                console.log('Checking invoiceIds:', invoiceDetails.invoiceIds);
+                console.log('Checking tuitionInvoices:', invoiceDetails.tuitionInvoices);
+                
+                if (invoiceDetails.tuitionInvoiceIds && Array.isArray(invoiceDetails.tuitionInvoiceIds)) {
+                    tuitionIds = invoiceDetails.tuitionInvoiceIds;
+                    console.log('Using tuitionInvoiceIds:', tuitionIds);
+                } else if (invoiceDetails.selectedTuitionInvoiceIds && Array.isArray(invoiceDetails.selectedTuitionInvoiceIds)) {
+                    tuitionIds = invoiceDetails.selectedTuitionInvoiceIds;
+                    console.log('Using selectedTuitionInvoiceIds:', tuitionIds);
+                } else if (invoiceDetails.invoiceIds && Array.isArray(invoiceDetails.invoiceIds)) {
+                    tuitionIds = invoiceDetails.invoiceIds;
+                    console.log('Using invoiceIds:', tuitionIds);
+                } else if (invoiceDetails.tuitionInvoices && Array.isArray(invoiceDetails.tuitionInvoices)) {
+                    tuitionIds = invoiceDetails.tuitionInvoices.map(inv => inv.invoiceId).filter(Boolean);
+                    console.log('Using tuitionInvoices mapped:', tuitionIds);
+                } else {
+                    console.log('No tuition IDs found in any field');
+                }
+                
+                console.log('Final tuition IDs to remove:', tuitionIds);
+                
+                if (tuitionIds.length > 0) {
+                    const consolidatedIds = JSON.parse(localStorage.getItem('consolidatedInvoiceIds') || '[]');
+                    console.log('Current consolidated IDs before removal:', consolidatedIds);
+                    
+                    const updatedIds = consolidatedIds.filter(id => !tuitionIds.includes(id));
+                    localStorage.setItem('consolidatedInvoiceIds', JSON.stringify(updatedIds));
+                    console.log('Removed consolidated IDs:', tuitionIds);
+                    console.log('Updated consolidated IDs after removal:', updatedIds);
+                    
+                    // Thông báo cho MyInvoices component biết cần refresh
+                    window.dispatchEvent(new CustomEvent('consolidatedInvoicesChanged', { 
+                        detail: { type: 'cancelled', invoiceIds: tuitionIds }
+                    }));
+                } else {
+                    console.log('No tuition IDs found in invoice details, trying fallback method...');
+                    
+                    // Fallback: lấy tất cả outstanding invoices và tìm các hóa đơn có cùng kỳ
+                    try {
+                        const outstandingInvoices = await tuitionService.getOutstandingInvoices();
+                        console.log('Outstanding invoices for fallback:', outstandingInvoices);
+                        
+                        if (invoiceDetails && invoiceDetails.invoiceMonth && invoiceDetails.invoiceYear) {
+                            const matchingInvoices = outstandingInvoices.filter(inv => 
+                                inv.invoiceMonth === invoiceDetails.invoiceMonth && 
+                                inv.invoiceYear === invoiceDetails.invoiceYear
+                            );
+                            
+                            tuitionIds = matchingInvoices.map(inv => inv.invoiceId);
+                            console.log('Found matching invoices by period:', tuitionIds);
+                        }
+                    } catch (fallbackError) {
+                        console.log('Fallback method failed:', fallbackError);
+                    }
+                    
+                    if (tuitionIds.length > 0) {
+                        // Thử lại với tuition IDs từ fallback
+                        const consolidatedIds = JSON.parse(localStorage.getItem('consolidatedInvoiceIds') || '[]');
+                        const updatedIds = consolidatedIds.filter(id => !tuitionIds.includes(id));
+                        localStorage.setItem('consolidatedInvoiceIds', JSON.stringify(updatedIds));
+                        console.log('Removed consolidated IDs (fallback):', tuitionIds);
+                        console.log('Updated consolidated IDs after fallback removal:', updatedIds);
+                        
+                        window.dispatchEvent(new CustomEvent('consolidatedInvoicesChanged', { 
+                            detail: { type: 'cancelled', invoiceIds: tuitionIds }
+                        }));
+                    } else {
+                        // Force refresh nếu không tìm thấy ID nào
+                        console.log('Force refreshing consolidated IDs...');
+                        localStorage.setItem('consolidatedInvoiceIds', JSON.stringify([]));
+                        
+                        window.dispatchEvent(new CustomEvent('consolidatedInvoicesChanged', { 
+                            detail: { type: 'force-refresh' }
+                        }));
+                    }
+                }
+            } else {
+                console.log('No invoice details found for ID:', invoiceId);
+                
+                // Force refresh nếu không tìm thấy invoice
+                console.log('Force refreshing consolidated IDs (no invoice details)...');
+                localStorage.setItem('consolidatedInvoiceIds', JSON.stringify([]));
+                
+                window.dispatchEvent(new CustomEvent('consolidatedInvoicesChanged', { 
+                    detail: { type: 'force-refresh' }
+                }));
+            }
 
             toast.success(response?.message || 'Đã hủy hóa đơn gộp');
             await Promise.all([fetchFamilyInvoices(), fetchOutstandingTuitionInvoices()]);
@@ -400,8 +508,8 @@ const FamilyInvoices = () => {
     };
 
     return (
-        <div className="family-invoices-container">
-            <ParentSidebar />
+        <div className={embedded ? 'family-invoices-container family-invoices-embedded' : 'family-invoices-container'}>
+            {!embedded && <ParentSidebar />}
             
             <div className="family-invoices-content">
                 <div className="page-header">
@@ -708,7 +816,7 @@ const FamilyInvoices = () => {
                                                 className={`quick-action-btn ${isSameSelection(getChildInvoiceIds(child.studentId)) ? 'active' : ''}`}
                                                 onClick={() => selectOnlyChildInvoices(child.studentId)}
                                             >
-                                                {`Chỉ ${child.fullName}`}
+                                                {child.fullName}
                                             </button>
                                         ))}
 
@@ -717,7 +825,7 @@ const FamilyInvoices = () => {
                                             className={`quick-action-btn ${isSameSelection(allFilteredInvoiceIds) && allFilteredInvoiceIds.length > 0 ? 'active' : ''}`}
                                             onClick={selectAllInvoices}
                                         >
-                                            Chọn tất cả trong kỳ
+                                            Tất cả
                                         </button>
 
                                         <button

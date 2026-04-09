@@ -88,6 +88,8 @@ namespace EducenAPI.Services.TenantService
                 dbContext.Database.SetConnectionString(modifiedConnectionString);
 
                 bool canConnect = await dbContext.Database.CanConnectAsync();
+                bool isNewDatabase = false;
+
                 if (!canConnect)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
@@ -95,15 +97,42 @@ namespace EducenAPI.Services.TenantService
                     Console.ResetColor();
 
                     await dbContext.Database.EnsureCreatedAsync();
+                    isNewDatabase = true;
                 }
 
-                if (dbContext.Database.GetPendingMigrations().Any())
+                if (!isNewDatabase && dbContext.Database.GetPendingMigrations().Any())
                 {
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                    Console.WriteLine($"Applying ApplicationDB Migrations for New '{tenant.TenantId}' tenant.");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"Database for tenant '{tenant.TenantId}' already exists.");
                     Console.ResetColor();
 
-                    dbContext.Database.Migrate();
+                    // Check if tables exist (from previous EnsureCreated)
+                    try
+                    {
+                        var tableCount = await dbContext.Database
+                            .SqlQueryRaw<int>("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES")
+                            .FirstOrDefaultAsync();
+
+                        if (tableCount > 0)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"Tables already exist in tenant database, skipping migration.");
+                            Console.ResetColor();
+                        }
+                        else
+                        {
+                            // Tables don't exist, run EnsureCreated
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"Creating tables for tenant '{tenant.TenantId}'.");
+                            Console.ResetColor();
+                            await dbContext.Database.EnsureCreatedAsync();
+                        }
+                    }
+                    catch
+                    {
+                        // If can't check, try EnsureCreated
+                        await dbContext.Database.EnsureCreatedAsync();
+                    }
                 }
 
                 // Tạo admin cho tenant nếu có nhập Username và Password
@@ -133,6 +162,46 @@ namespace EducenAPI.Services.TenantService
 
                 _adminDbContext.Add(tenant);
                 _adminDbContext.SaveChanges();
+
+                // Tự động gán gói dịch vụ cho tenant mới (ưu tiên gói rẻ nhất, bao gồm cả Trial)
+                var allPlans = _adminDbContext.Plans.Where(p => p.IsActive).ToList();
+                var cheapestPlan = allPlans.OrderBy(p => p.Price).FirstOrDefault();
+
+                Console.WriteLine($"[CreateTenant] TenantId: {tenant.TenantId}, Plans found: {allPlans.Count}, Cheapest: {cheapestPlan?.PlanName}");
+
+                if (cheapestPlan != null)
+                {
+                    var startDate = DateTime.UtcNow;
+                    var months = cheapestPlan.IsTrial ? (cheapestPlan.TrialDays / 30) : 1;
+                    Console.WriteLine($"[CreateTenant] Creating subscription - PlanId: {cheapestPlan.PlanId}, Start: {startDate}, End: {(cheapestPlan.IsTrial ? startDate.AddDays(cheapestPlan.TrialDays) : startDate.AddMonths(months))}");
+                    
+                    var subscription = new Subscription
+                    {
+                        TenantId = tenant.TenantId,
+                        PlanId = cheapestPlan.PlanId,
+                        StartDate = startDate,
+                        EndDate = cheapestPlan.IsTrial ? startDate.AddDays(cheapestPlan.TrialDays) : startDate.AddMonths(months),
+                        Status = "Active"
+                    };
+                    _adminDbContext.Subscriptions.Add(subscription);
+
+                    // Tạo credit ledger cho gói đăng ký
+                    var creditLedger = new TenantCreditLedger
+                    {
+                        TenantId = tenant.TenantId,
+                        Amount = cheapestPlan.Price,
+                        EntryType = "Credit",
+                        ReferenceType = "NewTenantSubscription",
+                        ReferenceId = subscription.Id,
+                        BalanceAfter = cheapestPlan.Price,
+                        Note = $"Đăng ký gói {cheapestPlan.PlanName}"
+                    };
+                    _adminDbContext.TenantCreditLedgers.Add(creditLedger);
+
+                    _adminDbContext.SaveChanges();
+                    
+                    Console.WriteLine($"[CreateTenant] Subscription created with Id: {subscription.Id}");
+                }
             }
             catch (Exception ex)
             {
@@ -167,6 +236,77 @@ namespace EducenAPI.Services.TenantService
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+        }
+
+        public async Task<TenantCreditLedger> AdjustTenantCreditAsync(
+            string tenantId,
+            decimal amount,
+            string note,
+            string referenceType = "ManualAdjustment",
+            string? referenceId = null)
+        {
+            var tenant = await _adminDbContext.Tenants.FirstOrDefaultAsync(t => t.TenantId == tenantId);
+            if (tenant == null)
+                throw new Exception("Không tìm thấy trung tâm.");
+
+            var nextBalance = tenant.CreditBalance + amount;
+            if (nextBalance < 0)
+                throw new Exception("Số dư credit không thể âm.");
+
+            tenant.CreditBalance = nextBalance;
+            tenant.UpdatedAt = DateTime.UtcNow;
+
+            var ledger = new TenantCreditLedger
+            {
+                TenantId = tenantId,
+                Amount = amount,
+                EntryType = amount >= 0 ? "Credit" : "Debit",
+                ReferenceType = string.IsNullOrWhiteSpace(referenceType) ? "ManualAdjustment" : referenceType.Trim(),
+                ReferenceId = string.IsNullOrWhiteSpace(referenceId) ? null : referenceId.Trim(),
+                BalanceAfter = tenant.CreditBalance,
+                Note = string.IsNullOrWhiteSpace(note) ? "Điều chỉnh credit thủ công bởi SystemAdmin" : note.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _adminDbContext.TenantCreditLedgers.Add(ledger);
+            await _adminDbContext.SaveChangesAsync();
+
+            return ledger;
+        }
+
+        public async Task<TenantCreditLedger> SetTenantCreditBalanceAsync(
+            string tenantId,
+            decimal newBalance,
+            string note,
+            string? referenceId = null)
+        {
+            if (newBalance < 0)
+                throw new Exception("Số dư credit không thể âm.");
+
+            var tenant = await _adminDbContext.Tenants.FirstOrDefaultAsync(t => t.TenantId == tenantId);
+            if (tenant == null)
+                throw new Exception("Không tìm thấy trung tâm.");
+
+            var delta = newBalance - tenant.CreditBalance;
+            tenant.CreditBalance = newBalance;
+            tenant.UpdatedAt = DateTime.UtcNow;
+
+            var ledger = new TenantCreditLedger
+            {
+                TenantId = tenantId,
+                Amount = delta,
+                EntryType = delta >= 0 ? "Credit" : "Debit",
+                ReferenceType = "ManualSetBalance",
+                ReferenceId = string.IsNullOrWhiteSpace(referenceId) ? null : referenceId.Trim(),
+                BalanceAfter = tenant.CreditBalance,
+                Note = string.IsNullOrWhiteSpace(note) ? "Thiết lập số dư credit bởi SystemAdmin" : note.Trim(),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _adminDbContext.TenantCreditLedgers.Add(ledger);
+            await _adminDbContext.SaveChangesAsync();
+
+            return ledger;
         }
 
         public Tenant? UpdateTenant(string tenantId, UpdateTenantRequest request)
@@ -248,7 +388,8 @@ namespace EducenAPI.Services.TenantService
                     TotalUsers = usage.TotalUsers,
                     TotalStudents = usage.TotalStudents,
                     TotalClasses = usage.TotalClasses,
-                    StorageMB = usage.StorageMB
+                    StorageMB = usage.StorageMB,
+                    CreditBalance = tenant.CreditBalance
                 });
             }
 
@@ -295,7 +436,8 @@ namespace EducenAPI.Services.TenantService
                 TotalUsers = usage.TotalUsers,
                 TotalStudents = usage.TotalStudents,
                 TotalClasses = usage.TotalClasses,
-                StorageMB = usage.StorageMB
+                StorageMB = usage.StorageMB,
+                CreditBalance = tenant.CreditBalance
             };
         }
         private (int TotalUsers, int TotalStudents, int TotalClasses, double StorageMB) GetTenantUsage(Tenant tenant)

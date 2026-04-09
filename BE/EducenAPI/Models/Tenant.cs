@@ -49,5 +49,13 @@ namespace EducenAPI.Models
         public ICollection<PaymentRecord> PaymentRecords { get; set; } = new List<PaymentRecord>();
 
         public ICollection<TenantCreditLedger> CreditLedgers { get; set; } = new List<TenantCreditLedger>();
+
+        public ICollection<TenantContract> Contracts { get; set; } = new List<TenantContract>();
+
+        public ICollection<PackageChangeRequest> PackageChangeRequests { get; set; } = new List<PackageChangeRequest>();
+
+        public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+
+        public ICollection<PaymentNotification> PaymentNotifications { get; set; } = new List<PaymentNotification>();
     }
 }

@@ -28,6 +28,7 @@ public partial class EducenV2Context : DbContext
     public virtual DbSet<Assignment> Assignments { get; set; } = null!;
     public virtual DbSet<Assistant> Assistants { get; set; } = null!;
     public virtual DbSet<Attendance> Attendances { get; set; } = null!;
+    public DbSet<AttendanceModificationRequest> AttendanceModificationRequests { get; set; }
     public virtual DbSet<Class> Classes { get; set; } = null!;
     public virtual DbSet<LessonMaterial> LessonMaterials { get; set; } = null!;
     public virtual DbSet<Parent> Parents { get; set; } = null!;
@@ -59,6 +60,9 @@ public partial class EducenV2Context : DbContext
     // === Family Invoice System ===
     public DbSet<FamilyInvoice> FamilyInvoices { get; set; }
     public DbSet<FamilyInvoiceItem> FamilyInvoiceItems { get; set; }
+
+    // === Invoice Lock System ===
+    public DbSet<InvoiceLock> InvoiceLocks { get; set; }
 
     // === Payment Records (Học phí - lưu trong Tenant DB) ===
     public DbSet<PaymentRecordTenant> PaymentRecordTenants { get; set; }

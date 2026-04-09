@@ -28,6 +28,16 @@ namespace EducenAPI.Persistence.Contexts
         public DbSet<TenantPaymentGatewayConfig> TenantPaymentGatewayConfigs { get; set; }
         public DbSet<TenantPaymentConfigAudit> TenantPaymentConfigAudits { get; set; }
 
+        // === Tenant Contract ===
+        public DbSet<TenantContract> TenantContracts { get; set; }
+
+        // === Package Change & Invoice ===
+        public DbSet<PackageChangeRequest> PackageChangeRequests { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
+
+        // === Payment Notification ===
+        public DbSet<PaymentNotification> PaymentNotifications { get; set; }
+
         // === Zalo OA ===
         public DbSet<TenantZaloOAConfig> TenantZaloOAConfigs { get; set; }
 
@@ -134,6 +144,68 @@ namespace EducenAPI.Persistence.Contexts
                 .WithMany()
                 .HasForeignKey(z => z.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // === TenantContract Configuration ===
+            builder.Entity<TenantContract>()
+                .HasOne(c => c.Tenant)
+                .WithMany(t => t.Contracts)
+                .HasForeignKey(c => c.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<TenantContract>()
+                .HasIndex(c => new { c.TenantId, c.Status });
+
+            // === PackageChangeRequest Configuration ===
+            builder.Entity<PackageChangeRequest>()
+                .HasOne(pcr => pcr.Tenant)
+                .WithMany(t => t.PackageChangeRequests)
+                .HasForeignKey(pcr => pcr.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PackageChangeRequest>()
+                .HasOne(pcr => pcr.CurrentPlan)
+                .WithMany(p => p.CurrentPackageRequests)
+                .HasForeignKey(pcr => pcr.CurrentPlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<PackageChangeRequest>()
+                .HasOne(pcr => pcr.RequestedPlan)
+                .WithMany(p => p.RequestedPackageRequests)
+                .HasForeignKey(pcr => pcr.RequestedPlanId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<PackageChangeRequest>()
+                .HasIndex(pcr => new { pcr.TenantId, pcr.Status });
+
+            // === Invoice Configuration ===
+            builder.Entity<Invoice>()
+                .HasOne(i => i.Tenant)
+                .WithMany(t => t.Invoices)
+                .HasForeignKey(i => i.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Invoice>()
+                .HasOne(i => i.PackageChangeRequest)
+                .WithMany(pcr => pcr.Invoices)
+                .HasForeignKey(i => i.PackageChangeRequestId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Invoice>()
+                .HasIndex(i => i.InvoiceNumber)
+                .IsUnique();
+
+            builder.Entity<Invoice>()
+                .HasIndex(i => new { i.TenantId, i.Status });
+
+            // === PaymentNotification Configuration ===
+            builder.Entity<PaymentNotification>()
+                .HasOne(pn => pn.Tenant)
+                .WithMany(t => t.PaymentNotifications)
+                .HasForeignKey(pn => pn.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PaymentNotification>()
+                .HasIndex(pn => new { pn.TenantId, pn.ScheduledFor, pn.Status });
         }
     }
 }
