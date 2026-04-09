@@ -5,7 +5,8 @@ namespace EducenAPI.DTOs.ZaloOA
         public int Id { get; set; }
         public string TenantId { get; set; } = string.Empty;
         public string TenantName { get; set; } = string.Empty;
-        public string OAId { get; set; } = string.Empty;
+        public string AppId { get; set; } = string.Empty;
+        public string? OAId { get; set; }
         public bool IsActive { get; set; }
         public bool WebhookVerified { get; set; }
         public DateTime? TokenExpiresAt { get; set; }

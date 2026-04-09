@@ -26,7 +26,7 @@ const SystemAdminLogin = () => {
             }
 
             // Xác thực bằng cách gọi thử API Tenants với API Key nhập vào
-            const response = await fetch('http://localhost:5106/api/admin/Tenants', {
+            const response = await fetch('/api/admin/Tenants', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',

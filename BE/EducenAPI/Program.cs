@@ -213,11 +213,14 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:5173",  // Vite dev server
                 "http://localhost:3000",   // CRA fallback
-                "http://localhost:5106"   // Backend HTTP
+                "http://localhost:5106",   // Backend HTTP
+                "http://192.168.1.9:5173", // Local network host
+                "https://unfated-subcoriaceous-irene.ngrok-free.dev" // ngrok public URL
               )
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials()
+              .SetPreflightMaxAge(TimeSpan.FromSeconds(3600)); ;
     });
 });
 
@@ -267,6 +270,14 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = "swagger";
     });
 }
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.Headers.Add("Access-Control-Allow-Private-Network", "true");
+    }
+    await next();
+});
 app.UseCors("AllowFrontend");
 if (!app.Environment.IsDevelopment())
 {

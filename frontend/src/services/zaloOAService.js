@@ -43,8 +43,8 @@ const zaloOAService = {
     },
 
     // Thiết lập OA cho tenant
-    setupConfig: async (tenantId, oaId, secretKey) => {
-        const response = await adminApi.post(`/admin/ZaloOAConfig/${tenantId}`, { oaId, secretKey });
+    setupConfig: async (tenantId, appId, oaId, secretKey) => {
+        const response = await adminApi.post(`/admin/ZaloOAConfig/${tenantId}`, { appId, oaId, secretKey });
         return response.data;
     },
 

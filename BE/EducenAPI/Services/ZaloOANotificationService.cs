@@ -19,7 +19,7 @@ namespace EducenAPI.Services
         private readonly ILogger<ZaloOANotificationService> _logger;
         private readonly string _encryptionKey;
 
-        private const string ZALO_API_BASE = "https://openapi.zalo.me/v2.0";
+        private const string ZALO_API_BASE = "https://openapi.zalo.me/v3.0";
         private const string ZALO_OAUTH_BASE = "https://oauth.zalo.me/v4";
 
         public ZaloOANotificationService(
@@ -55,6 +55,7 @@ namespace EducenAPI.Services
 
             if (existing != null)
             {
+                existing.AppId = request.AppId;
                 existing.OAId = request.OAId;
                 existing.EncryptedSecretKey = encryptedSecret;
                 existing.IsActive = false;
@@ -68,6 +69,7 @@ namespace EducenAPI.Services
                 existing = new TenantZaloOAConfig
                 {
                     TenantId = tenantId,
+                    AppId = request.AppId,
                     OAId = request.OAId,
                     EncryptedSecretKey = encryptedSecret,
                     IsActive = false,
@@ -123,15 +125,18 @@ namespace EducenAPI.Services
             if (config == null)
                 throw new Exception("Trung tâm chưa cấu hình Zalo OA.");
 
+            var appId = config.AppId;
+            var oaId = config.DisplayId;
+
             _logger.LogInformation("=== Verify Zalo OA Connection for tenant {TenantId} ===", tenantId);
-            _logger.LogInformation("OAId: {OAId}, IsActive: {IsActive}, HasAccessToken: {HasAT}, HasRefreshToken: {HasRT}, TokenExpiresAt: {Exp}",
-                config.OAId, config.IsActive,
+            _logger.LogInformation("AppId: {AppId}, OAId: {OAId}, IsActive: {IsActive}, HasAccessToken: {HasAT}, HasRefreshToken: {HasRT}, TokenExpiresAt: {Exp}",
+                appId, oaId, config.IsActive,
                 !string.IsNullOrEmpty(config.EncryptedAccessToken),
                 !string.IsNullOrEmpty(config.EncryptedRefreshToken),
                 config.TokenExpiresAt);
 
-            if (string.IsNullOrWhiteSpace(config.OAId))
-                throw new Exception("OA ID (App ID) trong cấu hình bị rỗng. Vui lòng cập nhật lại cấu hình.");
+            if (string.IsNullOrWhiteSpace(appId))
+                throw new Exception("App ID trong cấu hình bị rỗng. Vui lòng cập nhật lại cấu hình.");
 
             if (string.IsNullOrWhiteSpace(config.EncryptedSecretKey))
                 throw new Exception("Secret Key trong cấu hình bị rỗng. Vui lòng cập nhật lại cấu hình.");
@@ -149,7 +154,7 @@ namespace EducenAPI.Services
                     {
                         var secretKey = Decrypt(config.EncryptedSecretKey);
                         var refreshToken = Decrypt(config.EncryptedRefreshToken);
-                        var tokenResponse = await RefreshTokenAsync(config.OAId, secretKey, refreshToken);
+                        var tokenResponse = await RefreshTokenAsync(config.AppId, secretKey, refreshToken);
 
                         if (tokenResponse != null && !string.IsNullOrEmpty(tokenResponse.AccessToken))
                         {
@@ -197,8 +202,8 @@ namespace EducenAPI.Services
 
             var result = new
             {
-                oaId = config.OAId,
-                oaIdLength = config.OAId?.Length ?? 0,
+                oaId = config.AppId,
+                oaIdLength = config.AppId?.Length ?? 0,
                 secretKeyLength = secretKey?.Length ?? 0,
                 secretKeyPrefix = secretKey?.Length > 4 ? secretKey[..4] + "..." : secretKey,
                 hasAccessToken = !string.IsNullOrEmpty(config.EncryptedAccessToken),
@@ -231,34 +236,34 @@ namespace EducenAPI.Services
 
             _logger.LogInformation("=== Zalo OAuth Callback Start ===");
             _logger.LogInformation("Tenant: {TenantId}", tenantId);
-            _logger.LogInformation("OAId (app_id): {OAId} (length: {Len})", config.OAId, config.OAId?.Length ?? 0);
+            _logger.LogInformation("OAId (app_id): {OAId} (length: {Len})", config.AppId, config.AppId?.Length ?? 0);
             _logger.LogInformation("SecretKey length: {Len}", secretKey?.Length ?? 0);
             _logger.LogInformation("Code length: {Len}, first 8 chars: {CodePrefix}", code?.Length ?? 0,
                 code?.Length > 8 ? code[..8] + "..." : code);
 
-            if (string.IsNullOrWhiteSpace(config.OAId))
+            if (string.IsNullOrWhiteSpace(config.AppId))
                 throw new Exception("OA ID (App ID) trong cấu hình bị rỗng. Vui lòng cập nhật lại cấu hình.");
 
             if (string.IsNullOrWhiteSpace(secretKey))
                 throw new Exception("Secret Key trong cấu hình bị rỗng. Vui lòng cập nhật lại cấu hình.");
 
-            var tokenResponse = await GetAccessTokenAsync(config.OAId, secretKey, code);
+            var tokenResponse = await GetAccessTokenAsync(config.AppId, secretKey, code);
 
             if (tokenResponse == null)
             {
-                _logger.LogError("Zalo token exchange returned null. Check previous logs for HTTP errors. app_id={AppId}", config.OAId);
+                _logger.LogError("Zalo token exchange returned null. Check previous logs for HTTP errors. app_id={AppId}", config.AppId);
                 throw new Exception("Không thể kết nối đến Zalo API. Vui lòng kiểm tra kết nối mạng và xem log backend để biết chi tiết.");
             }
 
             if (!string.IsNullOrEmpty(tokenResponse.ErrorMessage))
             {
-                _logger.LogError("Zalo token exchange FAILED: {Error}. app_id={AppId}", tokenResponse.ErrorMessage, config.OAId);
+                _logger.LogError("Zalo token exchange FAILED: {Error}. app_id={AppId}", tokenResponse.ErrorMessage, config.AppId);
                 throw new Exception($"Zalo từ chối kết nối: {tokenResponse.ErrorMessage}. Vui lòng kiểm tra: 1) App ID có đúng là số từ Zalo Developer Portal, 2) Secret Key có đúng, 3) Redirect URI đã đăng ký trong Zalo Developer Portal.");
             }
 
             if (string.IsNullOrEmpty(tokenResponse.AccessToken))
             {
-                _logger.LogError("Zalo response has no access_token. app_id={AppId}", config.OAId);
+                _logger.LogError("Zalo response has no access_token. app_id={AppId}", config.AppId);
                 throw new Exception("Không thể lấy access token từ Zalo. Vui lòng kiểm tra App ID, Secret Key và code.");
             }
 
@@ -284,8 +289,16 @@ namespace EducenAPI.Services
             var config = await _adminContext.TenantZaloOAConfigs
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId);
 
-            var followerCount = await _tenantContext.ZaloOARecipients
-                .CountAsync(r => r.IsFollowing);
+            int followerCount = 0;
+            try
+            {
+                followerCount = await _tenantContext.ZaloOARecipients
+                    .CountAsync(r => r.IsFollowing);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ZaloOARecipients table not found for tenant {TenantId}", tenantId);
+            }
 
             if (config == null)
             {
@@ -301,7 +314,7 @@ namespace EducenAPI.Services
             {
                 IsConfigured = true,
                 IsActive = config.IsActive,
-                OAId = config.OAId,
+                OAId = config.AppId,
                 FollowerCount = followerCount,
                 TokenExpiresAt = config.TokenExpiresAt,
                 IsTokenExpired = config.TokenExpiresAt.HasValue && config.TokenExpiresAt.Value < DateTime.UtcNow
@@ -322,44 +335,58 @@ namespace EducenAPI.Services
             var accessToken = await EnsureAccessTokenAsync(config);
 
             // Get recipients
-            var query = _tenantContext.ZaloOARecipients
-                .Include(r => r.User)
-                .Where(r => r.IsFollowing);
-
-            if (request.Target != "all")
+            List<ZaloOARecipient> recipients;
+            try
             {
-                var targetClass = await _tenantContext.Classes
-                    .Include(c => c.Students)
-                    .FirstOrDefaultAsync(c => c.ClassName == request.Target);
-
-                if (targetClass != null)
-                {
-                    var studentUserIds = targetClass.Students.Select(s => s.UserId).ToList();
-                    query = query.Where(r => studentUserIds.Contains(r.UserId));
-                }
+                recipients = await _tenantContext.ZaloOARecipients
+                    .Where(r => r.IsFollowing)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ZaloOARecipients table not found for tenant {TenantId}. Migration may not have been applied.", tenantId);
+                throw new Exception($"Bảng ZaloOARecipients chưa tồn tại trong database của trung tâm. Vui lòng liên hệ quản trị hệ thống để chạy migration.");
             }
 
-            var recipients = await query.ToListAsync();
-            result.TotalRecipients = recipients.Count;
-
-            // Send messages
-            foreach (var recipient in recipients)
+            try
             {
-                try
-                {
-                    var zaloResponse = await SendZaloTextMessageAsync(accessToken, recipient.ZaloUserId, $"{request.Title}\n\n{request.Content}");
+                result.TotalRecipients = recipients.Count;
 
-                    if (zaloResponse)
-                        result.Sent++;
-                    else
-                        result.Failed++;
-                }
-                catch (Exception ex)
+                if (recipients.Count == 0)
                 {
-                    _logger.LogError(ex, "Failed to send Zalo message to {ZaloUserId}", recipient.ZaloUserId);
-                    result.Failed++;
-                    result.Errors.Add($"User {recipient.User?.FullName}: {ex.Message}");
+                    return new SendZaloMessageResponse
+                    {
+                        Sent = 0,
+                        Failed = 0,
+                        TotalRecipients = 0,
+                        Message = "Chưa có follower nào. Vui lòng đảm bảo users đã theo dõi Zalo OA qua webhook."
+                    };
                 }
+
+                // Send messages
+                foreach (var recipient in recipients)
+                {
+                    try
+                    {
+                        var zaloResponse = await SendZaloTextMessageAsync(accessToken, recipient.ZaloUserId, $"{request.Title}\n\n{request.Content}");
+
+                        if (zaloResponse)
+                            result.Sent++;
+                        else
+                            result.Failed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send Zalo message to {ZaloUserId}", recipient.ZaloUserId);
+                        result.Failed++;
+                        result.Errors.Add($"User {recipient.ZaloUserId}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ZaloOARecipients table not found for tenant {TenantId}. Migration may not have been applied.", tenantId);
+                throw new Exception($"Bảng ZaloOARecipients chưa tồn tại trong database của trung tâm. Vui lòng liên hệ quản trị hệ thống để chạy migration.");
             }
 
             // Save notification record
@@ -385,21 +412,26 @@ namespace EducenAPI.Services
 
         public async Task<List<ZaloOAFollowerResponse>> GetFollowersAsync(string tenantId)
         {
-            var followers = await _tenantContext.ZaloOARecipients
-                .Include(r => r.User)
-                .Where(r => r.IsFollowing)
-                .OrderByDescending(r => r.FollowedAt)
-                .ToListAsync();
-
-            return followers.Select(f => new ZaloOAFollowerResponse
+            try
             {
-                Id = f.Id,
-                UserId = f.UserId,
-                UserName = f.User?.FullName,
-                ZaloUserId = f.ZaloUserId,
-                IsFollowing = f.IsFollowing,
-                FollowedAt = f.FollowedAt
-            }).ToList();
+                var followers = await _tenantContext.ZaloOARecipients
+                    .Where(r => r.IsFollowing)
+                    .OrderByDescending(r => r.FollowedAt)
+                    .ToListAsync();
+
+                return followers.Select(f => new ZaloOAFollowerResponse
+                {
+                    Id = f.Id,
+                    ZaloUserId = f.ZaloUserId,
+                    IsFollowing = f.IsFollowing,
+                    FollowedAt = f.FollowedAt
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ZaloOARecipients table not found for tenant {TenantId}", tenantId);
+                return new List<ZaloOAFollowerResponse>();
+            }
         }
 
         public async Task<List<ZaloMessageHistoryResponse>> GetMessageHistoryAsync(string tenantId)
@@ -426,56 +458,62 @@ namespace EducenAPI.Services
 
         public async Task HandleWebhookAsync(ZaloWebhookPayload payload)
         {
+            var webhookOAId = payload.OAId;
+            
             var config = await _adminContext.TenantZaloOAConfigs
-                .FirstOrDefaultAsync(c => c.OAId == payload.OAId);
+                .FirstOrDefaultAsync(c => c.AppId == webhookOAId || c.OAId == webhookOAId);
 
             if (config == null)
             {
-                _logger.LogWarning("Received webhook for unknown OA: {OAId}", payload.OAId);
+                _logger.LogWarning("Received webhook for unknown OA: {OAId}", webhookOAId);
                 return;
             }
 
+            // 2. Switch Tenant Context
+            await _tenantService.SetTenant(config.TenantId);
+            if (!string.IsNullOrEmpty(_tenantService.ConnectionString))
+            {
+                _tenantContext.Database.SetConnectionString(_tenantService.ConnectionString);
+            }
+
+            var zaloUserId = payload.FollowerId;
+
+            if (string.IsNullOrEmpty(zaloUserId)) return;
+
             switch (payload.EventName)
             {
+                case "follow":
                 case "user_follow":
-                    if (!string.IsNullOrEmpty(payload.FollowerId))
+                    var existing = await _tenantContext.ZaloOARecipients
+                        .FirstOrDefaultAsync(r => r.ZaloUserId == zaloUserId);
+
+                    if (existing != null)
                     {
-                        var existing = await _tenantContext.ZaloOARecipients
-                            .FirstOrDefaultAsync(r => r.ZaloUserId == payload.FollowerId);
-
-                        if (existing != null)
-                        {
-                            existing.IsFollowing = true;
-                            existing.FollowedAt = DateTime.UtcNow;
-                            existing.UnfollowedAt = null;
-                        }
-                        else
-                        {
-                            _tenantContext.ZaloOARecipients.Add(new ZaloOARecipient
-                            {
-                                UserId = 0,
-                                ZaloUserId = payload.FollowerId,
-                                IsFollowing = true,
-                                FollowedAt = DateTime.UtcNow
-                            });
-                        }
-
-                        await _tenantContext.SaveChangesAsync();
+                        existing.IsFollowing = true;
+                        existing.FollowedAt = DateTime.UtcNow;
+                        existing.UnfollowedAt = null;
                     }
+                    else
+                    {
+                        _tenantContext.ZaloOARecipients.Add(new ZaloOARecipient
+                        {
+                            ZaloUserId = zaloUserId,
+                            IsFollowing = true,
+                            FollowedAt = DateTime.UtcNow
+                        });
+                    }
+                    await _tenantContext.SaveChangesAsync();
                     break;
 
-                case "user_unfollow":
-                    if (!string.IsNullOrEmpty(payload.FollowerId))
-                    {
-                        var recipient = await _tenantContext.ZaloOARecipients
-                            .FirstOrDefaultAsync(r => r.ZaloUserId == payload.FollowerId);
+                case "unfollow": // Zalo gửi "unfollow", không phải "user_unfollow"
+                    var recipient = await _tenantContext.ZaloOARecipients
+                        .FirstOrDefaultAsync(r => r.ZaloUserId == zaloUserId);
 
-                        if (recipient != null)
-                        {
-                            recipient.IsFollowing = false;
-                            recipient.UnfollowedAt = DateTime.UtcNow;
-                            await _tenantContext.SaveChangesAsync();
-                        }
+                    if (recipient != null)
+                    {
+                        recipient.IsFollowing = false;
+                        recipient.UnfollowedAt = DateTime.UtcNow;
+                        await _tenantContext.SaveChangesAsync();
                     }
                     break;
             }
@@ -595,7 +633,7 @@ namespace EducenAPI.Services
 
             var secretKey = Decrypt(config.EncryptedSecretKey);
             var refreshToken = Decrypt(config.EncryptedRefreshToken);
-            var tokenResponse = await RefreshTokenAsync(config.OAId, secretKey, refreshToken);
+            var tokenResponse = await RefreshTokenAsync(config.AppId, secretKey, refreshToken);
 
             if (tokenResponse == null)
                 throw new Exception("Không thể kết nối đến Zalo API.");
@@ -617,13 +655,13 @@ namespace EducenAPI.Services
             return tokenResponse.AccessToken;
         }
 
-        private async Task<ZaloTokenResponse?> RefreshTokenAsync(string oaId, string secretKey, string refreshToken)
+        private async Task<ZaloTokenResponse?> RefreshTokenAsync(string appId, string secretKey, string refreshToken)
         {
             try
             {
                 var content = new FormUrlEncodedContent(new[]
                 {
-                    new KeyValuePair<string, string>("app_id", oaId),
+                    new KeyValuePair<string, string>("app_id", appId),
                     new KeyValuePair<string, string>("grant_type", "refresh_token"),
                     new KeyValuePair<string, string>("refresh_token", refreshToken)
                 });
@@ -631,7 +669,7 @@ namespace EducenAPI.Services
                 var requestUrl = $"{ZALO_OAUTH_BASE}/oa/access_token";
                 _logger.LogInformation("=== Zalo Refresh Token ===");
                 _logger.LogInformation("URL: {Url}", requestUrl);
-                _logger.LogInformation("app_id: {AppId}", oaId);
+                _logger.LogInformation("app_id: {AppId}", appId);
                 _logger.LogInformation("refresh_token length: {Len}", refreshToken?.Length ?? 0);
 
                 var httpClient = _httpClientFactory.CreateClient("ZaloAPI");
@@ -699,29 +737,74 @@ namespace EducenAPI.Services
 
         private async Task<bool> SendZaloTextMessageAsync(string accessToken, string zaloUserId, string message)
         {
+            // 1. "Làm sạch" token: Đảm bảo không dính ký tự rác từ quá trình giải mã AES
+            accessToken = accessToken?.Trim().TrimEnd('\0');
+
+            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(zaloUserId))
+            {
+                _logger.LogWarning("Zalo Send: Thiếu AccessToken hoặc ZaloUserId");
+                return false;
+            }
+
+            // 2. Chuẩn bị nội dung Body
             var body = new
             {
                 recipient = new { user_id = zaloUserId },
                 message = new { text = message }
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{ZALO_API_BASE}/oa/message/cs");
-            request.Headers.Add("access_token", accessToken);
-            request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+            // 3. Sửa URL: Bỏ tham số ?access_token=... khỏi URL
+            // (Zalo v3.0 yêu cầu token nằm trong Header để bảo mật hơn)
+            var url = $"{ZALO_API_BASE}/oa/message/cs";
 
-            var httpClient = _httpClientFactory.CreateClient("ZaloAPI");
-            var response = await httpClient.SendAsync(request);
-            var json = await response.Content.ReadAsStringAsync();
-            var doc = JsonDocument.Parse(json);
-
-            if (doc.RootElement.TryGetProperty("error", out var error) && error.GetInt32() != 0)
+            try
             {
-                var msg = doc.RootElement.TryGetProperty("message", out var m) ? m.GetString() : "Unknown error";
-                _logger.LogWarning("Zalo send message error: {Error} - {Message}", error.GetInt32(), msg);
+                var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+                };
+
+                // 4. QUAN TRỌNG NHẤT: Đưa Token vào Header thay vì URL
+                // Điều này giúp giải quyết lỗi "Access token must be placed in header"
+                request.Headers.Add("access_token", accessToken);
+
+                var httpClient = _httpClientFactory.CreateClient("ZaloAPI");
+                var response = await httpClient.SendAsync(request);
+                var json = await response.Content.ReadAsStringAsync();
+
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("error", out var errorElement))
+                {
+                    int errorCode = errorElement.GetInt32();
+                    if (errorCode != 0)
+                    {
+                        var errorMsg = doc.RootElement.TryGetProperty("message", out var m) ? m.GetString() : "Unknown error";
+
+                        // Phân loại mã lỗi để log dễ hiểu hơn
+                        string friendlyMessage = errorCode switch
+                        {
+                            -216 => "Token hết hạn hoặc sai định dạng Header. Hãy kiểm tra lại luồng Refresh.",
+                            404 => "URL sai hoặc Endpoint không tồn tại.",
+                            -212 => "Người dùng chưa nhắn tin cho OA trong 48h qua.",
+                            -232 => "Hết hạn tương tác 48h (Người dùng cần chủ động nhắn lại cho OA).",
+                            -224 => "Gói dịch vụ OA chưa được kích hoạt hoặc đã hết hạn.",
+                            _ => errorMsg
+                        };
+
+                        _logger.LogWarning("Zalo send message failed: {Code} - {Msg}. Raw Response: {Json}",
+                                            errorCode, friendlyMessage, json);
+                        return false;
+                    }
+                }
+
+                _logger.LogInformation("Zalo gửi tin nhắn thành công cho User: {UserId}", zaloUserId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi kết nối khi gọi API Zalo.");
                 return false;
             }
-
-            return true;
         }
 
         private static int ParseExpiresIn(JsonElement root)
@@ -744,6 +827,7 @@ namespace EducenAPI.Services
                 Id = config.Id,
                 TenantId = config.TenantId,
                 TenantName = tenantName,
+                AppId = config.AppId,
                 OAId = config.OAId,
                 IsActive = config.IsActive,
                 WebhookVerified = config.WebhookVerified,
@@ -767,14 +851,18 @@ namespace EducenAPI.Services
 
         private string Decrypt(string cipherText)
         {
+            if (string.IsNullOrEmpty(cipherText)) return string.Empty;
             using var aes = Aes.Create();
             aes.Key = DeriveKey();
             aes.IV = new byte[16];
+            aes.Padding = PaddingMode.PKCS7; // Xác định rõ Padding
 
             using var decryptor = aes.CreateDecryptor();
             var cipherBytes = Convert.FromBase64String(cipherText);
             var decryptedBytes = decryptor.TransformFinalBlock(cipherBytes, 0, cipherBytes.Length);
-            return Encoding.UTF8.GetString(decryptedBytes);
+
+            // Trim để loại bỏ các ký tự rác phát sinh khi giải mã
+            return Encoding.UTF8.GetString(decryptedBytes).TrimEnd('\0').Trim();
         }
 
         private byte[] DeriveKey()

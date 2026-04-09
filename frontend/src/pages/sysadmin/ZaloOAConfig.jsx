@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     MessageSquare, CheckCircle, AlertCircle, Settings2, Trash2, RefreshCw,
-    Loader2, X, ShieldCheck, ShieldX, Search, Building2, KeyRound, Bug
+    Loader2, X, ShieldCheck, ShieldX, Search, Building2, KeyRound
 } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import adminApi from '../../services/adminApi';
@@ -17,7 +17,7 @@ const ZaloOAConfig = () => {
 
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedTenant, setSelectedTenant] = useState(null);
-    const [form, setForm] = useState({ oaId: '', secretKey: '' });
+    const [form, setForm] = useState({ appId: '', oaId: '', secretKey: '' });
     const [saving, setSaving] = useState(false);
     const [verifying, setVerifying] = useState(false);
 
@@ -52,6 +52,7 @@ const ZaloOAConfig = () => {
         setSelectedTenant(tenant);
         const existing = getConfigForTenant(tenant.tenantId);
         setForm({
+            appId: existing?.appId || '',
             oaId: existing?.oaId || '',
             secretKey: '',
         });
@@ -59,13 +60,13 @@ const ZaloOAConfig = () => {
     };
 
     const handleSave = async () => {
-        if (!form.oaId.trim() || !form.secretKey.trim()) {
-            showToast('Vui lòng nhập đầy đủ OA ID và Secret Key.', 'error');
+        if (!form.appId.trim() || !form.secretKey.trim()) {
+            showToast('Vui lòng nhập App ID và Secret Key.', 'error');
             return;
         }
         setSaving(true);
         try {
-            await zaloOAService.setupConfig(selectedTenant.tenantId, form.oaId, form.secretKey);
+            await zaloOAService.setupConfig(selectedTenant.tenantId, form.appId, form.oaId, form.secretKey);
             showToast('Đã lưu cấu hình Zalo OA.');
             setModalOpen(false);
             fetchData();
@@ -93,13 +94,13 @@ const ZaloOAConfig = () => {
         }
     };
 
-    const handleAuthorize = (tenantId, oaId) => {
-        if (!oaId) {
-            showToast('Vui lòng thiết lập OA ID trước khi cấp quyền.', 'error');
+    const handleAuthorize = (tenantId, appId) => {
+        if (!appId) {
+            showToast('Vui lòng thiết lập App ID trước khi cấp quyền.', 'error');
             return;
         }
         const callbackUrl = `${window.location.origin}/sysadmin/zalo-oa`;
-        const authUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${encodeURIComponent(oaId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${tenantId}`;
+        const authUrl = `https://oauth.zaloapp.com/v4/oa/permission?app_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${tenantId}`;
         window.location.href = authUrl;
     };
 
@@ -134,25 +135,6 @@ const ZaloOAConfig = () => {
             fetchData();
         } catch {
             showToast('Xóa cấu hình thất bại.', 'error');
-        }
-    };
-
-    const handleDebug = async (tenantId) => {
-        try {
-            const res = await zaloOAService.debugConfig(tenantId);
-            const info = res.data || res;
-            const lines = [
-                `OA ID: ${info.oaId} (độ dài: ${info.oaIdLength})`,
-                `Secret Key độ dài: ${info.secretKeyLength}, prefix: ${info.secretKeyPrefix}`,
-                `Có Access Token: ${info.hasAccessToken ? 'Có' : 'Không'}`,
-                `Có Refresh Token: ${info.hasRefreshToken ? 'Có' : 'Không'}`,
-                `Đang hoạt động: ${info.isActive ? 'Có' : 'Không'}`,
-                `Token hết hạn: ${info.tokenExpiresAt || 'Chưa có'}`,
-                `Token đã hết hạn: ${info.isTokenExpired ? 'Có' : 'Không'}`,
-            ];
-            alert('DEBUG Zalo OA Config:\n\n' + lines.join('\n'));
-        } catch (err) {
-            showToast(err.response?.data?.message || 'Không thể lấy thông tin debug.', 'error');
         }
     };
 
@@ -200,6 +182,7 @@ const ZaloOAConfig = () => {
                                 <tr>
                                     <th>Trung Tâm</th>
                                     <th>Subdomain</th>
+                                    <th>App ID</th>
                                     <th>OA ID</th>
                                     <th>Trạng Thái</th>
                                     <th>Ngày Cập Nhật</th>
@@ -218,7 +201,8 @@ const ZaloOAConfig = () => {
                                                 </div>
                                             </td>
                                             <td className="zalo-oa-subdomain">{tenant.subDomain}</td>
-                                            <td>{config?.oaId || <span className="zalo-oa-na">Chưa cấu hình</span>}</td>
+                                            <td>{config?.appId || <span className="zalo-oa-na">—</span>}</td>
+                                            <td>{config?.oaId || <span className="zalo-oa-na">—</span>}</td>
                                             <td>
                                                 {config ? (
                                                     config.isActive ? (
@@ -258,17 +242,10 @@ const ZaloOAConfig = () => {
                                                             </button>
                                                             <button
                                                                 className="zalo-oa-action-btn authorize"
-                                                                onClick={() => handleAuthorize(tenant.tenantId, config?.oaId)}
+                                                                onClick={() => handleAuthorize(tenant.tenantId, config?.appId)}
                                                                 title="Cấp quyền Zalo OA"
                                                             >
                                                                 <KeyRound size={15} />
-                                                            </button>
-                                                            <button
-                                                                className="zalo-oa-action-btn debug"
-                                                                onClick={() => handleDebug(tenant.tenantId)}
-                                                                title="Debug config"
-                                                            >
-                                                                <Bug size={15} />
                                                             </button>
                                                             <button
                                                                 className="zalo-oa-action-btn delete"
@@ -285,7 +262,7 @@ const ZaloOAConfig = () => {
                                     );
                                 })}
                                 {filteredTenants.length === 0 && (
-                                    <tr><td colSpan={6} className="zalo-oa-empty">Không tìm thấy trung tâm.</td></tr>
+                                    <tr><td colSpan={7} className="zalo-oa-empty">Không tìm thấy trung tâm.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -302,16 +279,26 @@ const ZaloOAConfig = () => {
                             </div>
                             <div className="zalo-oa-modal-body">
                                 <div className="zalo-oa-field">
-                                    <label>OA ID</label>
+                                    <label>App ID *</label>
                                     <input
                                         type="text"
-                                        placeholder="Nhập OA ID..."
-                                        value={form.oaId}
-                                        onChange={(e) => setForm({ ...form, oaId: e.target.value })}
+                                        placeholder="Nhập App ID (từ Zalo Developer Portal)..."
+                                        value={form.appId}
+                                        onChange={(e) => setForm({ ...form, appId: e.target.value })}
                                     />
                                 </div>
                                 <div className="zalo-oa-field">
-                                    <label>Secret Key</label>
+                                    <label>OA ID</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập OA ID (nếu khác App ID)..."
+                                        value={form.oaId}
+                                        onChange={(e) => setForm({ ...form, oaId: e.target.value })}
+                                    />
+                                    <small>Để trống nếu OA ID trùng với App ID.</small>
+                                </div>
+                                <div className="zalo-oa-field">
+                                    <label>Secret Key *</label>
                                     <input
                                         type="password"
                                         placeholder="Nhập Secret Key..."
