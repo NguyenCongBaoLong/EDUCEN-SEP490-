@@ -55,6 +55,8 @@ namespace EducenAPI.Services.TenantService
             Tenant tenant = new Tenant
             {
                 TenantName = request.TenantName,
+                Username = !string.IsNullOrWhiteSpace(request.AdminUsername) ? request.AdminUsername.Trim() : $"admin_{request.SubDomain}",
+                Password = !string.IsNullOrWhiteSpace(request.AdminPassword) ? BCrypt.Net.BCrypt.HashPassword(request.AdminPassword) : BCrypt.Net.BCrypt.HashPassword("default123"),
                 ContactPerson = request.ContactPerson,
                 Email = request.Email,
                 PhoneNumber = request.PhoneNumber,
@@ -84,6 +86,16 @@ namespace EducenAPI.Services.TenantService
                 EducenV2Context dbContext = scopeTenant.ServiceProvider.GetRequiredService<EducenV2Context>();
 
                 dbContext.Database.SetConnectionString(modifiedConnectionString);
+
+                bool canConnect = await dbContext.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"Creating database for tenant '{tenant.TenantId}'.");
+                    Console.ResetColor();
+
+                    await dbContext.Database.EnsureCreatedAsync();
+                }
 
                 if (dbContext.Database.GetPendingMigrations().Any())
                 {
