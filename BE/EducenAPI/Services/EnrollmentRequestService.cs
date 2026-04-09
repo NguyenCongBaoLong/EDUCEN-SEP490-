@@ -151,19 +151,76 @@ namespace EducenAPI.Services
                 throw new Exception("Email là bắt buộc.");
             if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
                 throw new Exception("Họ và tên là bắt buộc.");
+            if (string.IsNullOrWhiteSpace(request.Phone))
+                throw new Exception("Số điện thoại là bắt buộc.");
 
-            // Check duplicate email trong enrollment requests (Pending)
-            var existingPending = await _context.EnrollmentRequests
-                .AnyAsync(r => r.Email == request.Email && r.Status == "Pending");
-            if (existingPending)
-                throw new Exception("Đã tồn tại yêu cầu đăng ký với email này.");
+            // Normalize and validate Phone (main)
+            if (!string.IsNullOrWhiteSpace(request.Phone))
+            {
+                var normalizedPhone = new string(request.Phone.Where(char.IsDigit).ToArray());
+                if (normalizedPhone.StartsWith("84")) normalizedPhone = "0" + normalizedPhone.Substring(2);
+                
+                if (normalizedPhone.Length != 10 || !normalizedPhone.StartsWith("0"))
+                    throw new Exception("Số điện thoại không hợp lệ! Vui lòng nhập SĐT Việt Nam (10 số).");
+                
+                request.Phone = normalizedPhone; // Save normalized version
+            }
 
-            // Kiểm tra nếu là GuestRegistration thì email không được trùng với tài khoản đã có (User)
+            // Normal validation for Email
+            var emailRegex = new System.Text.RegularExpressions.Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+            if (!emailRegex.IsMatch(request.Email))
+                throw new Exception("Định dạng Email không hợp lệ.");
+
+            // Normalize and validate ParentPhone if provided
+            if (!string.IsNullOrWhiteSpace(request.ParentPhone))
+            {
+                var normalizedParentPhone = new string(request.ParentPhone.Where(char.IsDigit).ToArray());
+                if (normalizedParentPhone.StartsWith("84")) normalizedParentPhone = "0" + normalizedParentPhone.Substring(2);
+
+                if (normalizedParentPhone.Length == 10)
+                {
+                    request.ParentPhone = normalizedParentPhone;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ParentEmail) && !emailRegex.IsMatch(request.ParentEmail))
+                throw new Exception("Định dạng Email phụ huynh không hợp lệ.");
+
+            // Check duplicate email & phone trong enrollment requests (Pending)
+            var duplicateRequest = await _context.EnrollmentRequests
+                .FirstOrDefaultAsync(r => (r.Email == request.Email || r.Phone == request.Phone) && r.Status == "Pending");
+            
+            if (duplicateRequest != null)
+            {
+                if (duplicateRequest.Email == request.Email)
+                    throw new Exception("Đã tồn tại yêu cầu đăng ký đang chờ duyệt với email này.");
+                if (duplicateRequest.Phone == request.Phone)
+                    throw new Exception("Đã tồn tại yêu cầu đăng ký đang chờ duyệt với số điện thoại này.");
+            }
+
+            // Kiểm tra nếu là GuestRegistration thì email và phone không được trùng với tài khoản Student đã có
             if (request.RequestType == "GuestRegistration")
             {
-                var userExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
-                if (userExists)
-                    throw new Exception("Email này đã thuộc về Trung tâm! Vui lòng đăng nhập vào tài khoản để đăng ký lớp học.");
+                var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
+                if (emailExists)
+                    throw new Exception("Email này đã được sử dụng bởi một tài khoản khác trong hệ thống!");
+
+                var phoneExists = await _context.Users.AnyAsync(u => u.PhoneNumber == request.Phone && u.RoleId == 3); // Role 3 is Student
+                if (phoneExists)
+                    throw new Exception("Số điện thoại này đã được đăng ký bởi một học sinh khác! Vui lòng kiểm tra lại hoặc đăng nhập.");
+            }
+
+            // Xử lý ClassId và GradeId: Nếu là 0 hoặc <= 0 thì coi như null
+            if (request.ClassId <= 0) request.ClassId = null;
+            if (request.GradeId <= 0) request.GradeId = null;
+
+            // Kiểm tra sĩ số nếu có chọn lớp hợp lệ
+            if (request.ClassId.HasValue)
+            {
+                if (await IsClassFullAsync(request.ClassId.Value))
+                {
+                    throw new Exception("Rất tiếc, lớp học này đã đủ sĩ số tối đa. Vui lòng chọn lớp khác hoặc liên hệ trung tâm để được tư vấn.");
+                }
             }
 
             request.Status = "Pending";
@@ -184,17 +241,6 @@ namespace EducenAPI.Services
 
             if (request.Status != "Pending")
                 throw new Exception("Yêu cầu đã được xử lý trước đó");
-
-            // Generate username từ email
-            var usernameFromEmail = request.Email?.Split('@')[0] ?? $"stu_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-
-            // Check username đã tồn tại chưa
-            var username = usernameFromEmail;
-            int counter = 1;
-            while (await _context.Users.AnyAsync(u => u.Username == username))
-            {
-                username = $"{usernameFromEmail}_{counter++}";
-            }
 
             // Check email đã tồn tại trong Users chưa
             User? user = null;
@@ -228,16 +274,16 @@ namespace EducenAPI.Services
             }
             else
             {
-                // Tạo User mới
+                // Tạo User mới (Chỉ tạo thông tin, không tạo TK đăng nhập ngay)
                 user = new User
                 {
-                    Username = username,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Edu123456"),
+                    Username = null,
+                    PasswordHash = null,
                     FullName = $"{request.FirstName} {request.LastName}".Trim(),
                     Email = request.Email,
                     PhoneNumber = request.Phone,
                     RoleId = 3, // Student role
-                    AccountStatus = "Active",
+                    AccountStatus = "NoAccount",
                     IsAccountSent = false,
                     Address = request.Address
                 };
@@ -301,7 +347,7 @@ namespace EducenAPI.Services
             if (!string.IsNullOrWhiteSpace(request.ParentName) && 
                 (!string.IsNullOrWhiteSpace(request.ParentPhone) || !string.IsNullOrWhiteSpace(request.ParentEmail)))
             {
-                // 1. Tìm phụ huynh đã tồn tại theo SĐT hoặc Email
+                // 1. Tìm tài khoản phụ huynh (Ưu tiên theo SĐT hoặc Email)
                 User? parentUser = null;
                 
                 if (!string.IsNullOrWhiteSpace(request.ParentPhone))
@@ -309,7 +355,7 @@ namespace EducenAPI.Services
                     parentUser = await _context.Users
                         .Include(u => u.Parent)
                         .ThenInclude(p => p.Students)
-                        .FirstOrDefaultAsync(u => u.PhoneNumber == request.ParentPhone && u.RoleId == 4);
+                        .FirstOrDefaultAsync(u => u.PhoneNumber == request.ParentPhone && u.UserId != student.UserId);
                 }
                 
                 if (parentUser == null && !string.IsNullOrWhiteSpace(request.ParentEmail))
@@ -317,42 +363,50 @@ namespace EducenAPI.Services
                     parentUser = await _context.Users
                         .Include(u => u.Parent)
                         .ThenInclude(p => p.Students)
-                        .FirstOrDefaultAsync(u => u.Email == request.ParentEmail && u.RoleId == 4);
+                        .FirstOrDefaultAsync(u => u.Email == request.ParentEmail && u.UserId != student.UserId);
                 }
 
-                // 2. Nếu không tìm thấy, tạo tài khoản Phụ huynh mới
+                // 2. Nếu tìm thấy User nhưng chưa có record Parent, tạo thêm cho họ
+                if (parentUser != null && parentUser.Parent == null)
+                {
+                    var newParent = new Parent { UserId = parentUser.UserId };
+                    _context.Parents.Add(newParent);
+                    await _context.SaveChangesAsync();
+                    parentUser.Parent = newParent;
+                }
+
+                // 3. Nếu chưa có User nào, tạo mới hoàn toàn
                 if (parentUser == null)
                 {
-                    // Check email trùng lặp nếu có email phụ huynh
-                    if (!string.IsNullOrWhiteSpace(request.ParentEmail))
-                    {
-                        var emailExists = await _context.Users.AnyAsync(u => u.Email == request.ParentEmail);
-                        if (emailExists)
-                        {
-                            // Nếu email đã dùng nhưng không phải role Phụ huynh, chúng ta skip hoặc báo lỗi nhẹ
-                            // Ở đây chọn skip việc tạo phụ huynh mới để tránh crash, nhưng vẫn log hoặc xử lý sau
-                        }
-                        else
-                        {
-                            parentUser = await CreateNewParentAsync(request);
-                        }
-                    }
-                    else
-                    {
-                        parentUser = await CreateNewParentAsync(request);
-                    }
+                    parentUser = await CreateNewParentAsync(request);
                 }
 
-                // 3. Liên kết Học sinh với Phụ huynh
+                // 4. Liên kết Học sinh với Phụ huynh (Cả 2 chiều để chắc chắn EF nhận diện)
                 if (parentUser?.Parent != null)
                 {
+                    Console.WriteLine($"[DEBUG] Linking Student {student.UserId} with Parent {parentUser.UserId}");
+
                     if (parentUser.Parent.Students == null) parentUser.Parent.Students = new List<Student>();
+                    if (student.Parents == null) student.Parents = new List<Parent>();
                     
                     if (!parentUser.Parent.Students.Any(s => s.UserId == student.UserId))
                     {
                         parentUser.Parent.Students.Add(student);
                     }
+
+                    if (!student.Parents.Any(p => p.UserId == parentUser.UserId))
+                    {
+                        student.Parents.Add(parentUser.Parent);
+                    }
                 }
+                else
+                {
+                    Console.WriteLine($"[DEBUG] Skipping parent linking: parentUser or parent record is null.");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] No parent info found in request (ParentName: '{request.ParentName}')");
             }
 
             await _context.SaveChangesAsync();
@@ -469,27 +523,16 @@ namespace EducenAPI.Services
 
         private async Task<User> CreateNewParentAsync(EnrollmentRequest request)
         {
-            // Generate username cho phụ huynh
-            var usernameBase = !string.IsNullOrWhiteSpace(request.ParentEmail) 
-                ? request.ParentEmail.Split('@')[0] 
-                : $"par_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-            
-            var username = usernameBase;
-            int counter = 1;
-            while (await _context.Users.AnyAsync(u => u.Username == username))
-            {
-                username = $"{usernameBase}_{counter++}";
-            }
 
             var user = new User
             {
-                Username = username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Edu123456"),
+                Username = null,
+                PasswordHash = null,
                 FullName = request.ParentName,
                 Email = request.ParentEmail,
                 PhoneNumber = request.ParentPhone,
                 RoleId = 4, // Parent role
-                AccountStatus = "Active",
+                AccountStatus = "NoAccount",
                 IsAccountSent = false,
                 Address = request.Address
             };

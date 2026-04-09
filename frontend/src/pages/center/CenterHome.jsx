@@ -401,8 +401,44 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
         e.preventDefault();
         setIsSubmittingEnrollment(true);
 
+        // Frontend validation - Normalize phone before testing
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^(84|0[35789])[0-9]{8}$/;
+
+        const normalizedPhone = form.phone.replace(/[\s\.\-\(\)]/g, "");
+        const normalizedParentPhone = form.parentPhone ? form.parentPhone.replace(/[\s\.\-\(\)]/g, "") : "";
+
+        if (!emailRegex.test(form.email)) {
+            toast.error("Email không hợp lệ!");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+        if (!phoneRegex.test(normalizedPhone)) {
+            toast.error("Số điện thoại không hợp lệ! Vui lòng nhập SĐT Việt Nam.");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+
+        // Validate optional parent info if partially filled
+        if (form.parentEmail && !emailRegex.test(form.parentEmail)) {
+            toast.error("Email phụ huynh không hợp lệ!");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+        if (normalizedParentPhone && !phoneRegex.test(normalizedParentPhone)) {
+            toast.error("Số điện thoại phụ huynh không hợp lệ!");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+
         try {
-            const payload = { ...form };
+            const payload = { 
+                ...form,
+                phone: normalizedPhone, // Send normalized
+                parentPhone: normalizedParentPhone || form.parentPhone, // Send normalized if valid
+                gradeId: form.gradeId === "" ? null : parseInt(form.gradeId),
+                classId: form.classId === "" ? null : parseInt(form.classId)
+            };
 
             const response = await api.post('/enrollment-requests', payload);
 
@@ -410,7 +446,8 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                 toast.success(response.data.message || 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
                 setForm({ 
                     firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '',
-                    parentName: '', parentPhone: '', parentEmail: ''
+                    parentName: '', parentPhone: '', parentEmail: '',
+                    gradeId: '', classId: ''
                 });
             }
         } catch (error) {
