@@ -88,6 +88,8 @@ namespace EducenAPI.Services.TenantService
                 dbContext.Database.SetConnectionString(modifiedConnectionString);
 
                 bool canConnect = await dbContext.Database.CanConnectAsync();
+                bool isNewDatabase = false;
+
                 if (!canConnect)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
@@ -95,9 +97,10 @@ namespace EducenAPI.Services.TenantService
                     Console.ResetColor();
 
                     await dbContext.Database.EnsureCreatedAsync();
+                    isNewDatabase = true;
                 }
 
-                if (dbContext.Database.GetPendingMigrations().Any())
+                if (!isNewDatabase && dbContext.Database.GetPendingMigrations().Any())
                 {
                     Console.ForegroundColor = ConsoleColor.Blue;
                     Console.WriteLine($"Applying ApplicationDB Migrations for New '{tenant.TenantId}' tenant.");
