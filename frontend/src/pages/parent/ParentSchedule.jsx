@@ -8,6 +8,7 @@ import ParentSidebar from '../../components/ParentSidebar';
 import { useChild } from '../../context/ChildContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import '../../css/pages/parent/ParentSchedule.css';
 
 const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
@@ -52,7 +53,7 @@ const ParentSchedule = () => {
             });
             setStudentClasses(mapped);
             setAttendanceRecords(attRes.data || []);
-        }).catch(() => toast.error('Không thể tải lịch học'))
+        }).catch((error) => showValidationError(error, 'Không thể tải lịch học'))
           .finally(() => setIsLoading(false));
     }, [selectedChild]);
 

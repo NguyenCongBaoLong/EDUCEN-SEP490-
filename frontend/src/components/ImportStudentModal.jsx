@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle, Loader2, DownloadCloud } from 'lucide-react';
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 import api from '../services/api';
 import '../css/components/ImportStudentModal.css';
 
@@ -33,7 +34,7 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
         if (!f) return;
         const ext = f.name.split('.').pop().toLowerCase();
         if (!['xlsx', 'xls'].includes(ext)) {
-            toast.error('Chỉ hỗ trợ file Excel (.xlsx, .xls). Vui lòng tải mẫu để biết định dạng.');
+            showValidationError('Chỉ hỗ trợ file Excel (.xlsx, .xls). Vui lòng tải mẫu để biết định dạng.');
             return;
         }
         setFile(f);
@@ -87,7 +88,7 @@ const ImportStudentModal = ({ isOpen, onClose, onImport }) => {
                 msg = 'Không tìm thấy dữ liệu trong file Excel.';
             }
 
-            toast.error(msg);
+            showValidationError(err, msg);
         } finally {
             setLoading(false);
         }

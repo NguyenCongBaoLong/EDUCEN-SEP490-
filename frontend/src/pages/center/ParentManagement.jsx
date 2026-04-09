@@ -6,7 +6,8 @@ import ParentTable from '../../components/ParentTable';
 import AddParentModal from '../../components/AddParentModal';
 import ParentDetailModal from '../../components/ParentDetailModal';
 import ConfirmModal from '../../components/ConfirmModal';
-import api, { parseValidationErrors } from '../../services/api';
+import api from '../../services/api';
+import { parseValidationErrors, showValidationError } from '../../services/toastHelper';
 import '../../css/pages/center/ParentManagement.css';
 
 const ParentManagement = () => {
@@ -85,7 +86,7 @@ const ParentManagement = () => {
             await fetchAllUsers();
         } catch (error) {
             console.error("Fetch data error:", error);
-            toast.error("Không thể tải dữ liệu phụ huynh");
+            showValidationError(error, "Không thể tải dữ liệu phụ huynh");
         } finally {
             setIsLoading(false);
         }
@@ -153,7 +154,7 @@ const ParentManagement = () => {
                 }
             }
             // Fallback: show toast
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            showValidationError(error, 'Có lỗi xảy ra');
         }
     };
 
@@ -173,7 +174,7 @@ const ParentManagement = () => {
             ));
             toast.success("Đổi trạng thái thành công!");
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi khi đổi trạng thái');
+            showValidationError(error, 'Lỗi khi đổi trạng thái');
         }
     };
 
@@ -189,7 +190,7 @@ const ParentManagement = () => {
             toast.success("Đã gửi tài khoản phụ huynh thành công!");
         } catch (error) {
             toast.dismiss(loadingToast);
-            toast.error(error.response?.data?.message || 'Lỗi khi gửi tài khoản');
+            showValidationError(error, 'Lỗi khi gửi tài khoản');
         }
     };
 
@@ -221,7 +222,7 @@ const ParentManagement = () => {
             toast.success(`Đã gửi thành công ${selectedParentIds.length} tài khoản!`);
         } catch (error) {
             toast.dismiss(loadingToast);
-            toast.error("Một số tài khoản có thể chưa gửi được. Vui lòng kiểm tra lại.");
+            showValidationError("Một số tài khoản có thể chưa gửi được. Vui lòng kiểm tra lại.");
             fetchData();
         }
     };

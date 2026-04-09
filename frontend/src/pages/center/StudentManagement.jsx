@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Plus, Upload, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
-import api, { parseValidationErrors } from '../../services/api';
+import api from '../../services/api';
+import { parseValidationErrors, showValidationError } from '../../services/toastHelper';
 import StudentTable from '../../components/StudentTable';
 import AddStudentModal from '../../components/AddStudentModal';
 import StudentDetailModal from '../../components/StudentDetailModal';
@@ -128,7 +129,7 @@ const StudentManagement = () => {
             setStudentList(data);
         } catch (error) {
             console.error("Fetch students error:", error);
-            toast.error("Không thể tải danh sách học sinh");
+            showValidationError(error, "Không thể tải danh sách học sinh");
         }
     };
 
@@ -223,7 +224,7 @@ const StudentManagement = () => {
                     return;
                 }
             }
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            showValidationError(error, 'Có lỗi xảy ra');
         }
     };
 
@@ -245,7 +246,7 @@ const StudentManagement = () => {
             toast.success("Đổi trạng thái thành công!");
         } catch (error) {
             console.error(error);
-            toast.error(error.response?.data?.message || 'Lỗi khi đổi trạng thái');
+            showValidationError(error, 'Lỗi khi đổi trạng thái');
         }
     };
 
@@ -264,7 +265,7 @@ const StudentManagement = () => {
                     ? { ...s, accountSent: false, status: 'inactive' }
                     : s
             ));
-            toast.error(error.response?.data?.message || error.response?.data || 'Gửi tài khoản thất bại');
+            showValidationError(error, 'Gửi tài khoản thất bại');
         }
     };
 
@@ -282,7 +283,7 @@ const StudentManagement = () => {
         fetchStudents();
         setSelectedStudentIds([]);
         if (successCount > 0) toast.success(`Đã gửi tài khoản cho ${successCount} học sinh!`);
-        if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
+        if (failCount > 0) showValidationError(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
     };
 
     const handleImportStudents = (importResults) => {

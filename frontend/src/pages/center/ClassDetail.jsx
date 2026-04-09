@@ -7,6 +7,7 @@ import {
     Plus, AlertTriangle, BookOpen, Info, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import Sidebar from '../../components/Sidebar';
 import CreateClassModal from '../../components/CreateClassModal';
 import api from '../../services/api';
@@ -232,7 +233,7 @@ const ClassDetail = () => {
             // Fetch list in the background
             fetchStudents();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Không thể thêm học sinh.');
+            showValidationError(err, 'Không thể thêm học sinh.');
         } finally {
             setAddingStudentId(null);
         }
@@ -247,7 +248,7 @@ const ClassDetail = () => {
             toast.success(`Đã xóa ${removeModal.student.fullName} khỏi lớp thành công!`);
             setRemoveModal({ show: false, student: null });
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Không thể xóa học sinh.');
+            showValidationError(err, 'Không thể xóa học sinh.');
         } finally {
             setActionLoading(false);
         }
@@ -282,10 +283,10 @@ const ClassDetail = () => {
                 toast.success(`Import xong! ${result.success}/${result.total} học sinh được thêm vào lớp.`);
             }
             if (result.failed > 0 && result.success === 0) {
-                toast.error(`Import thất bại: ${result.failed} dòng bị lỗi.`);
+                showValidationError(`Import thất bại: ${result.failed} dòng bị lỗi.`);
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Import thất bại, vui lòng thử lại.');
+            showValidationError(err, 'Import thất bại, vui lòng thử lại.');
         } finally {
             setActionLoading(false);
         }
@@ -332,7 +333,7 @@ const ClassDetail = () => {
             toast.success('Đã cập nhật thông tin lớp học thành công!');
         } catch (err) {
             console.error("Lỗi khi cập nhật lớp học:", err);
-            toast.error(err.response?.data?.message || 'Không thể cập nhật lớp học.');
+            showValidationError(err, 'Không thể cập nhật lớp học.');
         }
     };
 

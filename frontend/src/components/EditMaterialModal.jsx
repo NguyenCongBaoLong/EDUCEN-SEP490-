@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, FileText } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 
 const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [] }) => {
     const [formData, setFormData] = useState({
@@ -59,8 +60,7 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [
             onClose();
         } catch (error) {
             console.error('Error updating material:', error);
-            const msg = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật tài liệu.';
-            toast.error(msg);
+            showValidationError(error, 'Có lỗi xảy ra khi cập nhật tài liệu.');
         } finally {
             setIsSubmitting(false);
         }

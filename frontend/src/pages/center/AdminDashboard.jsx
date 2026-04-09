@@ -17,6 +17,8 @@ import EnrollmentRequestsTable from '../../components/EnrollmentRequestsTable';
 import EnrollmentDetailModal from '../../components/EnrollmentDetailModal';
 import RejectEnrollmentModal from '../../components/RejectEnrollmentModal';
 import { useAuth } from '../../context/AuthContext';
+import { toast } from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import { CreditCard, DollarSign as DollarIcon, LayoutDashboard, FileText, Wallet } from 'lucide-react';
 import zaloOAService from '../../services/zaloOAService';
 import notificationService from '../../services/notificationService';
@@ -282,8 +284,8 @@ const AdminDashboard = () => {
                 setSelectedMessage(prev => prev ? { ...prev, adminResponse: replyText, status: 'Answered' } : null);
             }
         } catch (error) {
-            console.error('Error replying:', error);
-            toast.error(error.response?.data?.message || 'Gửi trả lời thất bại.');
+            console.error('Lỗi khi gửi phản hồi:', error);
+            showValidationError(error, 'Gửi trả lời thất bại.');
         } finally {
             setReplying(false);
         }
@@ -552,8 +554,8 @@ const AdminDashboard = () => {
                 toast.success('Đã duyệt yêu cầu và tạo tài khoản học sinh!');
             }
         } catch (error) {
-            console.error('Approve error:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+            console.error('Lỗi khi duyệt yêu cầu:', error);
+            showValidationError(error, 'Lỗi khi duyệt yêu cầu');
         }
     };
 
@@ -571,8 +573,8 @@ const AdminDashboard = () => {
                 toast.success('Đã từ chối yêu cầu');
             }
         } catch (error) {
-            console.error('Reject error:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+            console.error('Lỗi khi từ chối yêu cầu:', error);
+            showValidationError(error, 'Lỗi khi từ chối yêu cầu');
         }
         setRejectingRequest(null);
     };

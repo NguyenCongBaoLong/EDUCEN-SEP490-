@@ -12,6 +12,7 @@ import '../../css/pages/student/StudentClassDetail.css';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 
 /* ─── Helpers ─── */
 const formatDate = (dateStr, includeTime = false) => {
@@ -83,7 +84,7 @@ const SubmitModal = ({ assignment, onClose, onSubmit, isSubmitting }) => {
     }
 
     const handleSubmit = () => {
-        if (files.length === 0) return toast.error('Vui lòng chọn ít nhất một file để nộp bài.');
+        if (files.length === 0) return showValidationError('Vui lòng chọn ít nhất một file để nộp bài.');
         onSubmit({ files });
     };
 
@@ -185,7 +186,7 @@ const StudentClassDetail = () => {
         } catch (err) {
             console.error('Error fetching class detail:', err);
             setError('Không thể tải thông tin lớp học. Vui lòng thử lại sau.');
-            toast.error('Lỗi khi tải thông tin lớp học');
+            showValidationError(err, 'Lỗi khi tải thông tin lớp học');
         } finally {
             setLoading(false);
         }
@@ -202,7 +203,7 @@ const StudentClassDetail = () => {
     };
 
     const handleDownload = (fileUrl, fileName) => {
-        if (!fileUrl) return toast.error('Không tìm thấy tệp tin');
+        if (!fileUrl) return showValidationError('Không tìm thấy tệp tin');
         const link = document.createElement('a');
         link.href = fileUrl;
         link.download = fileName || 'download';
@@ -246,7 +247,7 @@ const StudentClassDetail = () => {
             fetchClassDetail(); // Refresh data
         } catch (err) {
             console.error('Submission error:', err);
-            toast.error(err.response?.data?.message || 'Có lỗi khi nộp bài');
+            showValidationError(err, 'Có lỗi khi nộp bài');
         } finally {
             setIsSubmitting(false);
         }

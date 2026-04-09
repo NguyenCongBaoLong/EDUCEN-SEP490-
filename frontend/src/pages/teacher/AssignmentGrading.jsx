@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Clock, Search, FileText, Download, Check, X, AlertCircle, Send, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import api from '../../services/api';
 import '../../css/pages/teacher/AssignmentGrading.css';
@@ -54,7 +55,7 @@ const AssignmentGrading = ({ isTA = false }) => {
             }
         } catch (error) {
             console.error('Error fetching grading data:', error);
-            toast.error('Không thể tải dữ liệu chấm điểm');
+            showValidationError(error, 'Không thể tải dữ liệu chấm điểm');
         } finally {
             setIsLoading(false);
         }
@@ -152,7 +153,7 @@ const AssignmentGrading = ({ isTA = false }) => {
             await fetchGradingData();
         } catch (error) {
             console.error('Error saving grade:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi khi lưu điểm');
+            showValidationError(error, 'Có lỗi khi lưu điểm');
         } finally {
             setIsSaving(false);
         }
@@ -161,7 +162,7 @@ const AssignmentGrading = ({ isTA = false }) => {
     const handlePublishAll = async (isPublish) => {
         const gradedCount = students.filter(s => s.submission && s.submission.score != null).length;
         if (gradedCount === 0) {
-            toast.error('Không có bài nào đã chấm để công bố');
+            showValidationError('Không có bài nào đã chấm để công bố');
             return;
         }
 
@@ -175,7 +176,7 @@ const AssignmentGrading = ({ isTA = false }) => {
             await fetchGradingData();
         } catch (error) {
             console.error('Error publishing all grades:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi công bố hàng loạt');
+            showValidationError(error, 'Có lỗi xảy ra khi công bố hàng loạt');
         } finally {
             setIsPublishingAll(false);
         }
@@ -194,7 +195,7 @@ const AssignmentGrading = ({ isTA = false }) => {
             await fetchGradingData();
         } catch (error) {
             console.error('Error publishing grade:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi khi thay đổi trạng thái công bố');
+            showValidationError(error, 'Có lỗi khi thay đổi trạng thái công bố');
         } finally {
             setIsPublishing(false);
         }
@@ -221,7 +222,7 @@ const AssignmentGrading = ({ isTA = false }) => {
             await fetchGradingData();
         } catch (error) {
             console.error('Error resetting grade:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi khi hủy đánh giá');
+            showValidationError(error, 'Có lỗi khi hủy đánh giá');
         } finally {
             setIsResetting(false);
         }

@@ -9,6 +9,7 @@ import api from '../../services/api';
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
 import '../../css/pages/teacher/TeacherSchedule.css';
 import { useSchedule } from '../../context/ScheduleContext';
+import { showValidationError } from '../../services/toastHelper';
 
 
 const TeacherSchedule = ({ isTA = false }) => {
@@ -114,7 +115,7 @@ const TeacherSchedule = ({ isTA = false }) => {
         if (classItem.classId) {
             navigate(isTA ? `/ta/classes/${classItem.classId}` : `/teacher/classes/${classItem.classId}`);
         } else {
-            toast.error("Không tìm thấy thông tin lớp học");
+            showValidationError(null, "Không tìm thấy thông tin lớp học");
         }
     };
 
@@ -439,7 +440,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                             setRequestOpen(false);
                         } catch (error) {
                             console.error('Error sending request:', error);
-                            toast.error(error.response?.data?.message || 'Gửi yêu cầu thất bại.');
+                            showValidationError(error, 'Gửi yêu cầu thất bại.');
                         }
                     }}
                     initialData={requestInitialData}

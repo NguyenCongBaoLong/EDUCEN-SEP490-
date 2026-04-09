@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import PropTypes from 'prop-types';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 import '../css/components/CreateClassModal.css';
 
 const GradeModal = ({ isOpen, onClose, onSuccess, editingGrade }) => {
@@ -46,8 +47,8 @@ const GradeModal = ({ isOpen, onClose, onSuccess, editingGrade }) => {
             onSuccess();
             onClose();
         } catch (error) {
-            console.error(error);
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi lưu khối lớp');
+            console.error('Error saving grade:', error);
+            showValidationError(error, 'Có lỗi xảy ra khi lưu khối lớp');
         } finally {
             setLoading(false);
         }

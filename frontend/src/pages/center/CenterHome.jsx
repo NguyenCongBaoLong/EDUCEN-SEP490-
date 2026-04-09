@@ -13,7 +13,9 @@ import { useSchedule } from '../../context/ScheduleContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import '../../css/pages/center/CenterHome.css';
-import toast from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
+import HomePage from '../HomePage';
 
 
 
@@ -415,7 +417,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             }
         } catch (error) {
             console.error('Enrollment error:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+            showValidationError(error, 'Có lỗi xảy ra. Vui lòng thử lại.');
         } finally {
             setIsSubmittingEnrollment(false);
         }
@@ -587,8 +589,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                 await fetchCenterData();
             }
         } catch (err) {
-            console.error('Save error:', err);
-            toast.error('Có lỗi xảy ra khi lưu: ' + (err.response?.data?.message || err.message));
+            showValidationError(err, 'Có lỗi xảy ra khi lưu');
         } finally {
             setIsSaving(false);
         }
@@ -1529,9 +1530,14 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                             {upcomingClasses
                                                                 .filter(c => !form.gradeId || (c.gradeId && c.gradeId.toString() === form.gradeId.toString()))
                                                                 .filter(c => !form.preferredCourse || c.subjectName === form.preferredCourse)
-                                                                .map(c => (
-                                                                    <option key={c.classId} value={c.classId}>{c.className} ({c.teacherName || 'Chưa XL'})</option>
-                                                                ))
+                                                                .map(c => {
+                                                                    const isFull = c.maxStudents > 0 && c.studentCount >= c.maxStudents;
+                                                                    return (
+                                                                        <option key={c.classId} value={c.classId}>
+                                                                            {c.className} ({c.teacherName || 'Chưa XL'}) {isFull ? '(Lớp đầy)' : ''}
+                                                                        </option>
+                                                                    );
+                                                                })
                                                             }
                                                         </select>
                                                     </div>

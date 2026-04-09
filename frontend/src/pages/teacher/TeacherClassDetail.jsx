@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -297,7 +298,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             }
         } catch (err) {
             console.error('Failed to fetch class detail:', err);
-            if (!isRefresh) toast.error('Không thể tải thông tin lớp học.');
+            if (!isRefresh) showValidationError(err, 'Không thể tải thông tin lớp học.');
         } finally {
             if (!isRefresh) setLoading(false);
         }
@@ -413,7 +414,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             toast.success("Đã xóa tài liệu khỏi buổi học!");
         } catch (err) {
             console.error('Delete material error:', err);
-            toast.error('Không thể xóa tài liệu. Vui lòng thử lại.');
+            showValidationError(err, 'Không thể xóa tài liệu. Vui lòng thử lại.');
         } finally {
             setDeleteMaterialId(null);
             setDeleteTargetSession(null);
@@ -437,7 +438,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             toast.success("Đã xóa bài tập khỏi buổi học!");
         } catch (err) {
             console.error('Delete assignment error:', err);
-            toast.error('Không thể xóa bài tập. Vui lòng thử lại.');
+            showValidationError(err, 'Không thể xóa bài tập. Vui lòng thử lại.');
         } finally {
             setDeleteAssignmentId(null);
             setDeleteTargetSession(null);
@@ -504,7 +505,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
         } catch (err) {
             console.error('Import error:', err);
             const msg = err.response?.data?.message || 'Lỗi khi import từ thư viện.';
-            toast.error(msg);
+            showValidationError(err, msg);
         }
         setImportModal({ isOpen: false, type: 'material', targetSession: null });
     };
@@ -530,7 +531,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             a.click();
             document.body.removeChild(a);
         } else {
-            toast.error("Không có đường dẫn tải về");
+            showValidationError('Không có đường dẫn tải về');
         }
     };
 
@@ -571,7 +572,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
         } catch (error) {
             console.error('Error saving assignment:', error);
             const msg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu bài tập.';
-            toast.error(msg);
+            showValidationError(error, msg);
         }
     };
 

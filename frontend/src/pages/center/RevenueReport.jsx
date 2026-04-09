@@ -27,6 +27,7 @@ import {
     Legend 
 } from 'recharts';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -66,7 +67,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
             const response = await api.get(`/revenue-reports/summary?tenantId=${tenantId}&fromDate=${fromDate}&toDate=${toDate}`);
             setSummary(response.data);
         } catch (error) {
-            toast.error('Lỗi tải báo cáo tổng quan');
+            showValidationError(error, 'Lỗi tải báo cáo tổng quan');
         } finally {
             setLoading(false);
         }
@@ -79,7 +80,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
             const response = await api.get(`/revenue-reports/by-month?tenantId=${tenantId}&year=${year}`);
             setMonthlyData(response.data);
         } catch (error) {
-            toast.error('Lỗi tải báo cáo theo tháng');
+            showValidationError(error, 'Lỗi tải báo cáo theo tháng');
         } finally {
             setLoading(false);
         }
@@ -92,7 +93,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
             const response = await api.get(`/revenue-reports/by-class?tenantId=${tenantId}&month=${month}&year=${year}`);
             setClassData(response.data);
         } catch (error) {
-            toast.error('Lỗi tải báo cáo theo lớp');
+            showValidationError(error, 'Lỗi tải báo cáo theo lớp');
         } finally {
             setLoading(false);
         }
@@ -105,7 +106,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
             const response = await api.get(`/revenue-reports/outstanding?tenantId=${tenantId}`);
             setOutstandingData(response.data);
         } catch (error) {
-            toast.error('Lỗi tải báo cáo công nợ');
+            showValidationError(error, 'Lỗi tải báo cáo công nợ');
         } finally {
             setLoading(false);
         }
@@ -134,7 +135,7 @@ const RevenueReport = ({ hideSidebar = false }) => {
             
             toast.success('Xuất báo cáo thành công');
         } catch (error) {
-            toast.error('Lỗi xuất báo cáo');
+            showValidationError(error, 'Lỗi xuất báo cáo');
         }
     };
 

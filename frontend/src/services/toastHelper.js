@@ -134,7 +134,7 @@ function translateErrorMessage(englishMsg) {
 /**
  * Parse validation errors trực tiếp với translate to Vietnamese
  */
-function parseValidationErrors(errorResponse) {
+export function parseValidationErrors(errorResponse) {
     const data = errorResponse?.data;
     
     if (!data) {

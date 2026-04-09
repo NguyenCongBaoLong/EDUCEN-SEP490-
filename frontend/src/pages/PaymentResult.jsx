@@ -9,6 +9,7 @@ import {
     Download
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 import paymentService from '../services/paymentService';
 import { useAuth } from '../context/AuthContext';
 import '../css/pages/PaymentResult.css';
@@ -58,7 +59,7 @@ const PaymentResult = () => {
     };
 
     const showErrorToast = (message) => {
-        toast.error(message, { id: 'payment-result-status' });
+        showValidationError(message);
     };
 
     const verifyPayment = async () => {

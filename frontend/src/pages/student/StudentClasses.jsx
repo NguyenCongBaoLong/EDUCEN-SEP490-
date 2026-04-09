@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import StudentSidebar from '../../components/StudentSidebar';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import '../../css/pages/student/StudentClasses.css';
 
 const SUBJECT_COLORS = {
@@ -22,7 +23,7 @@ const PerformanceReportModal = ({ onClose }) => {
         setLoading(true);
         api.get('/Students/performance-report')
             .then(res => setReport(res.data))
-            .catch(() => toast.error('Không thể tải báo cáo học tập'))
+            .catch((error) => showValidationError(error, 'Không thể tải báo cáo học tập'))
             .finally(() => setLoading(false));
     }, []);
 
@@ -233,8 +234,8 @@ const StudentClasses = () => {
             await syncPendingEnrollments();
             const myEnrolled = await fetchMyClasses();
             await fetchAvailableClasses(myEnrolled);
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            showValidationError(error, 'Không thể tải danh sách lớp của bạn.');
         } finally {
             setLoading(false);
         }
@@ -272,8 +273,8 @@ const StudentClasses = () => {
             const res = await api.get('/Classes/student/my-classes');
             setMyEnrolledClasses(res.data);
             return res.data;
-        } catch (err) {
-            toast.error('Kh\u00f4ng th\u1ec3 t\u1ea3i danh s\u00e1ch l\u1edbp c\u1ee7a b\u1ea1n.');
+        } catch (error) {
+            showValidationError(error, 'Không thể tải danh sách lớp của bạn.');
             return [];
         }
     };

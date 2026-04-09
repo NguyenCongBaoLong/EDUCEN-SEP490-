@@ -12,6 +12,7 @@ import {
     User
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import ParentSidebar from '../../components/ParentSidebar';
 import tuitionService from '../../services/tuitionService';
 import familyInvoiceService from '../../services/familyInvoiceService';
@@ -164,7 +165,7 @@ const FamilyInvoices = () => {
             
             setInvoices(filteredInvoices);
         } catch (error) {
-            toast.error('Không thể tải danh sách hóa đơn');
+            showValidationError(error, 'Không thể tải danh sách hóa đơn');
             console.error('Error fetching family invoices:', error);
         } finally {
             setLoading(false);
@@ -177,7 +178,7 @@ const FamilyInvoices = () => {
             const invoicesData = await tuitionService.getOutstandingInvoices();
             setOutstandingTuitionInvoices(invoicesData || []);
         } catch (error) {
-            toast.error('Không thể tải hóa đơn học phí chưa thanh toán');
+            showValidationError(error, 'Không thể tải hóa đơn học phí chưa thanh toán');
             console.error('Error fetching outstanding tuition invoices:', error);
         } finally {
             setLoadingOutstanding(false);
@@ -217,10 +218,10 @@ const FamilyInvoices = () => {
             if (result.success && result.paymentUrl) {
                 window.location.href = result.paymentUrl;
             } else {
-                toast.error(result.errorMessage || result.message || 'Thanh toán thất bại');
+                showValidationError(result.errorMessage || result.message || 'Thanh toán thất bại');
             }
         } catch (error) {
-            toast.error('Lỗi thanh toán: ' + (error.response?.data?.message || error.message));
+            showValidationError(error, 'Lỗi thanh toán');
             console.error('Payment error:', error);
         } finally {
             setProcessingPayment(false);
@@ -231,24 +232,24 @@ const FamilyInvoices = () => {
 
     const handleCreateInvoice = async () => {
         if (selectedTuitionInvoiceIds.length === 0) {
-            toast.error('Vui lòng chọn ít nhất 1 hóa đơn học phí để gộp');
+            showValidationError('Vui lòng chọn ít nhất 1 hóa đơn học phí để gộp');
             return;
         }
 
         if (selectedPeriods.length > 1) {
-            toast.error('Chỉ được gộp các hóa đơn cùng tháng và năm');
+            showValidationError('Chỉ được gộp các hóa đơn cùng tháng và năm');
             return;
         }
 
         if (selectedStudents.length === 0) {
-            toast.error('Không xác định được học sinh cho hóa đơn đã chọn');
+            showValidationError('Không xác định được học sinh cho hóa đơn đã chọn');
             return;
         }
 
         // Validate: chỉ gộp hóa đơn chưa thanh toán
         const hasPaidInvoices = selectedInvoices.some(invoice => invoice.status === 'Paid');
         if (hasPaidInvoices) {
-            toast.error('Không thể gộp hóa đơn đã thanh toán. Vui lòng bỏ chọn các hóa đơn đã thanh toán.');
+            showValidationError('Không thể gộp hóa đơn đã thanh toán. Vui lòng bỏ chọn các hóa đơn đã thanh toán.');
             return;
         }
 
@@ -268,7 +269,7 @@ const FamilyInvoices = () => {
             setShowCreateModal(false);
             fetchFamilyInvoices();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi tạo hóa đơn');
+            showValidationError(error, 'Lỗi tạo hóa đơn');
         } finally {
             setCreating(false);
         }
@@ -289,7 +290,7 @@ const FamilyInvoices = () => {
             toast.success(response?.message || 'Đã hủy hóa đơn gộp');
             await Promise.all([fetchFamilyInvoices(), fetchOutstandingTuitionInvoices()]);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Không thể hủy hóa đơn gộp');
+            showValidationError(error, 'Không thể hủy hóa đơn gộp');
         } finally {
             setCancellingInvoiceId(null);
         }

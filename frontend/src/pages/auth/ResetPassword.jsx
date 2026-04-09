@@ -3,6 +3,7 @@ import { ArrowLeft, AlertCircle, Eye, EyeOff, Lock, Key, Mail, Loader2 } from 'l
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import '../../css/pages/auth/ResetPassword.css';
 
 const ResetPassword = () => {
@@ -53,9 +54,8 @@ const ResetPassword = () => {
             toast.success('Mật khẩu đã được đặt lại thành công!');
             navigate('/login');
         } catch (err) {
-            const msg = err.response?.data?.message || 'Mã xác thực không hợp lệ hoặc đã hết hạn.';
-            setError(msg);
-            toast.error(msg);
+            showValidationError(err, 'Mã xác thực không hợp lệ hoặc đã hết hạn.');
+            setError(err.response?.data?.message || 'Mã xác thực không hợp lệ hoặc đã hết hạn.');
         } finally {
             setIsLoading(false);
         }

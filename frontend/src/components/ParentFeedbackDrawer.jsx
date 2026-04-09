@@ -4,6 +4,7 @@ import {
     Clock, Star, AlertCircle, MailOpen
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 import api from '../services/api';
 import '../css/pages/parent/ParentFeedback.css';
 import '../css/components/TeacherInboxDrawer.css'; // reuse drawer shell styles
@@ -81,8 +82,9 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
         try {
             const res = await api.get('/support-requests/my');
             setFeedbacks(res.data || []);
-        } catch {
-            toast.error('Không thể tải danh sách phản hồi.');
+        } catch (err) {
+            console.error('Error fetching feedbacks:', err);
+            showValidationError(err, 'Không thể tải danh sách phản hồi.');
         } finally {
             setLoading(false);
         }
@@ -125,7 +127,8 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
             setView('list');
             await fetchFeedbacks();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Gửi phản hồi thất bại.');
+            console.error('Error sending feedback:', err);
+            showValidationError(err, 'Gửi phản hồi thất bại.');
         } finally {
             setSubmitting(false);
         }

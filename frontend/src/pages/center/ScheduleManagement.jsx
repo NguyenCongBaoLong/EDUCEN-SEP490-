@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
 import '../../css/pages/center/ScheduleManagement.css';
@@ -129,7 +130,7 @@ const ScheduleManagement = () => {
                 setDeleteModal({ show: false, classItem: null });
                 toast.success('Xóa lịch học thành công!');
             } catch (error) {
-                toast.error('Lỗi khi xóa lịch học');
+                showValidationError(error, 'Lỗi khi xóa lịch học');
             }
         }
     };
@@ -161,7 +162,7 @@ const ScheduleManagement = () => {
                 toast.success(`Đã xóa tất cả buổi học của lớp ${deleteModal.classItem.code}!`);
             } catch (error) {
                 console.error(error);
-                toast.error("Lỗi khi xóa lịch học hàng loạt");
+                showValidationError(error, "Lỗi khi xóa lịch học hàng loạt");
             }
         }
     };

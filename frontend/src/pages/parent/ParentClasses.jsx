@@ -6,6 +6,7 @@ import ParentFeedbackDrawer from '../../components/ParentFeedbackDrawer';
 import { useChild } from '../../context/ChildContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import '../../css/pages/parent/ParentClasses.css';
 
 const SUBJECT_COLORS = {
@@ -28,7 +29,7 @@ const ClassDetailModal = ({ cls, onClose }) => {
         setLoading(true);
         api.get(`/Classes/parent/child/${selectedChild.studentId}/class/${cls.classId}/detail`)
             .then(res => setDetail(res.data))
-            .catch(() => toast.error('Không thể tải chi tiết lớp học'))
+            .catch((error) => showValidationError(error, 'Không thể tải chi tiết lớp học'))
             .finally(() => setLoading(false));
     }, [cls, selectedChild]);
 
@@ -181,7 +182,7 @@ const PerformanceReportModal = ({ onClose }) => {
         setLoading(true);
         api.get(`/Parents/child/${selectedChild.studentId}/performance-report`)
             .then(res => setReport(res.data))
-            .catch(() => toast.error('Không thể tải báo cáo học tập'))
+            .catch((error) => showValidationError(error, 'Không thể tải báo cáo học tập'))
             .finally(() => setLoading(false));
     }, [selectedChild]);
 
@@ -342,7 +343,7 @@ const ParentClasses = () => {
         setClasses([]);
         api.get(`/Classes/parent/child/${selectedChild.studentId}/classes`)
             .then(res => setClasses(res.data || []))
-            .catch(() => toast.error('Không thể tải dữ liệu lớp học'))
+            .catch((error) => showValidationError(error, 'Không thể tải dữ liệu lớp học'))
             .finally(() => setLoading(false));
     }, [selectedChild]);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 import { X, UserCheck, Plus, Trash2, Calendar, Search } from 'lucide-react';
 import PropTypes from 'prop-types';
 import TeacherAssignModal from './TeacherAssignModal';
@@ -177,7 +178,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
     const handleRemoveSlot = (index) => {
         // Prevent removing if only one slot
         if (formData.scheduleSlots.length <= 1) {
-            toast.error('⚠️ Phải có ít nhất 1 buổi học!');
+            showValidationError('⚠️ Phải có ít nhất 1 buổi học!');
             return;
         }
         setFormData(prev => ({
@@ -199,27 +200,27 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         e.preventDefault();
 
         // Validation: Check all slots have valid data
-        const invalidSlots = formData.scheduleSlots.filter(slot =>
+        const hasEmptySlot = formData.scheduleSlots.some(slot =>
             !slot.day || !slot.startTime || !slot.endTime
         );
 
-        if (invalidSlots.length > 0) {
-            toast.error('❌ Vui lòng điền đầy đủ thông tin cho tất cả các buổi học!');
+        if (hasEmptySlot) {
+            showValidationError('❌ Vui lòng điền đầy đủ thông tin cho tất cả các buổi học!');
             return;
         }
 
         if (!formData.mainTeacherId) {
-            toast.error('❌ Vui lòng chọn giáo viên chính cho lớp học!');
+            showValidationError('❌ Vui lòng chọn giáo viên chính cho lớp học!');
             return;
         }
 
-        if (!formData.maxStudents || formData.maxStudents <= 0) {
-            toast.error('❌ Sĩ số tối đa phải lớn hơn 0!');
+        if (formData.maxStudents <= 0) {
+            showValidationError('❌ Sĩ số tối đa phải lớn hơn 0!');
             return;
         }
 
         // Validation: Check for duplicate slots
-        const duplicateSlots = formData.scheduleSlots.some((slot, index) =>
+        const hasDuplicates = formData.scheduleSlots.some((slot, index) =>
             formData.scheduleSlots.findIndex((s, i) =>
                 i !== index &&
                 s.day === slot.day &&
@@ -228,8 +229,8 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             ) !== -1
         );
 
-        if (duplicateSlots) {
-            toast.error('❌ Có buổi học bị trùng lặp! Vui lòng kiểm tra lại lịch học.');
+        if (hasDuplicates) {
+            showValidationError('❌ Có buổi học bị trùng lặp! Vui lòng kiểm tra lại lịch học.');
             return;
         }
 
@@ -256,7 +257,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
                 // Only check slots on the same day
                 if (slot1.day === slot2.day) {
                     if (hasTimeOverlap(slot1.startTime, slot1.endTime, slot2.startTime, slot2.endTime)) {
-                        toast.error(`❌ Phát hiện xung đột lịch học!\n\nCả 2 buổi học đều vào ${slot1.day}:\n• Buổi 1: ${slot1.startTime} - ${slot1.endTime}\n• Buổi 2: ${slot2.startTime} - ${slot2.endTime}`);
+                        showValidationError(`❌ Phát hiện xung đột lịch học!\n\nCả 2 buổi học đều vào ${slot1.day}:\n• Buổi 1: ${slot1.startTime} - ${slot1.endTime}\n• Buổi 2: ${slot2.startTime} - ${slot2.endTime}`);
                         return;
                     }
                 }
@@ -265,32 +266,34 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
 
         // Validation: Check start time < end time for each slot
         const invalidTimes = formData.scheduleSlots.some(slot => {
-            const start = slot.startTime.split(':').map(Number);
-            const end = slot.endTime.split(':').map(Number);
-            return start[0] > end[0] || (start[0] === end[0] && start[1] >= end[1]);
+            const startTotal = timeToMinutes(slot.startTime);
+            const endTotal = timeToMinutes(slot.endTime);
+            if (startTotal >= endTotal) {
+                showValidationError('❌ Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc!');
+                return true;
+            }
+            return false;
         });
 
-        if (invalidTimes) {
-            toast.error('❌ Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc!');
-            return;
-        }
+        if (invalidTimes) return;
 
         // Validation: Check each slot is at least 1 hour 30 mins (90 mins)
-        const shortSlots = formData.scheduleSlots.filter(slot => {
+        const shortSlots = formData.scheduleSlots.some(slot => {
             if (!slot.startTime || !slot.endTime) return false;
-            const duration = timeToMinutes(slot.endTime) - timeToMinutes(slot.startTime);
-            return duration < 90;
+            const diff = timeToMinutes(slot.endTime) - timeToMinutes(slot.startTime);
+            if (diff < 90) {
+                showValidationError('❌ Mỗi buổi học phải kéo dài ít nhất 1 tiếng 30 phút (90 phút)!');
+                return true;
+            }
+            return false;
         });
 
-        if (shortSlots.length > 0) {
-            toast.error('❌ Mỗi buổi học phải kéo dài ít nhất 1 tiếng 30 phút (90 phút)!');
-            return;
-        }
+        if (shortSlots) return;
 
         // Validation: Check start date < end date
         if (formData.startDate && formData.endDate) {
-            if (new Date(formData.startDate) > new Date(formData.endDate)) {
-                toast.error('❌ Ngày bắt đầu không thể sau ngày kết thúc!');
+            if (formData.endDate && new Date(formData.startDate) > new Date(formData.endDate)) {
+                showValidationError('❌ Ngày bắt đầu không thể sau ngày kết thúc!');
                 return;
             }
         }
@@ -301,14 +304,14 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         const schedule = formatScheduleForDisplay(formData.scheduleSlots);
 
         // Validation: Check duplicate class (simplified - just check name + subject for now)
-        const isDuplicate = existingClasses.some(cls => {
+        const conflictClass = existingClasses.find(cls => {
             if (editingClass && cls.id === editingClass.id) return false;
             return cls.name.toLowerCase() === formData.name.toLowerCase() &&
                 cls.subject === formData.subject;
         });
 
-        if (isDuplicate) {
-            toast.error(`❌ Không thể tạo lớp! Đã tồn tại lớp "${formData.name}" cho môn ${formData.subject}.`);
+        if (conflictClass) {
+            showValidationError(`❌ Không thể tạo lớp! Đã tồn tại lớp "${conflictClass.name}" cho môn ${formData.subject}.`);
             return;
         }
 
@@ -320,12 +323,12 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         );
 
         if (teacherConflicts.mainTeacherConflicts.length > 0) {
-            toast.error(`❌ Giáo viên "${formData.mainTeacher}" đã có lịch dạy trùng!`);
+            showValidationError(`❌ Giáo viên "${formData.mainTeacher}" đã có lịch dạy trùng!`);
             return;
         }
 
         if (teacherConflicts.assistantConflicts.length > 0) {
-            toast.error(`❌ Trợ giảng "${formData.assistant}" đã có lịch dạy trùng!`);
+            showValidationError(`❌ Trợ giảng "${formData.assistant}" đã có lịch dạy trùng!`);
             return;
         }
 

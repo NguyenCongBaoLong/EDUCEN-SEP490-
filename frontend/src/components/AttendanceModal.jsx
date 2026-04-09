@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, CheckCircle, XCircle, Calendar, Users, Zap } from 'lucide-react';
 import PropTypes from 'prop-types';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 import api from '../services/api';
 import '../css/components/AttendanceModal.css';
 
@@ -91,7 +92,7 @@ const AttendanceModal = ({ isOpen, onClose, onSave, session, students, existingR
             }
         } catch (error) {
             console.error('Save attendance error:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi lưu điểm danh');
+            showValidationError(error, 'Lỗi khi lưu điểm danh');
         } finally {
             setSaving(false);
         }

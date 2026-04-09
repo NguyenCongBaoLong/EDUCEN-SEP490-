@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 
 import Sidebar from '../../components/Sidebar';
 
-import api, { parseValidationErrors } from '../../services/api';
+import api from '../../services/api';
+import { parseValidationErrors, showValidationError } from '../../services/toastHelper';
 
 import accountService from '../../services/accountService';
 
@@ -150,7 +151,7 @@ const StaffManagement = () => {
 
             console.error("Fetch staff error:", error);
 
-            toast.error("Không thể tải danh sách nhân viên");
+            showValidationError(error, "Không thể tải danh sách nhân viên");
 
         }
 
@@ -222,7 +223,7 @@ const StaffManagement = () => {
 
             console.error("Lỗi khi đổi trạng thái:", error);
 
-            toast.error(error.response?.data?.message || "Không thể đổi trạng thái");
+            showValidationError(error, "Không thể đổi trạng thái");
 
         }
 
@@ -245,7 +246,7 @@ const StaffManagement = () => {
             toast.success(`Đã gửi email tài khoản cho ${staff.name}`);
         } catch (error) {
             console.error("Lỗi khi gửi email:", error);
-            toast.error(error.response?.data?.message || 'Không thể gửi email tài khoản');
+            showValidationError(error, 'Không thể gửi email tài khoản');
         }
     };
 
@@ -253,8 +254,8 @@ const StaffManagement = () => {
 
     // Xử lý gửi email cho nhiều nhân viên được chọn
     const handleSendBulkAccounts = async () => {
-        if (selectedStaff.length === 0) {
-            toast.error('Vui lòng chọn ít nhất một nhân viên');
+        if (selectedStaffIds.length === 0) {
+            showValidationError('Vui lòng chọn ít nhất một nhân viên');
             return;
         }
 
@@ -283,7 +284,7 @@ const StaffManagement = () => {
             toast.success(`Đã gửi email thành công cho ${successCount} nhân viên`);
         }
         if (failCount > 0) {
-            toast.error(`Gửi thất bại cho ${failCount} nhân viên`);
+            showValidationError(`${failCount} nhân viên gửi thất bại`);
         }
 
         setSelectedStaff([]);
@@ -426,7 +427,7 @@ const StaffManagement = () => {
                 }
             }
             // Fallback: show toast
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            showValidationError(error, 'Có lỗi xảy ra');
         }
 
     };

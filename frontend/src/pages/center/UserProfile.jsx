@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Briefcase, MapPin, Calendar, FileText, Lock, Upload, Camera, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import Sidebar from '../../components/Sidebar';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import StudentSidebar from '../../components/StudentSidebar';
@@ -137,7 +138,7 @@ const UserProfile = () => {
             });
 
             if (Object.keys(updatePayload).length === 0) {
-                toast.error('Vui lòng chỉnh sửa ít nhất một trường trước khi lưu.');
+            showValidationError('Vui lòng chỉnh sửa ít nhất một trường trước khi lưu.');
                 return;
             }
 
@@ -184,7 +185,7 @@ const UserProfile = () => {
                 errorMsg = err.response.data;
             }
             
-            toast.error(errorMsg);
+            showValidationError(err, errorMsg);
         }
     };
 
@@ -266,8 +267,9 @@ const UserProfile = () => {
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             setIsChangingPassword(false);
         } catch (err) {
-            setPasswordError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
-            toast.error(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+            const errorMsg = err.response?.data?.message || 'Lỗi khi đổi mật khẩu.';
+            setPasswordError(errorMsg);
+            showValidationError(err, errorMsg);
         }
     };
 

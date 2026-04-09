@@ -9,6 +9,7 @@ import '../../css/pages/student/StudentSchedule.css';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 
 const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4'];
@@ -58,7 +59,7 @@ const StudentSchedule = () => {
             setAttendanceRecords(attendanceRes.data);
         } catch (error) {
             console.error('Error fetching schedule/attendance:', error);
-            toast.error('Không thể tải lịch học');
+            showValidationError(error, 'Không thể tải lịch học');
         } finally {
             setTimeout(() => setIsLoading(false), 300);
         }

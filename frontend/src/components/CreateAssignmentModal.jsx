@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Calendar, FileText, Link as LinkIcon } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 
 const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData, classes, isTemplate = false, currentClassId, grades = [] }) => {
     const [formData, setFormData] = useState({
@@ -137,7 +138,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
             onClose();
         } catch (error) {
             console.error('Error creating assignment:', error);
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo bài tập.');
+            showValidationError(error, 'Có lỗi xảy ra khi tạo bài tập.');
         } finally {
             setIsSubmitting(false);
         }

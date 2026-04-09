@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, UploadCloud, FileText, CheckCircle, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../services/toastHelper';
 
 const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = [] }) => {
     const [formData, setFormData] = useState({
@@ -65,7 +66,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (files.length === 0) {
-            toast.error("Vui lòng chọn ít nhất 1 file tài liệu để tải lên.");
+            showValidationError("Vui lòng chọn ít nhất 1 file tài liệu để tải lên.");
             return;
         }
 
@@ -94,8 +95,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
             onUpload(); // Triggers refresh in parent
         } catch (error) {
             console.error('Error uploading materials:', error);
-            const msg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi tải lên tài liệu.';
-            toast.error(msg);
+            showValidationError(error, 'Có lỗi xảy ra khi tải lên tài liệu.');
         } finally {
             setIsSubmitting(false);
         }

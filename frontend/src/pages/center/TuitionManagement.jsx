@@ -20,6 +20,7 @@ import {
     X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Sidebar';
 import tuitionService from '../../services/tuitionService';
@@ -111,7 +112,7 @@ const TuitionManagement = () => {
             const response = await api.get('/Classes');
             setClasses(response.data);
         } catch (error) {
-            toast.error('Không thể tải danh sách lớp');
+            showValidationError(error, 'Không thể tải danh sách lớp');
         } finally {
             setLoadingClasses(false);
         }
@@ -136,7 +137,7 @@ const TuitionManagement = () => {
     // Tính toán học phí cho lớp
     const handleCalculate = async () => {
         if (!selectedClass) {
-            toast.error('Vui lòng chọn lớp học');
+            showValidationError('Vui lòng chọn lớp học');
             return;
         }
 
@@ -163,15 +164,7 @@ const TuitionManagement = () => {
 
             toast.success(`Đã tính toán học phí cho ${data.length} học sinh`);
         } catch (error) {
-            const data = error.response?.data;
-            if (data?.errors) {
-                const errorDetails = data.errors.map(e => 
-                    `${e.field}: ${e.errors?.join(', ')}`
-                ).join('\n');
-                toast.error(`Lỗi:\n${errorDetails}`, { duration: 6000 });
-            } else {
-                toast.error(data?.message || 'Lỗi tính toán học phí');
-            }
+            showValidationError(error, 'Lỗi tính toán học phí');
         } finally {
             setLoading(false);
         }
@@ -190,10 +183,10 @@ const TuitionManagement = () => {
 
         if (validStudents.length === 0) {
             if (alreadyInvoicedStudents.length > 0) {
-                toast.error('Các học sinh đã chọn đã có hóa đơn trong kỳ này. Vui lòng bỏ chọn các học sinh đã có hóa đơn.');
-                return;
+                showValidationError('Các học sinh đã chọn đã có hóa đơn trong kỳ này. Vui lòng bỏ chọn các học sinh đã có hóa đơn.');
+            } else {
+                showValidationError('Vui lòng chọn ít nhất một học sinh có buổi học.');
             }
-            toast.error('Vui lòng chọn ít nhất một học sinh có buổi học.');
             return;
         }
 
@@ -222,7 +215,7 @@ const TuitionManagement = () => {
     const executeGenerateInvoices = async (studentIds) => {
         const filteredStudentIds = [...new Set(studentIds)].filter((studentId) => !isStudentAlreadyInvoiced(studentId));
         if (filteredStudentIds.length === 0) {
-            toast.error('Không có học sinh hợp lệ để tạo hóa đơn.');
+            showValidationError('Không có học sinh hợp lệ để tạo hóa đơn.');
             return;
         }
 
@@ -248,22 +241,10 @@ const TuitionManagement = () => {
             }
             if (result.failedCount > 0) {
                 const errorDetails = result.errors?.join('\n') || '';
-                toast.error(
-                    `${result.failedCount} hóa đơn thất bại${errorDetails ? ':\n' + errorDetails : ''}`,
-                    { duration: 8000 }
-                );
+                showValidationError(`${result.failedCount} hóa đơn thất bại${errorDetails ? ':\n' + errorDetails : ''}`);
             }
         } catch (error) {
-            const data = error.response?.data;
-            if (data?.errors) {
-                // Hiện chi tiết validation errors
-                const errorDetails = data.errors.map(e => 
-                    `${e.field}: ${e.errors?.join(', ')}`
-                ).join('\n');
-                toast.error(`Validation lỗi:\n${errorDetails}`, { duration: 6000 });
-            } else {
-                toast.error(data?.message || 'Lỗi tạo hóa đơn');
-            }
+            showValidationError(error, 'Lỗi tạo hóa đơn');
         } finally {
             setGenerating(false);
         }
@@ -276,7 +257,9 @@ const TuitionManagement = () => {
             const data = await tuitionService.getInvoices(invoiceFilters);
             setInvoices(data);
         } catch (error) {
-            toast.error('Lỗi tải danh sách hóa đơn');
+            console.error('Lỗi tải dữ liệu hóa đơn:', error);
+            showValidationError(error, 'Lỗi khi tải dữ liệu. Vui lòng thử lại sau.');
+            setInvoices([]);
         } finally {
             setInvoicesLoading(false);
         }
@@ -310,10 +293,10 @@ const TuitionManagement = () => {
                 // Redirect đến trang thanh toán
                 window.location.href = result.paymentUrl;
             } else {
-                toast.error(result.errorMessage || 'Lỗi tạo thanh toán');
+                showValidationError(result.errorMessage || 'Lỗi tạo thanh toán');
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi thanh toán');
+            showValidationError(error, 'Lỗi thanh toán');
         } finally {
             setProcessingPayment(false);
         }
@@ -335,7 +318,7 @@ const TuitionManagement = () => {
             toast.success('Đã gửi hóa đơn cho học sinh');
             fetchInvoices();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi gửi hóa đơn');
+            showValidationError(error, 'Lỗi gửi hóa đơn');
         } finally {
             setSendingInvoice(null);
         }
@@ -345,7 +328,7 @@ const TuitionManagement = () => {
     const handleBatchSend = async () => {
         const draftInvoices = invoices.filter(inv => inv.status === 'Draft');
         if (draftInvoices.length === 0) {
-            toast.error('Không có hóa đơn nháp nào để gửi');
+            showValidationError('Không có hóa đơn nháp nào để gửi');
             return;
         }
 
@@ -375,7 +358,7 @@ const TuitionManagement = () => {
         }
 
         if (successCount > 0) toast.success(`Đã gửi ${successCount} hóa đơn`);
-        if (failCount > 0) toast.error(`${failCount} hóa đơn gửi thất bại`);
+        if (failCount > 0) showValidationError(`${failCount} hóa đơn gửi thất bại`);
 
         fetchInvoices();
     };
@@ -400,7 +383,7 @@ const TuitionManagement = () => {
             toast.success('Đã xác nhận thu tiền thành công');
             fetchInvoices();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+            showValidationError(error, 'Có lỗi xảy ra');
         }
     };
 
@@ -424,7 +407,7 @@ const TuitionManagement = () => {
             toast.success('Đã hủy hóa đơn thành công');
             fetchInvoices();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi hủy hóa đơn');
+            showValidationError(error, 'Có lỗi xảy ra khi hủy hóa đơn');
         }
     };
 

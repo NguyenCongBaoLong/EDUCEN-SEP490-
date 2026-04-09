@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, BookOpen, Clock, FileText, CheckCircle, AlertCircle, Edit, Trash2, X, AlertTriangle, Library, FileUp, Download, PlayCircle, Loader2, Presentation, FileArchive, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import api from '../../services/api';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import CreateAssignmentModal from '../../components/CreateAssignmentModal';
@@ -114,7 +115,7 @@ const TeacherAssignments = ({ isTA = false }) => {
 
         } catch (error) {
             console.error("Error fetching library data:", error);
-            toast.error("Không thể tải dữ liệu thư viện");
+            showValidationError(error, "Không thể tải dữ liệu thư viện");
         } finally {
             setLoading(false);
         }
@@ -221,7 +222,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             if (validationErrors) {
                 console.table(validationErrors);
             }
-            toast.error(error.response?.data?.message || "Không thể lưu bài tập");
+            showValidationError(error, "Không thể lưu bài tập");
         }
         setIsAssignmentModalOpen(false);
     };
@@ -235,7 +236,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 fetchData();
             } catch (error) {
                 console.error("Error deleting assignment:", error);
-                toast.error("Không thể xóa bài tập");
+                showValidationError(error, "Không thể xóa bài tập");
             }
             setDeleteAssignmentModal({ show: false, assignment: null });
         }
@@ -258,7 +259,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 fetchData();
             } catch (error) {
                 console.error("Error deleting material:", error);
-                toast.error("Không thể xóa tài liệu");
+                showValidationError(error, "Không thể xóa tài liệu");
             }
             setDeleteMaterialId(null);
         }
@@ -276,7 +277,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             a.click();
             document.body.removeChild(a);
         } else {
-            toast.error("Không có đường dẫn tải về");
+            showValidationError("Không có đường dẫn tải về");
         }
     };
 

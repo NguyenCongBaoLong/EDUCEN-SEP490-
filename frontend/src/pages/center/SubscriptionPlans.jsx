@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
 import paymentService from '../../services/paymentService';
@@ -36,7 +37,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             if (plansResult.status === 'fulfilled') {
                 setPlans(plansResult.value.data || []);
             } else {
-                toast.error('Không thể tải danh sách gói dịch vụ');
+                showValidationError(plansResult.reason, 'Không thể tải danh sách gói dịch vụ');
                 setPlans([]);
             }
 
@@ -73,7 +74,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             setShowCreditHistory(true);
         } catch (error) {
             console.error('Load credit history error:', error?.response?.data || error);
-            toast.error('Không thể tải lịch sử giao dịch credit');
+            showValidationError(error, 'Không thể tải lịch sử giao dịch credit');
         } finally {
             setCreditHistoryLoading(false);
         }
@@ -82,7 +83,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const handlePay = async (plan, months = 1) => {
         const tenantId = user?.tenantId || localStorage.getItem('tenantId');
         if (!tenantId) {
-            toast.error('Không tìm thấy thông tin trung tâm');
+            showValidationError('Không tìm thấy thông tin trung tâm');
             return;
         }
 
@@ -106,9 +107,9 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 return;
             }
 
-            toast.error(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
+            showValidationError(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Thanh toán thất bại');
+            showValidationError(error, 'Thanh toán thất bại');
         } finally {
             setPayingPlanId(null);
         }
@@ -131,7 +132,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
         const tenantId = user?.tenantId || localStorage.getItem('tenantId');
         if (!tenantId) {
-            toast.error('Không tìm thấy thông tin trung tâm');
+            showValidationError('Không tìm thấy thông tin trung tâm');
             return;
         }
 
@@ -184,11 +185,11 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                     return;
                 }
 
-                toast.error(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
+                showValidationError(result.errorMessage || 'Không thể tạo giao dịch thanh toán');
             }
         } catch (error) {
             console.error('Extend subscription error:', error.response?.data);
-            toast.error(error.response?.data?.message || 'Gia hạn gói dịch vụ thất bại');
+            showValidationError(error, 'Gia hạn gói dịch vụ thất bại');
         } finally {
             setPayingPlanId(null);
         }
@@ -226,7 +227,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 }
             } catch (error) {
                 console.error('Confirm extend error:', error);
-                toast.error('Xác nhận gia hạn thất bại');
+                showValidationError(error, 'Xác nhận gia hạn thất bại');
             }
         }
     };
@@ -260,7 +261,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         if (!canChangePlan(plan)) {
             const daysSinceStart = Math.floor((new Date() - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
             if (daysSinceStart > 7) {
-                toast.error('Chỉ được hạ gói trong 7 ngày đầu tiên của gói dịch vụ');
+                showValidationError('Chỉ được hạ gói trong 7 ngày đầu tiên của gói dịch vụ');
                 return;
             }
         }
@@ -307,7 +308,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             }
         } catch (error) {
             console.error('Change plan error:', error.response?.data);
-            toast.error(error.response?.data?.message || 'Đổi gói dịch vụ thất bại');
+            showValidationError(error, 'Đổi gói dịch vụ thất bại');
         }
     };
 

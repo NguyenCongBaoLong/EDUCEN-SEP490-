@@ -12,6 +12,7 @@ import {
     AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { showValidationError } from '../../services/toastHelper';
 import StudentSidebar from '../../components/StudentSidebar';
 import ParentSidebar from '../../components/ParentSidebar';
 import tuitionService from '../../services/tuitionService';
@@ -54,7 +55,7 @@ const MyInvoices = () => {
             setInvoices(allInvoices);
             setOutstandingInvoices(outstanding);
         } catch (error) {
-            toast.error('Không thể tải danh sách hóa đơn');
+            showValidationError(error, 'Không thể tải danh sách hóa đơn');
         } finally {
             setLoading(false);
         }
@@ -65,17 +66,17 @@ const MyInvoices = () => {
 
         // Kiểm tra invoice có ở trạng thái cho phép thanh toán không
         if (selectedInvoice.status === 'Paid') {
-            toast.error('Hóa đơn này đã được thanh toán');
+            showValidationError('Hóa đơn này đã được thanh toán');
             setShowPaymentModal(false);
             return;
         }
         if (selectedInvoice.status === 'Cancelled') {
-            toast.error('Hóa đơn này đã bị hủy');
+            showValidationError('Hóa đơn này đã bị hủy');
             setShowPaymentModal(false);
             return;
         }
         if (selectedInvoice.status === 'Draft') {
-            toast.error('Hóa đơn chưa được gửi, vui lòng liên hệ trung tâm');
+            showValidationError('Hóa đơn chưa được gửi, vui lòng liên hệ trung tâm');
             setShowPaymentModal(false);
             return;
         }
@@ -103,11 +104,11 @@ const MyInvoices = () => {
             if (result.success && result.paymentUrl) {
                 window.location.href = result.paymentUrl;
             } else {
-                toast.error(result.errorMessage || 'Lỗi tạo thanh toán');
+                showValidationError(result.errorMessage || 'Lỗi tạo thanh toán');
             }
         } catch (error) {
             console.error('Payment create failed', error);
-            toast.error(error.response?.data?.message || error.message || 'Lỗi thanh toán');
+            showValidationError(error, 'Lỗi thanh toán');
         } finally {
             setProcessingPayment(false);
         }
@@ -123,16 +124,16 @@ const MyInvoices = () => {
                 || user?.nameid;
 
         if (isParent && !studentId) {
-            toast.error('Vui lòng chọn con');
+            showValidationError('Vui lòng chọn con');
             return;
         }
 
         if (!isParent && !studentId) {
-            toast.error('Không thể xác định học sinh để gộp hóa đơn');
+            showValidationError('Không thể xác định học sinh để gộp hóa đơn');
             return;
         }
         if (outstandingInvoices.length < 2) {
-            toast.error('Cần ít nhất 2 hóa đơn để gộp');
+            showValidationError('Cần ít nhất 2 hóa đơn để gộp');
             return;
         }
 
@@ -165,7 +166,7 @@ const MyInvoices = () => {
                 await fetchInvoices();
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi tạo hóa đơn gộp');
+            showValidationError(error, 'Lỗi tạo hóa đơn gộp');
         } finally {
             setProcessingPayment(false);
         }
