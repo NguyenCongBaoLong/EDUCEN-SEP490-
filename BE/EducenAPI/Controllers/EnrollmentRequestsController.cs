@@ -78,6 +78,7 @@ namespace EducenAPI.Controllers
                     Phone = dto.Phone ?? string.Empty,
                     Address = dto.Address,
                     PreferredCourse = dto.PreferredCourse,
+                    ParentName = dto.ParentName,
                     ParentPhone = dto.ParentPhone,
                     ParentEmail = dto.ParentEmail,
                     GradeId = dto.GradeId,
