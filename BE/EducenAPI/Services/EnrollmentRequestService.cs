@@ -166,6 +166,15 @@ namespace EducenAPI.Services
                     throw new Exception("Email này đã thuộc về Trung tâm! Vui lòng đăng nhập vào tài khoản để đăng ký lớp học.");
             }
 
+            // Kiểm tra sĩ số nếu có chọn lớp
+            if (request.ClassId.HasValue)
+            {
+                if (await IsClassFullAsync(request.ClassId.Value))
+                {
+                    throw new Exception("Rất tiếc, lớp học này đã đủ sĩ số tối đa. Vui lòng chọn lớp khác hoặc liên hệ trung tâm để được tư vấn.");
+                }
+            }
+
             request.Status = "Pending";
             request.RequestDate = DateTime.UtcNow;
 

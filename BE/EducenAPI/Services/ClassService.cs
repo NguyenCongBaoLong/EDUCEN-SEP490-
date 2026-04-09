@@ -1041,6 +1041,59 @@ namespace EducenAPI.Services
             return true;
         }
 
+        private bool IsTimeOverlap(TimeOnly start1, TimeOnly end1, TimeOnly start2, TimeOnly end2)
+        {
+            return start1 < end2 && start2 < end1;
+        }
+
+        public async Task<bool> IsScheduleConflictingAsync(int studentId, int classId)
+        {
+            // Lấy lịch của lớp học mục tiêu
+            var targetClassSchedules = await _context.Schedules
+                .Where(s => s.ClassId == classId)
+                .ToListAsync();
+
+            if (!targetClassSchedules.Any()) return false;
+
+            // Lấy toàn bộ lịch của học sinh từ các lớp đã gán (chỉ tính các lớp đang hoạt động)
+            var studentSchedules = await _context.Schedules
+                .Include(s => s.Class)
+                .ThenInclude(c => c.Students)
+                .Where(s => s.Class.Students.Any(stu => stu.UserId == studentId) && s.Class.Status == "Active")
+                .ToListAsync();
+
+            foreach (var target in targetClassSchedules)
+            {
+                foreach (var existing in studentSchedules)
+                {
+                    // So sánh: Cùng ngày và có khoảng thời gian giao nhau
+                    if (target.DayOfWeek == existing.DayOfWeek)
+                    {
+                        if (IsTimeOverlap(target.StartTime, target.EndTime, existing.StartTime, existing.EndTime))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public async Task<bool> IsClassFullAsync(int classId)
+        {
+            var cls = await _context.Classes
+                .Include(c => c.Students)
+                .FirstOrDefaultAsync(c => c.ClassId == classId);
+
+            if (cls == null) return false;
+
+            // Nếu MaxStudents <= 0 coi như không giới hạn
+            if (cls.MaxStudents <= 0) return false;
+
+            return cls.Students.Count >= cls.MaxStudents;
+        }
+
         public async Task<bool> AddStudentToClassAsync(int classId, int studentId)
         {
             var existingClass = await _context.Classes
@@ -1058,6 +1111,17 @@ namespace EducenAPI.Services
 
             if (existingClass.Students.Any(s => s.UserId == studentId))
                 throw new Exception("Học sinh này đã tham gia lớp học này");
+
+            // Kiểm tra sĩ số & trùng lịch
+            if (await IsClassFullAsync(classId))
+            {
+                throw new Exception("Lớp học đã đầy sĩ số tối đa.");
+            }
+
+            if (await IsScheduleConflictingAsync(studentId, classId))
+            {
+                throw new Exception("Lịch học của học sinh bị trùng với lịch của lớp học này.");
+            }
 
             existingClass.Students.Add(student);
             await _context.SaveChangesAsync();
@@ -1184,6 +1248,17 @@ namespace EducenAPI.Services
             // Check if student already in class
             if (existingClass.Students.Any(s => s.UserId == student.UserId))
                 return new ImportStudentToClassResult { Success = false, ErrorMessage = $"Học sinh '{studentDto.Username}' đã có trong lớp." };
+
+            // Kiểm tra sĩ số & trùng lịch
+            if (await IsClassFullAsync(classId))
+            {
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = "Lớp học đã đầy sĩ số tối đa." };
+            }
+
+            if (await IsScheduleConflictingAsync(student.UserId, classId))
+            {
+                return new ImportStudentToClassResult { Success = false, ErrorMessage = "Lịch học của học sinh bị trùng với lịch của lớp học này." };
+            }
 
             existingClass.Students.Add(student);
             await _context.SaveChangesAsync();
