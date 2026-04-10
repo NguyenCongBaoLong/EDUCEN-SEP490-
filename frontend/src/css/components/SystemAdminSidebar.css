@@ -54,7 +54,7 @@
     border-radius: 10px;
     color: #6b7280;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 700;
     font-size: 0.9375rem;
     transition: all 0.2s;
 }
@@ -67,7 +67,29 @@
 .sa-sidebar-nav-item.active {
     background: #ede9fe;
     color: #6366f1;
-    font-weight: 600;
+    font-weight: 800;
+}
+
+.sa-sidebar-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    min-width: 20px;
+    text-align: center;
+    margin-left: auto;
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .sa-notification-btn {

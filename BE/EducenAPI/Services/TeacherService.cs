@@ -257,7 +257,7 @@ namespace EducenAPI.Services
             return classes;
         }
 
-        public async Task<bool> SendAccountAsync(int teacherId)
+public async Task<bool> SendAccountAsync(int teacherId)
         {
             var teacher = await _context.Teachers
                 .Include(t => t.TeacherNavigation)
@@ -289,7 +289,7 @@ namespace EducenAPI.Services
 
             await _context.SaveChangesAsync();
 
-            // Send email
+            // Send email with the EXACT password
             await _mailService.SendTeacherAccount(user.Email, user.Username, newPassword);
 
             return true;

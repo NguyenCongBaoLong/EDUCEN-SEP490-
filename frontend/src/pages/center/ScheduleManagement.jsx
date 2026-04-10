@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -214,11 +214,9 @@ const ScheduleManagement = () => {
     const getClassStyle = (classItem, index, totalInSlot) => {
         const startHour = parseInt(classItem.startTime.split(':')[0]);
         const startMin = parseInt(classItem.startTime.split(':')[1]);
-        const endHour = parseInt(classItem.endTime.split(':')[0]);
-        const endMin = parseInt(classItem.endTime.split(':')[1]);
 
         const startOffset = (startHour - hourRange.min) + (startMin / 60);
-        const duration = (endHour - startHour) + ((endMin - startMin) / 60);
+        const fixedCardHeight = 52; // Fixed height for all sessions
 
         // Calculate width and left position for overlapping classes
         const widthPercentage = totalInSlot > 1 ? 100 / totalInSlot : 100;
@@ -226,7 +224,7 @@ const ScheduleManagement = () => {
 
         return {
             top: `${startOffset * 40}px`,
-            height: `${duration * 40 - 2}px`,
+            height: `${fixedCardHeight}px`,
             backgroundColor: classItem.color,
             width: `${widthPercentage}%`,
             left: `${leftPercentage}%`
@@ -571,3 +569,4 @@ const ScheduleManagement = () => {
 };
 
 export default ScheduleManagement;
+

@@ -1,4 +1,4 @@
-/* ─── StudentSchedule Page ─────────────────────────────────── */
+﻿/* â”€â”€â”€ StudentSchedule Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ss-page {
     display: flex;
     min-height: 100vh;
@@ -7,7 +7,7 @@
 
 .ss-main {
     flex: 1;
-    margin-left: 240px;
+    margin-left: 260px;
     padding: 32px;
     display: flex;
     flex-direction: column;
@@ -340,7 +340,7 @@
     gap: 12px;
 }
 
-/* ─── Month View ─── */
+/* â”€â”€â”€ Month View â”€â”€â”€ */
 .ss-month-view {
     background: #fff;
     border: 1px solid #e2e8f0;

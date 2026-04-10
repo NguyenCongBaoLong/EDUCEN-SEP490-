@@ -1,4 +1,4 @@
-/* ParentManagement.css */
+﻿/* ParentManagement.css */
 .parent-management {
     display: flex;
     min-height: 100vh;
@@ -21,7 +21,7 @@
 
 .parent-header .header-left h1 {
     font-size: 1.875rem;
-    font-weight: 700;
+    font-weight: 800;
     color: #111827;
     margin: 0 0 0.4rem;
 }

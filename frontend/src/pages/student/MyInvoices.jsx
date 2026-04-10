@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import {
     FileText,
     CreditCard,
@@ -30,9 +30,19 @@ const MyInvoices = () => {
     const [invoices, setInvoices] = useState([]);
     const [outstandingInvoices, setOutstandingInvoices] = useState([]);
     const [consolidatedInvoiceIds, setConsolidatedInvoiceIds] = useState(() => {
-    const saved = localStorage.getItem('consolidatedInvoiceIds');
-    return saved ? JSON.parse(saved) : [];
-});
+        const saved = localStorage.getItem('consolidatedInvoiceIds');
+        if (!saved) return [];
+        try {
+            const parsed = JSON.parse(saved);
+            return Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+        } catch {
+            return [];
+        }
+    });
+    const normalizedConsolidatedIds = useMemo(
+        () => new Set((consolidatedInvoiceIds || []).map((id) => String(id))),
+        [consolidatedInvoiceIds]
+    );
     const [loading, setLoading] = useState(true);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -117,7 +127,7 @@ const MyInvoices = () => {
                 const savedIds = localStorage.getItem('consolidatedInvoiceIds');
                 if (savedIds) {
                     const parsedIds = JSON.parse(savedIds);
-                    setConsolidatedInvoiceIds(parsedIds);
+                    setConsolidatedInvoiceIds(Array.isArray(parsedIds) ? parsedIds.map((id) => String(id)) : []);
                     console.log('Updated consolidated IDs from event:', parsedIds);
                 }
             }
@@ -265,7 +275,7 @@ const MyInvoices = () => {
                     // Lưu ID các hóa đơn đã gộp
                     const consolidatedIds = monthInvoices.map(inv => inv.invoiceId);
                     setConsolidatedInvoiceIds(prev => {
-                        const newList = [...prev, ...consolidatedIds];
+                        const newList = [...prev, ...consolidatedIds.map((id) => String(id))];
                         console.log('Previous consolidated IDs:', prev);
                         console.log('New consolidated IDs:', newList);
                         return newList;
@@ -337,7 +347,7 @@ const MyInvoices = () => {
             // Lưu ID các hóa đơn đã gộp
             const consolidatedIds = invoices.map(inv => inv.invoiceId);
             setConsolidatedInvoiceIds(prev => {
-                const newList = [...prev, ...consolidatedIds];
+                const newList = [...prev, ...consolidatedIds.map((id) => String(id))];
                 console.log('Added consolidated invoice IDs for period:', consolidatedIds);
                 console.log('New consolidated IDs list:', newList);
                 return newList;
@@ -452,7 +462,7 @@ const MyInvoices = () => {
         console.log('Checking invoice ID:', invoice.invoiceId);
         
         // 1. Kiểm tra đơn giản nhất: ID có trong danh sách đã gộp không
-        if (consolidatedInvoiceIds.includes(invoice.invoiceId)) {
+        if (normalizedConsolidatedIds.has(String(invoice.invoiceId))) {
             console.log('Invoice found in consolidated list');
             return true;
         }
@@ -903,3 +913,4 @@ const MyInvoices = () => {
 };
 
 export default MyInvoices;
+

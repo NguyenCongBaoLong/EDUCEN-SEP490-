@@ -308,11 +308,14 @@ namespace EducenAPI.Services
             if (string.IsNullOrWhiteSpace(user.Email))
                 throw new Exception("Trợ giảng chưa có email. Vui lòng cập nhật email trước khi gửi tài khoản.");
 
-            // Generate username nếu chưa có
-            if (string.IsNullOrWhiteSpace(user.Username))
-            {
-                user.Username = user.Email;
-            }
+            // Username = email (lowercase)
+            var targetUsername = user.Email.Trim().ToLower();
+            var usernameConflict = await _context.Users
+                .AnyAsync(u => u.UserId != user.UserId && u.Username == targetUsername);
+            if (usernameConflict)
+                throw new Exception("Email này đã được dùng làm username cho tài khoản khác.");
+
+            user.Username = targetUsername;
 
             // Generate password
             var newPassword = PasswordGenerator.GenerateSecurePassword();

@@ -850,8 +850,7 @@
               "RelativeToolTip": "Services\\AttendanceService.cs",
               "ViewState": "AgIAAI8BAAAAAAAAAAAuwLkBAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-09T00:58:25.853Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-09T00:58:25.853Z"
             },
             {
               "$type": "Document",
@@ -863,8 +862,7 @@
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAAMBAAAAAAAAAAAAACcBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-08T18:31:29.651Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-08T18:31:29.651Z"
             },
             {
               "$type": "Document",
@@ -876,8 +874,7 @@
               "RelativeToolTip": "Services\\TenantRegistrationService.cs",
               "ViewState": "AgIAAC0AAAAAAAAAAAA6wEYAAAAkAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-08T18:09:01.135Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-08T18:09:01.135Z"
             },
             {
               "$type": "Document",
@@ -887,7 +884,7 @@
               "RelativeDocumentMoniker": "appsettings.json",
               "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\appsettings.json",
               "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAABkAAAAWAAAAAAAAAA==",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABEAAAAwAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-03-26T07:57:09.171Z",
               "EditorCaption": ""

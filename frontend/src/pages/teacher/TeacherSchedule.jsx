@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
@@ -122,18 +122,15 @@ const TeacherSchedule = ({ isTA = false }) => {
     const getClassStyle = (classItem, index, totalInSlot) => {
         const startHour = parseInt(classItem.startTime.split(':')[0]);
         const startMin = parseInt(classItem.startTime.split(':')[1]);
-        const endHour = parseInt(classItem.endTime.split(':')[0]);
-        const endMin = parseInt(classItem.endTime.split(':')[1]);
-
         const startOffset = (startHour - 8) + (startMin / 60);
-        const duration = (endHour - startHour) + ((endMin - startMin) / 60);
+        const fixedCardHeight = 92;
 
         const widthPercentage = totalInSlot > 1 ? 100 / totalInSlot : 100;
         const leftPercentage = index * widthPercentage;
 
         return {
             top: `${startOffset * 70}px`,
-            height: `${duration * 70 - 4}px`,
+            height: `${fixedCardHeight}px`,
             backgroundColor: classItem.color,
             width: `${widthPercentage}%`,
             left: `${leftPercentage}%`
@@ -265,6 +262,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                             key={classItem.id}
                                                             className="ts-class-card"
                                                             style={getClassStyle(classItem, idx, group.length)}
+                                                            title={`${classItem.code} - ${classItem.name}\nGiờ: ${classItem.startTime} - ${classItem.endTime}\nPhòng: ${classItem.roomName || 'N/A'}\nGiáo viên: ${classItem.teacher || 'N/A'}`}
                                                             onClick={() => handleCardClick(classItem)}
                                                         >
                                                             <div className="ts-class-code">
@@ -339,6 +337,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                         key={classItem.id}
                                                         className="ts-class-card"
                                                         style={getClassStyle(classItem, 0, 1)}
+                                                        title={`${classItem.code} - ${classItem.name}\nGiờ: ${classItem.startTime} - ${classItem.endTime}\nPhòng: ${classItem.roomName || 'N/A'}\nGiáo viên: ${classItem.teacher || 'N/A'}`}
                                                         onClick={() => handleCardClick(classItem)}
                                                     >
                                                         <div className="ts-class-code">
@@ -450,3 +449,5 @@ const TeacherSchedule = ({ isTA = false }) => {
 };
 
 export default TeacherSchedule;
+
+

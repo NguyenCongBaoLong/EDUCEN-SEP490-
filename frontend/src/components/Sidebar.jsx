@@ -1,5 +1,5 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, LogOut, Home, ChevronLeft, Heart, DollarSign, TrendingUp, CreditCard } from 'lucide-react';
+﻿import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, GraduationCap, Users, BookOpen, Calendar, LogOut, ChevronLeft, Heart, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import '../css/components/Sidebar.css';
 
@@ -43,7 +43,6 @@ const Sidebar = () => {
             </div>
 
             <nav className="sidebar-nav">
-                {/* Back to Center Home */}
                 <Link to="/center" className="sidebar-back-link">
                     <ChevronLeft size={16} />
                     <span>Trang chủ trung tâm</span>
