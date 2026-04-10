@@ -117,14 +117,9 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                 data.append('EndTime', formData.dueDate);
             }
             data.append('AllowLateSubmission', formData.allowLateSubmission);
-            // Always set StartTime to now for new assignments
-            if (!initialData) {
-                // For new, we can use ISO but a local-compatible format is better for consistency
-                const now = new Date();
-                const offset = now.getTimezoneOffset() * 60000;
-                const localISOTime = new Date(now - offset).toISOString().slice(0, 19);
-                data.append('StartTime', localISOTime);
-            } else if (formData.startTime) {
+            // For update flow, keep existing StartTime from assignment if available.
+            // For create flow, backend will auto-resolve StartTime from selected session.
+            if (initialData && formData.startTime) {
                 data.append('StartTime', formData.startTime);
             }
             if (formData.file && !formData.file.isExisting) {

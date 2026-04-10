@@ -65,15 +65,22 @@ namespace EducenAPI.Services
             }
         }
 
+        private async Task<DateTime?> ResolveStartTimeFromSessionAsync(int? sessionId)
+        {
+            if (!sessionId.HasValue) return null;
+
+            var session = await _context.ClassSessions
+                .Include(s => s.Schedule)
+                .FirstOrDefaultAsync(s => s.SessionId == sessionId.Value);
+
+            if (session == null || session.Schedule == null) return null;
+
+            return session.SessionDate.Date.Add(session.Schedule.StartTime.ToTimeSpan());
+        }
+
         public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
             
-            //  Validate StartTime > EndTime
-            if (dto.StartTime.HasValue && dto.EndTime.HasValue && dto.StartTime > dto.EndTime)
-            {
-                throw new BadRequestException("Thời gian bắt đầu không được lớn hơn thời gian kết thúc.");
-            }
-
             //  Validate SessionId có tồn tại trong database hay không
             if (dto.SessionId.HasValue)
             {
@@ -83,6 +90,16 @@ namespace EducenAPI.Services
                 {
                     throw new BadRequestException("SessionId không tồn tại trong hệ thống.");
                 }
+            }
+
+            var resolvedStartTime = await ResolveStartTimeFromSessionAsync(dto.SessionId)
+                ?? dto.StartTime
+                ?? DateTime.Now;
+
+            //  Validate StartTime > EndTime
+            if (dto.EndTime.HasValue && resolvedStartTime > dto.EndTime.Value)
+            {
+                throw new BadRequestException("Start time cannot be later than end time.");
             }
 
             string? fileUrl = null;
@@ -149,7 +166,7 @@ namespace EducenAPI.Services
                 Title = dto.Title,
                 Description = dto.Description,
                 FileUrl = fileUrl,
-                StartTime = dto.StartTime ?? DateTime.Now,
+                StartTime = resolvedStartTime,
                 EndTime = dto.EndTime,
                 UserId = userId,
                 GradeId = dto.GradeId,

@@ -58,11 +58,15 @@ namespace EducenAPI.Services
                 var tenantId = Guid.NewGuid().ToString();
                 var subDomain = reg.CenterName.ToLower().Replace(" ", "-") + "-" + tenantId[..8];
                 var connectionString = $"Server=.;Database=Educen_{tenantId[..8]};Trusted_Connection=True;TrustServerCertificate=True";
+                var defaultUsername = $"admin_{subDomain}";
+                var defaultPasswordHash = BCrypt.Net.BCrypt.HashPassword("default123");
                 
                 var tenant = new Tenant
                 {
                     TenantId = tenantId,
                     TenantName = reg.CenterName,
+                    Username = defaultUsername,
+                    Password = defaultPasswordHash,
                     ContactPerson = reg.ContactPerson,
                     Email = reg.Email,
                     PhoneNumber = reg.PhoneNumber,

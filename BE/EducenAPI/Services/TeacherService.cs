@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Teachers;
+﻿using EducenAPI.DTOs.Teachers;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -92,42 +92,6 @@ namespace EducenAPI.Services
             dto.Email = dto.Email?.Trim()?.ToLower();
             dto.FullName = dto.FullName?.Trim();
 
-            // Skip user creation if username or password is null
-            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
-            {
-                // Create teacher profile without user account
-                var teacherProfile = new Teacher
-                {
-                    UserId = 0, // Will be set when account is created
-                    Specialization = dto.Specialization,
-                    Degree = dto.Degree
-                };
-
-                _context.Teachers.Add(teacherProfile);
-                await _context.SaveChangesAsync();
-
-                return new TeacherDto
-                {
-                    TeacherId = teacherProfile.UserId,
-                    UserId = teacherProfile.UserId,
-                    Username = "",
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
-                    Specialization = teacherProfile.Specialization ?? "",
-                    Degree = teacherProfile.Degree,
-                    AccountStatus = "Pending",
-                    ClassesCount = 0,
-                    CreatedAt = DateTime.Now
-                };
-            }
-
-            var existingUser = await _context.Users
-                .AnyAsync(u => u.Username == dto.Username);
-
-            if (existingUser)
-                throw new Exception("Tên đăng nhập đã tồn tại.");
-
             var existingEmail = await _context.Users
                 .AnyAsync(u => u.Email == dto.Email);
 
@@ -140,16 +104,19 @@ namespace EducenAPI.Services
             if (teacherRole == null)
                 throw new Exception("Không tìm thấy vai trò Giáo viên.");
 
+            // Tạo profile giáo viên trước, chưa cấp tài khoản đăng nhập.
+            // Username/PasswordHash sẽ được gán khi bấm "Gửi tài khoản".
             var user = new User
             {
-                Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Username = null,
+                PasswordHash = null,
                 RoleId = teacherRole.RoleId,
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = dto.Address,
-                AccountStatus = "Active"
+                AccountStatus = "NoAccount",
+                IsAccountSent = false
             };
 
             _context.Users.Add(user);
@@ -304,16 +271,21 @@ namespace EducenAPI.Services
             if (string.IsNullOrWhiteSpace(user.Email))
                 throw new Exception("Giáo viên chưa có email. Vui lòng cập nhật email trước khi gửi tài khoản.");
 
-            // Generate username nếu chưa có
-            if (string.IsNullOrWhiteSpace(user.Username))
-            {
-                user.Username = user.Email;
-            }
+            // Chỉ khi gửi tài khoản mới gán username/password.
+            // Username bắt buộc = email (bao gồm @)
+            var targetUsername = user.Email.Trim().ToLower();
+            var usernameConflict = await _context.Users
+                .AnyAsync(u => u.UserId != user.UserId && u.Username == targetUsername);
+            if (usernameConflict)
+                throw new Exception("Email này đã được dùng làm username cho tài khoản khác.");
+
+            user.Username = targetUsername;
 
             // Generate password
             var newPassword = PasswordGenerator.GenerateSecurePassword();
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
             user.AccountStatus = "Active";
+            user.IsAccountSent = true;
 
             await _context.SaveChangesAsync();
 
