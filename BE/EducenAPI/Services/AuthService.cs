@@ -37,6 +37,9 @@ namespace EducenAPI.Services
 
         public async Task Register(RegisterDto dto)
         {
+            dto.Username = dto.Username?.Trim();
+            dto.FullName = dto.FullName?.Trim();
+
             var exist = await _context.Users
                 .AnyAsync(x => x.Username == dto.Username);
 

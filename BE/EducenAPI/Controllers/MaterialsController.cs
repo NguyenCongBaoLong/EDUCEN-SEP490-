@@ -21,18 +21,32 @@ namespace EducenAPI.Controllers
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> SaveMaterials([FromForm] SaveMaterialDto dto)
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var result = await _lessonMaterialService.SaveMaterials(dto, baseUrl);
-            return Ok(result);
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _lessonMaterialService.SaveMaterials(dto, baseUrl);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Teacher,Assistant,Admin")]
         public async Task<IActionResult> UpdateMaterial(int id, [FromForm] SaveMaterialDto dto)
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            var result = await _lessonMaterialService.UpdateMaterialAsync(id, dto, baseUrl);
-            return Ok(result);
+            try
+            {
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+                var result = await _lessonMaterialService.UpdateMaterialAsync(id, dto, baseUrl);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("upload")]

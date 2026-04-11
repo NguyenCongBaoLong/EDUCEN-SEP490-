@@ -138,6 +138,14 @@ namespace EducenAPI.Services
             if (dto.StartTime >= dto.EndTime)
                 throw new Exception("Thời gian kết thúc phải sau thời gian bắt đầu.");
 
+            // Validate room exists if RoomId is provided
+            if (dto.RoomId.HasValue && dto.RoomId.Value > 0)
+            {
+                var roomExists = await _context.Rooms.AnyAsync(r => r.RoomId == dto.RoomId.Value);
+                if (!roomExists)
+                    throw new Exception("Phòng học không tồn tại.");
+            }
+
             // Check for time overlap with existing schedules for same class
             var dayOfWeek = (int)dto.ScheduleDate.DayOfWeek;
             var existingSchedules = await _context.Schedules
@@ -209,7 +217,8 @@ namespace EducenAPI.Services
                 ClassId = dto.ClassId,
                 DayOfWeek = dayOfWeek,
                 StartTime = TimeOnly.FromTimeSpan(dto.StartTime),
-                EndTime = TimeOnly.FromTimeSpan(dto.EndTime)
+                EndTime = TimeOnly.FromTimeSpan(dto.EndTime),
+                RoomId = dto.RoomId
             };
 
             _context.Schedules.Add(schedule);

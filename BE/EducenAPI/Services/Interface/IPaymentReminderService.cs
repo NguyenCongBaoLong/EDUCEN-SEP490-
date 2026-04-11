@@ -36,6 +36,11 @@ namespace EducenAPI.Services.Interface
         /// Xóa thông báo
         /// </summary>
         Task<bool> DeleteNotificationAsync(int notificationId);
+
+        /// <summary>
+        /// Đánh dấu tất cả thông báo chưa đọc của user là đã đọc
+        /// </summary>
+        Task<int> MarkAllAsReadAsync(int userId);
     }
 
     public class CreateNotificationRequest

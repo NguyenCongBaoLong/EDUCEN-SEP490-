@@ -134,6 +134,8 @@ namespace EducenAPI.Services
 
         public async Task<ClassDto> CreateClassAsync(CreateClassDto dto)
         {
+            dto.ClassName = dto.ClassName?.Trim();
+
             // Validate Subject exists
             var subject = await _context.Subjects.FindAsync(dto.SubjectId);
             if (subject == null)

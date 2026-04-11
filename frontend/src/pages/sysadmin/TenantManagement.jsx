@@ -11,6 +11,7 @@ import '../../css/pages/sysadmin/TenantManagement.css';
 const EMPTY_FORM = {
     tenantId: '', tenantName: '', subDomain: '',
     contactPerson: '', email: '', phoneNumber: '', address: '',
+    adminUsername: '', adminPassword: '',
 };
 
 const TenantManagement = () => {
@@ -737,6 +738,37 @@ const TenantManagement = () => {
                                         />
                                     </div>
                                 </div>
+                                {!editTarget && (
+                                    <>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginTop: '0.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+                                            Tài khoản Admin (tùy chọn)
+                                        </div>
+                                        <div className="sa-form-row">
+                                            <div className="sa-form-group">
+                                                <label>Tên đăng nhập Admin</label>
+                                                <input
+                                                    name="adminUsername"
+                                                    value={form.adminUsername}
+                                                    onChange={handleChange}
+                                                    placeholder="vd: admin_trungtam"
+                                                    minLength={3}
+                                                />
+                                                <span className="sa-form-hint">Nếu nhập sẽ tự tạo tài khoản Admin cho trung tâm</span>
+                                            </div>
+                                            <div className="sa-form-group">
+                                                <label>Mật khẩu Admin</label>
+                                                <input
+                                                    name="adminPassword"
+                                                    type="password"
+                                                    value={form.adminPassword}
+                                                    onChange={handleChange}
+                                                    placeholder="Tối thiểu 6 ký tự"
+                                                    minLength={6}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                                 {!editTarget && (
                                     <div className="sa-form-note">
                                         <CheckCircle size={14} />

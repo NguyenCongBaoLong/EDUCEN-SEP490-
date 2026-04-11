@@ -127,6 +127,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Classes/5/assign-teacher/{teacherId}
         [HttpPut("{id:int}/assign-teacher/{teacherId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignTeacher(int id, int teacherId)
         {
             try
@@ -145,6 +146,7 @@ namespace EducenAPI.Controllers
 
         // PUT: api/Classes/5/assign-assistant/{assistantId}
         [HttpPut("{id:int}/assign-assistant/{assistantId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignAssistant(int id, int assistantId)
         {
             try
@@ -163,6 +165,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes/5/students/{studentId}
         [HttpPost("{id:int}/students/{studentId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddStudentToClass(int id, int studentId)
         {
             try
@@ -181,6 +184,7 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Classes/5/students/{studentId}
         [HttpDelete("{id:int}/students/{studentId:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RemoveStudentFromClass(int id, int studentId)
         {
             try
@@ -199,6 +203,7 @@ namespace EducenAPI.Controllers
 
         // POST: api/Classes/5/import-students
         [HttpPost("{id:int}/import-students")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ImportStudentsToClass(int id, IFormFile file)
         {
             try

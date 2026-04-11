@@ -36,17 +36,20 @@ function resolveTenantId() {
 // Tự động gắn JWT token vào mỗi request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
-    if (token) {
+    // Không gửi session giả của SystemAdmin (không phải JWT hợp lệ)
+    if (token && token !== 'sysadmin-session') {
         config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Tự động gửi tenantId nếu có (từ localStorage hoặc URL query param)
-    const tenantId = resolveTenantId();
-    if (tenantId) {
-        console.log(`[API Interceptor] Using TenantId: ${tenantId}`);
-        config.headers['tenant'] = tenantId;
-    } else {
-        console.log('[API Interceptor] No TenantId found');
+    // SystemAdmin không cần tenant header
+    if (token !== 'sysadmin-session') {
+        const tenantId = resolveTenantId();
+        if (tenantId) {
+            console.log(`[API Interceptor] Using TenantId: ${tenantId}`);
+            config.headers['tenant'] = tenantId;
+        } else {
+            console.log('[API Interceptor] No TenantId found');
+        }
     }
 
     return config;
@@ -57,6 +60,12 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
+            // Không logout SystemAdmin — họ xác thực bằng X-API-KEY, không dùng JWT
+            const token = localStorage.getItem('token');
+            if (token === 'sysadmin-session') {
+                return Promise.reject(error);
+            }
+
             localStorage.removeItem('token');
             localStorage.removeItem('user');
 

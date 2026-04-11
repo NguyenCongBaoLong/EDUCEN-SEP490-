@@ -64,6 +64,8 @@ namespace EducenAPI.Services
 
         public async Task<Attendance> CreateOrUpdateAttendanceAsync(int sessionId, int studentId, string status, int updatedByUserId)
         {
+            ValidateStatus(status);
+
             var existing = await _context.Attendances
                 .FirstOrDefaultAsync(a => a.SessionId == sessionId && a.StudentId == studentId);
 
@@ -112,6 +114,8 @@ namespace EducenAPI.Services
 
             foreach (var record in records)
             {
+                ValidateStatus(record.Status);
+
                 var existing = existingAttendances.FirstOrDefault(a => a.StudentId == record.StudentId);
                 
                 if (existing != null)
@@ -145,6 +149,8 @@ namespace EducenAPI.Services
 
         public async Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId)
         {
+            ValidateStatus(status);
+
             var attendance = await _context.Attendances
                 .Include(a => a.Session)
                 .FirstOrDefaultAsync(a => a.AttendanceId == attendanceId);
@@ -247,6 +253,14 @@ namespace EducenAPI.Services
             }).ToList();
 
             return summary;
+        }
+
+        private static readonly HashSet<string> ValidStatuses = new() { "present", "absent", "notYet" };
+
+        private static void ValidateStatus(string status)
+        {
+            if (!ValidStatuses.Contains(status))
+                throw new Exception($"Trạng thái điểm danh không hợp lệ: '{status}'. Chỉ chấp nhận: present, absent, notYet.");
         }
 
         private void ValidateSessionForAttendance(ClassSession session)

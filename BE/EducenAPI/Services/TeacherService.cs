@@ -85,6 +85,10 @@ namespace EducenAPI.Services
 
         public async Task<TeacherDto> CreateTeacherAsync(CreateTeacherDto dto)
         {
+            dto.Username = dto.Username?.Trim();
+            dto.Email = dto.Email?.Trim()?.ToLower();
+            dto.FullName = dto.FullName?.Trim();
+
             // Skip user creation if username or password is null
             if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
             {

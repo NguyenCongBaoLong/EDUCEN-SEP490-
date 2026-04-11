@@ -259,6 +259,30 @@ namespace EducenAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Cập nhật tự động các hóa đơn quá hạn
+        /// Endpoint này có thể được gọi bởi scheduled job hoặc manual trigger
+        /// </summary>
+        [HttpPost("update-overdue")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateOverdueInvoices()
+        {
+            try
+            {
+                var updatedCount = await _invoiceService.UpdateOverdueInvoicesAsync();
+                return Ok(new { 
+                    message = "Cập nhật hóa đơn quá hạn thành công",
+                    updatedCount = updatedCount,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating overdue invoices");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         #endregion
 
         #region Student/Parent Endpoints

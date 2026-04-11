@@ -69,14 +69,9 @@ namespace EducenAPI.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                var notifications = await _notificationService.GetUserNotificationsAsync(tenantId, userId, true);
+                var count = await _notificationService.MarkAllAsReadAsync(userId);
 
-                foreach (var notification in notifications)
-                {
-                    await _notificationService.MarkNotificationAsReadAsync(notification.NotificationId);
-                }
-
-                return Ok(new { message = $"Đã đánh dấu {notifications.Count} thông báo là đã đọc." });
+                return Ok(new { message = $"Đã đánh dấu {count} thông báo là đã đọc." });
             }
             catch (Exception ex)
             {

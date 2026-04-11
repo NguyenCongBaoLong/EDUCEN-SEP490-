@@ -40,6 +40,24 @@ namespace EducenAPI.Services
 
         public async Task<EnrollmentRequest> CreateRequestAsync(EnrollmentRequest request)
         {
+            // Trim input
+            request.Email = request.Email?.Trim();
+            request.FirstName = request.FirstName?.Trim();
+            request.LastName = request.LastName?.Trim();
+            request.Phone = request.Phone?.Trim();
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(request.Email))
+                throw new Exception("Email là bắt buộc.");
+            if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
+                throw new Exception("Họ và tên là bắt buộc.");
+
+            // Check duplicate email trong enrollment requests (Pending)
+            var existingPending = await _context.EnrollmentRequests
+                .AnyAsync(r => r.Email == request.Email && r.Status == "Pending");
+            if (existingPending)
+                throw new Exception("Đã tồn tại yêu cầu đăng ký với email này.");
+
             request.Status = "Pending";
             request.RequestDate = DateTime.UtcNow;
 
@@ -59,13 +77,30 @@ namespace EducenAPI.Services
             if (request.Status != "Pending")
                 throw new Exception("Yêu cầu đã được xử lý trước đó");
 
-            // Tạo User và Student
-            // Username = phần đằng trước @ của email
+            // Generate username từ email
             var usernameFromEmail = request.Email?.Split('@')[0] ?? $"stu_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+            // Check username đã tồn tại chưa
+            var username = usernameFromEmail;
+            int counter = 1;
+            while (await _context.Users.AnyAsync(u => u.Username == username))
+            {
+                username = $"{usernameFromEmail}_{counter++}";
+            }
+
+            // Check email đã tồn tại trong Users chưa
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
+                if (emailExists)
+                    throw new Exception($"Email '{request.Email}' đã được sử dụng bởi tài khoản khác.");
+            }
+
+            // Tạo User và Student
             var user = new User
             {
-                Username = usernameFromEmail,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Edu123456"), // Mật khẩu mặc định
+                Username = username,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Edu123456"),
                 FullName = $"{request.FirstName} {request.LastName}".Trim(),
                 Email = request.Email,
                 PhoneNumber = request.Phone,

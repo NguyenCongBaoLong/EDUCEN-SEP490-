@@ -1,12 +1,13 @@
 ﻿using EducenAPI.Models;
 using EducenAPI.DTOs;
 using EducenAPI.DTOs.Tenant;
+using System.Threading.Tasks;
 
 namespace EducenAPI.Services.TenantService
 {
     public interface ITenantService
     {
-        Tenant CreateTenant(CreateTenantRequest request);
+        Task<Tenant> CreateTenant(CreateTenantRequest request);
         IEnumerable<Tenant> GetAllTenants();
 
         Tenant? GetTenantById(string tenantId);

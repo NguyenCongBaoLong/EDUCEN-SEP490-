@@ -293,5 +293,34 @@ namespace EducenAPI.Services
                            i.DueDate.Date == targetDate)
                 .ToListAsync();
         }
+
+        /// <summary>
+        /// Cập nhật tự động các hóa đơn quá hạn
+        /// Chạy hàng ngày để cập nhật status từ "Sent" -> "Overdue"
+        /// </summary>
+        public async Task<int> UpdateOverdueInvoicesAsync()
+        {
+            var overdueInvoices = await _context.TuitionInvoices
+                .Where(i => i.Status == "Sent" && i.DueDate < DateTime.UtcNow)
+                .ToListAsync();
+
+            if (overdueInvoices.Any())
+            {
+                foreach (var invoice in overdueInvoices)
+                {
+                    invoice.Status = "Overdue";
+                    invoice.UpdatedAt = DateTime.UtcNow;
+                    
+                    _logger.LogInformation("Invoice {InvoiceId} marked as overdue. DueDate: {DueDate}, Current: {CurrentDate}",
+                        invoice.InvoiceId, invoice.DueDate, DateTime.UtcNow);
+                }
+
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Updated {Count} invoices to overdue status", overdueInvoices.Count);
+            }
+
+            return overdueInvoices.Count;
+        }
     }
 }

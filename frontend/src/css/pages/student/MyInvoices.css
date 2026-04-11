@@ -176,7 +176,7 @@
 /* Details Section */
 .invoice-details {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 1rem;
     padding: 1.25rem 0;
     border-top: 1px solid #f1f5f9;
@@ -200,9 +200,26 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.925rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--text-main);
+}
+
+.detail-value.overdue-due-date {
+    color: var(--status-overdue-text);
+    font-weight: 700;
+}
+
+.overdue-badge {
+    background: var(--status-overdue-bg);
+    color: var(--status-overdue-text);
+    padding: 0.2rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-left: 0.5rem;
 }
 
 .detail-value svg {
@@ -309,6 +326,34 @@
 .payment-modal {
     border-radius: 1.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Modal Summary Updates */
+.invoice-summary .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.invoice-summary .summary-row:last-child {
+    border-bottom: none;
+}
+
+.invoice-summary .summary-row.overdue-warning {
+    color: var(--status-overdue-text);
+    font-weight: 600;
+}
+
+.invoice-summary .summary-row.overdue-warning strong {
+    color: var(--status-overdue-text);
+}
+
+.overdue-text {
+    color: var(--status-overdue-text);
+    font-weight: 700;
+    font-size: 0.875rem;
 }
 
 @media (max-width: 1024px) {

@@ -50,6 +50,16 @@ namespace EducenAPI.Services.Payment
         {
             try
             {
+                // Validate amount
+                if (dto.Amount <= 0)
+                {
+                    return new PaymentResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Số tiền thanh toán phải lớn hơn 0."
+                    };
+                }
+
                 var isTuition = dto.TransactionType == "Tuition";
                 var tenantContext = await ResolveCreateTenantContextAsync(dto, isTuition);
                 if (string.IsNullOrWhiteSpace(tenantContext.TenantId))

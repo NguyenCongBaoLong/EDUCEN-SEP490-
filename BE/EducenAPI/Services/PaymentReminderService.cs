@@ -193,5 +193,16 @@ namespace EducenAPI.Services
 
             return true;
         }
+
+        public async Task<int> MarkAllAsReadAsync(int userId)
+        {
+            var unread = await _tenantContext.Notifications
+                .Where(n => n.UserId == userId && !n.IsRead)
+                .ToListAsync();
+
+            foreach (var n in unread) n.IsRead = true;
+            await _tenantContext.SaveChangesAsync();
+            return unread.Count;
+        }
     }
 }

@@ -3,6 +3,7 @@ using EducenAPI.DTOs.Tenant;
 using EducenAPI.Services.TenantService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace EducenAPI.Controllers
 {
@@ -20,10 +21,17 @@ namespace EducenAPI.Controllers
 
         // Create a new tenant
         [HttpPost]
-        public IActionResult Post(CreateTenantRequest request)
+        public async Task<IActionResult> Post(CreateTenantRequest request)
         {
-            var result = _tenantService.CreateTenant(request);
-            return Ok(result);
+            try
+            {
+                var result = await _tenantService.CreateTenant(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet]
@@ -48,12 +56,19 @@ namespace EducenAPI.Controllers
         [HttpPut("{tenantId}")]
         public IActionResult Update(string tenantId, UpdateTenantRequest request)
         {
-            var updatedTenant = _tenantService.UpdateTenant(tenantId, request);
+            try
+            {
+                var updatedTenant = _tenantService.UpdateTenant(tenantId, request);
 
-            if (updatedTenant == null)
-                return NotFound();
+                if (updatedTenant == null)
+                    return NotFound();
 
-            return Ok(updatedTenant);
+                return Ok(updatedTenant);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // Tạo admin cho tenant

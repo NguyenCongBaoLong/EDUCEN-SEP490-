@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using EducenAPI.DTOs.EnrollmentRequests;
 using EducenAPI.Models;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
@@ -60,7 +61,7 @@ namespace EducenAPI.Controllers
         // POST: api/enrollment-requests (Public - no auth required for submission)
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> CreateRequest([FromBody] EnrollmentRequest request)
+        public async Task<IActionResult> CreateRequest([FromBody] CreateEnrollmentRequestDto dto)
         {
             if (!ModelState.IsValid)
             {
@@ -69,6 +70,16 @@ namespace EducenAPI.Controllers
 
             try
             {
+                var request = new EnrollmentRequest
+                {
+                    FirstName = dto.FirstName,
+                    LastName = dto.LastName,
+                    Email = dto.Email,
+                    Phone = dto.Phone ?? string.Empty,
+                    Address = dto.Address,
+                    PreferredCourse = dto.PreferredCourse
+                };
+
                 var created = await _service.CreateRequestAsync(request);
                 return Ok(new
                 {

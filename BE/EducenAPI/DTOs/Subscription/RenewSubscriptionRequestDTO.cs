@@ -1,15 +1,25 @@
-﻿namespace EducenAPI.DTOs.Subscription
+using System.ComponentModel.DataAnnotations;
+
+namespace EducenAPI.DTOs.Subscription
 {
     public class RenewSubscriptionRequestDTO
     {
+        [Required(ErrorMessage = "TenantId là bắt buộc.")]
         public string TenantId { get; set; }
+
+        [Range(1, 120, ErrorMessage = "Số tháng phải từ 1 đến 120.")]
         public int Months { get; set; }
     }
 
     public class ChangePlanRequestDTO
     {
+        [Required(ErrorMessage = "TenantId là bắt buộc.")]
         public string TenantId { get; set; }
+
+        [Required(ErrorMessage = "NewPlanId là bắt buộc.")]
         public string NewPlanId { get; set; }
+
+        [Range(1, 120, ErrorMessage = "Số tháng phải từ 1 đến 120.")]
         public int Months { get; set; }
     }
 }

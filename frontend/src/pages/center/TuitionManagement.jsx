@@ -48,12 +48,6 @@ const TuitionManagement = () => {
     // State cho tick chọn học sinh
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     
-    // State cho quản lý đơn giá lớp học
-    const [currentClassPrice, setCurrentClassPrice] = useState(0);
-    const [isEditingPrice, setIsEditingPrice] = useState(false);
-    const [newPriceInput, setNewPriceInput] = useState('');
-    const [updatingPrice, setUpdatingPrice] = useState(false);
-    
     // State cho danh sách hóa đơn
     const [invoices, setInvoices] = useState([]);
     const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -115,62 +109,10 @@ const TuitionManagement = () => {
         try {
             const response = await api.get('/Classes');
             setClasses(response.data);
-            
-            // Nếu có classId từ URL, tìm giá của nó
-            if (classId) {
-                const cls = response.data.find(c => c.classId === parseInt(classId));
-                if (cls) setCurrentClassPrice(cls.pricePerSession || 0);
-            }
         } catch (error) {
             toast.error('Không thể tải danh sách lớp');
         } finally {
             setLoadingClasses(false);
-        }
-    };
-
-    // Khi chọn lớp khác, cập nhật đơn giá của lớp đó
-    useEffect(() => {
-        if (selectedClass) {
-            const cls = classes.find(c => c.classId === parseInt(selectedClass));
-            if (cls) {
-                setCurrentClassPrice(cls.pricePerSession || 0);
-                setIsEditingPrice(false);
-            }
-        } else {
-            setCurrentClassPrice(0);
-            setIsEditingPrice(false);
-        }
-    }, [selectedClass, classes]);
-
-    const handleUpdatePrice = async () => {
-        const priceValue = parseFloat(newPriceInput);
-        if (isNaN(priceValue) || priceValue < 0) {
-            toast.error('Vui lòng nhập đơn giá hợp lệ');
-            return;
-        }
-
-        setUpdatingPrice(true);
-        try {
-            await tuitionService.updateClassPrice(parseInt(selectedClass), priceValue);
-            setCurrentClassPrice(priceValue);
-            setIsEditingPrice(false);
-            toast.success('Đã cập nhật đơn giá lớp học');
-            
-            // Cập nhật lại danh sách lớp để đồng bộ dữ liệu
-            setClasses(prev => prev.map(cls => 
-                cls.classId === parseInt(selectedClass) 
-                    ? { ...cls, pricePerSession: priceValue } 
-                    : cls
-            ));
-            
-            // Nếu đang có kết quả tính toán, tính lại để cập nhật số liệu
-            if (calculations.length > 0) {
-                handleCalculate();
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Lỗi cập nhật đơn giá');
-        } finally {
-            setUpdatingPrice(false);
         }
     };
 
@@ -498,51 +440,6 @@ const TuitionManagement = () => {
                                         ))}
                                     </select>
                                 </div>
-                                
-                                {selectedClass && (
-                                    <div className="filter-group class-price-group">
-                                        <label>Đơn giá/buổi</label>
-                                        {!isEditingPrice ? (
-                                            <div className="price-display">
-                                                <span className="price-value">{formatCurrency(currentClassPrice)}</span>
-                                                <button 
-                                                    className="edit-price-btn"
-                                                    onClick={() => {
-                                                        setNewPriceInput(currentClassPrice.toString());
-                                                        setIsEditingPrice(true);
-                                                    }}
-                                                    title="Chỉnh sửa đơn giá"
-                                                >
-                                                    <Edit3 size={16} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="price-edit">
-                                                <input 
-                                                    type="number"
-                                                    value={newPriceInput}
-                                                    onChange={(e) => setNewPriceInput(e.target.value)}
-                                                    placeholder="Nhập giá..."
-                                                    className="price-input"
-                                                    autoFocus
-                                                />
-                                                <button 
-                                                    className="save-price-btn"
-                                                    onClick={handleUpdatePrice}
-                                                    disabled={updatingPrice}
-                                                >
-                                                    <Save size={16} />
-                                                </button>
-                                                <button 
-                                                    className="cancel-price-btn"
-                                                    onClick={() => setIsEditingPrice(false)}
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
 
                                 <div className="filter-group">
                                     <label>Năm</label>
