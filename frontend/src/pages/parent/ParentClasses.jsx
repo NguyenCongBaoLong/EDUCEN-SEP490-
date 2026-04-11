@@ -1,8 +1,9 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2, MessageSquare, TrendingUp, Award, FileCheck } from 'lucide-react';
 import ParentSidebar from '../../components/ParentSidebar';
 import ParentFeedbackDrawer from '../../components/ParentFeedbackDrawer';
+import ParentFeedbackModal from '../../components/ParentFeedbackModal';
 import { useChild } from '../../context/ChildContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -327,11 +328,18 @@ const ParentClasses = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [selectedClass, setSelectedClass] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
-    const [feedbackOpenSignal, setFeedbackOpenSignal] = useState(0);
+    const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+    const [inboxOpenSignal, setInboxOpenSignal] = useState(0);
 
     useEffect(() => {
-        if (searchParams.get('panel') !== 'feedback') return;
-        setFeedbackOpenSignal(prev => prev + 1);
+        const panel = searchParams.get('panel');
+        if (panel === 'feedback') {
+            setIsFeedbackModalOpen(true);
+        } else if (panel === 'inbox') {
+            setInboxOpenSignal(prev => prev + 1);
+        } else {
+            return;
+        }
 
         const nextParams = new URLSearchParams(searchParams);
         nextParams.delete('panel');
@@ -413,7 +421,15 @@ const ParentClasses = () => {
                                 <TrendingUp size={18} /> Báo cáo học tập
                             </button>
                         )}
-                        <ParentFeedbackDrawer autoOpenSignal={feedbackOpenSignal} />
+                        <button className="pc-btn-feedback" style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '8px 16px', borderRadius: '10px',
+                            background: '#6366f1', color: 'white', border: 'none',
+                            fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer'
+                        }} onClick={() => setIsFeedbackModalOpen(true)}>
+                            <MessageSquare size={18} /> Gửi phản hồi
+                        </button>
+                        <ParentFeedbackDrawer autoOpenSignal={inboxOpenSignal} />
                     </div>
                 </div>
 
@@ -495,7 +511,7 @@ const ParentClasses = () => {
                                         const fmtDate = d => d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : null;
                                         const dateRange = [fmtDate(cls.startDate), fmtDate(cls.endDate)].filter(Boolean).join(' – ');
                                         return (
-                                            <div key={cls.classId} className="pc-card" style={{ '--accent': accent }}>
+                                            <div key={`${cls.studentId}-${cls.classId}`} className="pc-card" style={{ '--accent': accent }}>
                                                 <div className="pc-card-top">
                                                     <div className="pc-card-accent" style={{ background: accent }} />
                                                     <div className="pc-card-header-row">
@@ -572,6 +588,12 @@ const ParentClasses = () => {
             {showReportModal && (
                 <PerformanceReportModal onClose={() => setShowReportModal(false)} />
             )}
+
+            <ParentFeedbackModal 
+                isOpen={isFeedbackModalOpen} 
+                onClose={() => setIsFeedbackModalOpen(false)}
+                onSuccess={() => setInboxOpenSignal(prev => prev + 1)} 
+            />
         </div>
     );
 };

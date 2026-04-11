@@ -338,6 +338,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [selectedSession, setSelectedSession] = useState(null);
     const [attendanceData, setAttendanceData] = useState({});
     const [canAttend, setCanAttend] = useState(true);
+    const [lockMessage, setLockMessage] = useState('');
 
     // Import Modal
     const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
@@ -611,12 +612,15 @@ const TeacherClassDetail = ({ isTA = false }) => {
             try {
                 const res = await api.get(`/attendance/session/${session.sessionId}/can-attend`);
                 setCanAttend(res.data.canAttend !== false);
+                setLockMessage(res.data.message || '');
             } catch (err) {
                 console.error('Error checking canAttend:', err);
                 setCanAttend(true); // Default to allow
+                setLockMessage('');
             }
         } else {
             setCanAttend(true);
+            setLockMessage('');
         }
         
         setAttendanceOpen(true);
@@ -1233,6 +1237,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         existingRecords={attendanceData[selectedSession.sessionId]}
                         sessionId={selectedSession.sessionId}
                         canAttend={canAttend}
+                        lockMessage={lockMessage}
                         onRequestModification={() => fetchClassData(true)}
                     />
                 )

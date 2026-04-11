@@ -64,7 +64,7 @@ const parseContent = (content) => {
 
 const EMPTY_FORM = { category: '', subject: '', content: '', rating: 0 };
 
-const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
+const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
     const [open, setOpen] = useState(false);
     // 'list' | 'form' | 'detail'
     const [view, setView] = useState('list');
@@ -75,6 +75,10 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
     const [form, setForm] = useState(EMPTY_FORM);
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
+
+    // This component now acts as 'Mailbox' only.
+    // Send feedback is handled by ParentFeedbackModal.
+
 
     const fetchFeedbacks = async () => {
         setLoading(true);
@@ -142,13 +146,15 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
     return (
         <>
             {/* Trigger */}
-            <button className="tid-trigger-btn" onClick={() => setOpen(true)}>
-                <Inbox size={16} />
-                Hộp Thư & Phản hồi
-                {unreadCount > 0 && (
-                    <span className="tid-trigger-badge">{unreadCount}</span>
-                )}
-            </button>
+            {!hideTrigger && (
+                <button className="tid-trigger-btn" onClick={() => setOpen(true)}>
+                    <Inbox size={16} />
+                    Hộp thư
+                    {unreadCount > 0 && (
+                        <span className="tid-trigger-badge">{unreadCount}</span>
+                    )}
+                </button>
+            )}
 
             {/* Overlay */}
             {open && <div className="tid-overlay" onClick={closeDrawer} />}
@@ -165,7 +171,7 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
                     ) : (
                         <div className="tid-drawer-title">
                             <Inbox size={18} />
-                            <span>Hộp Thư & Phản hồi</span>
+                            <span>Hộp thư</span>
                             {unreadCount > 0 && (
                                 <span className="tid-drawer-title-badge">{unreadCount}</span>
                             )}
@@ -183,14 +189,9 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
                     {view === 'list' && (
                         <div>
                             {/* Send new feedback button */}
-                            <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                                <button
-                                    className="pf-btn-submit"
-                                    style={{ width: '100%', justifyContent: 'center' }}
-                                    onClick={() => setView('form')}
-                                >
-                                    <Send size={15} /> Gửi phản hồi mới
-                                </button>
+                            {/* Inbox list container */}
+                            <div style={{ padding: '0 0', borderBottom: '1px solid #f1f5f9' }}>
+                                {/* Feedback button removed as it is now in Sidebar */}
                             </div>
 
                             {/* Feedback history */}
@@ -237,56 +238,8 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0 }) => {
                         </div>
                     )}
 
-                    {/* ── FORM VIEW ── */}
-                    {view === 'form' && (
-                        <div style={{ padding: '16px' }}>
-                            <form onSubmit={handleSubmit} noValidate>
-                                <div className={`pf-field ${errors.category ? 'error' : ''}`}>
-                                    <label>Danh mục <span className="req">*</span></label>
-                                    <select value={form.category} onChange={e => { setForm(p => ({ ...p, category: e.target.value })); setErrors(p => ({ ...p, category: undefined })); }}>
-                                        <option value="">-- Chọn danh mục --</option>
-                                        {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                    {errors.category && <span className="pf-error"><AlertCircle size={13} /> {errors.category}</span>}
-                                </div>
+                    {/* FORM VIEW REMOVED - Handled by ParentFeedbackModal */}
 
-                                <div className={`pf-field ${errors.subject ? 'error' : ''}`}>
-                                    <label>Tiêu đề <span className="req">*</span></label>
-                                    <input
-                                        type="text"
-                                        placeholder="Tóm tắt nội dung phản hồi..."
-                                        value={form.subject}
-                                        maxLength={120}
-                                        onChange={e => { setForm(p => ({ ...p, subject: e.target.value })); setErrors(p => ({ ...p, subject: undefined })); }}
-                                    />
-                                    {errors.subject && <span className="pf-error"><AlertCircle size={13} /> {errors.subject}</span>}
-                                </div>
-
-                                <div className={`pf-field ${errors.rating ? 'error' : ''}`}>
-                                    <label>Mức độ hài lòng <span className="req">*</span></label>
-                                    <StarRating value={form.rating} onChange={v => { setForm(p => ({ ...p, rating: v })); setErrors(p => ({ ...p, rating: undefined })); }} />
-                                    {errors.rating && <span className="pf-error"><AlertCircle size={13} /> {errors.rating}</span>}
-                                </div>
-
-                                <div className={`pf-field ${errors.content ? 'error' : ''}`}>
-                                    <label>Nội dung <span className="req">*</span></label>
-                                    <textarea
-                                        placeholder="Mô tả chi tiết phản hồi của bạn (ít nhất 20 ký tự)..."
-                                        rows={5}
-                                        value={form.content}
-                                        maxLength={1000}
-                                        onChange={e => { setForm(p => ({ ...p, content: e.target.value })); setErrors(p => ({ ...p, content: undefined })); }}
-                                    />
-                                    <div className="pf-char-count">{form.content.length}/1000</div>
-                                    {errors.content && <span className="pf-error"><AlertCircle size={13} /> {errors.content}</span>}
-                                </div>
-
-                                <button type="submit" className="pf-btn-submit" disabled={submitting} style={{ width: '100%', justifyContent: 'center' }}>
-                                    <Send size={16} /> {submitting ? 'Đang gửi...' : 'Gửi phản hồi'}
-                                </button>
-                            </form>
-                        </div>
-                    )}
 
                     {/* ── DETAIL VIEW ── */}
                     {view === 'detail' && selectedFb && (() => {

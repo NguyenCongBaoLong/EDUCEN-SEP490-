@@ -1,5 +1,5 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, X, AlertTriangle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
@@ -32,11 +32,11 @@ const ScheduleManagement = () => {
                     api.get('/Teachers')
                 ]);
                 setSubjects(subRes.data);
-                
+
                 const allStaff = [
                     ...(tRes.data || []).map(t => t.fullName)
                 ].filter(Boolean);
-                
+
                 setStaffList([...new Set(allStaff)].sort());
             } catch (error) {
                 console.error('Lỗi khi tải bộ lọc:', error);
@@ -212,19 +212,19 @@ const ScheduleManagement = () => {
 
     // Get class position and height with overlap handling
     const getClassStyle = (classItem, index, totalInSlot) => {
-        const startHour = parseInt(classItem.startTime.split(':')[0]);
-        const startMin = parseInt(classItem.startTime.split(':')[1]);
+        const [sh, sm] = classItem.startTime.split(':').map(Number);
+        const [eh, em] = classItem.endTime.split(':').map(Number);
+        const duration = (eh + em / 60) - (sh + sm / 60);
 
-        const startOffset = (startHour - hourRange.min) + (startMin / 60);
-        const fixedCardHeight = 52; // Fixed height for all sessions
+        const startOffset = (sh - hourRange.min) + (sm / 60);
 
         // Calculate width and left position for overlapping classes
         const widthPercentage = totalInSlot > 1 ? 100 / totalInSlot : 100;
         const leftPercentage = index * widthPercentage;
 
         return {
-            top: `${startOffset * 40}px`,
-            height: `${fixedCardHeight}px`,
+            top: `${startOffset * 65}px`,
+            height: `${duration * 65 - 2}px`,
             backgroundColor: classItem.color,
             width: `${widthPercentage}%`,
             left: `${leftPercentage}%`
@@ -323,7 +323,7 @@ const ScheduleManagement = () => {
                                 <div className="schedule-day-header"></div>
                                 {timeSlots.map((time) => (
                                     <div key={time} className="schedule-time-slot">
-                                        {time}
+                                        <span className="schedule-time-label">{time}</span>
                                     </div>
                                 ))}
                             </div>
@@ -412,7 +412,10 @@ const ScheduleManagement = () => {
                                                             >
                                                                 <X size={14} />
                                                             </button>
-                                                            <div className="schedule-class-code">{classItem.code}</div>
+                                                            <div className="schedule-class-time">
+                                                                <Clock size={10} />
+                                                                {classItem.startTime} - {classItem.endTime}
+                                                            </div>
                                                             <div className="schedule-class-name">{classItem.name}</div>
                                                             {classItem.teacher && (
                                                                 <div className="schedule-class-teacher">

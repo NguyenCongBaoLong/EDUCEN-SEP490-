@@ -23,6 +23,7 @@ const AttendanceModal = ({
     existingRecords, 
     sessionId,
     canAttend = true,
+    lockMessage = '',
     onRequestModification 
 }) => {
     const getAttendanceStatusMeta = (status) => {
@@ -105,7 +106,7 @@ const AttendanceModal = ({
 
     const handleSave = async () => {
         if (!canAttend) {
-            toast.error('Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.');
+            toast.error(lockMessage || 'Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.');
             return;
         }
         
@@ -417,9 +418,9 @@ const AttendanceModal = ({
                         }}>
                             <Clock size={28} color="#f59e0b" />
                         </div>
-                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>Đã quá ngày điểm danh</h4>
+                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>{lockMessage || 'Đã quá ngày điểm danh'}</h4>
                         <p style={{ margin: '0 0 20px', color: '#b45309', fontSize: '14px' }}>
-                            Bạn chỉ có thể điểm danh trong ngày diễn ra buổi học. Để sửa điểm danh cho ngày đã qua, vui lòng gửi yêu cầu cho Admin.
+                            {lockMessage ? 'Vui lòng kiểm tra lại thời gian hoặc gửi yêu cầu cho Admin.' : 'Bạn chỉ có thể điểm danh trong ngày diễn ra buổi học. Để sửa điểm danh cho ngày đã qua, vui lòng gửi yêu cầu cho Admin.'}
                         </p>
                         <button 
                             onClick={() => setShowRequestForm(true)}
@@ -585,6 +586,7 @@ AttendanceModal.propTypes = {
     })),
     sessionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     canAttend: PropTypes.bool,
+    lockMessage: PropTypes.string,
     onRequestModification: PropTypes.func,
 };
 

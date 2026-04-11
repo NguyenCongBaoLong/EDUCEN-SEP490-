@@ -1,4 +1,4 @@
-﻿/* â”€â”€â”€ StudentSchedule Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ StudentSchedule Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .ss-page {
     display: flex;
     min-height: 100vh;
@@ -167,6 +167,8 @@
     font-weight: 500;
     color: #64748b;
     gap: 2px;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .ss-day-header.today {
@@ -199,14 +201,21 @@
 }
 
 .ss-time-slot {
-    height: 70px;
+    height: 85px;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 6px;
+    padding-top: 0;
     font-size: 0.6875rem;
     color: #94a3b8;
     border-bottom: 1px solid #f1f5f9;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.ss-time-label {
+    transform: translateY(-50%);
 }
 
 .ss-day-column {
@@ -227,12 +236,14 @@
 
 .ss-day-grid {
     position: relative;
-    height: calc(16 * 70px);
+    height: calc(16 * 85px);
 }
 
 .ss-grid-cell {
-    height: 70px;
+    height: 85px;
     border-bottom: 1px solid #f1f5f9;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .ss-classes-container {
@@ -244,15 +255,15 @@
 .ss-class-card {
     position: absolute;
     border-radius: 8px;
-    padding: 6px 8px;
+    padding: 4px 6px;
     cursor: pointer;
     overflow: hidden;
     opacity: 0.92;
-    transition: opacity .15s, box-shadow .15s;
+    transition: all .2s;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
 }
 
 .ss-class-card:hover {
@@ -294,15 +305,15 @@
 .ss-att-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
+    gap: 3px;
+    font-size: 0.6875rem;
     font-weight: 700;
-    padding: 3px 6px;
-    border-radius: 6px;
+    padding: 2px 5px;
+    border-radius: 4px;
     margin-top: auto;
     width: fit-content;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
