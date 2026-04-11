@@ -94,6 +94,11 @@
     transition: all 0.2s;
     box-shadow: 0 3px 10px rgba(99, 102, 241, 0.35);
     white-space: nowrap;
+    position: relative;
+}
+
+.sa-btn-primary .sa-tab-badge {
+    margin-left: 0.5rem;
 }
 
 .sa-btn-primary:hover:not(:disabled) {

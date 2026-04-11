@@ -212,6 +212,18 @@ const TenantManagement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!editTarget) {
+            if (!form.adminUsername?.trim() || !form.adminPassword?.trim()) {
+                showToast('Vui lòng nhập đầy đủ tài khoản Admin khi tạo trung tâm.', 'error');
+                return;
+            }
+            if (form.adminPassword.trim().length < 6) {
+                showToast('Mật khẩu Admin phải có ít nhất 6 ký tự.', 'error');
+                return;
+            }
+        }
+
         setSaving(true);
         try {
             if (editTarget) {
@@ -474,6 +486,7 @@ const TenantManagement = () => {
     });
 
     const pendingCount = registrations.filter(r => r.status === 'Pending').length;
+    const pendingPackageCount = changeRequests.filter(r => r.status === 'Pending').length;
 
     return (
         <div className="sa-page">
@@ -526,11 +539,14 @@ const TenantManagement = () => {
                             <span className="sa-tab-badge">{pendingCount}</span>
                         )}
                     </button>
-                    <button 
+                    <button
                         className={`sa-tab-btn ${activeTab === 'package-requests' ? 'active' : ''}`}
                         onClick={() => { setActiveTab('package-requests'); fetchChangeRequests(); }}
                     >
                         <Package size={18} /> Yêu Cầu Đổi Gói
+                        {pendingPackageCount > 0 && (
+                            <span className="sa-tab-badge">{pendingPackageCount}</span>
+                        )}
                     </button>
                 </div>
 
@@ -565,6 +581,9 @@ const TenantManagement = () => {
                                         {activeTab === 'package-requests' && (
                         <button className="sa-btn-primary" onClick={openInvoiceHistory}>
                             <FileText size={16} /> Lịch Sử Gửi Hóa Đơn
+                            {invoiceHistory.length > 0 && (
+                                <span className="sa-tab-badge">{invoiceHistory.length}</span>
+                            )}
                         </button>
                     )}
                     <span className="sa-count-badge">
@@ -929,28 +948,30 @@ const TenantManagement = () => {
                                 {!editTarget && (
                                     <>
                                         <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#374151', marginTop: '0.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
-                                            Tài khoản Admin (tùy chọn)
+                                            Tài khoản Admin (bắt buộc)
                                         </div>
                                         <div className="sa-form-row">
                                             <div className="sa-form-group">
-                                                <label>Tên đăng nhập Admin</label>
+                                                <label>Tên đăng nhập Admin *</label>
                                                 <input
                                                     name="adminUsername"
                                                     value={form.adminUsername}
                                                     onChange={handleChange}
                                                     placeholder="vd: admin_trungtam"
+                                                    required
                                                     minLength={3}
                                                 />
-                                                <span className="sa-form-hint">Nếu nhập sẽ tự tạo tài khoản Admin cho trung tâm</span>
+                                                <span className="sa-form-hint">Tên đăng nhập sẽ dùng để đăng nhập Admin của trung tâm.</span>
                                             </div>
                                             <div className="sa-form-group">
-                                                <label>Mật khẩu Admin</label>
+                                                <label>Mật khẩu Admin *</label>
                                                 <input
                                                     name="adminPassword"
                                                     type="password"
                                                     value={form.adminPassword}
                                                     onChange={handleChange}
                                                     placeholder="Tối thiểu 6 ký tự"
+                                                    required
                                                     minLength={6}
                                                 />
                                             </div>
@@ -1739,7 +1760,7 @@ const TenantManagement = () => {
                 {showInvoiceHistory && (
                     <>
                         <div className="sa-modal-overlay" onClick={() => setShowInvoiceHistory(false)} />
-                        <div className="sa-modal" style={{ maxWidth: '1000px', width: '90vw' }}>
+                        <div className="sa-modal" style={{ maxWidth: '1400px', width: '95vw' }}>
                             <div className="sa-modal-header">
                                 <h2>Lịch Sử Gửi Hóa Đơn</h2>
                                 <button className="sa-modal-close" onClick={() => setShowInvoiceHistory(false)}><X size={20} /></button>

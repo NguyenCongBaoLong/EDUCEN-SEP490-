@@ -1,22 +1,50 @@
 import { useState } from 'react';
-import { ArrowLeft, BookOpen, AlertCircle, CheckCircle, Mail, Loader2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, AlertCircle, CheckCircle, Mail, Loader2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import '../../css/pages/auth/ForgotPassword.css';
- 
+  
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
- 
+    const [emailError, setEmailError] = useState('');
+  
+    const validateEmail = (email) => {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    };
+  
+    const handleEmailChange = (e) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (value && !validateEmail(value)) {
+            setEmailError('Vui lòng nhập địa chỉ email hợp lệ');
+        } else {
+            setEmailError('');
+        }
+    };
+  
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setEmailError('');
+  
+        if (!email) {
+            setEmailError('Vui lòng nhập địa chỉ email');
+            return;
+        }
+  
+        if (!validateEmail(email)) {
+            setEmailError('Địa chỉ email không hợp lệ');
+            return;
+        }
+  
         setIsLoading(true);
- 
+  
         try {
-            await api.post('/auth/reset-password', { email });
+            await api.post('/auth/reset-password', { email: email.trim() });
             setSubmitted(true);
         } catch (err) {
             setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu.');
@@ -56,18 +84,19 @@ const ForgotPassword = () => {
                                     type="email"
                                     id="email"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Địa chỉ Email"
+                                    onChange={handleEmailChange}
+                                    placeholder="Nhập email của bạn"
                                     className="fp-input"
-                                    required
+                                    autoComplete="email"
+                                    disabled={isLoading}
                                 />
                                 <Mail size={18} className="fp-input-icon" />
                             </div>
 
-                            {error && (
+                            {(error || emailError) && (
                                 <div className="fp-error">
                                     <AlertCircle size={16} />
-                                    <span>{error}</span>
+                                    <span>{error || emailError}</span>
                                 </div>
                             )}
 
@@ -83,19 +112,10 @@ const ForgotPassword = () => {
                         </div>
                         <h3 style={{ color: 'white', marginBottom: '0.5rem', fontWeight: '700' }}>Kiểm tra email</h3>
                         <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
-                            Nếu email tồn tại, chúng tôi đã gửi mã xác thực đến <strong>{email}</strong>. (Lưu ý: Do đang phát triển, vui lòng check console log ở Backend để lấy mã).
+                            Nếu email tồn tại, chúng tôi đã gửi mã xác thực đến <strong>{email}</strong>.
                         </p>
 
-                        <Link to="/reset-password" state={{ email }} style={{
-                            textDecoration: 'none',
-                            background: 'white',
-                            color: '#4c1d95',
-                            padding: '0.875rem',
-                            borderRadius: '99px',
-                            display: 'block',
-                            fontWeight: '700',
-                            marginBottom: '1rem'
-                        }}>
+                        <Link to="/reset-password" state={{ email }} className="fp-success-btn">
                             Đi đến trang đặt lại
                         </Link>
                     </div>

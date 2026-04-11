@@ -1,4 +1,4 @@
-/* StudentManagement.css */
+﻿/* StudentManagement.css */
 .student-management {
     display: flex;
     min-height: 100vh;
@@ -22,7 +22,7 @@
 
 .header-left h1 {
     font-size: 1.875rem;
-    font-weight: 700;
+    font-weight: 800;
     color: #111827;
     margin: 0 0 0.5rem 0;
 }

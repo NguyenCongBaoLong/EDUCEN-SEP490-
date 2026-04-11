@@ -1,4 +1,4 @@
-/* Layout */
+﻿/* Layout */
 .teacher-report-layout {
     display: flex;
     min-height: 100vh;
@@ -8,7 +8,7 @@
 .report-main-content {
     flex: 1;
     padding: 24px 32px;
-    margin-left: 250px;
+    margin-left: 260px;
     /* Assuming 250px sidebar width */
     max-width: calc(100vw - 250px);
     overflow-y: auto;

@@ -150,7 +150,7 @@ const ZaloOAConfig = () => {
                 <div className="zalo-oa-header">
                     <div>
                         <h1 className="zalo-oa-title">
-                            <MessageSquare size={24} />
+                            
                             Cấu Hình Zalo OA
                         </h1>
                         <p className="zalo-oa-subtitle">Quản lý Official Account Zalo cho từng trung tâm</p>

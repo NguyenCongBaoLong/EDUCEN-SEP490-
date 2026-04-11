@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
@@ -113,13 +113,12 @@ const StudentSchedule = () => {
 
     const getClassStyle = (classItem, idx, total) => {
         const [sh, sm] = classItem.startTime.split(':').map(Number);
-        const [eh, em] = classItem.endTime.split(':').map(Number);
         const offset = (sh - 8) + sm / 60;
-        const dur = (eh - sh) + (em - sm) / 60;
+        const fixedCardHeight = 92;
         const w = total > 1 ? 100 / total : 100;
         return {
             top: `${offset * 70}px`,
-            height: `${dur * 70 - 4}px`,
+            height: `${fixedCardHeight}px`,
             backgroundColor: classItem.color,
             width: `${w}%`,
             left: `${idx * w}%`,
@@ -234,6 +233,7 @@ const StudentSchedule = () => {
                                         key={`${c.id}-${c.day}-${gIdx}-${idx}`}
                                         className="ss-class-card"
                                         style={getClassStyle(c, idx, group.length)}
+                                        title={`${c.code} - ${c.name}\nGiờ: ${c.startTime} - ${c.endTime}\nPhòng: ${c.room}\nĐiểm danh: ${status === 'present' ? 'Có mặt' : status === 'absent' ? 'Vắng mặt' : status === 'upcoming' ? 'Sắp tới' : 'Chưa điểm danh'}`}
                                         onClick={() => navigate(`/student/classes/${c.id}`)}
                                     >
                                         <div className="ss-class-code">{c.code}</div>
@@ -428,3 +428,5 @@ const StudentSchedule = () => {
 };
 
 export default StudentSchedule;
+
+

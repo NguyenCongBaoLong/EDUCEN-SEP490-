@@ -104,21 +104,35 @@ main, .grading-main, .classes-main, .ts-main, .cd-main, .classes-management {
 }
 
 .sidebar-nav-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 20px 1fr;
     align-items: center;
     gap: 0.875rem;
     padding: 0.875rem 1rem;
     border-radius: 10px;
     color: #6b7280;
     text-decoration: none;
-    font-weight: 500;
-    font-size: 0.9375rem;
+    font-weight: 700;
+    font-size: 0.95rem;
     transition: all 0.2s;
     overflow: hidden;
     white-space: nowrap;
 }
 
+.sidebar-nav-item svg {
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+}
+
+.sidebar-nav-item span {
+    min-width: 0;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+}
+
 .sidebar.collapsed .sidebar-nav-item {
+    display: flex;
     justify-content: center;
     padding: 0.875rem 0;
 }
@@ -155,6 +169,7 @@ main, .grading-main, .classes-main, .ts-main, .cd-main, .classes-management {
 .sidebar-nav-item.active {
     background: #FEE2E2;
     color: #3b82f6;
+    font-weight: 700;
 }
 
 .sidebar-footer {
@@ -264,8 +279,8 @@ main, .grading-main, .classes-main, .ts-main, .cd-main, .classes-management {
     margin: 0 0.75rem 0.25rem;
     border-radius: 8px;
     color: #6b7280;
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: 0.95rem;
+    font-weight: 700;
     text-decoration: none;
     transition: all 0.15s;
 }

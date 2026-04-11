@@ -166,8 +166,8 @@ const ResetPassword = () => {
                         </div>
                     )}
 
-                    <button type="submit" className="rp-submit" disabled={isLoading}>
-                        {isLoading ? <><Loader2 size={18} className="spin-icon" /> Đang cập nhật...</> : 'Cập nhật mật khẩu'}
+<button type="submit" className="rp-submit" disabled={isLoading}>
+                        {isLoading ? <><Loader2 size={18} className="rp-spin-icon" /> Đang cập nhật...</> : 'Cập nhật mật khẩu'}
                     </button>
                 </form>
 

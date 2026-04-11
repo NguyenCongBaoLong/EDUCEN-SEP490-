@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 
 import { Plus, Mail, CheckSquare, Square } from 'lucide-react';
 
@@ -15,12 +15,24 @@ import StaffTable from '../../components/StaffTable';
 import AddStaffModal from '../../components/AddStaffModal';
 
 import StaffDetailModal from '../../components/StaffDetailModal';
+import ConfirmModal from '../../components/ConfirmModal';
 
 import '../../css/pages/center/StaffManagement.css';
 
 
 
 const StaffManagement = () => {
+
+    // Function Ä‘á»ƒ generate password ngáº«u nhiÃªn an toÃ n
+    const generatePassword = () => {
+        const length = 12;
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < length; i++) {
+            password += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        return password;
+    };
 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -34,9 +46,16 @@ const StaffManagement = () => {
 
     const [statusFilter, setStatusFilter] = useState('');
 
-    // State cho email gửi tài khoản
+    // State cho email gá»­i tÃ i khoáº£n
     const [selectedStaff, setSelectedStaff] = useState([]);
     const [sendAccountModal, setSendAccountModal] = useState({ show: false, staff: null });
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+        type: 'warning'
+    });
 
     const [staffList, setStaffList] = useState([]);
     const [allUsers, setAllUsers] = useState([]); // For email validation across all roles
@@ -231,26 +250,30 @@ const StaffManagement = () => {
 
 
 
-    // Xử lý gửi email tài khoản cho một nhân viên
-    const handleSendAccount = async (staffId) => {
+    // Xá»­ lÃ½ gá»­i email tÃ i khoáº£n cho má»™t nhÃ¢n viÃªn
+    const executeSendAccount = async (staffId) => {
         const staff = staffList.find(s => s.id === staffId);
         if (!staff) return;
 
-        // Kiểm tra xem userId có tồn tại không
+        // Kiá»ƒm tra xem userId cÃ³ tá»“n táº¡i khÃ´ng
         if (!staff.userId) {
             toast.error(`Không thể gửi email tài khoản cho ${staff.name}: Không tìm thấy thông tin user. Vui lòng xóa và tạo lại nhân viên.`);
-            console.error('UserId is null/undefined for staff:', staff);
             return;
         }
 
+        const loadingToast = toast.loading('Đang gửi thông tin...');
         try {
-            const toastId = toast.loading(`Đang gửi tài khoản cho ${staff.name}...`);
             const isTeacher = staff.role === 'teacher';
             const sendFn = isTeacher
                 ? accountService.sendTeacherAccount
                 : accountService.sendAssistantAccount;
 
+            // Generate username vÃ  password tá»« frontend
+            const username = staff.email;
+            const password = generatePassword();
+
             console.log('Gửi email tài khoản cho:', staff.name, 'ID:', staff.id, 'Role:', staff.role, 'UserID:', staff.userId);
+            console.log('Username:', username, 'Password:', password);
             const numericId = parseInt(staff.id);
             console.log('Numeric ID:', numericId, 'Is NaN:', isNaN(numericId));
 
@@ -259,27 +282,41 @@ const StaffManagement = () => {
                 return;
             }
 
-            await sendFn(numericId);
-            
-            // Refresh lại danh sách để lấy trạng thái mới từ backend
+            await sendFn(numericId, username, password);
+
+            // Refresh láº¡i danh sÃ¡ch Ä‘á»ƒ láº¥y tráº¡ng thÃ¡i má»›i tá»« backend
             await fetchStaff();
-            
-            toast.dismiss(toastId);
+
+            toast.dismiss(loadingToast);
             toast.success(`Đã gửi email tài khoản cho ${staff.name}`);
         } catch (error) {
+            toast.dismiss(loadingToast);
             console.error("Lỗi khi gửi email:", error);
             console.error("Error response:", error.response);
             console.error("Error message:", error.response?.data?.message);
             console.error("Error status:", error.response?.status);
-            toast.dismiss();
             toast.error(error.response?.data?.message || 'Không thể gửi email tài khoản');
         }
     };
 
+    const handleSendAccount = async (staffId) => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff) return;
 
+        setConfirmModal({
+            isOpen: true,
+            title: 'Gửi tài khoản',
+            message: `Bạn có chắc muốn gửi thông tin tài khoản cho <strong>${staff.name}</strong>?`,
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                await executeSendAccount(staffId);
+            },
+            type: 'info'
+        });
+    };
 
-    // Xử lý gửi email cho nhiều nhân viên được chọn
-    const handleSendBulkAccounts = async () => {
+    // Xá»­ lÃ½ gá»­i email cho nhiá»u nhÃ¢n viÃªn Ä‘Æ°á»£c chá»n
+    const executeBulkSendAccounts = async () => {
         if (selectedStaff.length === 0) {
             toast.error('Vui lòng chọn ít nhất một nhân viên');
             return;
@@ -287,6 +324,7 @@ const StaffManagement = () => {
 
         let successCount = 0;
         let failCount = 0;
+        const loadingToast = toast.loading('Đang gửi thông tin...');
 
         for (const staffId of selectedStaff) {
             const staff = staffList.find(s => s.id === staffId);
@@ -298,7 +336,11 @@ const StaffManagement = () => {
                     ? accountService.sendTeacherAccount
                     : accountService.sendAssistantAccount;
 
-                await sendFn(parseInt(staff.id));
+                // Generate username vÃ  password cho má»—i nhÃ¢n viÃªn
+                const username = staff.email;
+                const password = generatePassword();
+
+                await sendFn(parseInt(staff.id), username, password);
                 successCount++;
             } catch (error) {
                 failCount++;
@@ -306,8 +348,9 @@ const StaffManagement = () => {
             }
         }
 
-        // Refresh lại danh sách để lấy trạng thái mới từ backend
+        // Refresh láº¡i danh sÃ¡ch Ä‘á»ƒ láº¥y tráº¡ng thÃ¡i má»›i tá»« backend
         await fetchStaff();
+        toast.dismiss(loadingToast);
 
         if (successCount > 0) {
             toast.success(`Đã gửi email thành công cho ${successCount} nhân viên`);
@@ -319,9 +362,27 @@ const StaffManagement = () => {
         setSelectedStaff([]);
     };
 
+    const handleSendBulkAccounts = async () => {
+        if (selectedStaff.length === 0) {
+            toast.error('Vui lòng chọn ít nhất một nhân viên');
+            return;
+        }
+
+        setConfirmModal({
+            isOpen: true,
+            title: 'Gửi tài khoản hàng loạt',
+            message: `Bạn có chắc muốn gửi thông tin tài khoản cho <strong>${selectedStaff.length}</strong> nhân viên đã chọn?`,
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                await executeBulkSendAccounts();
+            },
+            type: 'info'
+        });
+    };
 
 
-    // Toggle chọn một nhân viên
+
+    // Toggle chá»n má»™t nhÃ¢n viÃªn
     const handleToggleSelect = (staffId) => {
         setSelectedStaff(prev =>
             prev.includes(staffId)
@@ -332,7 +393,7 @@ const StaffManagement = () => {
 
 
 
-    // Chọn tất cả - chỉ chọn những người chưa gửi tài khoản (giống StudentTable)
+    // Chá»n táº¥t cáº£ - chá»‰ chá»n nhá»¯ng ngÆ°á»i chÆ°a gá»­i tÃ i khoáº£n (giá»‘ng StudentTable)
     const handleSelectAll = () => {
         const unsentStaff = filteredStaff.filter(s => !s.accountSent).map(s => s.id);
         if (selectedStaff.length === unsentStaff.length && selectedStaff.length > 0) {
@@ -603,6 +664,14 @@ const StaffManagement = () => {
                 staff={viewingStaff}
 
             />
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                type={confirmModal.type}
+            />
 
         </div>
 
@@ -613,4 +682,5 @@ const StaffManagement = () => {
 
 
 export default StaffManagement;
+
 

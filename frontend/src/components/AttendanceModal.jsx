@@ -25,6 +25,17 @@ const AttendanceModal = ({
     canAttend = true,
     onRequestModification 
 }) => {
+    const getAttendanceStatusMeta = (status) => {
+        switch (status) {
+            case 'present':
+                return { label: 'Có mặt', className: 'present', icon: CheckCircle };
+            case 'absent':
+                return { label: 'Vắng mặt', className: 'absent', icon: XCircle };
+            default:
+                return { label: 'Chưa điểm danh', className: 'pending', icon: Clock };
+        }
+    };
+
     const [records, setRecords] = useState({});
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -258,7 +269,10 @@ const AttendanceModal = ({
                                                 }
                                             }}
                                         />
-                                        <span style={{ fontSize: '14px' }}>{st.name}</span>
+                                        <span style={{ fontSize: '14px', flex: 1 }}>{st.name}</span>
+                                        <span className={`atm-req-status-badge ${getAttendanceStatusMeta(records[st.id]).className}`}>
+                                            {getAttendanceStatusMeta(records[st.id]).label}
+                                        </span>
                                     </label>
                                 ))}
                             </div>
@@ -267,12 +281,35 @@ const AttendanceModal = ({
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>
+                        {selectedStudentsForRequest.length > 0 && (
+                            <div className="atm-original-status-panel">
+                                <div className="atm-original-status-title">
+                                    Trạng thái điểm danh ban đầu của học sinh đã chọn
+                                </div>
+                                <div className="atm-original-status-grid">
+                                    {students
+                                        .filter(st => selectedStudentsForRequest.includes(st.id))
+                                        .map(st => {
+                                            const currentStatusMeta = getAttendanceStatusMeta(records[st.id]);
+                                            return (
+                                                <div key={`origin-${st.id}`} className="atm-original-status-item">
+                                                    <span className="atm-original-student-name">{st.name}</span>
+                                                    <span className={`atm-req-status-badge ${currentStatusMeta.className}`}>
+                                                        {currentStatusMeta.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="atm-request-field">
+                            <label className="atm-request-field-label">
                                 Trạng thái điểm danh muốn sửa:
                             </label>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                            <div className="atm-request-status-options">
+                                <label className={`atm-request-status-option ${requestData.requestedStatus === 'present' ? 'active-present' : ''}`}>
                                     <input 
                                         type="radio" 
                                         name="requestedStatus" 
@@ -280,10 +317,10 @@ const AttendanceModal = ({
                                         checked={requestData.requestedStatus === 'present'}
                                         onChange={e => setRequestData({ ...requestData, requestedStatus: e.target.value })}
                                     />
-                                    <CheckCircle size={16} color="#10b981" />
+                                    <CheckCircle size={16} />
                                     <span>Có mặt</span>
                                 </label>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                                <label className={`atm-request-status-option ${requestData.requestedStatus === 'absent' ? 'active-absent' : ''}`}>
                                     <input 
                                         type="radio" 
                                         name="requestedStatus" 
@@ -291,29 +328,22 @@ const AttendanceModal = ({
                                         checked={requestData.requestedStatus === 'absent'}
                                         onChange={e => setRequestData({ ...requestData, requestedStatus: e.target.value })}
                                     />
-                                    <XCircle size={16} color="#ef4444" />
+                                    <XCircle size={16} />
                                     <span>Vắng mặt</span>
                                 </label>
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', fontWeight: '500', marginBottom: '8px' }}>
-                                Lý do <span style={{ color: '#ef4444' }}>*</span>:
+                        <div className="atm-request-field">
+                            <label className="atm-request-field-label">
+                                Lý do <span className="atm-required">*</span>:
                             </label>
                             <textarea
+                                className="atm-request-textarea"
                                 value={requestData.reason}
                                 onChange={e => setRequestData({ ...requestData, reason: e.target.value })}
                                 placeholder="Nhập lý do yêu cầu sửa điểm danh..."
                                 rows={4}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '6px',
-                                    fontSize: '14px',
-                                    resize: 'vertical'
-                                }}
                                 disabled={submittingRequest}
                             />
                         </div>

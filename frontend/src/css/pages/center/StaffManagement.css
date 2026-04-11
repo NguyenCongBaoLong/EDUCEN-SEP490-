@@ -1,4 +1,4 @@
-.staff-management {
+﻿.staff-management {
     display: flex;
     min-height: 100vh;
     background: #f9fafb;
@@ -6,7 +6,7 @@
 
 .staff-main {
     flex: 1;
-    margin-left: 280px;
+    margin-left: 260px;
     padding: 2rem;
 }
 
@@ -22,8 +22,8 @@
 }
 
 .staff-header h1 {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 1.875rem;
+    font-weight: 800;
     color: #111827;
     margin: 0 0 0.5rem 0;
 }
@@ -72,3 +72,4 @@
         justify-content: center;
     }
 }
+

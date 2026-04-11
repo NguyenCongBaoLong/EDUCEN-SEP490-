@@ -42,6 +42,8 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [submittingInvoicePayment, setSubmittingInvoicePayment] = useState(false);
     const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
     const [loadingOnlineHistory, setLoadingOnlineHistory] = useState(false);
+    const [historySectionFilter, setHistorySectionFilter] = useState('all');
+    const isSingleHistorySection = historySectionFilter !== 'all';
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -887,7 +889,14 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             {showChangeRequestModal && (
                 <>
                     <div className="subscription-modal-overlay" onClick={() => setShowChangeRequestModal(false)} />
-                    <div className="subscription-modal" style={{ maxWidth: '1600px', width: '98vw', maxHeight: '90vh' }}>
+                    <div
+                        className="subscription-modal"
+                        style={{
+                            maxWidth: isSingleHistorySection ? '980px' : '1600px',
+                            width: isSingleHistorySection ? '92vw' : '98vw',
+                            maxHeight: '90vh'
+                        }}
+                    >
                         <div className="subscription-modal-header">
                             <h2>Lịch sử đổi gói & giao dịch</h2>
                             <button className="subscription-modal-close" onClick={() => setShowChangeRequestModal(false)}>
@@ -895,9 +904,41 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                             </button>
                         </div>
                         <div className="subscription-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: 'calc(90vh - 120px)', overflow: 'auto', padding: '1rem' }}>
-                            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'nowrap', alignItems: 'flex-start', minHeight: '500px' }}>
+                            <div className="subscription-history-filter">
+                                <button
+                                    type="button"
+                                    className={`subscription-history-filter-btn ${historySectionFilter === 'all' ? 'active' : ''}`}
+                                    onClick={() => setHistorySectionFilter('all')}
+                                >
+                                    Tất cả
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`subscription-history-filter-btn ${historySectionFilter === 'invoice' ? 'active' : ''}`}
+                                    onClick={() => setHistorySectionFilter('invoice')}
+                                >
+                                    Hoá đơn đổi gói
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`subscription-history-filter-btn ${historySectionFilter === 'online' ? 'active' : ''}`}
+                                    onClick={() => setHistorySectionFilter('online')}
+                                >
+                                    Lịch sử giao dịch online
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`subscription-history-filter-btn ${historySectionFilter === 'request' ? 'active' : ''}`}
+                                    onClick={() => setHistorySectionFilter('request')}
+                                >
+                                    Lịch sử đổi gói
+                                </button>
+                            </div>
+
+                            <div className={`subscription-history-grid ${isSingleHistorySection ? 'single' : ''}`}>
                                 {/* Côt 1: Hóa dôn dôi gói */}
-                                <div style={{ flex: 1, minWidth: '350px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#ffffff' }}>
+                                {(historySectionFilter === 'all' || historySectionFilter === 'invoice') && (
+                                <div className="subscription-history-card">
                                     <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Hóa đơn đổi gói</h4>
                                     {loadingInvoices ? (
                                         <div className="subscription-state">Đang tải...</div>
@@ -962,9 +1003,11 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         </div>
                                     )}
                                 </div>
+                                )}
 
                                 {/* Côt 2: Lich su giao dich online (VNPay) */}
-                                <div style={{ flex: 1, minWidth: '350px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#ffffff' }}>
+                                {(historySectionFilter === 'all' || historySectionFilter === 'online') && (
+                                <div className="subscription-history-card">
                                     <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Lịch sử giao dịch online (VNPay)</h4>
                                     {loadingOnlineHistory ? (
                                         <div className="subscription-state">Đang tải...</div>
@@ -1009,9 +1052,11 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         </div>
                                     )}
                                 </div>
+                                )}
 
                                 {/* Côt 3: Lich su dôi gói */}
-                                <div style={{ flex: 1, minWidth: '350px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '1rem', background: '#ffffff' }}>
+                                {(historySectionFilter === 'all' || historySectionFilter === 'request') && (
+                                <div className="subscription-history-card">
                                     <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Lịch sử đổi gói</h4>
                                     {loadingRequests ? (
                                         <div className="subscription-state">Đang tải...</div>
@@ -1055,6 +1100,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         </div>
                                     )}
                                 </div>
+                                )}
                             </div>
                         </div>
                     </div>

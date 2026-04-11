@@ -740,6 +740,75 @@
     margin-bottom: 24px;
 }
 
+.subscription-history-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.subscription-history-filter-btn {
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.subscription-history-filter-btn:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.subscription-history-filter-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
+.subscription-history-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(320px, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.subscription-history-grid.single {
+    grid-template-columns: minmax(560px, 820px);
+    justify-content: center;
+}
+
+.subscription-history-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 1400px) {
+    .subscription-history-grid {
+        grid-template-columns: repeat(2, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 920px) {
+    .subscription-history-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .subscription-history-grid.single {
+        grid-template-columns: 1fr;
+    }
+}
+
 .subscription-modal-header h2 {
     font-size: 20px;
     font-weight: 800;
