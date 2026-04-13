@@ -153,3 +153,30 @@
     color: #d97706;
     flex-shrink: 0;
 }
+
+/* Filter tabs */
+.plan-filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.plan-filter-btn {
+    transition: all 0.2s ease;
+}
+
+.plan-filter-btn:hover {
+    transform: translateY(-1px);
+    border-color: #a78bfa;
+    color: #5b21b6;
+    background: #f5f3ff;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.18);
+}
+
+.plan-filter-btn.active {
+    border-color: #6366f1;
+    color: #ffffff;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    box-shadow: 0 6px 14px rgba(99, 102, 241, 0.3);
+}

@@ -19,9 +19,9 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetPlans()
+        public async Task<IActionResult> GetPlans([FromQuery] bool includeInactive = false)
         {
-            var plans = await _planService.GetAllPlansAsync();
+            var plans = await _planService.GetAllPlansAsync(includeInactive);
             return Ok(plans);
         }
 
@@ -93,6 +93,14 @@ namespace EducenAPI.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> SetPlanStatus(string id, [FromQuery] bool isActive)
+        {
+            var updated = await _planService.SetPlanActiveStatusAsync(id, isActive);
+            if (!updated) return NotFound();
+            return NoContent();
         }
     }
 }

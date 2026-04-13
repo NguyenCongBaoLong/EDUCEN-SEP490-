@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Package, Check, Edit2, Trash2, Plus, X, Loader2, AlertCircle } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import adminApi from '../../services/adminApi';
@@ -12,11 +12,15 @@ const EMPTY_FORM = {
     features: '',
 };
 
+const normalizeText = (value) => (typeof value === 'string' ? value.trim() : value);
+const hasText = (value) => normalizeText(value)?.length > 0;
+
 const formatPrice = (p) =>
     Number(p).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
 
 const PlansManagement = () => {
     const [plans, setPlans] = useState([]);
+    const [statusFilter, setStatusFilter] = useState('all');
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null); // null = create
@@ -33,7 +37,7 @@ const PlansManagement = () => {
     const fetchPlans = async () => {
         setLoading(true);
         try {
-            const res = await adminApi.get('/admin/plans');
+            const res = await adminApi.get('/admin/plans', { params: { includeInactive: true } });
             setPlans(res.data);
         } catch {
             showToast('Không thể tải danh sách gói dịch vụ', 'error');
@@ -43,6 +47,12 @@ const PlansManagement = () => {
     };
 
     useEffect(() => { fetchPlans(); }, []);
+
+    const filteredPlans = plans.filter(plan => {
+        if (statusFilter === 'active') return plan.isActive;
+        if (statusFilter === 'archived') return !plan.isActive;
+        return true;
+    });
 
     const openCreate = () => {
         setEditTarget(null);
@@ -66,13 +76,17 @@ const PlansManagement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!hasText(form.planName)) {
+            showToast('Tên gói không được để trống hoặc chỉ chứa khoảng trắng.', 'error');
+            return;
+        }
         setSaving(true);
         const payload = {
-            planName: form.planName,
+            planName: normalizeText(form.planName),
             price: Number(form.price),
             limitUsers: Number(form.limitUsers),
             storageLimit: Number(form.storageLimit),
-            features: form.features,
+            features: normalizeText(form.features),
         };
         try {
             if (editTarget) {
@@ -95,12 +109,22 @@ const PlansManagement = () => {
         if (!deleteTarget) return;
         try {
             await adminApi.delete(`/admin/plans/${deleteTarget.planId}`);
-            showToast('Đã xóa gói dịch vụ');
+            showToast('Đã lưu trữ gói dịch vụ');
             setDeleteTarget(null);
             fetchPlans();
         } catch (err) {
-            showToast(err.response?.data?.message || 'Không thể xóa gói (có thể đang được sử dụng)', 'error');
+            showToast(err.response?.data?.message || 'Không thể lưu trữ gói dịch vụ.', 'error');
             setDeleteTarget(null);
+        }
+    };
+
+    const handleTogglePlanStatus = async (plan, isActive) => {
+        try {
+            await adminApi.put(`/admin/plans/${plan.planId}/status`, null, { params: { isActive } });
+            showToast(isActive ? 'Đã khôi phục gói dịch vụ.' : 'Đã lưu trữ gói dịch vụ.');
+            fetchPlans();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể cập nhật trạng thái gói.', 'error');
         }
     };
 
@@ -129,18 +153,38 @@ const PlansManagement = () => {
                         <Plus size={18} /> Thêm Gói Mới
                     </button>
                 </div>
+                <div className="plan-filter-tabs">
+                    <button
+                        className={`sa-btn-outline plan-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setStatusFilter('all')}
+                    >
+                        Tất cả
+                    </button>
+                    <button
+                        className={`sa-btn-outline plan-filter-btn ${statusFilter === 'active' ? 'active' : ''}`}
+                        onClick={() => setStatusFilter('active')}
+                    >
+                        Đang hoạt động
+                    </button>
+                    <button
+                        className={`sa-btn-outline plan-filter-btn ${statusFilter === 'archived' ? 'active' : ''}`}
+                        onClick={() => setStatusFilter('archived')}
+                    >
+                        Đã lưu trữ
+                    </button>
+                </div>
 
                 {/* Plan Cards */}
                 {loading ? (
                     <div className="sa-loading"><Loader2 size={20} className="spin" /> Đang tải...</div>
-                ) : plans.length === 0 ? (
+                ) : filteredPlans.length === 0 ? (
                     <div className="sa-empty">
                         <Package size={40} />
                         <p>Chưa có gói dịch vụ nào. Hãy tạo gói đầu tiên!</p>
                     </div>
                 ) : (
                     <div className="plans-grid">
-                        {plans.map((plan, idx) => {
+                        {filteredPlans.map((plan, idx) => {
                             const feats = plan.features ? plan.features.split(',') : [];
                             const colors = ['blue', 'purple', 'gold'];
                             const color = colors[idx % colors.length];
@@ -149,6 +193,9 @@ const PlansManagement = () => {
                                     <div className="plan-header">
                                         <div className="plan-icon"><Package size={22} /></div>
                                         <h3 className="plan-name">{plan.planName}</h3>
+                                        <span className={`sa-status-badge ${plan.isActive ? 'active' : 'inactive'}`}>
+                                            {plan.isActive ? 'Active' : 'Archive'}
+                                        </span>
                                     </div>
                                     <div className="plan-price">
                                         <span className="plan-price-amount">{formatPrice(plan.price)}</span>
@@ -172,13 +219,23 @@ const PlansManagement = () => {
                                         <button className="sa-btn-outline" onClick={() => openEdit(plan)}>
                                             <Edit2 size={14} /> Chỉnh sửa
                                         </button>
-                                        <button
-                                            className="sa-btn-outline"
-                                            style={{ color: '#ef4444', borderColor: '#fca5a5' }}
-                                            onClick={() => setDeleteTarget(plan)}
-                                        >
-                                            <Trash2 size={14} /> Xóa
-                                        </button>
+                                        {plan.isActive ? (
+                                            <button
+                                                className="sa-btn-outline"
+                                                style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                                                onClick={() => setDeleteTarget(plan)}
+                                            >
+                                                <Trash2 size={14} /> Lưu trữ
+                                            </button>
+                                        ) : (
+                                            <button
+                                                className="sa-btn-outline"
+                                                style={{ color: '#10b981', borderColor: '#86efac' }}
+                                                onClick={() => handleTogglePlanStatus(plan, true)}
+                                            >
+                                                <Check size={14} /> Khôi phục
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -271,3 +328,4 @@ const PlansManagement = () => {
 };
 
 export default PlansManagement;
+

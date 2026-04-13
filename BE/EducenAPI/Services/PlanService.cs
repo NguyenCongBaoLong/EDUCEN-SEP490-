@@ -15,9 +15,14 @@ namespace EducenAPI.Services
             _context = context;
         }
 
-        public async Task<List<Plan>> GetAllPlansAsync()
+        public async Task<List<Plan>> GetAllPlansAsync(bool includeInactive = false)
         {
-            return await _context.Plans.Where(p => p.IsActive).OrderByDescending(p => p.Price).ToListAsync();
+            var query = _context.Plans.AsQueryable();
+            if (!includeInactive)
+            {
+                query = query.Where(p => p.IsActive);
+            }
+            return await query.OrderByDescending(p => p.Price).ToListAsync();
         }
 
         public async Task<Plan?> GetPlanByIdAsync(string id)
@@ -79,24 +84,25 @@ namespace EducenAPI.Services
         public async Task<bool> DeletePlanAsync(string id)
         {
             var plan = await _context.Plans
-                .Include(p => p.Subscriptions)
                 .FirstOrDefaultAsync(p => p.PlanId == id);
 
             if (plan == null)
                 return false;
-
-            // nếu plan đã từng được dùng
-            if (plan.Subscriptions != null && plan.Subscriptions.Any())
-            {
-                plan.IsActive = false;
-            }
-            else
-            {
-                _context.Plans.Remove(plan);
-            }
+            // Always soft delete to keep historical references for subscriptions/invoices.
+            // Inactive plans are excluded by listing queries (GetAllPlansAsync).
+            plan.IsActive = false;
 
             await _context.SaveChangesAsync();
 
+            return true;
+        }
+
+        public async Task<bool> SetPlanActiveStatusAsync(string id, bool isActive)
+        {
+            var plan = await _context.Plans.FirstOrDefaultAsync(p => p.PlanId == id);
+            if (plan == null) return false;
+            plan.IsActive = isActive;
+            await _context.SaveChangesAsync();
             return true;
         }
     }

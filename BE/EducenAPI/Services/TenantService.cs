@@ -448,7 +448,7 @@ namespace EducenAPI.Services.TenantService
 
             // Fix connection string for Docker environment dynamically
             var baseConnStr = _configuration.GetConnectionString("DefaultTenantConnection");
-            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr);
+            var baseBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(baseConnStr); 
             var tenantBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(tenant.ConnectionString);
             
             baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;

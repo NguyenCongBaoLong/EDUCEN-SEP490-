@@ -4,6 +4,8 @@ import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import refundService from '../../services/refundService';
 import '../../css/pages/sysadmin/RefundManagement.css';
 
+const normalizeText = (value) => (typeof value === 'string' ? value.trim() : value);
+
 const STATUS_OPTIONS = ['All', 'Pending', 'Approved', 'Rejected', 'Processing', 'Completed', 'Failed'];
 
 const RefundManagement = () => {
@@ -126,7 +128,7 @@ const RefundManagement = () => {
 
     const createRefund = async (e) => {
         e.preventDefault();
-        if (!form.tenantId || !form.paymentRecordId || !form.reason || !form.refundAmount) {
+        if (!form.tenantId || !form.paymentRecordId || !normalizeText(form.reason) || !form.refundAmount) {
             showMessage('Vui lòng nhập đầy đủ thông tin yêu cầu hoàn tiền.', 'error');
             return;
         }
@@ -137,7 +139,7 @@ const RefundManagement = () => {
                 tenantId: form.tenantId,
                 paymentRecordId: form.paymentRecordId,
                 refundAmount: Number(form.refundAmount),
-                reason: form.reason,
+                reason: normalizeText(form.reason),
                 refundMethod: form.refundMethod,
                 isServiceIssue: form.isServiceIssue
             });
