@@ -188,7 +188,7 @@ const PerformanceReportModal = ({ onClose }) => {
             .finally(() => setLoading(false));
     }, [selectedChild]);
 
-    if (!selectedChild) return null;
+    if (!selectedChild || selectedChild.studentId === 'all') return null;
 
     const getRankColor = (rank) => {
         switch (rank) {
@@ -416,7 +416,7 @@ const ParentClasses = () => {
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        {selectedChild && (
+                        {selectedChild && selectedChild.studentId !== 'all' && (
                             <button className="pc-btn-report" onClick={() => setShowReportModal(true)}>
                                 <TrendingUp size={18} /> Báo cáo học tập
                             </button>

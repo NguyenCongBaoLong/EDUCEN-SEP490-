@@ -106,7 +106,6 @@ const groupUnique = (list) => {
     return list.reduce((acc, curr) => {
         const isDup = acc.some(item => 
             item.title === curr.title && 
-            curr.fileUrl && // Chỉ gộp nếu bài tập đó thật sự có file trùng nhau
             item.fileUrl === curr.fileUrl
         );
         if (!isDup) acc.push(curr);

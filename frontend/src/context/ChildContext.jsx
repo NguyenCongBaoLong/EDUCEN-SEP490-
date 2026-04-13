@@ -16,10 +16,12 @@ export const ChildProvider = ({ children }) => {
             .then(res => {
                 const list = res.data || [];
                 setChildrenList(list);
-                // Thêm option "Tất cả" vào danh sách và làm nó là default
-                const allOption = { studentId: 'all', fullName: 'Tất cả' };
-                if (list.length > 0) {
-                    setSelectedChild(allOption);
+                if (list.length === 1) {
+                    // Chỉ có 1 con: chọn luôn con đó làm mặc định
+                    setSelectedChild(list[0]);
+                } else if (list.length > 1) {
+                    // Nhiều con: mặc định xem tất cả
+                    setSelectedChild({ studentId: 'all', fullName: 'Tất cả' });
                 }
             })
             .catch(console.error)

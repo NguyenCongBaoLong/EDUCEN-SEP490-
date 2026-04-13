@@ -282,6 +282,7 @@ namespace EducenAPI.Services
                         .Where(cl => cl.ClassId == c.ClassId)
                         .Select(cl => cl.Students.Count)
                         .FirstOrDefault(),
+                    MaxStudents = c.MaxStudents,
                     ScheduleSlots = c.Schedules.Select(s => new
                     {
                         s.DayOfWeek,

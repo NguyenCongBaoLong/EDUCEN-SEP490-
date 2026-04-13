@@ -48,7 +48,7 @@ const TeacherClasses = ({ isTA = false }) => {
                             initials: c.assistantName.split(' ').pop().charAt(0).toUpperCase() 
                         } : null,
                         currentStudents: c.studentCount ?? 0,
-                        maxStudents: null,
+                        maxStudents: c.maxStudents || c.MaxStudents || 30,
                         schedule: scheduleStr,
                         status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
                         startDate: c.startDate,

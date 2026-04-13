@@ -828,7 +828,11 @@ namespace EducenAPI.Services
                     }
                 }
 
-                // Update schedules only if slots have actually changed
+                // ✅ FIX: Xử lý 2 trường hợp riêng biệt:
+                // 1) Admin đổi hoặc gửi ScheduleSlots: kiểm tra thay đổi lịch
+                // 2) Kể cả khi lịch không đổi, nếu ngày bắt đầu/kết thúc đổi -> tái tạo session
+                bool scheduleSlotsChanged = false;
+
                 if (dto.ScheduleSlots != null)
                 {
                     var existingSlots = existingClass.Schedules.Select(s => new CreateScheduleSlotDto
@@ -841,47 +845,170 @@ namespace EducenAPI.Services
 
                     if (!AreScheduleSlotsEqual(dto.ScheduleSlots, existingSlots))
                     {
-                        // ✅ FIX: Chỉ xóa ClassSessions KHÔNG có điểm danh và KHÔNG có bài nộp
-                        // Những buổi đã có dữ liệu cần được giữ lại như lịch sử
+                        scheduleSlotsChanged = true;
+                        var finalStartDate = existingClass.StartDate;
+                        var finalEndDate   = existingClass.EndDate;
+                        var today          = DateTime.UtcNow.AddHours(7).Date;
+
+                        // ✅ FIX: Chỉ xóa sessions TƯƠNG LAI không có dữ liệu (không xóa lịch sử)
                         foreach (var schedule in existingClass.Schedules)
                         {
-                            if (schedule.Sessions != null && schedule.Sessions.Any())
-                            {
-                                // ✅ FIX: Load Attendances và xóa trước
-                                var sessionIds = schedule.Sessions.Select(s => s.SessionId).ToList();
-                                var attendancesToDelete = _context.Attendances
-                                    .Where(a => sessionIds.Contains(a.SessionId))
-                                    .ToList();
+                            if (schedule.Sessions == null || !schedule.Sessions.Any()) continue;
 
-                                if (attendancesToDelete.Any())
-                                {
-                                    _context.Attendances.RemoveRange(attendancesToDelete);
-                                }
+                            var futureSafeSessions = schedule.Sessions
+                                .Where(s => s.SessionDate.Date >= today
+                                         && !s.Assignments.Any()
+                                         && !s.LessonMaterials.Any())
+                                .ToList();
 
-                                var sessionsToDelete = schedule.Sessions
-                                    .Where(s => !s.Attendances.Any() && !s.Assignments.Any() && !s.LessonMaterials.Any())
-                                    .ToList();
+                            if (!futureSafeSessions.Any()) continue;
 
-                                if (sessionsToDelete.Any())
-                                {
-                                    _context.ClassSessions.RemoveRange(sessionsToDelete);
-                                }
-                                
-                                // Nếu vẫn còn session có dữ liệu, không thể xóa schedule này ngay lập tức 
-                                // hoặc ít nhất không xóa những session đó.
-                            }
+                            var futureSessionIds = futureSafeSessions.Select(s => s.SessionId).ToList();
+                            var attendancesToDelete = await _context.Attendances
+                                .Where(a => futureSessionIds.Contains(a.SessionId))
+                                .ToListAsync();
+                            if (attendancesToDelete.Any())
+                                _context.Attendances.RemoveRange(attendancesToDelete);
+
+                            _context.ClassSessions.RemoveRange(futureSafeSessions);
                         }
-
-                        // Do constraint FK Attendance -> Session là NoAction, 
-                        // nếu có session nào giữ lại, việc xóa Schedule cha sẽ bị lỗi.
-                        // Chiến thuật an toàn nhất: Chỉ recreate những gì thực sự cần thiết.
-                        // Tuy nhiên, để sửa lỗi 409 nhanh nhất cho trường hợp KHÔNG đổi lịch:
-                        
-                        _context.Schedules.RemoveRange(existingClass.Schedules);
                         await _context.SaveChangesAsync();
 
-                        // Create new schedules and sessions
-                        await CreateSchedulesForClass(id, dto.RoomId ?? existingClass.RoomId, dto.ScheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate);
+                        // Lấy danh sách session cần giữ lại làm lịch sử
+                        var pastSessionsWithData = existingClass.Schedules
+                            .SelectMany(sc => sc.Sessions ?? new List<ClassSession>())
+                            .Where(s => s.SessionDate.Date < today
+                                     || s.Assignments.Any()
+                                     || s.LessonMaterials.Any())
+                            .Select(s => s.SessionId)
+                            .ToHashSet();
+
+                        if (pastSessionsWithData.Any())
+                        {
+                            var newSchedules = new List<Schedule>();
+                            foreach (var slot in dto.ScheduleSlots)
+                            {
+                                var newSched = new Schedule
+                                {
+                                    ClassId    = id,
+                                    DayOfWeek  = slot.DayOfWeek,
+                                    StartTime  = TimeOnly.Parse(slot.StartTime),
+                                    EndTime    = TimeOnly.Parse(slot.EndTime),
+                                    RoomId     = slot.RoomId ?? (dto.RoomId ?? existingClass.RoomId)
+                                };
+                                _context.Schedules.Add(newSched);
+                                newSchedules.Add(newSched);
+                            }
+                            await _context.SaveChangesAsync();
+
+                            var keptSessions = await _context.ClassSessions
+                                .Where(s => pastSessionsWithData.Contains(s.SessionId))
+                                .ToListAsync();
+
+                            foreach (var ks in keptSessions)
+                            {
+                                var matchingSched = newSchedules.FirstOrDefault(ns => ns.DayOfWeek == (int)ks.SessionDate.DayOfWeek)
+                                                ?? newSchedules.First();
+                                ks.ScheduleId = matchingSched.ScheduleId;
+                            }
+                            await _context.SaveChangesAsync();
+
+                            _context.Schedules.RemoveRange(existingClass.Schedules);
+                            await _context.SaveChangesAsync();
+
+                            var existingSessionDates = await _context.ClassSessions
+                                .Where(s => s.ClassId == id)
+                                .Select(s => new { s.SessionDate, s.ScheduleId })
+                                .ToListAsync();
+
+                            foreach (var newSched in newSchedules)
+                            {
+                                if (!finalStartDate.HasValue || !finalEndDate.HasValue) continue;
+                                var dates = GenerateSessionDates(finalStartDate.Value, finalEndDate.Value, newSched.DayOfWeek);
+                                foreach (var d in dates)
+                                {
+                                    if (existingSessionDates.Any(e => e.SessionDate.Date == d.Date && e.ScheduleId == newSched.ScheduleId)) continue;
+                                    _context.ClassSessions.Add(new ClassSession
+                                    {
+                                        ClassId     = id,
+                                        ScheduleId  = newSched.ScheduleId,
+                                        SessionDate = d,
+                                        Status      = "Scheduled"
+                                    });
+                                }
+                            }
+                            await _context.SaveChangesAsync();
+                        }
+                        else
+                        {
+                            _context.Schedules.RemoveRange(existingClass.Schedules);
+                            await _context.SaveChangesAsync();
+                            await CreateSchedulesForClass(id, dto.RoomId ?? existingClass.RoomId, dto.ScheduleSlots, finalStartDate, finalEndDate);
+                        }
+                    }
+                }
+
+                // Nếu lịch học không đổi NHƯNG ngày đổi (hoặc vừa đổi cả hai)
+                // Hoặc trường hợp Admin chỉ gửi ngày mà không gửi ScheduleSlots
+                if (!scheduleSlotsChanged && (dto.StartDate.HasValue || dto.EndDate.HasValue))
+                {
+                    var finalStartDate = existingClass.StartDate;
+                    var finalEndDate   = existingClass.EndDate;
+
+                    if (finalStartDate.HasValue && finalEndDate.HasValue && existingClass.Schedules.Any())
+                    {
+                        var today = DateTime.UtcNow.AddHours(7).Date;
+
+                        var existingSessionsBySchedule = await _context.ClassSessions
+                            .Where(s => s.ClassId == id)
+                            .Select(s => new { s.SessionId, s.SessionDate, s.ScheduleId })
+                            .ToListAsync();
+
+                        var sessionIdsOutOfRange = await _context.ClassSessions
+                            .Include(s => s.Assignments)
+                            .Include(s => s.LessonMaterials)
+                            .Where(s => s.ClassId == id
+                                     && (s.SessionDate.Date < finalStartDate.Value.Date || s.SessionDate.Date > finalEndDate.Value.Date)
+                                     && s.SessionDate.Date >= today)
+                            .ToListAsync();
+
+                        var safeToRemove = sessionIdsOutOfRange
+                            .Where(s => !s.Assignments.Any() && !s.LessonMaterials.Any())
+                            .ToList();
+
+                        if (safeToRemove.Any())
+                        {
+                            var removeIds = safeToRemove.Select(s => s.SessionId).ToList();
+                            var attToDelete = await _context.Attendances
+                                .Where(a => removeIds.Contains(a.SessionId))
+                                .ToListAsync();
+                            if (attToDelete.Any())
+                                _context.Attendances.RemoveRange(attToDelete);
+                            _context.ClassSessions.RemoveRange(safeToRemove);
+                            await _context.SaveChangesAsync();
+                        }
+
+                        var existingDates = existingSessionsBySchedule
+                            .Select(s => new { s.SessionDate.Date, s.ScheduleId })
+                            .ToHashSet();
+
+                        foreach (var schedule in existingClass.Schedules)
+                        {
+                            var newDates = GenerateSessionDates(finalStartDate.Value, finalEndDate.Value, schedule.DayOfWeek);
+                            foreach (var d in newDates)
+                            {
+                                // Chỗ này quan trọng: dùng d.Date để so sánh
+                                if (existingDates.Any(e => e.Date == d.Date && e.ScheduleId == schedule.ScheduleId)) continue;
+                                _context.ClassSessions.Add(new ClassSession
+                                {
+                                    ClassId     = id,
+                                    ScheduleId  = schedule.ScheduleId,
+                                    SessionDate = d,
+                                    Status      = "Scheduled"
+                                });
+                            }
+                        }
+                        await _context.SaveChangesAsync();
                     }
                 }
 

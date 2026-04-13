@@ -162,7 +162,7 @@ namespace EducenAPI.Services
             if (submission == null)
                 throw new Exception("Không tìm thấy bài nộp");
 
-            if (submission.Score != null || submission.Status == "Graded" || submission.Status == "Published" || submission.IsPublished)
+            if (submission.Score != null || submission.Status == SubmissionStatus.Graded || submission.Status == SubmissionStatus.Published || submission.IsPublished)
                 throw new Exception("Không thể cập nhật bài nộp vì nó đã được chấm hoặc công khai.");
 
             var now = DateTime.Now;
@@ -264,7 +264,7 @@ namespace EducenAPI.Services
             submission.Score = request.Score;
             submission.TeacherComment = request.TeacherComment;
             submission.GradedAt = DateTime.Now;
-            submission.Status = "Graded";
+            submission.Status = SubmissionStatus.Graded;
 
             await _context.SaveChangesAsync();
             return MapToResponseDto(submission, baseUrl);
@@ -295,7 +295,7 @@ namespace EducenAPI.Services
                 TeacherComment = request.TeacherComment,
                 GradedAt = DateTime.Now,
                 SubmittedAt = DateTime.Now,
-                Status = "Graded",
+                Status = SubmissionStatus.Graded,
                 IsPublished = false,
                 FileUrl = ""
             };
@@ -323,7 +323,7 @@ namespace EducenAPI.Services
                 throw new Exception("Không thể công khai điểm trước khi chấm điểm");
 
             submission.IsPublished = isPublished;
-            submission.Status = isPublished ? "Published" : "Graded";
+            submission.Status = isPublished ? SubmissionStatus.Published : SubmissionStatus.Graded;
 
             await _context.SaveChangesAsync();
 
@@ -357,7 +357,17 @@ namespace EducenAPI.Services
             submission.TeacherComment = null;
             submission.GradedAt = null;
             submission.IsPublished = false;
-            
+
+            if (string.IsNullOrEmpty(submission.FileUrl))
+            {
+                submission.Status = SubmissionStatus.NotSubmitted;
+            }
+            else
+            {
+                bool isLate = submission.Asm.EndTime.HasValue && submission.SubmittedAt > submission.Asm.EndTime.Value;
+                submission.Status = isLate ? SubmissionStatus.LateSubmitted : SubmissionStatus.Submitted;
+            }
+
             await _context.SaveChangesAsync();
             return MapToResponseDto(submission, baseUrl);
         }

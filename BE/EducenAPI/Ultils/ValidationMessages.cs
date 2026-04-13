@@ -21,6 +21,11 @@ namespace EducenAPI.Ultils
         public const string InvalidDateFormat = "Định dạng ngày sinh không hợp lệ cho '{0}'. Vui lòng sử dụng định dạng: MM/DD/YYYY hoặc DD/MM/YYYY.";
         public const string DateOfBirthInFuture = "Ngày sinh không thể ở trong tương lai.";
         
+        public const string DuplicateParentPhone = "Số điện thoại phụ huynh đã tồn tại trong hệ thống.";
+        public const string DuplicateParentEmail = "Email phụ huynh đã tồn tại trong hệ thống.";
+        public const string InvalidParentPhoneFormat = "Định dạng số điện thoại phụ huynh không hợp lệ.";
+        public const string InvalidParentEmailFormat = "Định dạng email phụ huynh không hợp lệ.";
+        
         // Format with parameter
         public static string FormatInvalidDate(string dateValue) => 
             string.Format(InvalidDateFormat, dateValue);

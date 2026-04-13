@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Teachers;
+using EducenAPI.DTOs.Teachers;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -243,6 +243,7 @@ namespace EducenAPI.Services
                     TeacherName = teacher.TeacherNavigation.FullName ?? "",
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : "",
                     StudentCount = c.Students.Count,
+                    MaxStudents = c.MaxStudents,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     ScheduleSlots = c.Schedules.Select(s => new
