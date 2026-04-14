@@ -8,16 +8,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
 {
-    public class LessonMaterialService : ILessonMaterialService
+public class LessonMaterialService : ILessonMaterialService
     {
         private readonly EducenV2Context _context;
         private readonly IFileUploadService _fileService;
         private readonly IUserContextService _userServiceContext;
-        public LessonMaterialService(EducenV2Context context, IFileUploadService fileService, IUserContextService userServiceContext)
+        private readonly IQuotaService _quotaService;
+        public LessonMaterialService(EducenV2Context context, IFileUploadService fileService, IUserContextService userServiceContext, IQuotaService quotaService)
         {
             _context = context;
             _fileService = fileService;
             _userServiceContext = userServiceContext;
+            _quotaService = quotaService;
         }
 
         private void CreateResourceFileForMaterial(LessonMaterial material, string fileName, string contentType, string extension, string filePath, long fileSize)
@@ -95,6 +97,11 @@ namespace EducenAPI.Services
                 {
                     throw new BadRequestException("File tải lên không được rỗng (0MB).");
                 }
+
+                var (canUpload, _, errorMessage) = await _quotaService.CheckCanUploadAsync(dto.File.Length);
+                if (!canUpload)
+                    throw new BadRequestException(errorMessage ?? "Không thể tải file lên.");
+
                 string originalFileName = dto.File.FileName;
 
                 // Check duplicate by OriginalFileName
@@ -224,6 +231,11 @@ namespace EducenAPI.Services
                 {
                     throw new BadRequestException("File tải lên không được rỗng (0MB).");
                 }
+
+                var (canUpload, _, errorMessage) = await _quotaService.CheckCanUploadAsync(dto.File.Length);
+                if (!canUpload)
+                    throw new BadRequestException(errorMessage ?? "Không thể tải file lên.");
+
                 string newOriginalFileName = dto.File.FileName;
 
                 // Check duplicate in session (exclude current material), by filename only
@@ -318,6 +330,11 @@ namespace EducenAPI.Services
             {
                 throw new BadRequestException("File tải lên không được rỗng (0MB).");
             }
+
+            var (canUpload, _, errorMessage) = await _quotaService.CheckCanUploadAsync(dto.File.Length);
+            if (!canUpload)
+                throw new BadRequestException(errorMessage ?? "Không thể tải file lên.");
+
             string newOriginalFileName = dto.File.FileName;
 
             // Check duplicate by filename only (size check broken in Docker)

@@ -59,7 +59,7 @@ namespace EducenAPI.Services
                      u.RoleId == 5);   // Assistant
 
             var activeStaff = await _db.Users
-                .CountAsync(u => u.AccountStatus == "Active");
+                .CountAsync(u => u.AccountStatus == "Active" && !string.IsNullOrEmpty(u.Username));
 
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             var endOfMonth = startOfMonth.AddMonths(1);
@@ -70,8 +70,9 @@ namespace EducenAPI.Services
                             u.CreatedAt < endOfMonth)
                 .CountAsync();
 
-            // Current usage
-            var currentUsers = await _db.Users.CountAsync();
+            // Current usage - chỉ đếm users Active có Username
+            var currentUsers = await _db.Users
+                .CountAsync(u => u.AccountStatus == "Active" && !string.IsNullOrEmpty(u.Username));
 
             long totalBytes = 0;
             try

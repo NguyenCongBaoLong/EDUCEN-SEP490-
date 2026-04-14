@@ -250,20 +250,15 @@ const StudentManagement = () => {
     };
 
     const handleSendAccount = async (studentId) => {
-        setStudentList(prev => prev.map(s =>
-            s.id === studentId
-                ? { ...s, accountSent: true, status: 'active' }
-                : s
-        ));
-        toast.success('Đã gửi tài khoản cho học sinh!');
         try {
             await api.post(`/Students/send-account/${studentId}`);
-        } catch (error) {
             setStudentList(prev => prev.map(s =>
                 s.id === studentId
-                    ? { ...s, accountSent: false, status: 'inactive' }
+                    ? { ...s, accountSent: true, status: 'active' }
                     : s
             ));
+            toast.success('Đã gửi tài khoản cho học sinh!');
+        } catch (error) {
             toast.error(error.response?.data?.message || error.response?.data || 'Gửi tài khoản thất bại');
         }
     };
