@@ -1,4 +1,4 @@
-﻿using EducenAPI.Models;
+using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +19,10 @@ public interface ISubscriptionChangeService
         // SystemAdmin: Duyệt/Từ chối yêu cầu
         Task<PackageChangeRequest> ReviewPackageChangeRequestAsync(string requestId, bool approved, string? reviewNote, string reviewedBy);
 
-        // SystemAdmin: Tạo hóa đơn sau khi duyệt
+        // SystemAdmin: Tạo hoá đơn sau khi duyệt
         Task<Invoice> CreateInvoiceAsync(string requestId, int dueDays, string createdBy);
 
-        // SystemAdmin: Lấy hóa đơn theo tenant
+        // SystemAdmin: Lấy hoá đơn theo tenant
         Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId);
         Task<List<Invoice>> GetAllInvoicesAsync(string? tenantId = null, string? status = null);
 
@@ -82,12 +82,12 @@ public interface ISubscriptionChangeService
                 currentPlanId = requestedPlanId;
             }
 
-            // Kiá»ƒm tra yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá»
+            // Kiá»ƒm tra yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá» 
             var pendingRequest = await _context.PackageChangeRequests
                 .AnyAsync(r => r.TenantId == tenantId && r.Status == "Pending");
 
             if (pendingRequest)
-                throw new Exception("ÄÃ£ cÃ³ yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá» xá»­ lÃ½.");
+                throw new Exception("Đã có yêu cầu đổi gói đang chờ xử lý.");
 
             var request = new PackageChangeRequest
             {
@@ -175,7 +175,7 @@ if (request == null)
                 throw new Exception("Không tìm thấy yêu cầu.");
 
             if (request.Status != "Approved")
-                throw new Exception("Yêu cầu phải được duyệt trước khi tạo hóa đơn.");
+                throw new Exception("Yêu cầu phải được duyệt trước khi tạo hoá đơn.");
 
             var now = DateTime.UtcNow;
             var existingInvoices = await _context.Invoices
@@ -357,10 +357,10 @@ if (invoice == null)
                 throw new Exception("Không tìm thấy hóa đơn.");
 
             if (invoice.Status == "Paid")
-                throw new Exception("Hóa đơn đã thanh toán.");
+                throw new Exception("Hoá đơn đã thanh toán.");
 
             if (invoice.Status == "Cancelled")
-                throw new Exception("HoÃ¡ Ä‘Æ¡n Ä‘Ã£ bá»‹ huá»·.");
+                throw new Exception("Hoá đơn đã bị huỷ.");
 
             if (invoice.DueDate < DateTime.UtcNow)
             {
