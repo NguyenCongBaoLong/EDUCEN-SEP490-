@@ -268,6 +268,31 @@ namespace EducenAPI.Controllers
             }
         }
 
+        // POST: api/attendance/modification-requests/batch - Teacher gửi nhiều yêu cầu sửa điểm danh
+        [HttpPost("modification-requests/batch")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
+        public async Task<IActionResult> CreateModificationRequestsBatch([FromBody] DTOs.Attendance.CreateAttendanceModificationBatchRequestDto dto)
+        {
+            if (dto.Requests == null || dto.Requests.Count == 0)
+                return BadRequest(new { message = "Danh sách yêu cầu trống" });
+
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                var requests = await _service.CreateModificationRequestsAsync(dto.SessionId, dto.Requests, currentUserId);
+                return Ok(new
+                {
+                    message = "Gửi yêu cầu sửa điểm danh thành công",
+                    count = requests.Count,
+                    requestIds = requests.Select(x => x.RequestId).ToList()
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // GET: api/attendance/modification-requests/pending - Admin xem yêu cầu chờ duyệt
         [HttpGet("modification-requests/pending")]
         [Authorize(Roles = "Admin")]

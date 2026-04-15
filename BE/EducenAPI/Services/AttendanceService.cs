@@ -369,6 +369,8 @@ namespace EducenAPI.Services
 
         public async Task<AttendanceModificationRequest> CreateModificationRequestAsync(int sessionId, int studentId, string requestedStatus, string? reason, int requestedByUserId)
         {
+            ValidateStatus(requestedStatus);
+
             var session = await _context.ClassSessions.FindAsync(sessionId);
             if (session == null)
                 throw new Exception("Không tìm thấy buổi học");
@@ -400,6 +402,57 @@ namespace EducenAPI.Services
             await _context.SaveChangesAsync();
 
             return request;
+        }
+        public async Task<List<AttendanceModificationRequest>> CreateModificationRequestsAsync(int sessionId, List<AttendanceModificationStudentRequestDto> requests, int requestedByUserId)
+        {
+            if (requests == null || requests.Count == 0)
+                throw new Exception("Danh sach yeu cau trong");
+
+            var session = await _context.ClassSessions.FindAsync(sessionId);
+            if (session == null)
+                throw new Exception("Khong tim thay buoi hoc");
+
+            var studentIds = requests.Select(r => r.StudentId).Distinct().ToList();
+            var pendingStudentIds = await _context.AttendanceModificationRequests
+                .Where(r => r.SessionId == sessionId && r.Status == "Pending" && studentIds.Contains(r.StudentId))
+                .Select(r => r.StudentId)
+                .Distinct()
+                .ToListAsync();
+
+            if (pendingStudentIds.Count > 0)
+            {
+                var ids = string.Join(", ", pendingStudentIds);
+                throw new Exception($"Da ton tai yeu cau dang cho duyet cho cac hoc sinh: {ids}");
+            }
+
+            var currentStatusByStudent = await _context.Attendances
+                .Where(a => a.SessionId == sessionId && studentIds.Contains(a.StudentId))
+                .GroupBy(a => a.StudentId)
+                .Select(g => new { StudentId = g.Key, Status = g.OrderByDescending(x => x.RecordedAt).Select(x => x.Status).FirstOrDefault() })
+                .ToDictionaryAsync(x => x.StudentId, x => x.Status ?? "notYet");
+
+            var entities = new List<AttendanceModificationRequest>();
+            foreach (var item in requests)
+            {
+                ValidateStatus(item.RequestedStatus);
+                var currentStatus = currentStatusByStudent.TryGetValue(item.StudentId, out var status) ? status : "notYet";
+
+                entities.Add(new AttendanceModificationRequest
+                {
+                    SessionId = sessionId,
+                    StudentId = item.StudentId,
+                    CurrentStatus = currentStatus,
+                    RequestedStatus = item.RequestedStatus,
+                    Reason = item.Reason,
+                    RequestedByUserId = requestedByUserId,
+                    Status = "Pending",
+                    RequestedAt = DateTime.UtcNow
+                });
+            }
+
+            _context.AttendanceModificationRequests.AddRange(entities);
+            await _context.SaveChangesAsync();
+            return entities;
         }
 
         public async Task<List<AttendanceModificationRequestDto>> GetPendingModificationRequestsAsync(int? classId = null)
@@ -541,3 +594,5 @@ namespace EducenAPI.Services
         }
     }
 }
+
+

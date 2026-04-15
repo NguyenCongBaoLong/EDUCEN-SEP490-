@@ -150,6 +150,7 @@ if (request == null)
             request.ReviewedAt = DateTime.UtcNow;
             request.ReviewedBy = reviewedBy;
             request.ReviewNote = reviewNote?.Trim();
+            CreateCenterReviewNotification(request, approved, reviewedBy);
 
             await _context.SaveChangesAsync();
 
@@ -160,6 +161,37 @@ if (request == null)
             }
 
             return request;
+        }
+
+        private void CreateCenterReviewNotification(PackageChangeRequest request, bool approved, string reviewedBy)
+        {
+            var reason = string.IsNullOrWhiteSpace(request.ReviewNote) ? "Khong co ly do." : request.ReviewNote.Trim();
+            if (reason.Length > 700)
+            {
+                reason = reason[..700];
+            }
+
+            var title = approved
+                ? "Yeu cau doi goi da duoc duyet"
+                : "Yeu cau doi goi da bi tu choi";
+
+            var message = approved
+                ? $"Yeu cau doi sang goi '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' da duoc duyet boi {reviewedBy}. He thong se tao hoa don."
+                : $"Yeu cau doi sang goi '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' da bi tu choi boi {reviewedBy}. Ly do: {reason}";
+
+            var now = DateTime.UtcNow;
+            _context.PaymentNotifications.Add(new PaymentNotification
+            {
+                TenantId = request.TenantId,
+                NotificationType = "PackageChangeReview",
+                Title = title,
+                Message = message.Length > 1000 ? message[..1000] : message,
+                Channel = "InApp",
+                Status = "Sent",
+                ScheduledFor = now,
+                SentAt = now,
+                CreatedAt = now
+            });
         }
 
         public async Task<Invoice> CreateInvoiceAsync(string requestId, int dueDays, string createdBy)
