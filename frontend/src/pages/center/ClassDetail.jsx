@@ -484,7 +484,6 @@ const ClassDetail = () => {
                                                         <div className="cd-avatar">{getInitials(st.fullName)}</div>
                                                         <div>
                                                             <div className="cd-student-name">{st.fullName}</div>
-                                                            <div className="cd-student-id">@{st.username}</div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -675,7 +674,6 @@ const ClassDetail = () => {
                                                     <div className="cd-avatar">{getInitials(s.fullName)}</div>
                                                     <div className="cd-pick-info">
                                                         <div className="cd-student-name">{s.fullName}</div>
-                                                        <div className="cd-student-id">@{s.username} &nbsp;•&nbsp; {s.email}</div>
                                                     </div>
                                                     <button
                                                         className="cd-btn-pick"

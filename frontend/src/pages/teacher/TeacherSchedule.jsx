@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
@@ -120,17 +120,17 @@ const TeacherSchedule = ({ isTA = false }) => {
 
 
     const getClassStyle = (classItem, index, totalInSlot) => {
-        const startHour = parseInt(classItem.startTime.split(':')[0]);
-        const startMin = parseInt(classItem.startTime.split(':')[1]);
-        const startOffset = (startHour - 8) + (startMin / 60);
-        const fixedCardHeight = 92;
+        const [sh, sm] = classItem.startTime.split(':').map(Number);
+        const [eh, em] = classItem.endTime.split(':').map(Number);
+        const duration = (eh + em / 60) - (sh + sm / 60);
+        const startOffset = (sh - 8) + (sm / 60);
 
         const widthPercentage = totalInSlot > 1 ? 100 / totalInSlot : 100;
         const leftPercentage = index * widthPercentage;
 
         return {
-            top: `${startOffset * 70}px`,
-            height: `${fixedCardHeight}px`,
+            top: `${startOffset * 85}px`,
+            height: `${duration * 85 - 4}px`,
             backgroundColor: classItem.color,
             width: `${widthPercentage}%`,
             left: `${leftPercentage}%`
@@ -209,7 +209,9 @@ const TeacherSchedule = ({ isTA = false }) => {
                             <div className="ts-time-column">
                                 <div className="ts-day-header"></div>
                                 {timeSlots.map((time) => (
-                                    <div key={time} className="ts-time-slot">{time}</div>
+                                    <div key={time} className="ts-time-slot">
+                                        <span className="ts-time-label">{time}</span>
+                                    </div>
                                 ))}
                             </div>
 
@@ -304,7 +306,9 @@ const TeacherSchedule = ({ isTA = false }) => {
                             <div className="ts-time-column">
                                 <div className="ts-day-header"></div>
                                 {timeSlots.map((time) => (
-                                    <div key={time} className="ts-time-slot">{time}</div>
+                                    <div key={time} className="ts-time-slot">
+                                        <span className="ts-time-label">{time}</span>
+                                    </div>
                                 ))}
                             </div>
 

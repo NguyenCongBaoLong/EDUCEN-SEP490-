@@ -1,0 +1,77 @@
+.enrollment-mgmt-container {
+    padding: 0;
+}
+
+.mgmt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem; /* Increased from 0.75rem for better balance */
+    padding: 0.5rem 0.5rem;
+}
+
+.mgmt-title-area {
+    display: flex;
+    flex-direction: column; /* Back to vertical for standard look */
+    gap: 0.25rem;
+}
+
+.mgmt-title-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.mgmt-page-title {
+    font-size: 1.5rem; /* Increased from 1.25rem to match other pages */
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.mgmt-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.8rem; /* Increased from 0.7 */
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mgmt-subtitle {
+    color: #6b7280; /* Darker than before (#9ca3af) */
+    font-size: 0.875rem; /* Increased from 0.75 */
+    margin: 0;
+    font-weight: 500;
+}
+
+.mgmt-content-card {
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    border-radius: 16px; /* Back to standard radius */
+    padding: 1.5rem; /* Back to comfortable padding */
+    overflow: hidden;
+    animation: slideUp 0.35s ease-out forwards;
+}
+
+/* Tab Badger in Table Component */
+.tab-count-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 0.75rem; /* Increased */
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}

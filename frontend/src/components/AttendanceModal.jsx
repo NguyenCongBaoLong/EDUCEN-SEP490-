@@ -23,6 +23,7 @@ const AttendanceModal = ({
     existingRecords, 
     sessionId,
     canAttend = true,
+    lockMessage = '',
     onRequestModification 
 }) => {
     const getAttendanceStatusMeta = (status) => {
@@ -105,7 +106,7 @@ const AttendanceModal = ({
 
     const handleSave = async () => {
         if (!canAttend) {
-            toast.error('Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.');
+            toast.error(lockMessage || 'Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.');
             return;
         }
         
@@ -201,7 +202,7 @@ const AttendanceModal = ({
                         </button>
                     </div>
 
-                    <div style={{ padding: '20px' }}>
+                    <div className="atm-body" style={{ padding: '20px' }}>
                         <div style={{ 
                             background: '#fef3c7', 
                             border: '1px solid #f59e0b', 
@@ -348,36 +349,23 @@ const AttendanceModal = ({
                             />
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <button 
-                                onClick={() => setShowRequestForm(false)}
-                                disabled={submittingRequest}
-                                style={{
-                                    padding: '10px 20px',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '6px',
-                                    background: 'white',
-                                    cursor: submittingRequest ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                Hủy
-                            </button>
-                            <button 
-                                onClick={handleSubmitRequest}
-                                disabled={submittingRequest}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: submittingRequest ? 'not-allowed' : 'pointer',
-                                    opacity: submittingRequest ? 0.7 : 1
-                                }}
-                            >
-                                {submittingRequest ? 'Đang gửi...' : 'Gửi yêu cầu'}
-                            </button>
-                        </div>
+                    </div>
+
+                    <div className="atm-footer">
+                        <button 
+                            className="atm-btn-cancel"
+                            onClick={() => setShowRequestForm(false)}
+                            disabled={submittingRequest}
+                        >
+                            Hủy
+                        </button>
+                        <button 
+                            className="atm-btn-save"
+                            onClick={handleSubmitRequest}
+                            disabled={submittingRequest}
+                        >
+                            {submittingRequest ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -417,9 +405,9 @@ const AttendanceModal = ({
                         }}>
                             <Clock size={28} color="#f59e0b" />
                         </div>
-                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>Đã quá ngày điểm danh</h4>
+                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>{lockMessage || 'Đã quá ngày điểm danh'}</h4>
                         <p style={{ margin: '0 0 20px', color: '#b45309', fontSize: '14px' }}>
-                            Bạn chỉ có thể điểm danh trong ngày diễn ra buổi học. Để sửa điểm danh cho ngày đã qua, vui lòng gửi yêu cầu cho Admin.
+                            {lockMessage ? 'Vui lòng kiểm tra lại thời gian hoặc gửi yêu cầu cho Admin.' : 'Bạn chỉ có thể điểm danh trong ngày diễn ra buổi học. Để sửa điểm danh cho ngày đã qua, vui lòng gửi yêu cầu cho Admin.'}
                         </p>
                         <button 
                             onClick={() => setShowRequestForm(true)}
@@ -585,6 +573,7 @@ AttendanceModal.propTypes = {
     })),
     sessionId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     canAttend: PropTypes.bool,
+    lockMessage: PropTypes.string,
     onRequestModification: PropTypes.func,
 };
 

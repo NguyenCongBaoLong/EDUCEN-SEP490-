@@ -1,8 +1,9 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, GraduationCap, BookOpen, Clock, Star, CheckCircle, AlertCircle, Eye, Loader2, MessageSquare, TrendingUp, Award, FileCheck } from 'lucide-react';
 import ParentSidebar from '../../components/ParentSidebar';
 import ParentFeedbackDrawer from '../../components/ParentFeedbackDrawer';
+import ParentFeedbackModal from '../../components/ParentFeedbackModal';
 import { useChild } from '../../context/ChildContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -125,32 +126,45 @@ const ClassDetailModal = ({ cls, onClose }) => {
                                                     {session.title || `Buổi ${session.sessionNum}`}
                                                 </div>
                                                 {session.assignments.map(asm => (
-                                                    <div key={asm.asmId} className={`pc-asm-row ${asm.currentSubmission ? 'submitted' : 'pending'}`} style={{ marginBottom: 8 }}>
-                                                        <div className="pc-asm-left">
-                                                            <div className="pc-asm-status-icon">
+                                                    <div key={asm.asmId} className={`pc-asm-row ${asm.currentSubmission ? 'submitted' : 'pending'}`}>
+                                                        {/* Thông tin bài tập */}
+                                                        <div className="pc-asm-info-col">
+                                                            <div className={`pc-asm-status-indicator ${asm.currentSubmission ? 'done' : 'wait'}`}>
                                                                 {asm.currentSubmission
-                                                                    ? <CheckCircle size={16} color="#16a34a" />
-                                                                    : <AlertCircle size={16} color="#f59e0b" />}
+                                                                    ? <FileCheck size={18} />
+                                                                    : <Clock size={18} />}
                                                             </div>
-                                                            <div>
+                                                            <div className="pc-asm-info-text">
                                                                 <div className="pc-asm-title">{asm.title}</div>
-                                                                <div className="pc-asm-due">Hạn: {asm.dueDate ? new Date(asm.dueDate).toLocaleDateString('vi-VN') : 'Chưa giới hạn'}</div>
+                                                                <div className="pc-asm-due">
+                                                                    <span>Hạn nộp:</span>
+                                                                    <strong>{asm.dueDate ? new Date(asm.dueDate).toLocaleDateString('vi-VN') : 'Không giới hạn'}</strong>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="pc-asm-right">
+
+                                                        {/* Điểm số */}
+                                                        <div className="pc-asm-score-col">
                                                             {asm.currentSubmission?.score !== null && asm.currentSubmission?.score !== undefined && asm.currentSubmission?.isPublished ? (
-                                                                <div className="pc-asm-grade-block">
-                                                                    <span className={`pc-asm-grade ${asm.currentSubmission.score >= 8 ? 'high' : asm.currentSubmission.score >= 6.5 ? 'mid' : 'low'}`}>
-                                                                        <Star size={12} /> {asm.currentSubmission.score}/10
-                                                                    </span>
-                                                                    {asm.currentSubmission.teacherComment && (
-                                                                        <div className="pc-asm-comment">💬 {asm.currentSubmission.teacherComment}</div>
-                                                                    )}
+                                                                <div className={`pc-asm-badge ${asm.currentSubmission.score >= 8 ? 'high' : asm.currentSubmission.score >= 6.5 ? 'mid' : 'low'}`}>
+                                                                    <span>{asm.currentSubmission.score}/10</span>
                                                                 </div>
                                                             ) : (
-                                                                <span className="pc-asm-pending">
+                                                                <div className="pc-asm-status-text">
                                                                     {asm.currentSubmission ? 'Chờ chấm' : 'Chưa nộp'}
-                                                                </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Phản hồi */}
+                                                        <div className="pc-asm-feedback-col">
+                                                            {asm.currentSubmission?.teacherComment ? (
+                                                                <div className="pc-asm-comment-wrapper">
+                                                                    <MessageSquare size={14} className="pc-comment-icon" />
+                                                                    <span className="pc-comment-text">{asm.currentSubmission.teacherComment}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="pc-comment-empty">Chưa có nhận xét của giáo viên</div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -187,7 +201,7 @@ const PerformanceReportModal = ({ onClose }) => {
             .finally(() => setLoading(false));
     }, [selectedChild]);
 
-    if (!selectedChild) return null;
+    if (!selectedChild || selectedChild.studentId === 'all') return null;
 
     const getRankColor = (rank) => {
         switch (rank) {
@@ -327,11 +341,18 @@ const ParentClasses = () => {
     const [statusFilter, setStatusFilter] = useState('');
     const [selectedClass, setSelectedClass] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
-    const [feedbackOpenSignal, setFeedbackOpenSignal] = useState(0);
+    const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+    const [inboxOpenSignal, setInboxOpenSignal] = useState(0);
 
     useEffect(() => {
-        if (searchParams.get('panel') !== 'feedback') return;
-        setFeedbackOpenSignal(prev => prev + 1);
+        const panel = searchParams.get('panel');
+        if (panel === 'feedback') {
+            setIsFeedbackModalOpen(true);
+        } else if (panel === 'inbox') {
+            setInboxOpenSignal(prev => prev + 1);
+        } else {
+            return;
+        }
 
         const nextParams = new URLSearchParams(searchParams);
         nextParams.delete('panel');
@@ -408,12 +429,20 @@ const ParentClasses = () => {
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        {selectedChild && (
+                        {selectedChild && selectedChild.studentId !== 'all' && (
                             <button className="pc-btn-report" onClick={() => setShowReportModal(true)}>
                                 <TrendingUp size={18} /> Báo cáo học tập
                             </button>
                         )}
-                        <ParentFeedbackDrawer autoOpenSignal={feedbackOpenSignal} />
+                        <button className="pc-btn-feedback" style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '8px 16px', borderRadius: '10px',
+                            background: '#6366f1', color: 'white', border: 'none',
+                            fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer'
+                        }} onClick={() => setIsFeedbackModalOpen(true)}>
+                            <MessageSquare size={18} /> Gửi phản hồi
+                        </button>
+                        <ParentFeedbackDrawer autoOpenSignal={inboxOpenSignal} />
                     </div>
                 </div>
 
@@ -495,7 +524,7 @@ const ParentClasses = () => {
                                         const fmtDate = d => d ? new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : null;
                                         const dateRange = [fmtDate(cls.startDate), fmtDate(cls.endDate)].filter(Boolean).join(' – ');
                                         return (
-                                            <div key={cls.classId} className="pc-card" style={{ '--accent': accent }}>
+                                            <div key={`${cls.studentId}-${cls.classId}`} className="pc-card" style={{ '--accent': accent }}>
                                                 <div className="pc-card-top">
                                                     <div className="pc-card-accent" style={{ background: accent }} />
                                                     <div className="pc-card-header-row">
@@ -572,6 +601,12 @@ const ParentClasses = () => {
             {showReportModal && (
                 <PerformanceReportModal onClose={() => setShowReportModal(false)} />
             )}
+
+            <ParentFeedbackModal 
+                isOpen={isFeedbackModalOpen} 
+                onClose={() => setIsFeedbackModalOpen(false)}
+                onSuccess={() => setInboxOpenSignal(prev => prev + 1)} 
+            />
         </div>
     );
 };

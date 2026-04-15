@@ -113,7 +113,7 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
                     <Users size={14} />
                     <span className="students-label">HỌC SINH</span>
                     <span className="students-count">
-                        {classData.currentStudents} / {classData.maxStudents || '-'}
+                        {classData.currentStudents} / {classData.maxStudents !== null && classData.maxStudents !== undefined ? classData.maxStudents : '-'}
                     </span>
                 </div>
 

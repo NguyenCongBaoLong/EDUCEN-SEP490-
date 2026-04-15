@@ -14,11 +14,19 @@ const ImportLibraryModal = ({ isOpen, onClose, onImport, type, libraryItems, exi
     const itemsPerPage = 6;
 
     const isAlreadyInSession = (item) => {
-        // Kiểm tra dựa trên Tên file gốc và Dung lượng (Chính xác hơn tiêu đề)
+        // 1. Nếu bài tập/tài liệu có file đính kèm: Kiểm tra theo Tên file gốc + Dung lượng
+        const fileName = item.originalFileName || item.fileName;
+        if (fileName && item.fileSize > 0) {
+            return existingItems.some(existing => 
+                (existing.originalFileName === fileName || existing.fileName === fileName) && 
+                existing.fileSize === item.fileSize
+            );
+        }
+
+        // 2. Nếu bài tập KHÔNG có file: Kiểm tra theo Tiêu đề đối với các bài khác cũng không có file
         return existingItems.some(existing => 
-            existing.originalFileName === item.originalFileName && 
-            existing.fileSize === item.fileSize &&
-            item.originalFileName // Đảm bảo mục thư viện có file
+            existing.title === item.title && 
+            !(existing.originalFileName || existing.fileName)
         );
     };
 

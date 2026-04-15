@@ -257,6 +257,7 @@ namespace EducenAPI.Services
                 return new { message = "Không tìm thấy trợ giảng." };
 
             var classes = await _context.Classes
+                .Include(c => c.Grade)
                 .Include(c => c.Subject)
                 .Include(c => c.Teacher)
                     .ThenInclude(t => t!.TeacherNavigation)
@@ -276,12 +277,14 @@ namespace EducenAPI.Services
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
+                    GradeName = c.Grade != null ? c.Grade.GradeName : "",
                     TeacherName = c.Teacher != null ? c.Teacher.TeacherNavigation.FullName : "",
                     AssistantName = assistant.AssistantNavigation.FullName ?? "",
                     StudentCount = _context.Classes
                         .Where(cl => cl.ClassId == c.ClassId)
                         .Select(cl => cl.Students.Count)
                         .FirstOrDefault(),
+                    MaxStudents = c.MaxStudents,
                     ScheduleSlots = c.Schedules.Select(s => new
                     {
                         s.DayOfWeek,

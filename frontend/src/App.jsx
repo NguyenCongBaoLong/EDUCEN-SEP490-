@@ -22,7 +22,6 @@ import TeacherAssignments from './pages/teacher/TeacherAssignments';
 import AssignmentGrading from './pages/teacher/AssignmentGrading';
 import TeacherPerformanceReport from './pages/teacher/TeacherPerformanceReport';
 import TeacherMailbox from './pages/teacher/TeacherMailbox';
-import TeacherAttendanceRequests from './pages/teacher/TeacherAttendanceRequests';
 import StudentClasses from './pages/student/StudentClasses';
 import StudentSchedule from './pages/student/StudentSchedule';
 import StudentClassDetail from './pages/student/StudentClassDetail';
@@ -42,6 +41,12 @@ import PlansManagement from './pages/sysadmin/PlansManagement';
 import ZaloOAConfig from './pages/sysadmin/ZaloOAConfig';
 import RefundManagement from './pages/sysadmin/RefundManagement';
 import SystemAdminLogin from './pages/auth/SystemAdminLogin';
+import EnrollmentManagement from './pages/center/EnrollmentManagement';
+import AttendanceModifications from './pages/center/AttendanceModifications';
+import SubjectManagement from './pages/center/SubjectManagement';
+import RoomManagement from './pages/center/RoomManagement';
+import GradeManagement from './pages/center/GradeManagement';
+
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
 import { ChildProvider } from './context/ChildContext';
@@ -85,6 +90,11 @@ function App() {
               <Route path="/center/tuition/:classId" element={<PrivateRoute allowedRoles={['Admin']}><TuitionManagement /></PrivateRoute>} />
               <Route path="/center/revenue" element={<PrivateRoute allowedRoles={['Admin']}><RevenueReport /></PrivateRoute>} />
               <Route path="/center/subscription" element={<PrivateRoute allowedRoles={['Admin']}><SubscriptionPlans /></PrivateRoute>} />
+              <Route path="/center/enrollment-requests" element={<PrivateRoute allowedRoles={['Admin']}><EnrollmentManagement /></PrivateRoute>} />
+              <Route path="/center/attendance-modifications" element={<PrivateRoute allowedRoles={['Admin']}><AttendanceModifications /></PrivateRoute>} />
+              <Route path="/center/subjects" element={<PrivateRoute allowedRoles={['Admin']}><SubjectManagement /></PrivateRoute>} />
+              <Route path="/center/rooms" element={<PrivateRoute allowedRoles={['Admin']}><RoomManagement /></PrivateRoute>} />
+              <Route path="/center/grades" element={<PrivateRoute allowedRoles={['Admin']}><GradeManagement /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant', 'Student', 'Parent']}><UserProfile /></PrivateRoute>} />
 
               {/* â”€â”€ Teacher Routes (chá»‰ Teacher) â”€â”€ */}
@@ -95,14 +105,12 @@ function App() {
               <Route path="/teacher/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Teacher']}><AssignmentGrading /></PrivateRoute>} />
               <Route path="/teacher/performance" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherPerformanceReport /></PrivateRoute>} />
               <Route path="/teacher/mailbox" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherMailbox /></PrivateRoute>} />
-              <Route path="/teacher/attendance-requests" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherAttendanceRequests /></PrivateRoute>} />
 
               {/* â”€â”€ TA Routes (chá»‰ Assistant) â”€â”€ */}
               <Route path="/ta/classes" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClasses isTA={true} /></PrivateRoute>} />
               <Route path="/ta/classes/:classId" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClassDetail isTA={true} /></PrivateRoute>} />
               <Route path="/ta/schedules" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherSchedule isTA={true} /></PrivateRoute>} />
               <Route path="/ta/performance" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherPerformanceReport isTA={true} /></PrivateRoute>} />
-              <Route path="/ta/attendance-requests" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherAttendanceRequests isTA={true} /></PrivateRoute>} />
 
               {/* â”€â”€ Student Routes (chá»‰ Student) â”€â”€ */}
               <Route path="/student/classes" element={<PrivateRoute allowedRoles={['Student']}><StudentClasses /></PrivateRoute>} />

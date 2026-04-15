@@ -1,144 +1,137 @@
-/* EnrollmentRequestsTable.css */
 .enrollment-requests-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 0.9375rem; /* Increased from 0.85rem */
 }
 
 .enrollment-requests-table th {
-    background: #f9fafb;
-    padding: 1rem 1.5rem;
-    text-align: left;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
+    background: #fdfdfd;
+    color: #4b5563;
+    font-weight: 700;
     text-transform: uppercase;
+    font-size: 0.75rem; /* Increased from 0.65 */
     letter-spacing: 0.05em;
-    border-bottom: 1px solid #e5e7eb;
-    white-space: nowrap;
+    padding: 14px 16px; /* Increased padding */
+    border-bottom: 2px solid #f3f4f6;
+    text-align: left;
 }
 
 .enrollment-requests-table td {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 16px; /* Increased padding */
+    border-bottom: 1px solid #f3f4f6;
     color: #374151;
-    font-size: 0.9375rem;
     vertical-align: middle;
 }
 
 .enrollment-requests-table tr:hover {
-    background-color: #f9fafb;
+    background-color: #f8fafc;
 }
 
+.enrollment-requests-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Status Badges */
 .enrollment-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0.75rem;
+    padding: 4px 12px;
     border-radius: 9999px;
     font-size: 0.8125rem;
-    font-weight: 500;
-    white-space: nowrap;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
 }
 
 .enrollment-status-badge.pending {
-    background: #fffbeb;
-    color: #b45309;
+    background: #fff7ed;
+    color: #ea580c;
 }
 
 .enrollment-status-badge.approved {
-    background: #ecfdf5;
-    color: #047857;
+    background: #f0fdf4;
+    color: #16a34a;
 }
 
 .enrollment-status-badge.rejected {
     background: #fef2f2;
-    color: #b91c1c;
-}
-
-.request-date {
-    color: #6b7280;
-    font-size: 0.875rem;
-}
-
-.action-btn.approve {
-    color: #059669;
-    background: #ecfdf5;
-}
-
-.action-btn.approve:hover {
-    background: #d1fae5;
-}
-
-.action-btn.reject {
     color: #dc2626;
-    background: #fef2f2;
 }
 
-.action-btn.reject:hover {
-    background: #fee2e2;
-}
-
-.status-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-}
-/* Enrollment Request Tabs */
-.sc-tabs {
-    display: flex;
-    gap: 8px;
+/* Balanced Support Mode overrides StudentTable styles */
+.balanced-mgmt-mode .sc-tabs {
     background: #f1f5f9;
-    padding: 6px;
+    padding: 4px;
     border-radius: 12px;
-    width: fit-content;
+    display: inline-flex;
+    gap: 4px;
 }
 
-.sc-tab {
-    padding: 10px 24px;
-    border: none;
-    background: transparent;
-    border-radius: 8px;
-    font-size: 0.9375rem;
+.balanced-mgmt-mode .sc-tab {
+    padding: 8px 20px;
+    font-size: 0.9rem;
     font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
     color: #64748b;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     align-items: center;
-    gap: 8px;
 }
 
-.sc-tab:hover {
-    color: #334155;
-    background: rgba(255, 255, 255, 0.5);
+.balanced-mgmt-mode .sc-tab.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
-.sc-tab.active {
-    background: #fff;
-    color: #3b82f6;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.course-intent {
+.action-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 8px;
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    width: 36px;
+    height: 36px;
 }
 
-.class-intent-label {
-    font-size: 0.8125rem;
-    color: #64748b;
-    font-weight: 500;
+.action-btn.view { color: #2563eb; background: #eff6ff; }
+.action-btn.view:hover { background: #dbeafe; }
+
+.action-btn.approve { color: #10b981; background: #ecfdf5; }
+.action-btn.approve:hover { background: #d1fae5; }
+
+.action-btn.reject { color: #ef4444; background: #fef2f2; }
+.action-btn.reject:hover { background: #fee2e2; }
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f3f4f6;
 }
 
-.grade-badge {
-    background: #eff6ff;
-    color: #1d4ed8;
-    padding: 0.25rem 0.625rem;
+.pagination-info { font-size: 0.875rem; color: #6b7280; }
+.pagination-controls { display: flex; gap: 6px; }
+
+.pagination-btn {
+    padding: 6px 12px;
     border-radius: 6px;
-    font-size: 0.8125rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    font-size: 0.875rem;
     font-weight: 600;
-    width: fit-content;
-    white-space: nowrap;
-    display: inline-block;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 36px;
 }
+
+.pagination-btn:hover:not(.disabled) { border-color: #3b82f6; color: #3b82f6; }
+.pagination-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+.pagination-btn.disabled { opacity: 0.5; cursor: not-allowed; }

@@ -39,9 +39,9 @@
 .inbox-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.6); /* Darker backdrop blur */
-    backdrop-filter: blur(4px);
-    z-index: 999;
+    background: rgba(15, 23, 42, 0.65); /* Increased opacity slightly */
+    backdrop-filter: blur(8px);
+    z-index: 2000; /* Higher than Sidebar (1000) */
     animation: fadeInOverlay 0.2s ease;
 }
 
@@ -62,7 +62,7 @@
     background: white;
     border-radius: 20px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    z-index: 1000;
+    z-index: 2001; /* Higher than Overlay */
     display: flex;
     flex-direction: column;
     opacity: 0;
@@ -70,6 +70,11 @@
     transform: translate(-50%, -45%) scale(0.95);
     transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     overflow: hidden;
+}
+
+.mailbox-panel {
+    position: relative;
+    z-index: 2000;
 }
 
 .inbox-drawer.open {

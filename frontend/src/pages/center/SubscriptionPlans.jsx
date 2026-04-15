@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from 'react';
-import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar, FileText, Send, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar, FileText, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import ContractViewer from '../../components/ContractViewer';
@@ -31,6 +31,8 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [loadingContracts, setLoadingContracts] = useState(false);
     const [viewContractTarget, setViewContractTarget] = useState(null);
     const [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
+    const [showInvoicesModal, setShowInvoicesModal] = useState(false);
+    const [showRequestsModal, setShowRequestsModal] = useState(false);
     const [changeRequestPlanId, setChangeRequestPlanId] = useState('');
     const [changeRequestMonths, setChangeRequestMonths] = useState(1);
     const [changeRequestReason, setChangeRequestReason] = useState('');
@@ -42,8 +44,6 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [submittingInvoicePayment, setSubmittingInvoicePayment] = useState(false);
     const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
     const [loadingOnlineHistory, setLoadingOnlineHistory] = useState(false);
-    const [historySectionFilter, setHistorySectionFilter] = useState('all');
-    const isSingleHistorySection = historySectionFilter !== 'all';
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -392,27 +392,34 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                         <h1>Chọn gói dịch vụ</h1>
                         <p>Đăng ký, đổi gói, gia hạn đều theo luồng yêu cầu duyệt và thanh toán hóa đơn.</p>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button
                             type="button"
-                            className="subscription-credit-history-btn"
+                            className="subscription-credit-history-btn subscription-action-btn--contract"
                             onClick={loadContracts}
-                            style={{ background: '#fef3c7', border: '1px solid #f59e0b', color: '#b45309' }}
                         >
-                            <FileText size={16} /> Hợp đồng
+                            <FileText size={15} /> Hợp đồng
                         </button>
                         <button
                             type="button"
-                            className="subscription-credit-history-btn"
+                            className="subscription-credit-history-btn subscription-action-btn--invoice"
                             onClick={() => {
-                                loadMyChangeRequests();
                                 loadMyInvoices();
                                 loadOnlinePaymentHistory();
-                                setShowChangeRequestModal(true);
+                                setShowInvoicesModal(true);
                             }}
-                            style={{ background: '#e0e7ff', border: '1px solid #6366f1', color: '#4338ca' }}
                         >
-                            <Send size={16} /> Lịch sử đổi gói & giao dịch
+                            <CreditCard size={15} /> Hoá đơn &amp; Thanh toán
+                        </button>
+                        <button
+                            type="button"
+                            className="subscription-credit-history-btn subscription-action-btn--history"
+                            onClick={() => {
+                                loadMyChangeRequests();
+                                setShowRequestsModal(true);
+                            }}
+                        >
+                            <ArrowUpDown size={15} /> Lịch sử đổi gói
                         </button>
                         {creditBalance > 0 && (
                             <div className="subscription-credit-info">
@@ -423,12 +430,14 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     className="subscription-credit-history-btn"
                                     onClick={loadCreditHistory}
                                     disabled={creditHistoryLoading}
+                                    style={{ background: '#059669', borderColor: '#059669', color: '#ecfdf5' }}
                                 >
-                                    {creditHistoryLoading ? 'Đang tải...' : 'Lịch sử'}
+                                    {creditHistoryLoading ? 'Đang tải...' : 'Lịch sử credit'}
                                 </button>
                             </div>
                         )}
                     </div>
+
                 </header>
 
                 {loading ? (
@@ -825,6 +834,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 </>
             )}
 
+
             {/* Contracts Modal */}
             {showContracts && (
                 <>
@@ -832,9 +842,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                     <div className="subscription-modal" style={{ maxWidth: '1200px', width: '90vw', maxHeight: '90vh', height: 'auto' }}>
                         <div className="subscription-modal-header">
                             <h2>Hợp đồng</h2>
-                            <button className="subscription-modal-close" onClick={() => setShowContracts(false)}>
-                                <X size={18} />
-                            </button>
+                            <button className="subscription-modal-close" onClick={() => setShowContracts(false)}><X size={18} /></button>
                         </div>
                         <div className="subscription-modal-body" style={{ padding: '1rem', maxHeight: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column' }}>
                             {loadingContracts ? (
@@ -862,22 +870,12 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                     <td style={{ padding: '0.75rem' }}>{c.fileType}</td>
                                                     <td style={{ padding: '0.75rem' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
                                                     <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                                                        <button 
-                                                            style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }}
-                                                            onClick={() => handleViewContract(c)}
-                                                        >
-                                                            Xem
-                                                        </button>
+                                                        <button style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }} onClick={() => handleViewContract(c)}>Xem</button>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
-                                    {viewContractTarget && (
-                                        <div style={{ flex: 1, minHeight: '400px', background: '#f1f1f1', borderRadius: '8px', overflow: 'hidden' }}>
-                                            <ContractViewer contract={viewContractTarget} isCenter={true} />
-                                        </div>
-                                    )}
                                 </div>
                             )}
                         </div>
@@ -885,223 +883,161 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 </>
             )}
 
-            {/* Change Request Modal */}
-            {showChangeRequestModal && (
+            {/* Invoices & Payment Modal */}
+            {showInvoicesModal && (
                 <>
-                    <div className="subscription-modal-overlay" onClick={() => setShowChangeRequestModal(false)} />
-                    <div
-                        className="subscription-modal"
-                        style={{
-                            maxWidth: isSingleHistorySection ? '980px' : '1600px',
-                            width: isSingleHistorySection ? '92vw' : '98vw',
-                            maxHeight: '90vh'
-                        }}
-                    >
+                    <div className="subscription-modal-overlay" onClick={() => setShowInvoicesModal(false)} />
+                    <div className="subscription-modal" style={{ maxWidth: '820px', width: '92vw', maxHeight: '90vh' }}>
                         <div className="subscription-modal-header">
-                            <h2>Lịch sử đổi gói & giao dịch</h2>
-                            <button className="subscription-modal-close" onClick={() => setShowChangeRequestModal(false)}>
-                                <X size={18} />
-                            </button>
+                            <h2>Hoá đơn &amp; Thanh toán</h2>
+                            <button className="subscription-modal-close" onClick={() => setShowInvoicesModal(false)}><X size={18} /></button>
                         </div>
-                        <div className="subscription-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: 'calc(90vh - 120px)', overflow: 'auto', padding: '1rem' }}>
-                            <div className="subscription-history-filter">
-                                <button
-                                    type="button"
-                                    className={`subscription-history-filter-btn ${historySectionFilter === 'all' ? 'active' : ''}`}
-                                    onClick={() => setHistorySectionFilter('all')}
-                                >
-                                    Tất cả
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`subscription-history-filter-btn ${historySectionFilter === 'invoice' ? 'active' : ''}`}
-                                    onClick={() => setHistorySectionFilter('invoice')}
-                                >
-                                    Hoá đơn đổi gói
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`subscription-history-filter-btn ${historySectionFilter === 'online' ? 'active' : ''}`}
-                                    onClick={() => setHistorySectionFilter('online')}
-                                >
-                                    Lịch sử giao dịch online
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`subscription-history-filter-btn ${historySectionFilter === 'request' ? 'active' : ''}`}
-                                    onClick={() => setHistorySectionFilter('request')}
-                                >
-                                    Lịch sử đổi gói
-                                </button>
-                            </div>
-
-                            <div className={`subscription-history-grid ${isSingleHistorySection ? 'single' : ''}`}>
-                                {/* Côt 1: Hóa dôn dôi gói */}
-                                {(historySectionFilter === 'all' || historySectionFilter === 'invoice') && (
-                                <div className="subscription-history-card">
-                                    <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Hóa đơn đổi gói</h4>
-                                    {loadingInvoices ? (
-                                        <div className="subscription-state">Đang tải...</div>
-                                    ) : myInvoices.length === 0 ? (
-                                        <div className="subscription-state">Chưa có hoá đơn nào.</div>
-                                    ) : (
-                                        // <div style={{ maxHeight: '800px', overflow: 'auto' }}>
-                                         <div style={{ maxHeight: '800px', overflow: 'visible' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Mã</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Số tiền</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Loại</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {myInvoices.map(i => {
-                                                        const isPending = i.status === 'Pending' || i.status === 'AwaitingConfirmation';
-                                                        return (
-                                                            <tr key={i.invoiceId}>
-                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{i.invoiceNumber}</td>
-                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(i.amount)} VNĐ</td>
-                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                    {i.paymentMethod === 'Cash' ? 'Tiền mặt' : i.paymentMethod === 'VNPay' ? 'VNPay' : '-'}
-                                                                </td>
-                                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                    {isPending ? (
-                                                                        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                                                            <button
-                                                                                type="button"
-                                                                                disabled={submittingInvoicePayment}
-                                                                                onClick={() => requestOfflineInvoicePayment(i.invoiceId, 'Cash')}
-                                                                                style={{ padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #ddd', cursor: 'pointer', fontSize: '0.75rem' }}
-                                                                            >
-                                                                                Tiền mặt
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                disabled={submittingInvoicePayment}
-                                                                                onClick={() => payInvoiceByVnPay(i)}
-                                                                                style={{ padding: '0.3rem 0.5rem', borderRadius: '4px', border: '1px solid #4f46e5', color: '#4338ca', cursor: 'pointer', fontSize: '0.75rem' }}
-                                                                            >
-                                                                                VNPay
-                                                                            </button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span style={{
-                                                                            color: i.status === 'Paid' ? '#16a34a' : '#6b7280',
-                                                                            fontWeight: 500
-                                                                        }}>
-                                                                            {i.status === 'Paid' ? 'Đã thanh toán' : i.status === 'Pending' ? 'Chờ thanh toán' : i.status}
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                                )}
-
-                                {/* Côt 2: Lich su giao dich online (VNPay) */}
-                                {(historySectionFilter === 'all' || historySectionFilter === 'online') && (
-                                <div className="subscription-history-card">
-                                    <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Lịch sử giao dịch online (VNPay)</h4>
-                                    {loadingOnlineHistory ? (
-                                        <div className="subscription-state">Đang tải...</div>
-                                    ) : onlinePaymentHistory.length === 0 ? (
-                                        <div className="subscription-state">Chưa có giao dịch online.</div>
-                                    ) : (
-                                        // <div style={{ maxHeight: '400px', overflow: 'auto' }}>
-                                         <div style={{ maxHeight: '400px', overflow: 'auto' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Mã GD</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Số tiền</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Ngày</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {onlinePaymentHistory.map(h => (
-                                                        <tr key={h.paymentId}>
+                        <div className="subscription-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: 'calc(90vh - 120px)', overflow: 'auto', padding: '1rem' }}>
+                            <div className="subscription-history-card">
+                                <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600 }}>Hóa đơn đổi gói</h4>
+                                {loadingInvoices ? (
+                                    <div className="subscription-state">Đang tải...</div>
+                                ) : myInvoices.length === 0 ? (
+                                    <div className="subscription-state">Chưa có hoá đơn nào.</div>
+                                ) : (
+                                    <div style={{ overflow: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Mã</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Số tiền</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Loại</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Trạng thái / TT</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {myInvoices.map(i => {
+                                                    const isPending = i.status === 'Pending' || i.status === 'AwaitingConfirmation';
+                                                    const hasSelectedMethod = i.paymentMethod && i.paymentMethod !== 'None' && i.paymentMethod !== '-';
+                                                    
+                                                    return (
+                                                        <tr key={i.invoiceId}>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{i.invoiceNumber}</td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap', fontWeight: 600 }}>{formatPrice(i.amount)} VNĐ</td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: '#f3f4f6', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>
-                                                                    {h.paymentId?.slice(-8)}
-                                                                </span>
+                                                                {i.paymentMethod === 'Cash' ? 'Tiền mặt' : i.paymentMethod === 'VNPay' ? 'VNPay' : 'Chưa chọn'}
                                                             </td>
-                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(h.amount)} VNĐ</td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                <span style={{
-                                                                    color: h.status === 'Success' ? '#16a34a' : h.status === 'Failed' ? '#dc2626' : '#f59e0b',
-                                                                    fontWeight: 500
-                                                                }}>
-                                                                    {h.status === 'Success' ? 'Thành công' : h.status === 'Failed' ? 'Thất bại' : h.status}
-                                                                </span>
-                                                            </td>
-                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                                                {h.paymentDate ? new Date(h.paymentDate).toLocaleString('vi-VN') : '—'}
+                                                                {isPending && !hasSelectedMethod ? (
+                                                                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                                                        <button 
+                                                                            type="button" 
+                                                                            disabled={submittingInvoicePayment} 
+                                                                            onClick={() => requestOfflineInvoicePayment(i.invoiceId, 'Cash')} 
+                                                                            style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', border: '1px solid #d1d5db', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, background: '#fff' }}
+                                                                        >
+                                                                            Tiền mặt
+                                                                        </button>
+                                                                        <button 
+                                                                            type="button" 
+                                                                            disabled={submittingInvoicePayment} 
+                                                                            onClick={() => payInvoiceByVnPay(i)} 
+                                                                            style={{ padding: '0.25rem 0.6rem', borderRadius: '6px', border: '1px solid #4f46e5', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', background: '#4f46e5', fontWeight: 600 }}
+                                                                        >
+                                                                            VNPay
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span style={{ 
+                                                                        color: i.status === 'Paid' ? '#16a34a' : (i.paymentMethod === 'Cash' ? '#f59e0b' : '#6b7280'), 
+                                                                        fontWeight: 600 
+                                                                    }}>
+                                                                        {i.status === 'Paid' ? 'Đã thanh toán' : 
+                                                                         i.paymentMethod === 'Cash' ? 'Chờ xác nhận' : 
+                                                                         i.status === 'Pending' ? 'Chờ thanh toán' : i.status}
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                                )}
-
-                                {/* Côt 3: Lich su dôi gói */}
-                                {(historySectionFilter === 'all' || historySectionFilter === 'request') && (
-                                <div className="subscription-history-card">
-                                    <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600, textAlign: 'center' }}>Lịch sử đổi gói</h4>
-                                    {loadingRequests ? (
-                                        <div className="subscription-state">Đang tải...</div>
-                                    ) : myChangeRequests.length === 0 ? (
-                                        <div className="subscription-state">Chưa có yêu cầu đổi gói nào.</div>
-                                    ) : (
-                                        <div style={{ maxHeight: '400px', overflow: 'auto' }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Ngày</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói ban đầu</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói yêu cầu</th>
-                                                        <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {myChangeRequests.map(r => (
-                                                        <tr key={r.requestId}>
-                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                                                {r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('vi-VN') : '—'}
-                                                            </td>
-                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                {r.currentPlan?.planName || '—'}
-                                                            </td>
-                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                {r.requestedPlan?.planName || '—'}
-                                                            </td>
-                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                <span style={{
-                                                                    color: r.status === 'Approved' ? '#16a34a' : r.status === 'Rejected' ? '#dc2626' : '#f59e0b',
-                                                                    fontWeight: 500
-                                                                }}>
-                                                                    {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Rejected' ? 'Từ chối' : r.status}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 )}
                             </div>
+
+                            <div className="subscription-history-card">
+                                <h4 style={{ marginBottom: '1rem', color: '#374151', fontWeight: 600 }}>Lịch sử giao dịch online (VNPay)</h4>
+                                {loadingOnlineHistory ? (
+                                    <div className="subscription-state">Đang tải...</div>
+                                ) : onlinePaymentHistory.length === 0 ? (
+                                    <div className="subscription-state">Chưa có giao dịch online.</div>
+                                ) : (
+                                    <div style={{ maxHeight: '300px', overflow: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Mã GD</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Số tiền</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Trạng thái</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Ngày</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {onlinePaymentHistory.map(h => (
+                                                    <tr key={h.paymentId}>
+                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: '#f3f4f6', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{h.paymentId?.slice(-8)}</span></td>
+                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(h.amount)} VNĐ</td>
+                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}><span style={{ color: h.status === 'Success' ? '#16a34a' : h.status === 'Failed' ? '#dc2626' : '#f59e0b', fontWeight: 500 }}>{h.status === 'Success' ? 'Thành công' : h.status === 'Failed' ? 'Thất bại' : h.status}</span></td>
+                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{h.paymentDate ? new Date(h.paymentDate).toLocaleString('vi-VN') : '—'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Plan History Modal */}
+            {showRequestsModal && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => setShowRequestsModal(false)} />
+                    <div className="subscription-modal" style={{ maxWidth: '720px', width: '92vw', maxHeight: '90vh' }}>
+                        <div className="subscription-modal-header">
+                            <h2>Lịch sử đổi gói</h2>
+                            <button className="subscription-modal-close" onClick={() => setShowRequestsModal(false)}><X size={18} /></button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ maxHeight: 'calc(90vh - 120px)', overflow: 'auto', padding: '1rem' }}>
+                            {loadingRequests ? (
+                                <div className="subscription-state">Đang tải...</div>
+                            ) : myChangeRequests.length === 0 ? (
+                                <div className="subscription-state">Chưa có yêu cầu đổi gói nào.</div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Ngày</th>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói ban đầu</th>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói yêu cầu</th>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {myChangeRequests.map(r => (
+                                            <tr key={r.requestId}>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{r.currentPlan?.planName || '—'}</td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{r.requestedPlan?.planName || '—'}</td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
+                                                    <span style={{ color: r.status === 'Approved' ? '#16a34a' : r.status === 'Rejected' ? '#dc2626' : '#f59e0b', fontWeight: 600 }}>
+                                                        {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Rejected' ? 'Từ chối' : r.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
                 </>
@@ -1114,9 +1050,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                     <div className="subscription-modal" style={{ maxWidth: '1200px', width: '90vw', maxHeight: '90vh', height: 'auto' }}>
                         <div className="subscription-modal-header">
                             <h2>{viewContractTarget.contractTitle}</h2>
-                            <button className="subscription-modal-close" onClick={() => setViewContractTarget(null)}>
-                                <X size={18} />
-                            </button>
+                            <button className="subscription-modal-close" onClick={() => setViewContractTarget(null)}><X size={18} /></button>
                         </div>
                         <div className="subscription-modal-body" style={{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f1f1' }}>
                             <ContractViewer contract={viewContractTarget} isCenter={true} />
@@ -1129,6 +1063,3 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 };
 
 export default SubscriptionPlans;
-
-
-

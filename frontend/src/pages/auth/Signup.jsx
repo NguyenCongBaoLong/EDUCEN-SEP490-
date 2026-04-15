@@ -65,7 +65,7 @@ const Signup = () => {
 
                     <h1 className="signup-tagline">
                         Mở Rộng Doanh Nghiệp<br />
-                        Gia Sư Của Bạn
+                        Trung tâm Của Bạn
                     </h1>
 
                     <p className="signup-subtitle">
@@ -139,91 +139,91 @@ const Signup = () => {
                             </div>
 
                             <form onSubmit={handleSubmit} className="signup-form">
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label htmlFor="fullName">Họ và tên</label>
-                                <input
-                                    type="text"
-                                    id="fullName"
-                                    name="fullName"
-                                    value={formData.fullName}
-                                    onChange={handleChange}
-                                    placeholder="Nguyễn Văn A"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label htmlFor="fullName">Họ và tên</label>
+                                        <input
+                                            type="text"
+                                            id="fullName"
+                                            name="fullName"
+                                            value={formData.fullName}
+                                            onChange={handleChange}
+                                            placeholder="Nguyễn Văn A"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
 
-                            <div className="form-group">
-                                <label htmlFor="email">Email công việc</label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="email@congty.com"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
-                        </div>
+                                    <div className="form-group">
+                                        <label htmlFor="email">Email công việc</label>
+                                        <input
+                                            type="email"
+                                            id="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            placeholder="email@congty.com"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label htmlFor="phone">Số điện thoại</label>
-                                <input
-                                    type="tel"
-                                    id="phone"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="+84 (555) 000-0000"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label htmlFor="phone">Số điện thoại</label>
+                                        <input
+                                            type="tel"
+                                            id="phone"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            placeholder="+84 (555) 000-0000"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
 
-                            <div className="form-group">
-                                <label htmlFor="centerName">Tên trung tâm gia sư</label>
-                                <input
-                                    type="text"
-                                    id="centerName"
-                                    name="centerName"
-                                    value={formData.centerName}
-                                    onChange={handleChange}
-                                    placeholder="VD: Elite Academy"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
-                        </div>
+                                    <div className="form-group">
+                                        <label htmlFor="centerName">Tên trung tâm gia sư</label>
+                                        <input
+                                            type="text"
+                                            id="centerName"
+                                            name="centerName"
+                                            value={formData.centerName}
+                                            onChange={handleChange}
+                                            placeholder="VD: Elite Academy"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                        <div className="form-group">
-                            <label htmlFor="message">Tin nhắn/Yêu cầu</label>
-                            <textarea
-                                id="message"
-                                name="message"
-                                value={formData.message}
-                                onChange={handleChange}
-                                placeholder="Cho chúng tôi biết về yêu cầu của bạn..."
-                                className="form-textarea"
-                                rows="4"
-                            />
-                        </div>
+                                <div className="form-group">
+                                    <label htmlFor="message">Tin nhắn/Yêu cầu</label>
+                                    <textarea
+                                        id="message"
+                                        name="message"
+                                        value={formData.message}
+                                        onChange={handleChange}
+                                        placeholder="Cho chúng tôi biết về yêu cầu của bạn..."
+                                        className="form-textarea"
+                                        rows="4"
+                                    />
+                                </div>
 
-                        {/* Submit Button */}
-                        <button type="submit" className="submit-btn" disabled={isSubmitting}>
-                            <span>{isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</span>
-                            <ArrowRight size={18} />
-                        </button>
+                                {/* Submit Button */}
+                                <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                                    <span>{isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</span>
+                                    <ArrowRight size={18} />
+                                </button>
 
-                        <div className="form-footer">
-                            Bằng việc nhấn "Gửi yêu cầu", bạn đồng ý với{' '}
-                            <a href="/#privacy">Chính sách bảo mật</a> và{' '}
-                            <a href="/#terms">Điều khoản dịch vụ</a>
-                        </div>
-                    </form>
+                                <div className="form-footer">
+                                    Bằng việc nhấn "Gửi yêu cầu", bạn đồng ý với{' '}
+                                    <a href="/#privacy">Chính sách bảo mật</a> và{' '}
+                                    <a href="/#terms">Điều khoản dịch vụ</a>
+                                </div>
+                            </form>
                         </>
                     )}
 

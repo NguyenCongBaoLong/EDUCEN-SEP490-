@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
@@ -113,12 +113,13 @@ const StudentSchedule = () => {
 
     const getClassStyle = (classItem, idx, total) => {
         const [sh, sm] = classItem.startTime.split(':').map(Number);
+        const [eh, em] = classItem.endTime.split(':').map(Number);
+        const duration = (eh + em / 60) - (sh + sm / 60);
         const offset = (sh - 8) + sm / 60;
-        const fixedCardHeight = 92;
         const w = total > 1 ? 100 / total : 100;
         return {
-            top: `${offset * 70}px`,
-            height: `${fixedCardHeight}px`,
+            top: `${offset * 85}px`,
+            height: `${duration * 85 - 4}px`,
             backgroundColor: classItem.color,
             width: `${w}%`,
             left: `${idx * w}%`,
@@ -127,7 +128,7 @@ const StudentSchedule = () => {
 
     const getAttendanceStatus = (classItem, date) => {
         const dStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        
+
         // Find if there's an attendance record for this class on this date
         const record = attendanceRecords.find(r => {
             if (!r.sessionDate) return false;
@@ -144,7 +145,7 @@ const StudentSchedule = () => {
         const isToday = date.toDateString() === new Date().toDateString();
         const isFuture = date > new Date();
         if (isFuture || isToday) return 'upcoming';
-        
+
         return 'missing';
     };
 
@@ -276,7 +277,7 @@ const StudentSchedule = () => {
             }
             return true;
         });
-        
+
         return dayClasses.map((c, i) => {
             const status = getAttendanceStatus(c, date);
             return (
@@ -362,7 +363,9 @@ const StudentSchedule = () => {
                             <div className="ss-time-column">
                                 <div className="ss-day-header" />
                                 {timeSlots.map(t => (
-                                    <div key={t} className="ss-time-slot">{t}</div>
+                                    <div key={t} className="ss-time-slot">
+                                        <span className="ss-time-label">{t}</span>
+                                    </div>
                                 ))}
                             </div>
                             {weekDates.map((date, idx) => renderDayColumn(date, idx))}
@@ -375,7 +378,9 @@ const StudentSchedule = () => {
                             <div className="ss-time-column">
                                 <div className="ss-day-header" />
                                 {timeSlots.map(t => (
-                                    <div key={t} className="ss-time-slot">{t}</div>
+                                    <div key={t} className="ss-time-slot">
+                                        <span className="ss-time-label">{t}</span>
+                                    </div>
                                 ))}
                             </div>
                             {(() => {

@@ -257,6 +257,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
         gradeId: '', classId: ''
     });
     const [isSubmittingEnrollment, setIsSubmittingEnrollment] = useState(false);
+    const [formErrors, setFormErrors] = useState({});
     const [availableSubjects, setAvailableSubjects] = useState([]);
     const [grades, setGrades] = useState([]);
     const [upcomingClasses, setUpcomingClasses] = useState([]);
@@ -395,7 +396,22 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
         };
     }, [saved, draft, upcomingClasses, availableSubjects, scheduledClasses, showAllClasses, currentHeroSlide]); // Re-run when content, view state, or slide changes
 
-    const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+    const handleFormChange = e => {
+        const { name, value } = e.target;
+        setForm(p => ({ ...p, [name]: value }));
+
+        // Real-time validation for phone
+        if (name === 'phone' || name === 'parentPhone') {
+            const normalized = value.replace(/[\s\.\-\(\)]/g, "");
+            if (value && normalized.length !== 10) {
+                setFormErrors(prev => ({ ...prev, [name]: "Số điện thoại phải có đúng 10 chữ số" }));
+            } else if (value && !/^\d{10}$/.test(normalized)) {
+                setFormErrors(prev => ({ ...prev, [name]: "Số điện thoại chỉ được chứa chữ số" }));
+            } else {
+                setFormErrors(prev => ({ ...prev, [name]: null }));
+            }
+        }
+    };
 
     const handleSubmitEnrollment = async e => {
         e.preventDefault();
@@ -403,7 +419,7 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
         // Frontend validation - Normalize phone before testing
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const phoneRegex = /^(84|0[35789])[0-9]{8}$/;
+        const phoneRegex = /^\d{10}$/; // Nới lỏng: chỉ cần 10 số
 
         const normalizedPhone = form.phone.replace(/[\s\.\-\(\)]/g, "");
         const normalizedParentPhone = form.parentPhone ? form.parentPhone.replace(/[\s\.\-\(\)]/g, "") : "";
@@ -413,8 +429,16 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             setIsSubmittingEnrollment(false);
             return;
         }
+        
+        // Final check for errors in state
+        if (formErrors.phone) {
+            toast.error(formErrors.phone);
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+
         if (!phoneRegex.test(normalizedPhone)) {
-            toast.error("Số điện thoại không hợp lệ! Vui lòng nhập SĐT Việt Nam.");
+            toast.error("Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số.");
             setIsSubmittingEnrollment(false);
             return;
         }
@@ -1512,9 +1536,10 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                             <label>Địa chỉ Email</label>
                                                             <input type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="email@example.com" required />
                                                         </div>
-                                                        <div className="center-form-group">
+                                                        <div className={`center-form-group ${formErrors.phone ? 'has-error' : ''}`}>
                                                             <label>Số điện thoại</label>
                                                             <input type="tel" name="phone" value={form.phone} onChange={handleFormChange} placeholder="0912345678" required />
+                                                            {formErrors.phone && <span className="center-form-error-msg"><X size={14} /> {formErrors.phone}</span>}
                                                         </div>
                                                     </div>
 
@@ -1596,9 +1621,10 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                                                                 <input type="text" name="parentName" value={form.parentName} onChange={handleFormChange} placeholder="Nhập họ tên phụ huynh" />
                                                             </div>
                                                             <div className="center-form-row">
-                                                                <div className="center-form-group">
+                                                                <div className={`center-form-group ${formErrors.parentPhone ? 'has-error' : ''}`}>
                                                                     <label>SĐT phụ huynh</label>
                                                                     <input type="tel" name="parentPhone" value={form.parentPhone} onChange={handleFormChange} placeholder="09xxxxxxxx" />
+                                                                    {formErrors.parentPhone && <span className="center-form-error-msg"><X size={14} /> {formErrors.parentPhone}</span>}
                                                                 </div>
                                                                 <div className="center-form-group">
                                                                     <label>Email phụ huynh</label>

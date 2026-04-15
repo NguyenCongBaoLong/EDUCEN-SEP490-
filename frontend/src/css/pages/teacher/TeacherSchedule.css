@@ -179,7 +179,7 @@
 }
 
 .ts-day-header {
-    height: 70px;
+    height: 85px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -188,6 +188,8 @@
     background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
     font-weight: 600;
     gap: 0.25rem;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .ts-day-header.today {
@@ -222,15 +224,22 @@
 }
 
 .ts-time-slot {
-    height: 70px;
+    height: 85px;
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: 0.5rem;
+    padding-top: 0;
     border-bottom: 1px solid #f9fafb;
     font-size: 0.75rem;
     color: #9ca3af;
     font-weight: 600;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.ts-time-label {
+    transform: translateY(-50%);
 }
 
 /* Day Columns */
@@ -246,14 +255,16 @@
 
 .ts-day-grid {
     position: relative;
-    height: calc(16 * 70px);
+    height: calc(16 * 85px);
     /* 16 slots from 08:00 to 23:00 */
 }
 
 .ts-grid-cell {
-    height: 70px;
+    height: 85px;
     border-bottom: 1px solid #f9fafb;
     transition: background 0.2s;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .ts-grid-cell:hover {
@@ -272,7 +283,7 @@
 /* Class Cards */
 .ts-class-card {
     position: absolute;
-    padding: 0.75rem;
+    padding: 6px 10px;
     border-radius: 10px;
     color: white;
     font-size: 0.75rem;

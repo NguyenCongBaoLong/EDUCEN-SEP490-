@@ -120,7 +120,7 @@ const ParentSchedule = () => {
         const offset = (sh - 8) + sm / 60;
         const dur = (eh - sh) + (em - sm) / 60;
         const w = total > 1 ? 100 / total : 100;
-        return { top: `${offset * 70}px`, height: `${dur * 70 - 4}px`, backgroundColor: classItem.color, width: `${w}%`, left: `${idx * w}%` };
+        return { top: `${offset * 85}px`, height: `${dur * 85 - 4}px`, backgroundColor: classItem.color, width: `${w}%`, left: `${idx * w}%` };
     };
 
     const getAttendanceStatus = (classItem, date) => {

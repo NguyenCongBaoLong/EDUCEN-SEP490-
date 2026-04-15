@@ -63,7 +63,7 @@ const SystemAdminLogin = () => {
                     </h1>
                     <p className="syslogin-subtitle">
                         Nền tảng quản lý tập trung cho<br />
-                        tất cả các trung tâm gia sư<br />
+                        tất cả các trung tâm <br />
                         trong hệ thống EduCen.
                     </p>
                     <div className="syslogin-badges">

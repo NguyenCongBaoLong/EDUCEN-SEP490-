@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Teachers;
+using EducenAPI.DTOs.Teachers;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -230,6 +230,7 @@ namespace EducenAPI.Services
                 return new { message = "Không tìm thấy giáo viên" };
 
             var classes = await _context.Classes
+                .Include(c => c.Grade)
                 .Where(c => c.TeacherId == id)
                 .Select(c => new
                 {
@@ -240,9 +241,11 @@ namespace EducenAPI.Services
                     c.StartDate,
                     c.EndDate,
                     SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
+                    GradeName = c.Grade != null ? c.Grade.GradeName : "",
                     TeacherName = teacher.TeacherNavigation.FullName ?? "",
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : "",
                     StudentCount = c.Students.Count,
+                    MaxStudents = c.MaxStudents,
                     TotalSessions = c.Sessions.Count,
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     ScheduleSlots = c.Schedules.Select(s => new

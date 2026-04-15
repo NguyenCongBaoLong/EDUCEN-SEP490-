@@ -38,7 +38,7 @@ const TeacherClasses = ({ isTA = false }) => {
                         id: c.classId,
                         name: c.className,
                         subject: c.subjectName || '',
-                        gradeLevel: '',
+                        gradeName: c.gradeName || '',
                         mainTeacher: { 
                             name: c.teacherName || 'Chưa phân công', 
                             initials: (c.teacherName || '?').split(' ').pop().charAt(0).toUpperCase() 
@@ -48,7 +48,7 @@ const TeacherClasses = ({ isTA = false }) => {
                             initials: c.assistantName.split(' ').pop().charAt(0).toUpperCase() 
                         } : null,
                         currentStudents: c.studentCount ?? 0,
-                        maxStudents: null,
+                        maxStudents: c.maxStudents || c.MaxStudents || 30,
                         schedule: scheduleStr,
                         status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
                         startDate: c.startDate,

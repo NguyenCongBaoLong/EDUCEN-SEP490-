@@ -9,7 +9,8 @@ import {
     CheckCircle, UserCheck, CalendarClock,
     MessageSquare, Pencil, Lock, Edit2,
     FileText, Download, Plus, PlayCircle, MoreVertical, Trash2,
-    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen, MapPin
+    ChevronDown, ChevronUp, CheckSquare, Library, BookOpen, MapPin,
+    History, ClipboardCheck
 } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import AttendanceModal from '../../components/AttendanceModal';
@@ -106,7 +107,6 @@ const groupUnique = (list) => {
     return list.reduce((acc, curr) => {
         const isDup = acc.some(item => 
             item.title === curr.title && 
-            curr.fileUrl && // Chỉ gộp nếu bài tập đó thật sự có file trùng nhau
             item.fileUrl === curr.fileUrl
         );
         if (!isDup) acc.push(curr);
@@ -338,6 +338,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [selectedSession, setSelectedSession] = useState(null);
     const [attendanceData, setAttendanceData] = useState({});
     const [canAttend, setCanAttend] = useState(true);
+    const [lockMessage, setLockMessage] = useState('');
 
     // Import Modal
     const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
@@ -353,9 +354,36 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setStudentPage(1);
     }, [studentSearch]);
 
-    // State cho Modal yêu cầu thay đổi
+    // State cho Modal lịch sử yêu cầu sửa điểm danh
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [classRequests, setClassRequests] = useState([]);
+    const [loadingRequests, setLoadingRequests] = useState(false);
+    const [historyStatusFilter, setHistoryStatusFilter] = useState('All');
+
+    // State cho Modal yêu cầu thay đổi (đổi lịch)
     const [requestOpen, setRequestOpen] = useState(false);
     const [requestInitialData, setRequestInitialData] = useState(null);
+
+    const fetchClassRequests = async () => {
+        setLoadingRequests(true);
+        try {
+            const res = await api.get('/attendance/modification-requests/my');
+            // Lọc theo classId hiện tại
+            const filtered = (res.data || []).filter(r => String(r.classId) === String(classId));
+            setClassRequests(filtered);
+        } catch (error) {
+            console.error('Error fetching class attendance requests:', error);
+            toast.error('Không thể tải lịch sử yêu cầu sửa điểm danh');
+        } finally {
+            setLoadingRequests(false);
+        }
+    };
+
+    useEffect(() => {
+        if (historyModalOpen) {
+            fetchClassRequests();
+        }
+    }, [historyModalOpen]);
 
     const getFileIcon = (type) => {
         switch (type) {
@@ -611,12 +639,15 @@ const TeacherClassDetail = ({ isTA = false }) => {
             try {
                 const res = await api.get(`/attendance/session/${session.sessionId}/can-attend`);
                 setCanAttend(res.data.canAttend !== false);
+                setLockMessage(res.data.message || '');
             } catch (err) {
                 console.error('Error checking canAttend:', err);
                 setCanAttend(true); // Default to allow
+                setLockMessage('');
             }
         } else {
             setCanAttend(true);
+            setLockMessage('');
         }
         
         setAttendanceOpen(true);
@@ -755,10 +786,20 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 {/* ── Lịch sử điểm danh ── */}
                                 <div className="cd-card">
                                     <div className="cd-card-header">
-                                        <h3>Lịch sử điểm danh</h3>
-                                        <span style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
-                                            {Object.keys(attendanceData).length} / {pastSessions.length} buổi đã qua
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <h3>Lịch sử điểm danh</h3>
+                                            <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 500 }}>
+                                                {pastSessions.length} buổi đã qua
+                                            </span>
+                                        </div>
+                                        <button 
+                                            className="cd-view-all-btn" 
+                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: '#4f46e5', fontWeight: 600, border: '1px solid #e0e7ff', padding: '4px 10px', borderRadius: '6px', background: '#f5f7ff' }}
+                                            onClick={() => setHistoryModalOpen(true)}
+                                        >
+                                            <History size={14} />
+                                            Lịch sử sửa
+                                        </button>
                                     </div>
 
                                     {pastSessions.length === 0 ? (
@@ -1233,6 +1274,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         existingRecords={attendanceData[selectedSession.sessionId]}
                         sessionId={selectedSession.sessionId}
                         canAttend={canAttend}
+                        lockMessage={lockMessage}
                         onRequestModification={() => fetchClassData(true)}
                     />
                 )
@@ -1351,6 +1393,130 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     assignment={{ ...detailAssignment, className: classData.name }}
                     onDownload={handleDownloadMaterial}
                 />
+            )}
+
+            {/* Modal Lịch sử sửa điểm danh (Table Refactored) */}
+            {historyModalOpen && (
+                <div className="atm-overlay">
+                    <div className="atm-modal" style={{ width: '900px', maxWidth: '95vw' }}>
+                        <div className="atm-header">
+                            <div>
+                                <h3>Lịch sử sửa điểm danh</h3>
+                                <div className="atm-session-meta">
+                                    <History size={14} /> 
+                                    <span>Lớp: {classData.name}</span>
+                                </div>
+                            </div>
+                            <button className="atm-close" onClick={() => setHistoryModalOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Filter Bar */}
+                        <div style={{ padding: '12px 24px', background: '#fcfdfe', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bộ lọc:</span>
+                            {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
+                                <button
+                                    key={status}
+                                    onClick={() => setHistoryStatusFilter(status)}
+                                    style={{
+                                        padding: '4px 14px',
+                                        borderRadius: '20px',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        border: '1px solid',
+                                        transition: 'all 0.15s',
+                                        background: historyStatusFilter === status ? '#3b82f6' : 'white',
+                                        color: historyStatusFilter === status ? 'white' : '#64748b',
+                                        borderColor: historyStatusFilter === status ? '#3b82f6' : '#e2e8f0',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {status === 'All' ? 'Tất cả' : status === 'Pending' ? 'Đang chờ' : status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        <div className="atm-body" style={{ padding: 0, overflow: 'hidden' }}>
+                            {loadingRequests ? (
+                                <div style={{ textAlign: 'center', padding: '60px' }}>
+                                    <div className="attendance-spinner" style={{ margin: '0 auto 16px' }}></div>
+                                    <p style={{ color: '#64748b' }}>Đang tải dữ liệu...</p>
+                                </div>
+                            ) : classRequests.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
+                                    <ClipboardCheck size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
+                                    <p style={{ fontSize: '1rem' }}>Không có lịch sử yêu cầu sửa cho lớp này.</p>
+                                </div>
+                            ) : (
+                                <div className="atm-history-container" style={{ maxHeight: '60vh' }}>
+                                    <table className="atm-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Ngày gửi</th>
+                                                <th>Học sinh</th>
+                                                <th>Buổi học</th>
+                                                <th>Nội dung sửa</th>
+                                                <th>Trạng thái</th>
+                                                <th>Ghi chú / Phản hồi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {classRequests
+                                                .filter(req => historyStatusFilter === 'All' || req.status === historyStatusFilter)
+                                                .map((req) => {
+                                                const statusKey = req.status?.toLowerCase() || 'pending';
+                                                return (
+                                                    <tr key={req.requestId}>
+                                                        <td style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                            {req.requestedAt?.split(' ')[0]}<br/>
+                                                            <small>{req.requestedAt?.split(' ')[1]}</small>
+                                                        </td>
+                                                        <td>
+                                                            <div className="atm-student-name-bold">{req.studentName}</div>
+                                                        </td>
+                                                        <td style={{ whiteSpace: 'nowrap' }}>
+                                                            <div style={{ fontWeight: 500, fontSize: '0.8125rem' }}>{req.sessionDate}</div>
+                                                        </td>
+                                                        <td>
+                                                            <div className="atm-change-preview">
+                                                                <span style={{ color: req.currentStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                                    {req.currentStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                </span>
+                                                                <ChevronRight size={12} className="atm-change-arrow" />
+                                                                <span style={{ color: req.requestedStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                                    {req.requestedStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`atm-status-badge atm-status-${statusKey}`}>
+                                                                {statusKey === 'pending' ? 'Chờ duyệt' : statusKey === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <div className="atm-note-text" title={req.reviewNote || req.reason}>
+                                                                {req.status === 'Rejected' ? (
+                                                                    <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bị từ chối'}</span>
+                                                                ) : (
+                                                                    req.reason || '—'
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="atm-footer">
+                            <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>Đóng</button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

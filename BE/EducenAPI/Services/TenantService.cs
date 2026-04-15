@@ -454,13 +454,16 @@ namespace EducenAPI.Services.TenantService
             baseBuilder.InitialCatalog = tenantBuilder.InitialCatalog;
             db.Database.SetConnectionString(baseBuilder.ConnectionString);
 
-            int users = db.Users.Count();
-            int students = db.Students.Count();
-            int classes = db.Classes.Count();
-
-            double storage = 0; // có thể tính từ file hoặc blob sau
-
-            return (users, students, classes, storage);
+            try {
+                int users = db.Users.Count();
+                int students = db.Students.Count();
+                int classes = db.Classes.Count();
+                double storage = 0; 
+                return (users, students, classes, storage);
+            } catch (Exception ex) {
+                Console.WriteLine($"[GetTenantUsage] Error for tenant {tenant.TenantId}: {ex.Message}");
+                return (0, 0, 0, 0);
+            }
         }
 
         public async Task<object> CreateAdminForTenantAsync(string tenantId, CreateTenantAdminDto dto)

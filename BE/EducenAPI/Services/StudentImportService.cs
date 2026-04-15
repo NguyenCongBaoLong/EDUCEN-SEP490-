@@ -320,7 +320,15 @@ public class StudentImportService : IStudentImportService
                 // --- Link Parent if info provided ---
                 if (!string.IsNullOrWhiteSpace(parentName) && studentId > 0)
                 {
-                    await EnsureParentLinkedAsync(studentId, parentName, parentPhone, parentEmail);
+                    var parentLinkError = await EnsureParentLinkedAsync(studentId, parentName, parentPhone, parentEmail);
+                    if (parentLinkError != null)
+                    {
+                        // Nếu lỗi liên quan đến validate phụ huynh, ta coi như dòng này bị lỗi hoặc cảnh báo
+                        // Ở đây ta chọn Fail dòng này để admin sửa lại data Excel cho chuẩn
+                        importResults.Failed++;
+                        importResults.Errors.Add($"{sheetName} - Dòng {row + 1}: {parentLinkError}");
+                        continue; 
+                    }
                 }
 
                 // Add to class if classId provided
@@ -430,13 +438,21 @@ public class StudentImportService : IStudentImportService
         };
     }
 
-    private async Task EnsureParentLinkedAsync(int studentId, string parentName, string? parentPhone, string? parentEmail)
+    private async Task<string?> EnsureParentLinkedAsync(int studentId, string parentName, string? parentPhone, string? parentEmail)
     {
-        // 1. Tìm phụ huynh đã tồn tại theo Phone hoặc Email
+        // 1. Validate format
+        if (!string.IsNullOrWhiteSpace(parentEmail) && !IsValidEmail(parentEmail))
+            return ValidationMessages.InvalidParentEmailFormat;
+            
+        if (!string.IsNullOrWhiteSpace(parentPhone) && !IsValidPhone(parentPhone))
+            return ValidationMessages.InvalidParentPhoneFormat;
+
+        // 2. Tìm phụ huynh đã tồn tại theo Phone hoặc Email
         User? parentUser = null;
         
         if (!string.IsNullOrWhiteSpace(parentPhone))
         {
+            // Chỉ tìm phụ huynh trùng SĐT trong cùng Role Parent (RoleId = 4)
             parentUser = await _context.Users
                 .Include(u => u.Parent)
                 .ThenInclude(p => p.Students)
@@ -445,15 +461,27 @@ public class StudentImportService : IStudentImportService
         
         if (parentUser == null && !string.IsNullOrWhiteSpace(parentEmail))
         {
+            // Tìm theo email (Email là duy nhất toàn hệ thống)
             parentUser = await _context.Users
                 .Include(u => u.Parent)
                 .ThenInclude(p => p.Students)
-                .FirstOrDefaultAsync(u => u.Email == parentEmail && u.RoleId == 4);
+                .FirstOrDefaultAsync(u => u.Email == parentEmail);
+
+            // Nếu tìm thấy User nhưng không phải role Phụ huynh -> Lỗi (Email trùng role khác)
+            if (parentUser != null && parentUser.RoleId != 4)
+                return ValidationMessages.EmailUsedByOtherRole;
         }
 
-        // 2. Nếu không tìm thấy, tạo mới
+        // 3. Nếu không tìm thấy, tạo mới (với điều kiện Validate Uniqueness)
         if (parentUser == null)
         {
+            // Kiểm tra trùng Email global lần nữa để chắc chắn (trường hợp email trùng với role không phải Parent)
+            if (!string.IsNullOrWhiteSpace(parentEmail))
+            {
+                var emailExistsGlobal = await _context.Users.AnyAsync(u => u.Email == parentEmail);
+                if (emailExistsGlobal) return ValidationMessages.DuplicateEmail;
+            }
+
             // Generate username cho phụ huynh
             var usernameBase = !string.IsNullOrWhiteSpace(parentEmail) 
                 ? parentEmail.Split('@')[0] 
@@ -474,7 +502,7 @@ public class StudentImportService : IStudentImportService
                 Email = parentEmail,
                 PhoneNumber = parentPhone,
                 RoleId = 4, // Parent role
-                AccountStatus = "Active",
+                AccountStatus = "NoAccount", // Không tạo tài khoản Active ngay
                 IsAccountSent = false
             };
 
@@ -491,7 +519,7 @@ public class StudentImportService : IStudentImportService
             parentUser.Parent = parent;
         }
 
-        // 3. Liên kết Student
+        // 4. Liên kết Student
         if (parentUser.Parent != null)
         {
             var student = await _context.Students.FindAsync(studentId);
@@ -506,5 +534,25 @@ public class StudentImportService : IStudentImportService
                 }
             }
         }
+        
+        return null; // Success
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsValidPhone(string phone)
+    {
+        return System.Text.RegularExpressions.Regex.IsMatch(phone ?? "", @"^[\d\s\-\+\(\)]+$");
     }
 }

@@ -537,3 +537,107 @@
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
+/* ─── History Table in Modal ───────────────────────── */
+.atm-history-container {
+    padding: 0 1.5rem 1.5rem;
+    overflow-x: auto;
+}
+
+.atm-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+}
+
+.atm-table th {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.atm-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.atm-table tr:hover td {
+    background: #fcfdfe;
+}
+
+.atm-table tr:last-child td {
+    border-bottom: none;
+}
+
+.atm-student-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.atm-student-name-bold {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.atm-session-info {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.atm-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.atm-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.atm-status-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.atm-status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.atm-change-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #475569;
+}
+
+.atm-change-arrow {
+    color: #94a3b8;
+}
+
+.atm-note-text {
+    font-size: 0.8125rem;
+    color: #64748b;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.atm-note-tooltip {
+    cursor: help;
+    border-bottom: 1px dotted #cbd5e1;
+}
