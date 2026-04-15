@@ -161,9 +161,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 48px 0;
+    padding: 60px 0;
     color: #94a3b8;
-    gap: 10px;
+    gap: 12px;
+}
+
+.pc-empty p {
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 /* Grid */
@@ -366,7 +371,7 @@
     background: #fff;
     border-radius: 16px;
     width: 100%;
-    max-width: 580px;
+    max-width: 800px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 24px 60px rgba(0, 0, 0, .2);
@@ -533,87 +538,152 @@
 }
 
 .pc-asm-row {
+    display: grid;
+    grid-template-columns: 260px 120px 1fr;
+    align-items: center;
+    gap: 16px;
+    background: #fff;
+    border: 1px solid #eef2f6;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.pc-asm-row:hover {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    background: #fff;
+}
+
+.pc-asm-info-col {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-    background: #f8fafc;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.pc-asm-status-indicator {
+    width: 38px;
+    height: 38px;
     border-radius: 10px;
-    padding: 12px 14px;
-    border-left: 3px solid #e2e8f0;
-}
-
-.pc-asm-row.submitted {
-    border-left-color: #22c55e;
-}
-
-.pc-asm-row.pending {
-    border-left-color: #f59e0b;
-}
-
-.pc-asm-left {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pc-asm-status-indicator.done {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.pc-asm-status-indicator.wait {
+    background: #fff7ed;
+    color: #f59e0b;
+}
+
+.pc-asm-info-text {
     flex: 1;
     min-width: 0;
 }
 
-.pc-asm-status-icon {
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
 .pc-asm-title {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.9375rem;
+    font-weight: 700;
     color: #1e293b;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .pc-asm-due {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: #94a3b8;
-}
-
-.pc-asm-grade-block {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
     gap: 4px;
 }
 
-.pc-asm-grade {
+.pc-asm-due strong {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.pc-asm-score-col {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pc-asm-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    padding: 3px 10px;
+    gap: 6px;
+    font-weight: 750;
+    font-size: 0.875rem;
+    padding: 5px 14px;
+    border-radius: 99px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.pc-asm-badge.high {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+}
+
+.pc-asm-badge.mid {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+}
+
+.pc-asm-badge.low {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+}
+
+.pc-asm-status-text {
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    font-weight: 500;
+    font-style: italic;
+}
+
+.pc-asm-feedback-col {
+    padding-left: 20px;
+    border-left: 2px solid #f1f5f9;
+    min-width: 0;
+}
+
+.pc-asm-comment-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.pc-comment-icon {
+    color: #6366f1;
+    background: #eef2ff;
+    padding: 6px;
     border-radius: 8px;
+    flex-shrink: 0;
+    width: 26px !important;
+    height: 26px !important;
 }
 
-.pc-asm-grade.high {
-    background: #dcfce7;
-    color: #16a34a;
+.pc-comment-text {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.5;
+    word-break: break-word;
 }
 
-.pc-asm-grade.mid {
-    background: #fef3c7;
-    color: #d97706;
-}
-
-.pc-asm-grade.low {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.pc-asm-comment {
-    font-size: 0.78rem;
-    color: #64748b;
-    max-width: 200px;
-    text-align: right;
-    line-height: 1.4;
+.pc-comment-empty {
+    font-size: 0.8125rem;
+    color: #cbd5e1;
+    font-style: italic;
 }
 
 .pc-asm-pending {

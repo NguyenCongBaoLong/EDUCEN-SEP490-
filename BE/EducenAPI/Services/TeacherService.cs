@@ -230,6 +230,7 @@ namespace EducenAPI.Services
                 return new { message = "Không tìm thấy giáo viên" };
 
             var classes = await _context.Classes
+                .Include(c => c.Grade)
                 .Where(c => c.TeacherId == id)
                 .Select(c => new
                 {
@@ -240,6 +241,7 @@ namespace EducenAPI.Services
                     c.StartDate,
                     c.EndDate,
                     SubjectName = c.Subject != null ? c.Subject.SubjectName : "",
+                    GradeName = c.Grade != null ? c.Grade.GradeName : "",
                     TeacherName = teacher.TeacherNavigation.FullName ?? "",
                     AssistantName = c.Assistant != null ? c.Assistant.AssistantNavigation.FullName : "",
                     StudentCount = c.Students.Count,

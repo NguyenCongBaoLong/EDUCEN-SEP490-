@@ -126,32 +126,45 @@ const ClassDetailModal = ({ cls, onClose }) => {
                                                     {session.title || `Buổi ${session.sessionNum}`}
                                                 </div>
                                                 {session.assignments.map(asm => (
-                                                    <div key={asm.asmId} className={`pc-asm-row ${asm.currentSubmission ? 'submitted' : 'pending'}`} style={{ marginBottom: 8 }}>
-                                                        <div className="pc-asm-left">
-                                                            <div className="pc-asm-status-icon">
+                                                    <div key={asm.asmId} className={`pc-asm-row ${asm.currentSubmission ? 'submitted' : 'pending'}`}>
+                                                        {/* Thông tin bài tập */}
+                                                        <div className="pc-asm-info-col">
+                                                            <div className={`pc-asm-status-indicator ${asm.currentSubmission ? 'done' : 'wait'}`}>
                                                                 {asm.currentSubmission
-                                                                    ? <CheckCircle size={16} color="#16a34a" />
-                                                                    : <AlertCircle size={16} color="#f59e0b" />}
+                                                                    ? <FileCheck size={18} />
+                                                                    : <Clock size={18} />}
                                                             </div>
-                                                            <div>
+                                                            <div className="pc-asm-info-text">
                                                                 <div className="pc-asm-title">{asm.title}</div>
-                                                                <div className="pc-asm-due">Hạn: {asm.dueDate ? new Date(asm.dueDate).toLocaleDateString('vi-VN') : 'Chưa giới hạn'}</div>
+                                                                <div className="pc-asm-due">
+                                                                    <span>Hạn nộp:</span>
+                                                                    <strong>{asm.dueDate ? new Date(asm.dueDate).toLocaleDateString('vi-VN') : 'Không giới hạn'}</strong>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="pc-asm-right">
+
+                                                        {/* Điểm số */}
+                                                        <div className="pc-asm-score-col">
                                                             {asm.currentSubmission?.score !== null && asm.currentSubmission?.score !== undefined && asm.currentSubmission?.isPublished ? (
-                                                                <div className="pc-asm-grade-block">
-                                                                    <span className={`pc-asm-grade ${asm.currentSubmission.score >= 8 ? 'high' : asm.currentSubmission.score >= 6.5 ? 'mid' : 'low'}`}>
-                                                                        <Star size={12} /> {asm.currentSubmission.score}/10
-                                                                    </span>
-                                                                    {asm.currentSubmission.teacherComment && (
-                                                                        <div className="pc-asm-comment">💬 {asm.currentSubmission.teacherComment}</div>
-                                                                    )}
+                                                                <div className={`pc-asm-badge ${asm.currentSubmission.score >= 8 ? 'high' : asm.currentSubmission.score >= 6.5 ? 'mid' : 'low'}`}>
+                                                                    <span>{asm.currentSubmission.score}/10</span>
                                                                 </div>
                                                             ) : (
-                                                                <span className="pc-asm-pending">
+                                                                <div className="pc-asm-status-text">
                                                                     {asm.currentSubmission ? 'Chờ chấm' : 'Chưa nộp'}
-                                                                </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Phản hồi */}
+                                                        <div className="pc-asm-feedback-col">
+                                                            {asm.currentSubmission?.teacherComment ? (
+                                                                <div className="pc-asm-comment-wrapper">
+                                                                    <MessageSquare size={14} className="pc-comment-icon" />
+                                                                    <span className="pc-comment-text">{asm.currentSubmission.teacherComment}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="pc-comment-empty">Chưa có nhận xét của giáo viên</div>
                                                             )}
                                                         </div>
                                                     </div>

@@ -12,6 +12,7 @@ namespace EducenAPI.DTOs.Attendance
     {
         public int RequestId { get; set; }
         public int SessionId { get; set; }
+        public int? ClassId { get; set; }
         public int StudentId { get; set; }
         public string? StudentName { get; set; }
         public string? ClassName { get; set; }

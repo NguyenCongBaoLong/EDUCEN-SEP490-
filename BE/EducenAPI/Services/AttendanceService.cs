@@ -424,6 +424,7 @@ namespace EducenAPI.Services
             {
                 RequestId = r.RequestId,
                 SessionId = r.SessionId,
+                ClassId = r.Session?.Schedule?.ClassId ?? r.Session?.ClassId,
                 StudentId = r.StudentId,
                 StudentName = r.Student?.StudentNavigation?.FullName,
                 ClassName = r.Session?.Schedule?.Class?.ClassName ?? r.Session?.Class?.ClassName,
@@ -520,6 +521,7 @@ namespace EducenAPI.Services
             {
                 RequestId = r.RequestId,
                 SessionId = r.SessionId,
+                ClassId = r.Session?.Schedule?.ClassId ?? r.Session?.ClassId,
                 StudentId = r.StudentId,
                 StudentName = r.Student?.StudentNavigation?.FullName,
                 ClassName = r.Session?.Schedule?.Class?.ClassName,

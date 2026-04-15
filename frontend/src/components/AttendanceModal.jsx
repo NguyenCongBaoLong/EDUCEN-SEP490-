@@ -202,7 +202,7 @@ const AttendanceModal = ({
                         </button>
                     </div>
 
-                    <div style={{ padding: '20px' }}>
+                    <div className="atm-body" style={{ padding: '20px' }}>
                         <div style={{ 
                             background: '#fef3c7', 
                             border: '1px solid #f59e0b', 
@@ -349,36 +349,23 @@ const AttendanceModal = ({
                             />
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <button 
-                                onClick={() => setShowRequestForm(false)}
-                                disabled={submittingRequest}
-                                style={{
-                                    padding: '10px 20px',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '6px',
-                                    background: 'white',
-                                    cursor: submittingRequest ? 'not-allowed' : 'pointer'
-                                }}
-                            >
-                                Hủy
-                            </button>
-                            <button 
-                                onClick={handleSubmitRequest}
-                                disabled={submittingRequest}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#3b82f6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: submittingRequest ? 'not-allowed' : 'pointer',
-                                    opacity: submittingRequest ? 0.7 : 1
-                                }}
-                            >
-                                {submittingRequest ? 'Đang gửi...' : 'Gửi yêu cầu'}
-                            </button>
-                        </div>
+                    </div>
+
+                    <div className="atm-footer">
+                        <button 
+                            className="atm-btn-cancel"
+                            onClick={() => setShowRequestForm(false)}
+                            disabled={submittingRequest}
+                        >
+                            Hủy
+                        </button>
+                        <button 
+                            className="atm-btn-save"
+                            onClick={handleSubmitRequest}
+                            disabled={submittingRequest}
+                        >
+                            {submittingRequest ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                        </button>
                     </div>
                 </div>
             </div>

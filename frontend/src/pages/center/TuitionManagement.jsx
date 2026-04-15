@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { 
-    Calculator, 
-    FileText, 
-    DollarSign, 
-    Calendar, 
+import {
+    Calculator,
+    FileText,
+    DollarSign,
+    Calendar,
     Users,
     CheckCircle,
     XCircle,
@@ -36,11 +36,11 @@ const TuitionManagement = () => {
     const { classId } = useParams();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('calculate'); // 'calculate' | 'invoices'
-    
+
     // State cho danh sách lớp
     const [classes, setClasses] = useState([]);
     const [loadingClasses, setLoadingClasses] = useState(false);
-    
+
     // State cho tính toán học phí
     const [selectedClass, setSelectedClass] = useState(classId || '');
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -48,11 +48,11 @@ const TuitionManagement = () => {
     const [calculations, setCalculations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [generating, setGenerating] = useState(false);
-    
+
     // State cho tick chọn học sinh
     const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     const [existingInvoiceStudentIds, setExistingInvoiceStudentIds] = useState([]);
-    
+
     // State cho danh sách hóa đơn
     const [invoices, setInvoices] = useState([]);
     const [invoicesLoading, setInvoicesLoading] = useState(false);
@@ -75,7 +75,7 @@ const TuitionManagement = () => {
         isOpen: false,
         title: '',
         message: '',
-        onConfirm: () => {},
+        onConfirm: () => { },
         type: 'warning'
     });
 
@@ -272,7 +272,7 @@ const TuitionManagement = () => {
         } catch (error) {
             const data = error.response?.data;
             if (data?.errors) {
-                const errorDetails = data.errors.map(e => 
+                const errorDetails = data.errors.map(e =>
                     `${e.field}: ${e.errors?.join(', ')}`
                 ).join('\n');
                 toast.error(`Lỗi:\n${errorDetails}`, { duration: 6000 });
@@ -290,7 +290,7 @@ const TuitionManagement = () => {
         const selected = calculations.filter(c => selectedStudentIds.includes(c.studentId));
         const alreadyInvoicedStudents = selected.filter(c => isStudentAlreadyInvoiced(c.studentId));
         const selectedWithoutExistingInvoice = selected.filter(c => !isStudentAlreadyInvoiced(c.studentId));
-        
+
         // Chỉ giữ học sinh có buổi học > 0
         const validStudents = selectedWithoutExistingInvoice.filter(c => c.attendedSessions > 0);
         const noSessionStudents = selectedWithoutExistingInvoice.filter(c => c.attendedSessions === 0);
@@ -366,7 +366,7 @@ const TuitionManagement = () => {
                 setLockInfo(data.lockInfo);
                 toast.error(data.message, { duration: 6000 });
             } else if (data?.errors) {
-                const errorDetails = data.errors.map(e => 
+                const errorDetails = data.errors.map(e =>
                     `${e.field}: ${e.errors?.join(', ')}`
                 ).join('\n');
                 toast.error(`Validation lỗi:\n${errorDetails}`, { duration: 6000 });
@@ -399,7 +399,7 @@ const TuitionManagement = () => {
         try {
             const tenantId = getValidTenantId();
             const returnUrl = `${window.location.origin}/payment/result`;
-            
+
             const paymentData = {
                 tenantId,
                 amount: selectedInvoice.finalAmount,
@@ -414,7 +414,7 @@ const TuitionManagement = () => {
             };
 
             const result = await paymentService.createPayment(paymentData);
-            
+
             if (result.success && result.paymentUrl) {
                 // Redirect đến trang thanh toán
                 window.location.href = result.paymentUrl;
@@ -552,10 +552,10 @@ const TuitionManagement = () => {
             'Overdue': { bg: '#fee2e2', color: '#dc2626', icon: XCircle },
             'Cancelled': { bg: '#f3f4f6', color: '#9ca3af', icon: XCircle }
         };
-        
+
         const style = styles[status] || styles['Draft'];
         const Icon = style.icon;
-        
+
         return (
             <span className="status-badge" style={{ background: style.bg, color: style.color }}>
                 <Icon size={14} />
@@ -613,7 +613,7 @@ const TuitionManagement = () => {
                                     </p>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                    <button 
+                                    <button
                                         onClick={handlePreviewAutoGenerate}
                                         disabled={autoGenerating}
                                         style={{
@@ -632,7 +632,7 @@ const TuitionManagement = () => {
                                         <Zap size={16} />
                                         Xem trước
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={handleAutoGenerate}
                                         disabled={autoGenerating || lockInfo?.isLocked}
                                         style={{
@@ -649,12 +649,12 @@ const TuitionManagement = () => {
                                         }}
                                     >
                                         <Zap size={16} />
-                                        {autoGenerating ? 'Đang tạo...' : 'Tạo tự động'}
+                                        {autoGenerating ? 'Đang tạo...' : 'Tạo hóa đơn thủ công'}
                                     </button>
                                     {lockInfo && (
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
+                                        <div style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
                                             gap: 8,
                                             padding: '8px 12px',
                                             borderRadius: 8,
@@ -669,15 +669,15 @@ const TuitionManagement = () => {
                                     )}
                                 </div>
                             </div>
-                            
+
                             {lockInfo?.isLocked && (
-                                <div style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: 8, 
-                                    padding: '10px 14px', 
-                                    background: '#fef3c7', 
-                                    borderRadius: 8, 
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    padding: '10px 14px',
+                                    background: '#fef3c7',
+                                    borderRadius: 8,
                                     marginBottom: 16,
                                     color: '#92400e',
                                     fontSize: '0.9rem'
@@ -688,10 +688,10 @@ const TuitionManagement = () => {
                             )}
 
                             {previewData && (
-                                <div style={{ 
+                                <div style={{
                                     marginBottom: 16,
-                                    padding: '12px 16px', 
-                                    background: '#f0f9ff', 
+                                    padding: '12px 16px',
+                                    background: '#f0f9ff',
                                     borderRadius: 8,
                                     border: '1px solid #bae6fd'
                                 }}>
@@ -732,8 +732,8 @@ const TuitionManagement = () => {
                             <div className="filter-row">
                                 <div className="filter-group">
                                     <label>Lớp học</label>
-                                    <select 
-                                        value={selectedClass} 
+                                    <select
+                                        value={selectedClass}
                                         onChange={(e) => setSelectedClass(e.target.value)}
                                         disabled={loadingClasses}
                                     >
@@ -749,8 +749,8 @@ const TuitionManagement = () => {
                                 </div>
                                 <div className="filter-group">
                                     <label>Tháng</label>
-                                    <select 
-                                        value={selectedMonth} 
+                                    <select
+                                        value={selectedMonth}
                                         onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                                     >
                                         {months.map(m => (
@@ -761,8 +761,8 @@ const TuitionManagement = () => {
 
                                 <div className="filter-group">
                                     <label>Năm</label>
-                                    <select 
-                                        value={selectedYear} 
+                                    <select
+                                        value={selectedYear}
                                         onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                                     >
                                         {years.map(y => (
@@ -770,7 +770,7 @@ const TuitionManagement = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <button 
+                                <button
                                     className="calculate-btn"
                                     onClick={handleCalculate}
                                     disabled={loading || (lockInfo?.isLocked)}
@@ -791,7 +791,7 @@ const TuitionManagement = () => {
                                         <span style={{ fontSize: '0.85rem', color: '#475569' }}>
                                             Đã có hóa đơn (khóa chọn): <strong>{existingInvoiceStudentIds.length}</strong>
                                         </span>
-                                        <button 
+                                        <button
                                             className="generate-btn"
                                             onClick={handleGenerateInvoices}
                                             disabled={generating || selectedStudentIds.length === 0 || lockInfo?.isLocked}
@@ -801,7 +801,7 @@ const TuitionManagement = () => {
                                         </button>
                                         <div style={{ display: 'flex', gap: 8, marginLeft: 8 }}>
                                             {lockInfo?.isLocked ? (
-                                                <button 
+                                                <button
                                                     onClick={() => handleUnlockMonth(selectedMonth, selectedYear)}
                                                     style={{
                                                         padding: '8px 12px',
@@ -820,7 +820,7 @@ const TuitionManagement = () => {
                                                     Mở khóa
                                                 </button>
                                             ) : (
-                                                <button 
+                                                <button
                                                     onClick={() => handleLockMonth(selectedMonth, selectedYear)}
                                                     style={{
                                                         padding: '8px 12px',
@@ -857,19 +857,19 @@ const TuitionManagement = () => {
                                                             && selectableIds.every((id) => selectedStudentIds.includes(id));
 
                                                         return (
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={allSelectableChecked}
-                                                        disabled={selectableIds.length === 0}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedStudentIds(selectableIds);
-                                                            } else {
-                                                                setSelectedStudentIds([]);
-                                                            }
-                                                        }}
-                                                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
-                                                    />
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={allSelectableChecked}
+                                                                disabled={selectableIds.length === 0}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedStudentIds(selectableIds);
+                                                                    } else {
+                                                                        setSelectedStudentIds([]);
+                                                                    }
+                                                                }}
+                                                                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                            />
                                                         );
                                                     })()}
                                                 </th>
@@ -887,33 +887,33 @@ const TuitionManagement = () => {
                                                 const hasNoSessions = calc.attendedSessions === 0;
                                                 const isDisabled = isStudentAlreadyInvoiced(calc.studentId);
                                                 return (
-                                                <tr key={index} style={isDisabled ? { opacity: 0.6, background: '#f1f5f9' } : hasNoSessions ? { opacity: 0.5, background: '#fef2f2' } : {}}>
-                                                    <td>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            disabled={isDisabled}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setSelectedStudentIds(prev => [...prev, calc.studentId]);
-                                                                } else {
-                                                                    setSelectedStudentIds(prev => prev.filter(id => id !== calc.studentId));
-                                                                }
-                                                            }}
-                                                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
-                                                        />
-                                                    </td>
-                                                    <td>
-                                                        {calc.studentName}
-                                                        {hasNoSessions && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#ef4444' }}>(0 buổi)</span>}
-                                                        {isDisabled && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#64748b' }}>(đã có hóa đơn)</span>}
-                                                    </td>
-                                                    <td>{calc.totalSessions}</td>
-                                                    <td className="attended">{calc.attendedSessions}</td>
-                                                    <td className="absent">{calc.absentSessions}</td>
-                                                    <td>{formatCurrency(calc.pricePerSession)}</td>
-                                                    <td className="total">{formatCurrency(calc.finalAmount)}</td>
-                                                </tr>
+                                                    <tr key={index} style={isDisabled ? { opacity: 0.6, background: '#f1f5f9' } : hasNoSessions ? { opacity: 0.5, background: '#fef2f2' } : {}}>
+                                                        <td>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                disabled={isDisabled}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedStudentIds(prev => [...prev, calc.studentId]);
+                                                                    } else {
+                                                                        setSelectedStudentIds(prev => prev.filter(id => id !== calc.studentId));
+                                                                    }
+                                                                }}
+                                                                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#3b82f6' }}
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            {calc.studentName}
+                                                            {hasNoSessions && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#ef4444' }}>(0 buổi)</span>}
+                                                            {isDisabled && <span style={{ marginLeft: 8, fontSize: '0.75rem', color: '#64748b' }}>(đã có hóa đơn)</span>}
+                                                        </td>
+                                                        <td>{calc.totalSessions}</td>
+                                                        <td className="attended">{calc.attendedSessions}</td>
+                                                        <td className="absent">{calc.absentSessions}</td>
+                                                        <td>{formatCurrency(calc.pricePerSession)}</td>
+                                                        <td className="total">{formatCurrency(calc.finalAmount)}</td>
+                                                    </tr>
                                                 );
                                             })}
                                         </tbody>
@@ -928,9 +928,9 @@ const TuitionManagement = () => {
                     <div className="invoices-section">
                         <div className="filter-bar">
                             <div className="filter-group">
-                                <select 
+                                <select
                                     value={invoiceFilters.status}
-                                    onChange={(e) => setInvoiceFilters({...invoiceFilters, status: e.target.value})}
+                                    onChange={(e) => setInvoiceFilters({ ...invoiceFilters, status: e.target.value })}
                                 >
                                     <option value="">Tất cả trạng thái</option>
                                     <option value="Draft">Nháp</option>
@@ -942,7 +942,7 @@ const TuitionManagement = () => {
                             <div className="filter-group">
                                 <select
                                     value={invoiceFilters.month}
-                                    onChange={(e) => setInvoiceFilters({...invoiceFilters, month: e.target.value})}
+                                    onChange={(e) => setInvoiceFilters({ ...invoiceFilters, month: e.target.value })}
                                 >
                                     <option value="">Tất cả tháng</option>
                                     {months.map(m => (
@@ -951,7 +951,7 @@ const TuitionManagement = () => {
                                 </select>
                             </div>
                             {invoices.some(inv => inv.status === 'Draft') && (
-                                <button 
+                                <button
                                     className="batch-send-btn"
                                     onClick={handleBatchSend}
                                     style={{
@@ -1001,7 +1001,7 @@ const TuitionManagement = () => {
                                                 <td>{getStatusBadge(invoice.status)}</td>
                                                 <td className="actions">
                                                     {invoice.status === 'Draft' && (
-                                                        <button 
+                                                        <button
                                                             className="send-btn"
                                                             onClick={() => handleSendInvoice(invoice.invoiceId)}
                                                             disabled={sendingInvoice === invoice.invoiceId}
@@ -1021,39 +1021,39 @@ const TuitionManagement = () => {
                                                             <Send size={12} />
                                                             {sendingInvoice === invoice.invoiceId ? 'Đang gửi...' : 'Gửi'}
                                                         </button>
-)}
-                                                {(invoice.status === 'Sent' || invoice.status === 'Overdue') && (
-                                                    <button 
-                                                        className="pay-btn"
-                                                        onClick={() => handleMarkAsPaid(invoice.invoiceId)}
-                                                    >
-                                                        <CreditCard size={14} />
-                                                        Đã thu tiền
-                                                    </button>
-                                                )}
-                                                {(invoice.status !== 'Paid' && invoice.status !== 'Cancelled') && (
-                                                    <button 
-                                                        className="invoice-action-btn cancel"
-                                                        onClick={() => handleCancelInvoice(invoice.invoiceId)}
-                                                        style={{
-                                                            padding: '4px 10px',
-                                                            background: '#dc2626',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: 4,
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.8rem',
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            gap: 4,
-                                                            marginLeft: 4
-                                                        }}
-                                                    >
-                                                        <X size={12} />
-                                                        Hủy
-                                                    </button>
-                                                )}
-                                            </td>
+                                                    )}
+                                                    {(invoice.status === 'Sent' || invoice.status === 'Overdue') && (
+                                                        <button
+                                                            className="pay-btn"
+                                                            onClick={() => handleMarkAsPaid(invoice.invoiceId)}
+                                                        >
+                                                            <CreditCard size={14} />
+                                                            Đã thu tiền
+                                                        </button>
+                                                    )}
+                                                    {(invoice.status !== 'Paid' && invoice.status !== 'Cancelled') && (
+                                                        <button
+                                                            className="invoice-action-btn cancel"
+                                                            onClick={() => handleCancelInvoice(invoice.invoiceId)}
+                                                            style={{
+                                                                padding: '4px 10px',
+                                                                background: '#dc2626',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: 4,
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.8rem',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: 4,
+                                                                marginLeft: 4
+                                                            }}
+                                                        >
+                                                            <X size={12} />
+                                                            Hủy
+                                                        </button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1084,13 +1084,13 @@ const TuitionManagement = () => {
                                 </p>
                             </div>
                             <div className="modal-actions">
-                                <button 
+                                <button
                                     className="cancel-btn"
                                     onClick={() => setShowPaymentModal(false)}
                                 >
                                     Hủy
                                 </button>
-                                <button 
+                                <button
                                     className="confirm-btn"
                                     onClick={handlePayment}
                                     disabled={processingPayment}

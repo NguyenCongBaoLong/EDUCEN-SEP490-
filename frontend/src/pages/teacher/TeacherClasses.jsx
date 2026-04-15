@@ -38,7 +38,7 @@ const TeacherClasses = ({ isTA = false }) => {
                         id: c.classId,
                         name: c.className,
                         subject: c.subjectName || '',
-                        gradeLevel: '',
+                        gradeName: c.gradeName || '',
                         mainTeacher: { 
                             name: c.teacherName || 'Chưa phân công', 
                             initials: (c.teacherName || '?').split(' ').pop().charAt(0).toUpperCase() 
