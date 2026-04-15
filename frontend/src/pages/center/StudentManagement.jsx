@@ -47,13 +47,25 @@ const StudentManagement = () => {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const parents = await fetchParents();
-            await fetchGrades();
-            await fetchClasses();
-            await fetchStudents(parents);
+            const [parentsRes, gradesRes, classesRes, usersRes] = await Promise.all([
+                api.get('/Parents'),
+                api.get('/Grades'),
+                api.get('/Classes'),
+                api.get('/admin/users')
+            ]);
             
-            // Also fetch all users for email validation
-            await fetchAllUsers();
+            const parents = parentsRes.data.map(p => ({
+                id: p.userId.toString(),
+                name: p.fullName || p.username,
+                email: p.email,
+                phone: p.phoneNumber || ''
+            }));
+            setParentList(parents);
+            setGradeList(gradesRes.data);
+            setClassList(classesRes.data);
+            setAllUsers(usersRes.data || []);
+            
+            await fetchStudents(parents);
         } finally {
             setIsLoading(false);
         }

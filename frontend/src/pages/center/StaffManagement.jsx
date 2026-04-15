@@ -84,18 +84,19 @@ const StaffManagement = () => {
         }
     };
 
-    const fetchStaff = async () => {
+const fetchStaff = async () => {
 
         try {
 
-            const [teachersRes, assistantsRes] = await Promise.all([
+            const [teachersRes, assistantsRes, usersRes] = await Promise.all([
 
                 api.get('/Teachers'),
 
-                api.get('/Assistants')
+                api.get('/Assistants'),
+
+                api.get('/admin/users').catch(() => ({ data: [] }))
 
             ]);
-
 
 
             const teachers = teachersRes.data.map(t => ({
@@ -129,7 +130,6 @@ const StaffManagement = () => {
             }));
 
 
-
             const assistants = assistantsRes.data.map(a => ({
 
                 id: a.assistantId.toString(),
@@ -155,6 +155,7 @@ const StaffManagement = () => {
                 notes: '',
 
                 status: a.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive',
+
                 accountSent: a.isAccountSent ?? false
 
             }));
@@ -163,8 +164,7 @@ const StaffManagement = () => {
 
             setStaffList([...teachers, ...assistants]);
 
-            // Also fetch all users for email validation
-            await fetchAllUsers();
+            setAllUsers(usersRes.data || []);
 
         } catch (error) {
 

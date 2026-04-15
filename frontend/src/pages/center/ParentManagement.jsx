@@ -48,12 +48,12 @@ const ParentManagement = () => {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [parentsRes, studentsRes] = await Promise.all([
+            const [parentsRes, studentsRes, usersRes] = await Promise.all([
                 api.get('/Parents'),
-                api.get('/Students')
+                api.get('/Students'),
+                api.get('/admin/users')
             ]);
             
-            // Map Parent Data
             const parents = parentsRes.data.map(p => ({
                 id: p.userId.toString(),
                 username: p.username,
@@ -70,7 +70,6 @@ const ParentManagement = () => {
                 childrenCount: p.childrenCount || 0
             }));
 
-            // Map Student Data for linking
             const students = studentsRes.data.map(s => ({
                 id: s.userId.toString(),
                 name: s.fullName,
@@ -80,9 +79,7 @@ const ParentManagement = () => {
 
             setParentList(parents);
             setStudentList(students);
-            
-            // Also fetch all users for email validation
-            await fetchAllUsers();
+            setAllUsers(usersRes.data || []);
         } catch (error) {
             console.error("Fetch data error:", error);
             toast.error("Không thể tải dữ liệu phụ huynh");

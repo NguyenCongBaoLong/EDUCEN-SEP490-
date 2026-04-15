@@ -123,29 +123,20 @@ const AdminDashboard = () => {
     const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchAllData = async () => {
             setLoading(true);
             try {
-                const res = await api.get('/CenterDashboard');
-                if (res.data) setDashboardData(res.data);
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const fetchZaloData = async () => {
-            try {
-                const [statusRes, historyRes, classesRes] = await Promise.allSettled([
-                    zaloOAService.getStatus(),
-                    zaloOAService.getMessageHistory(),
-                    api.get('/Classes'),
+                const [dashboardRes, zaloStatusRes, zaloHistoryRes, classesRes] = await Promise.all([
+                    api.get('/CenterDashboard'),
+                    zaloOAService.getStatus().catch(() => ({ data: null })),
+                    zaloOAService.getMessageHistory().catch(() => ({ data: [] })),
+                    api.get('/Classes').catch(() => ({ data: [] })),
                 ]);
 
-                if (statusRes.status === 'fulfilled') setOaStatus(statusRes.value.data);
-                if (historyRes.status === 'fulfilled') {
-                    setNotifications((historyRes.value.data || []).map(h => ({
+                if (dashboardRes.data) setDashboardData(dashboardRes.data);
+                if (zaloStatusRes.data) setOaStatus(zaloStatusRes.data);
+                if (zaloHistoryRes.data) {
+                    setNotifications((zaloHistoryRes.data || []).map(h => ({
                         id: h.notificationId,
                         title: h.title,
                         content: h.message,
@@ -153,14 +144,15 @@ const AdminDashboard = () => {
                         recipients: 0,
                     })));
                 }
-                if (classesRes.status === 'fulfilled') setClasses(classesRes.value.data || []);
+                if (classesRes.data) setClasses(classesRes.data || []);
             } catch (error) {
-                console.error('Error fetching Zalo OA data:', error);
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
             }
         };
 
-        fetchData();
-        fetchZaloData();
+        fetchAllData();
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);

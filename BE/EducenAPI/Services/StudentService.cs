@@ -23,6 +23,7 @@ namespace EducenAPI.Services
                 .Include(s => s.Parents)
                     .ThenInclude(p => p.ParentNavigation)
                 .Include(s => s.Classes)
+                .AsNoTracking()
                 .ToListAsync();
 
             return students.Select(MapToStudentDto);

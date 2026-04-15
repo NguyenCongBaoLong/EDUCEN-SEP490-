@@ -75,6 +75,7 @@ namespace EducenAPI.Services
         {
             return await _context.Users
                 .Include(u => u.Role)
+                .AsNoTracking()
                 .Select(u => new
                 {
                     u.UserId,

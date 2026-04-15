@@ -409,7 +409,7 @@ namespace EducenAPI.Services
                 .Include(r => r.Session).ThenInclude(s => s.Schedule).ThenInclude(sc => sc.Class)
                 .Include(r => r.RequestedByUser)
                 .Where(r => r.Status == "Pending")
-                .AsQueryable();
+                .AsNoTracking();
 
             if (classId.HasValue)
             {
