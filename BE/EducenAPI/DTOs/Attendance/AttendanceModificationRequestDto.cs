@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace EducenAPI.DTOs.Attendance
 {
     public class CreateAttendanceModificationRequestDto
@@ -6,6 +8,19 @@ namespace EducenAPI.DTOs.Attendance
         public int StudentId { get; set; }
         public string RequestedStatus { get; set; } = null!;
         public string? Reason { get; set; }
+    }
+
+    public class AttendanceModificationStudentRequestDto
+    {
+        public int StudentId { get; set; }
+        public string RequestedStatus { get; set; } = null!;
+        public string? Reason { get; set; }
+    }
+
+    public class CreateAttendanceModificationBatchRequestDto
+    {
+        public int SessionId { get; set; }
+        public List<AttendanceModificationStudentRequestDto> Requests { get; set; } = new();
     }
 
     public class AttendanceModificationRequestDto
