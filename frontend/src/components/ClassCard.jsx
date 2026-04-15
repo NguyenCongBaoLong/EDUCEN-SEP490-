@@ -26,14 +26,38 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
         return colors[subject] || 'gray';
     };
 
-    const isFull = classData.currentStudents >= classData.maxStudents;
+    const isFull = false; // logic removed
 
     return (
         <div className={`class-card ${isDeleting ? 'deleting' : ''}`} onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             <div className="class-card-header">
-                <span className={`class-subject-badge ${getSubjectColor(classData.subject)}`}>
-                    {classData.subject}
-                </span>
+                <div className="class-badges">
+                    <span className={`class-subject-badge ${getSubjectColor(classData.subject)}`}>
+                        {classData.subject}
+                    </span>
+                    {classData.gradeName && (
+                        <span className="class-grade-badge">
+                            {classData.gradeName}
+                        </span>
+                    )}
+                </div>
+                <div className="class-card-status-wrapper">
+                    {(() => {
+                        const hasStarted = classData.startDate ? new Date(classData.startDate) <= new Date() : false;
+                        const statusKey = classData.status !== 'active' 
+                            ? 'inactive' 
+                            : (classData.completedSessions === 0 && !hasStarted ? 'notstarted' : 'active');
+                        const statusLabel = classData.status !== 'active' 
+                            ? (classData.status === 'completed' ? 'Đã kết thúc' : 'Tạm dừng')
+                            : (classData.completedSessions === 0 && !hasStarted ? 'Chưa học' : 'Đang học');
+                        
+                        return (
+                            <span className={`class-card-status ${statusKey}`}>
+                                {statusLabel}
+                            </span>
+                        );
+                    })()}
+                </div>
                 {!readOnly && (
                     <div className="class-card-actions">
                         <button
@@ -89,8 +113,7 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
                     <Users size={14} />
                     <span className="students-label">HỌC SINH</span>
                     <span className="students-count">
-                        {classData.currentStudents} / {classData.maxStudents}
-                        {isFull && <span className="students-full"> [Đã đầy]</span>}
+                        {classData.currentStudents} / {classData.maxStudents !== null && classData.maxStudents !== undefined ? classData.maxStudents : '-'}
                     </span>
                 </div>
 

@@ -1,0 +1,253 @@
+/* ─── Shared SysAdmin page layout ──────────────────── */
+.sa-dashboard {
+    display: flex;
+    min-height: 100vh;
+    background: #f3f4f6;
+}
+
+.sa-dashboard-main {
+    flex: 1;
+    margin-left: 260px;
+    padding: 2rem 2.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+/* Header */
+.sa-dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.sa-dashboard-title {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 0.25rem;
+}
+
+.sa-dashboard-date {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin: 0;
+    text-transform: capitalize;
+}
+
+.sa-system-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 99px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6366f1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+}
+
+/* KPI Grid */
+.sa-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+}
+
+.sa-kpi-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f0f0f0;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.sa-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.sa-kpi-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sa-kpi-blue .sa-kpi-icon {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.sa-kpi-green .sa-kpi-icon {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.sa-kpi-red .sa-kpi-icon {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.sa-kpi-purple .sa-kpi-icon {
+    background: #f5f3ff;
+    color: #8b5cf6;
+}
+
+.sa-kpi-value {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1;
+}
+
+.sa-kpi-label {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    font-weight: 500;
+    margin: 0.25rem 0;
+}
+
+.sa-kpi-sub {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* Overview Card */
+.sa-overview-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f0f0f0;
+}
+
+.sa-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.sa-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.sa-card-title svg {
+    color: #6366f1;
+}
+
+.sa-card-badge {
+    font-size: 0.75rem;
+    background: #f5f3ff;
+    color: #6366f1;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-weight: 600;
+}
+
+/* Shared Table */
+.sa-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sa-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 1rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.sa-table td {
+    padding: 1rem;
+    font-size: 0.9rem;
+    color: #374151;
+    border-bottom: 1px solid #f9fafb;
+    vertical-align: middle;
+}
+
+.sa-table tr:last-child td {
+    border-bottom: none;
+}
+
+.sa-table tr:hover td {
+    background: #fafafa;
+}
+
+.sa-table-name {
+    font-weight: 600;
+    color: #111827 !important;
+}
+
+.sa-domain-tag {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.sa-status-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 99px;
+}
+
+.sa-status-badge.active {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.sa-status-badge.inactive {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* Loading / Empty */
+.sa-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 3rem;
+    color: #6b7280;
+    font-size: 0.9375rem;
+}
+
+.sa-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3.5rem 2rem;
+    color: #9ca3af;
+    font-size: 0.9375rem;
+    text-align: center;
+}
+
+.sa-empty svg {
+    color: #d1d5db;
+}

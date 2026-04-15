@@ -1,29 +1,21 @@
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
-import AttendanceModal from '../../components/AttendanceModal';
+import TeacherInboxDrawer from '../../components/TeacherInboxDrawer';
+import api from '../../services/api';
+
 import ScheduleRequestModal from '../../components/ScheduleRequestModal';
 import '../../css/pages/teacher/TeacherSchedule.css';
 import { useSchedule } from '../../context/ScheduleContext';
 
-// Mock data học sinh (để truyền vào AttendanceModal)
-const MOCK_STUDENTS = [
-    { id: 'ST-001', name: 'Nguyễn Văn An', avatar: 'NA' },
-    { id: 'ST-002', name: 'Trần Thị Bích', avatar: 'TB' },
-    { id: 'ST-003', name: 'Lê Minh Cường', avatar: 'LC' },
-    { id: 'ST-004', name: 'Phạm Thị Dung', avatar: 'PD' },
-    { id: 'ST-005', name: 'Hoàng Văn Em', avatar: 'HE' },
-];
 
 const TeacherSchedule = ({ isTA = false }) => {
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState('week');
 
-    // State cho Modal điểm danh nhanh
-    const [attendanceOpen, setAttendanceOpen] = useState(false);
-    const [selectedSession, setSelectedSession] = useState(null);
 
     // State cho Modal yêu cầu thay đổi
     const [requestOpen, setRequestOpen] = useState(false);
@@ -32,10 +24,12 @@ const TeacherSchedule = ({ isTA = false }) => {
     // Sử dụng shared schedule context
     const { scheduledClasses } = useSchedule();
 
-    // Lọc lịch dạy của giáo viên hiện tại (Trong thực tế sẽ lấy từ Auth context / API)
-    // Ở đây mock là lấy các lớp của "Thầy Minh"
-    const teacherName = "Thầy Nguyễn Minh";
-    const filteredClasses = scheduledClasses.filter(c => c.teacher === teacherName || !c.teacher);
+    // Lấy thông tin giáo viên từ localStorage
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const teacherName = user.fullName || "Giáo viên";
+
+    // Nếu fetch từ /Schedules/teacher/me thì đã được lọc từ BE rồi
+    const filteredClasses = scheduledClasses;
 
     // Get week dates (Monday to Sunday)
     const getWeekDates = () => {
@@ -113,48 +107,30 @@ const TeacherSchedule = ({ isTA = false }) => {
 
     const timeSlots = [
         '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00',
-        '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'
+        '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
     ];
 
     const handleCardClick = (classItem) => {
-        // Chuyển hướng đến chi tiết lớp (giả sử ID lớp nằm trong code hoặc có id riêng)
-        // Trong mockup TeacherClasses, id là 101, 102. Ở đây ta mock tạm id 101.
-        navigate(isTA ? `/ta/classes/101` : `/teacher/classes/101`);
+        if (classItem.classId) {
+            navigate(isTA ? `/ta/classes/${classItem.classId}` : `/teacher/classes/${classItem.classId}`);
+        } else {
+            toast.error("Không tìm thấy thông tin lớp học");
+        }
     };
 
-    const handleQuickAttendance = (e, classItem, date) => {
-        e.stopPropagation();
-        const sessionData = {
-            scheduleId: classItem.id,
-            date: date.toLocaleDateString('vi-VN'),
-            dayLabel: weekDays[getDayIndexForClass(classItem.day)],
-            time: `${classItem.startTime} - ${classItem.endTime}`
-        };
-        setSelectedSession(sessionData);
-        setAttendanceOpen(true);
-    };
-
-    const handleSaveAttendance = (session, payload) => {
-        console.log("Quick Attendance Saved:", session, payload);
-        setAttendanceOpen(false);
-        setSelectedSession(null);
-    };
 
     const getClassStyle = (classItem, index, totalInSlot) => {
-        const startHour = parseInt(classItem.startTime.split(':')[0]);
-        const startMin = parseInt(classItem.startTime.split(':')[1]);
-        const endHour = parseInt(classItem.endTime.split(':')[0]);
-        const endMin = parseInt(classItem.endTime.split(':')[1]);
-
-        const startOffset = (startHour - 8) + (startMin / 60);
-        const duration = (endHour - startHour) + ((endMin - startMin) / 60);
+        const [sh, sm] = classItem.startTime.split(':').map(Number);
+        const [eh, em] = classItem.endTime.split(':').map(Number);
+        const duration = (eh + em / 60) - (sh + sm / 60);
+        const startOffset = (sh - 8) + (sm / 60);
 
         const widthPercentage = totalInSlot > 1 ? 100 / totalInSlot : 100;
         const leftPercentage = index * widthPercentage;
 
         return {
-            top: `${startOffset * 70}px`,
-            height: `${duration * 70 - 4}px`,
+            top: `${startOffset * 85}px`,
+            height: `${duration * 85 - 4}px`,
             backgroundColor: classItem.color,
             width: `${widthPercentage}%`,
             left: `${leftPercentage}%`
@@ -171,13 +147,16 @@ const TeacherSchedule = ({ isTA = false }) => {
                         <h1>Lịch dạy của tôi</h1>
                         <p className="ts-subtitle">Chào {teacherName}, bạn có {filteredClasses.length} buổi dạy được phân công</p>
                     </div>
-                    <button className="ts-btn-request" onClick={() => {
-                        setRequestInitialData(null);
-                        setRequestOpen(true);
-                    }}>
-                        <MessageSquare size={18} />
-                        Yêu cầu thay đổi
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <TeacherInboxDrawer />
+                        <button className="ts-btn-request" onClick={() => {
+                            setRequestInitialData(null);
+                            setRequestOpen(true);
+                        }}>
+                            <MessageSquare size={18} />
+                            Yêu cầu thay đổi
+                        </button>
+                    </div>
                 </div>
 
                 <div className="ts-controls">
@@ -230,12 +209,24 @@ const TeacherSchedule = ({ isTA = false }) => {
                             <div className="ts-time-column">
                                 <div className="ts-day-header"></div>
                                 {timeSlots.map((time) => (
-                                    <div key={time} className="ts-time-slot">{time}</div>
+                                    <div key={time} className="ts-time-slot">
+                                        <span className="ts-time-label">{time}</span>
+                                    </div>
                                 ))}
                             </div>
 
                             {weekDates.map((date, dayIndex) => {
-                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                const dayClasses = filteredClasses.filter(c => {
+                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
+                                    if (!isSameDay) return false;
+
+                                    // Filter by date range
+                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                    return check >= start && check <= end;
+                                });
 
                                 // Group overlapping
                                 const groupedClasses = [];
@@ -273,24 +264,31 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                             key={classItem.id}
                                                             className="ts-class-card"
                                                             style={getClassStyle(classItem, idx, group.length)}
+                                                            title={`${classItem.code} - ${classItem.name}\nGiờ: ${classItem.startTime} - ${classItem.endTime}\nPhòng: ${classItem.roomName || 'N/A'}\nGiáo viên: ${classItem.teacher || 'N/A'}`}
                                                             onClick={() => handleCardClick(classItem)}
                                                         >
                                                             <div className="ts-class-code">
                                                                 {classItem.code}
-                                                                {date.toDateString() === new Date().toDateString() && (
-                                                                    <button
-                                                                        className="ts-btn-quick-att"
-                                                                        onClick={(e) => handleQuickAttendance(e, classItem, date)}
-                                                                        title="Điểm danh nhanh"
-                                                                    >
-                                                                        <CheckCircle size={14} />
-                                                                    </button>
-                                                                )}
                                                             </div>
                                                             <div className="ts-class-name">{classItem.name}</div>
-                                                            <div className="ts-class-time">
-                                                                <Clock size={10} />
-                                                                {classItem.startTime} - {classItem.endTime}
+                                                            <div className="ts-class-time" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                    <Clock size={10} />
+                                                                    {classItem.startTime} - {classItem.endTime}
+                                                                </span>
+                                                                <span style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    background: 'rgba(255, 255, 255, 0.25)',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '4px',
+                                                                    fontWeight: 700,
+                                                                    fontSize: '0.65rem'
+                                                                }}>
+                                                                    <MapPin size={10} />
+                                                                    {classItem.roomName || 'N/A'}
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     ))
@@ -308,14 +306,26 @@ const TeacherSchedule = ({ isTA = false }) => {
                             <div className="ts-time-column">
                                 <div className="ts-day-header"></div>
                                 {timeSlots.map((time) => (
-                                    <div key={time} className="ts-time-slot">{time}</div>
+                                    <div key={time} className="ts-time-slot">
+                                        <span className="ts-time-label">{time}</span>
+                                    </div>
                                 ))}
                             </div>
 
                             {(() => {
                                 const date = new Date(currentDate);
                                 const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                const dayClasses = filteredClasses.filter(c => {
+                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
+                                    if (!isSameDay) return false;
+
+                                    // Filter by date range
+                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                    return check >= start && check <= end;
+                                });
 
                                 return (
                                     <div className="ts-day-column-single">
@@ -331,19 +341,11 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                         key={classItem.id}
                                                         className="ts-class-card"
                                                         style={getClassStyle(classItem, 0, 1)}
+                                                        title={`${classItem.code} - ${classItem.name}\nGiờ: ${classItem.startTime} - ${classItem.endTime}\nPhòng: ${classItem.roomName || 'N/A'}\nGiáo viên: ${classItem.teacher || 'N/A'}`}
                                                         onClick={() => handleCardClick(classItem)}
                                                     >
                                                         <div className="ts-class-code">
                                                             {classItem.code}
-                                                            {date.toDateString() === new Date().toDateString() && (
-                                                                <button
-                                                                    className="ts-btn-quick-att"
-                                                                    onClick={(e) => handleQuickAttendance(e, classItem, date)}
-                                                                    title="Điểm danh nhanh"
-                                                                >
-                                                                    <CheckCircle size={14} />
-                                                                </button>
-                                                            )}
                                                         </div>
                                                         <div className="ts-class-name">{classItem.name}</div>
                                                         <div className="ts-class-time">
@@ -378,7 +380,17 @@ const TeacherSchedule = ({ isTA = false }) => {
                                             ))}
                                             {monthDates.map((date, i) => {
                                                 const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                                const dayClasses = filteredClasses.filter(c => getDayIndexForClass(c.day) === dayIndex);
+                                                const dayClasses = filteredClasses.filter(c => {
+                                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
+                                                    if (!isSameDay) return false;
+
+                                                    // Filter by date range
+                                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+                                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                                    return check >= start && check <= end;
+                                                });
                                                 const isToday = date.toDateString() === new Date().toDateString();
 
                                                 return (
@@ -407,26 +419,31 @@ const TeacherSchedule = ({ isTA = false }) => {
                 </div>
             </main>
 
-            {/* Attendance Modal Quich View */}
-            {attendanceOpen && selectedSession && (
-                <AttendanceModal
-                    isOpen={attendanceOpen}
-                    onClose={() => { setAttendanceOpen(false); setSelectedSession(null); }}
-                    onSave={handleSaveAttendance}
-                    session={selectedSession}
-                    students={MOCK_STUDENTS}
-                />
-            )}
 
             {/* Request Change Modal */}
             {requestOpen && (
                 <ScheduleRequestModal
                     isOpen={requestOpen}
                     onClose={() => setRequestOpen(false)}
-                    onSend={(payload) => {
-                        console.log("Schedule Request Sent:", payload);
-                        // Ở đây có thể thêm toast thông báo thành công
-                        setRequestOpen(false);
+                    onSend={async (payload) => {
+                        try {
+                            const typeLabels = {
+                                reschedule: 'Đổi lịch dạy',
+                                teacher_swap: 'Đổi giáo viên',
+                                absence: 'Xin nghỉ / Hủy buổi',
+                                other: 'Thay đổi khác',
+                            };
+                            const classInfo = payload.classInfo ? ` [${payload.classInfo.code} - ${payload.classInfo.name}]` : '';
+                            const Title = `[${typeLabels[payload.type] || 'Yêu cầu'}]${classInfo}`;
+                            const Content = `Loại yêu cầu: ${typeLabels[payload.type] || payload.type}\nLý do: ${payload.reason || 'Không có'}`;
+
+                            await api.post('/support-requests', { Title, Content });
+                            toast.success('Yêu cầu đã được gửi đến admin!');
+                            setRequestOpen(false);
+                        } catch (error) {
+                            console.error('Error sending request:', error);
+                            toast.error(error.response?.data?.message || 'Gửi yêu cầu thất bại.');
+                        }
                     }}
                     initialData={requestInitialData}
                 />
@@ -436,3 +453,5 @@ const TeacherSchedule = ({ isTA = false }) => {
 };
 
 export default TeacherSchedule;
+
+

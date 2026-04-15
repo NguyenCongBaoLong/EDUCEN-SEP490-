@@ -1,16 +1,27 @@
 ﻿using EducenAPI.Models;
 using EducenAPI.DTOs;
 using EducenAPI.DTOs.Tenant;
+using System.Threading.Tasks;
 
 namespace EducenAPI.Services.TenantService
 {
     public interface ITenantService
     {
-        Tenant CreateTenant(CreateTenantRequest request);
+        Task<Tenant> CreateTenant(CreateTenantRequest request);
         IEnumerable<Tenant> GetAllTenants();
 
         Tenant? GetTenantById(string tenantId);
+        Task<Tenant?> GetTenantByIdAsync(string tenantId);
 
         Tenant? UpdateTenant(string tenantId, UpdateTenantRequest request);
+        IEnumerable<TenantWithSubscriptionRequest> GetAllTenantDetails();
+
+        TenantWithSubscriptionRequest? GetTenantDetails(string tenantId);
+        Task<object> CreateAdminForTenantAsync(string tenantId, CreateTenantAdminDto dto);
+        Task<List<object>> GetTenantAdminsAsync(string tenantId);
+
+        Task<List<TenantCreditLedger>> GetCreditLedgerAsync(string tenantId, int page, int pageSize);
+        Task<TenantCreditLedger> AdjustTenantCreditAsync(string tenantId, decimal amount, string note, string referenceType = "ManualAdjustment", string? referenceId = null);
+        Task<TenantCreditLedger> SetTenantCreditBalanceAsync(string tenantId, decimal newBalance, string note, string? referenceId = null);
     }
 }

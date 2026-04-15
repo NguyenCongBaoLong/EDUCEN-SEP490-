@@ -1,12 +1,21 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-    MapPin, Phone, Mail, Globe, Clock, BookOpen, Star, Quote, Users, Award,
-    TrendingUp, Pencil, X, Check, LayoutDashboard, Eye, Plus, Trash2, ImageIcon, Upload, LogOut
+    Users, Award, Star, TrendingUp, BookOpen,
+    Pencil, Eye, Check, X, LayoutDashboard,
+    ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Upload, Phone,
+    Mail, MapPin, Globe, ArrowRight, Quote,
+    Clock, Calendar, LogOut, Plus, Trash2,
+    Facebook, Youtube, Instagram,
+    Image as ImageIcon
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
 import { useSchedule } from '../../context/ScheduleContext';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import '../../css/pages/center/CenterHome.css';
+import toast from 'react-hot-toast';
+
+
 
 /* ─── Initial data ──────────────────────────────────── */
 const INIT = {
@@ -45,6 +54,25 @@ const INIT = {
     ],
     quoteText: 'Giáo dục không phải là việc đổ đầy một cái thùng, mà là thắp sáng ngọn lửa đam mê học hỏi. Mỗi học sinh đều có tiềm năng riêng, và sứ mệnh của chúng tôi là giúp các em khám phá và phát triển những điều tốt đẹp nhất trong bản thân.',
     copyright: '© 2024 Trung Tâm Gia Sư Elite Scholars. All rights reserved.',
+    primaryColor: '#007bff',
+    backgroundColor: '#f0f4f8',
+    facebookUrl: '',
+    youtubeUrl: '',
+    instagramUrl: '',
+    displayConfig: JSON.stringify({
+        sections: [
+            { id: 'hero', enabled: true, title: 'Đầu trang' },
+            { id: 'about', enabled: true, title: 'Giới thiệu' },
+            { id: 'teachers', enabled: true, title: 'Giáo viên' },
+            { id: 'courses', enabled: true, title: 'Khóa học' },
+            { id: 'schedule', enabled: true, title: 'Lịch học' },
+            { id: 'upcoming-classes', enabled: true, title: 'Các lớp học' },
+            { id: 'gallery', enabled: true, title: 'Thư viện ảnh' },
+            { id: 'quote', enabled: true, title: 'Châm ngôn' },
+            { id: 'enrollment', enabled: true, title: 'Đăng ký' }
+        ]
+    }),
+    staffs: []
 };
 
 const ICON_MAP = {
@@ -62,7 +90,7 @@ const dayToColumnIndex = (day) => (day === 0 ? 6 : day - 1);
 
 
 /* ── Inline edit helper ── */
-const InlineEditField = ({ draft, set, field, className, placeholder, multiline, rows = 3 }) =>
+const InlineEditField = ({ draft, set, field, className, placeholder, multiline, rows = 3, maxLength }) =>
     multiline ? (
         <textarea
             className={`admin-edit-textarea${className ? ' ' + className : ''}`}
@@ -70,6 +98,7 @@ const InlineEditField = ({ draft, set, field, className, placeholder, multiline,
             onChange={e => set(field, e.target.value)}
             rows={rows}
             placeholder={placeholder}
+            maxLength={maxLength}
         />
     ) : (
         <input
@@ -77,81 +106,566 @@ const InlineEditField = ({ draft, set, field, className, placeholder, multiline,
             value={draft[field] || ''}
             onChange={e => set(field, e.target.value)}
             placeholder={placeholder}
+            maxLength={maxLength}
         />
     );
 
 /* ── Logo render helper ── */
 const LogoDisplay = ({ logoSrc, name }) => (
-    logoSrc
-        ? <img src={logoSrc} alt="logo" className="center-logo-img" />
-        : <><BookOpen size={24} /><span>{name}</span></>
+    <>
+        {logoSrc ? (
+            <img src={logoSrc} alt="logo" className="center-logo-img" />
+        ) : (
+            <BookOpen size={24} />
+        )}
+        <span>{name}</span>
+    </>
 );
 
+const BrandingStyles = ({ primaryColor, backgroundColor }) => {
+    const safePrimary = primaryColor || '#0066FF';
+    const safeBg = backgroundColor || '#ffffff';
+    const rgb = hexToRgb(safePrimary);
+    
+    return (
+        <style>{`
+            :root {
+                --center-primary: ${safePrimary};
+                --center-primary-rgb: ${rgb};
+                --center-primary-light: rgba(${rgb}, 0.1);
+                --center-bg: ${safeBg};
+            }
+
+            /* Page background - Override default gradient */
+            .center-home {
+                background: ${safeBg} !important;
+                background-image: none !important;
+            }
+
+            .center-btn-apply, .center-btn-submit, .center-btn-hero {
+                background: ${safePrimary} !important;
+                border-color: ${safePrimary} !important;
+                color: #fff !important;
+            }
+
+            /* Section badges */
+            .center-section-badge, .center-journey-badge {
+                background: rgba(${rgb}, 0.12) !important;
+                color: ${safePrimary} !important;
+            }
+
+            /* Highlight icons */
+            .center-highlight-icon {
+                background: rgba(${rgb}, 0.12) !important;
+                color: ${safePrimary} !important;
+            }
+
+            /* Underline titles */
+            .teachers-title-underline {
+                background: linear-gradient(90deg, ${safePrimary}, ${safePrimary}66) !important;
+            }
+
+            /* Links & hover */
+            .center-home .center-nav-link:hover, .center-home .center-footer-contact a:hover {
+                color: ${safePrimary} !important;
+            }
+
+            /* Footer Header Fix - Forced Visibility */
+            .center-home .center-footer-section h3, 
+            .center-home .center-footer-section h4 {
+                color: #1e293b !important;
+                display: flex !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            .center-home .center-footer-tagline, 
+            .center-home .center-footer-section p, 
+            .center-home .center-footer-contact a, 
+            .center-home .center-footer-links a {
+                color: #64748b !important;
+            }
+
+            /* Schedule */
+            .center-schedule-slot {
+                border-left-color: ${primaryColor} !important;
+            }
+            .center-slot-subject {
+                color: ${primaryColor} !important;
+            }
+
+            /* Footer headings */
+            .center-footer h3, .center-footer h4 {
+                color: rgba(255,255,255,0.9) !important;
+            }
+
+            /* Social icon hover */
+            .social-icon:hover {
+                background: ${primaryColor} !important;
+                border-color: ${primaryColor} !important;
+            }
+
+            /* Admin edit mode teacher avatar hover */
+            .admin-mode .editable-avatar:hover {
+                border-color: ${primaryColor} !important;
+            }
+
+            /* Add teacher card */
+            .teacher-add-card {
+                border-color: ${primaryColor}66 !important;
+                color: ${primaryColor} !important;
+            }
+            .teacher-add-card:hover {
+                background: rgba(${rgb}, 0.06) !important;
+            }
+        `}</style>
+
+    );
+};
+
+
+// Helper hex to rgb
+function hexToRgb(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+}
+
 /* ─── Component ─────────────────────────────────────── */
-const CenterHome = ({ isAdmin = false }) => {
+const CenterHome = ({ isAdmin: isAdminProp = false }) => {
+    // 1. Core Hooks
     const navigate = useNavigate();
-    const { scheduledClasses } = useSchedule();
+    const location = useLocation();
+    const { scheduledClasses = [], refreshSchedules } = useSchedule() || {};
     const { user, logout } = useAuth();
     const logoInputRef = useRef(null);
 
-    /* Enrollment form */
-    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
-    const handleFormChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
-    const handleSubmit = e => {
-        e.preventDefault();
-        alert('Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
-        setForm({ firstName: '', lastName: '', email: '', phone: '', preferredCourse: '' });
-    };
-
-    /* Edit state */
-    const [editMode, setEditMode] = useState(false);
+    // 2. Base State
     const [saved, setSaved] = useState({ ...INIT });
     const [draft, setDraft] = useState({ ...INIT });
+    const [editMode, setEditMode] = useState(false);
+    const [showCmsHub, setShowCmsHub] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [activeAdminTab, setActiveAdminTab] = useState('branding');
+    const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+    const [scrolled, setScrolled] = useState(false);
 
+    // 3. Enrollment Form State
+    const [form, setForm] = useState({ 
+        firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '',
+        parentName: '', parentPhone: '', parentEmail: '',
+        gradeId: '', classId: ''
+    });
+    const [isSubmittingEnrollment, setIsSubmittingEnrollment] = useState(false);
+    const [formErrors, setFormErrors] = useState({});
+    const [availableSubjects, setAvailableSubjects] = useState([]);
+    const [grades, setGrades] = useState([]);
+    const [upcomingClasses, setUpcomingClasses] = useState([]);
+    const [showAllClasses, setShowAllClasses] = useState(false);
+    const [showParentInfo, setShowParentInfo] = useState(false);
+
+    // 4. File State
+    const [logoFile, setLogoFile] = useState(null);
+    const [fileBuffer, setFileBuffer] = useState({
+        hero: {},   // {index: File}
+        staff: {},  // {index: File}
+        gallery: {}, // {index: File}
+        intro: null,
+        quote: null
+    });
+
+    // 5. Helpers & Derived State
+    const isAdmin = isAdminProp && user?.role === 'Admin';
     const set = (field, value) => setDraft(p => ({ ...p, [field]: value }));
-    const setNested = (field, index, key, value) =>
-        setDraft(p => {
-            const arr = [...p[field]];
-            arr[index] = { ...arr[index], [key]: value };
-            return { ...p, [field]: arr };
+
+    // 6. Data Fetch Functions
+    const fetchCenterData = async () => {
+        try {
+            const [response, classesRes] = await Promise.all([
+                api.get('/CenterHome'),
+                api.get('/CenterHome/classes').catch(() => ({ data: [] }))
+            ]);
+            
+            if (response.data) {
+                const data = response.data;
+                data.highlights = data.highlights || [];
+                data.courses = data.courses || [];
+                data.images = data.images || [];
+                data.heroImages = data.heroImages || [];
+                data.staffs = data.staffs || [];
+
+                let config = data.displayConfig ? JSON.parse(data.displayConfig) : JSON.parse(INIT.displayConfig);
+                const defaultConfig = JSON.parse(INIT.displayConfig);
+
+                const existingIds = config.sections.map(s => s.id);
+                const missingSections = defaultConfig.sections.filter(s => !existingIds.includes(s.id));
+                
+                if (missingSections.length > 0) {
+                    config.sections = [...config.sections, ...missingSections];
+                    data.displayConfig = JSON.stringify(config);
+                }
+
+                setSaved(data);
+                setDraft(data);
+            }
+
+            let classes = classesRes.data || [];
+            const now = new Date();
+            classes.sort((a, b) => {
+                const dateA = new Date(a.startDate || 0);
+                const dateB = new Date(b.startDate || 0);
+                
+                const isUpcomingA = dateA > now;
+                const isUpcomingB = dateB > now;
+                
+                if (isUpcomingA && !isUpcomingB) return -1;
+                if (!isUpcomingA && isUpcomingB) return 1;
+                
+                return dateA - dateB;
+            });
+
+            setUpcomingClasses(classes);
+            
+            const extGrades = [];
+            const gradeIds = new Set();
+            const extSubjects = new Set();
+            
+            classes.forEach(c => {
+                if (c.gradeId && !gradeIds.has(c.gradeId)) {
+                    gradeIds.add(c.gradeId);
+                    extGrades.push({ gradeId: c.gradeId, gradeName: c.gradeName || `Khối ${c.gradeId}` });
+                }
+                if (c.subjectName) {
+                    extSubjects.add(c.subjectName);
+                }
+            });
+            
+            setGrades(extGrades.sort((a,b) => a.gradeId - b.gradeId));
+            setAvailableSubjects(Array.from(extSubjects).sort());
+        } catch (error) {
+            console.error('Error fetching center data:', error);
+            if (error.response?.status === 404) {
+                setSaved({ ...INIT });
+                setDraft({ ...INIT });
+            }
+        }
+    };
+
+    /* --- Effects & Actions --- */
+
+useEffect(() => {
+        fetchCenterData();
+        if (refreshSchedules) refreshSchedules();
+    }, [refreshSchedules]);
+
+    /* --- Scroll & Sticky Header Animations --- */
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 50);
+        };
+        window.addEventListener('scroll', handleScroll);
+        
+        const observerOptions = {
+            threshold: 0.12,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        const elements = document.querySelectorAll('.reveal');
+        elements.forEach(el => observer.observe(el));
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            observer.disconnect();
+        };
+    }, [saved, draft, upcomingClasses, availableSubjects, scheduledClasses, showAllClasses, currentHeroSlide]); // Re-run when content, view state, or slide changes
+
+    const handleFormChange = e => {
+        const { name, value } = e.target;
+        setForm(p => ({ ...p, [name]: value }));
+
+        // Real-time validation for phone
+        if (name === 'phone' || name === 'parentPhone') {
+            const normalized = value.replace(/[\s\.\-\(\)]/g, "");
+            if (value && normalized.length !== 10) {
+                setFormErrors(prev => ({ ...prev, [name]: "Số điện thoại phải có đúng 10 chữ số" }));
+            } else if (value && !/^\d{10}$/.test(normalized)) {
+                setFormErrors(prev => ({ ...prev, [name]: "Số điện thoại chỉ được chứa chữ số" }));
+            } else {
+                setFormErrors(prev => ({ ...prev, [name]: null }));
+            }
+        }
+    };
+
+    const handleSubmitEnrollment = async e => {
+        e.preventDefault();
+        setIsSubmittingEnrollment(true);
+
+        // Frontend validation - Normalize phone before testing
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^\d{10}$/; // Nới lỏng: chỉ cần 10 số
+
+        const normalizedPhone = form.phone.replace(/[\s\.\-\(\)]/g, "");
+        const normalizedParentPhone = form.parentPhone ? form.parentPhone.replace(/[\s\.\-\(\)]/g, "") : "";
+
+        if (!emailRegex.test(form.email)) {
+            toast.error("Email không hợp lệ!");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+        
+        // Final check for errors in state
+        if (formErrors.phone) {
+            toast.error(formErrors.phone);
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+
+        if (!phoneRegex.test(normalizedPhone)) {
+            toast.error("Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số.");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+
+        // Validate optional parent info if partially filled
+        if (form.parentEmail && !emailRegex.test(form.parentEmail)) {
+            toast.error("Email phụ huynh không hợp lệ!");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+        if (normalizedParentPhone && !phoneRegex.test(normalizedParentPhone)) {
+            toast.error("Số điện thoại phụ huynh không hợp lệ!");
+            setIsSubmittingEnrollment(false);
+            return;
+        }
+
+        try {
+            const payload = { 
+                ...form,
+                phone: normalizedPhone, // Send normalized
+                parentPhone: normalizedParentPhone || form.parentPhone, // Send normalized if valid
+                gradeId: form.gradeId === "" ? null : parseInt(form.gradeId),
+                classId: form.classId === "" ? null : parseInt(form.classId)
+            };
+
+            const response = await api.post('/enrollment-requests', payload);
+
+            if (response.status === 200 || response.status === 201) {
+                toast.success(response.data.message || 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
+                setForm({ 
+                    firstName: '', lastName: '', email: '', phone: '', preferredCourse: '', address: '',
+                    parentName: '', parentPhone: '', parentEmail: '',
+                    gradeId: '', classId: ''
+                });
+            }
+        } catch (error) {
+            console.error('Enrollment error:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+        } finally {
+            setIsSubmittingEnrollment(false);
+        }
+    };
+
+    const handleClassSelect = (cls) => {
+        setForm(prev => ({
+            ...prev,
+            gradeId: cls.gradeId || '',
+            classId: cls.classId,
+            preferredCourse: cls.subjectName || ''
+        }));
+        
+        // Scroll to form
+        const element = document.getElementById('enrollment');
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    const triggerImageUpload = (callback) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const previewUrl = URL.createObjectURL(file);
+            callback(previewUrl, file);
+        };
+        input.click();
+    };
+
+    /* --- Action Helpers --- */
+    const addHeroImage = () => {
+        const newHero = {
+            imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=2070',
+            title: 'Tiêu đề mới',
+            subTitle: 'Mô tả mới',
+            buttonText: 'Xem thêm',
+            buttonLink: '#'
+        };
+        set('heroImages', [...(draft.heroImages || []), newHero]);
+    };
+
+    const removeHeroImage = (idx) => {
+        const h = [...(draft.heroImages || [])];
+        h.splice(idx, 1);
+        set('heroImages', h);
+        setFileBuffer(p => {
+            const next = { ...p, hero: { ...p.hero } };
+            delete next.hero[idx];
+            return next;
         });
+    };
 
-    const handleSave = () => { setSaved({ ...draft }); setEditMode(false); };
-    const handleCancel = () => { setDraft({ ...saved }); setEditMode(false); };
+    const addStaff = () => {
+        const newStaff = { name: 'Giáo viên mới', role: 'Vị trí', bio: '', avatarUrl: '' };
+        set('staffs', [...(draft.staffs || []), newStaff]);
+    };
 
-    /* Logo upload */
+    const removeStaff = (idx) => {
+        const s = [...(draft.staffs || [])];
+        s.splice(idx, 1);
+        set('staffs', s);
+        setFileBuffer(p => {
+            const next = { ...p, staff: { ...p.staff } };
+            delete next.staff[idx];
+            return next;
+        });
+    };
+
+    const addHighlight = () => {
+        const newH = { icon: 'Star', text: 'Ưu điểm mới' };
+        set('highlights', [...(draft.highlights || []), newH]);
+    };
+
+    const removeHighlight = (idx) => {
+        const h = [...(draft.highlights || [])];
+        h.splice(idx, 1);
+        set('highlights', h);
+    };
+
+    const handleActualSave = async () => {
+        setIsSaving(true);
+        try {
+            const formData = new FormData();
+
+            const fields = [
+                'name', 'tagline', 'footerTagline', 'address', 'city', 'phone',
+                'email', 'website', 'introTitle', 'introDescription', 'quoteText',
+                'copyright', 'primaryColor', 'backgroundColor', 'facebookUrl', 'instagramUrl', 'youtubeUrl',
+                'displayConfig'
+            ];
+            fields.forEach(f => formData.append(f, draft[f] || ''));
+
+            if (logoFile) {
+                formData.append('LogoFile', logoFile);
+            } else if (draft.logo && !draft.logo.startsWith('blob:') && !draft.logo.startsWith('data:')) {
+                formData.append('ExistingLogoUrl', draft.logo);
+            }
+
+            if (fileBuffer.intro) formData.append('IntroFile', fileBuffer.intro);
+            else if (draft.introImage) formData.append('ExistingIntroImageUrl', draft.introImage);
+
+            if (fileBuffer.quote) formData.append('QuoteFile', fileBuffer.quote);
+            else if (draft.quoteImage) formData.append('ExistingQuoteImageUrl', draft.quoteImage);
+
+            let heroFileCount = 0;
+            (draft.heroImages || []).forEach((hero, i) => {
+                const isObject = typeof hero === 'object';
+                const url = isObject ? hero.imageUrl : hero;
+                if (url && !url.startsWith('blob:') && !url.startsWith('data:')) {
+                    formData.append(`HeroImages[${i}].ExistingImageUrl`, url);
+                }
+                if (fileBuffer.hero[i]) {
+                    formData.append('HeroImageFiles', fileBuffer.hero[i]);
+                    formData.append(`HeroImages[${i}].FileIndex`, heroFileCount++);
+                }
+                if (isObject) {
+                    formData.append(`HeroImages[${i}].Title`, hero.title || '');
+                    formData.append(`HeroImages[${i}].SubTitle`, hero.subTitle || '');
+                    formData.append(`HeroImages[${i}].ButtonText`, hero.buttonText || '');
+                    formData.append(`HeroImages[${i}].ButtonLink`, hero.buttonLink || '');
+                }
+            });
+
+            let staffFileCount = 0;
+            (draft.staffs || []).forEach((s, i) => {
+                if (s.avatarUrl && !s.avatarUrl.startsWith('blob:') && !s.avatarUrl.startsWith('data:')) {
+                    formData.append(`Staffs[${i}].ExistingAvatarUrl`, s.avatarUrl);
+                }
+                if (fileBuffer.staff[i]) {
+                    formData.append('StaffAvatarFiles', fileBuffer.staff[i]);
+                    formData.append(`Staffs[${i}].FileIndex`, staffFileCount++);
+                }
+                formData.append(`Staffs[${i}].Name`, s.name || '');
+                formData.append(`Staffs[${i}].Role`, s.role || '');
+                formData.append(`Staffs[${i}].Bio`, s.bio || '');
+            });
+
+            // 6. Highlights
+            (draft.highlights || []).forEach((h, i) => {
+                formData.append(`Highlights[${i}].Icon`, h.icon || '');
+                formData.append(`Highlights[${i}].Text`, h.text || '');
+            });
+
+            // 7. Gallery (Images)
+            (draft.images || []).forEach((img) => {
+                if (img && !img.startsWith('blob:') && !img.startsWith('data:')) {
+                    formData.append('ExistingImageUrls', img);
+                }
+            });
+            Object.values(fileBuffer.gallery).forEach(f => {
+                if (f) formData.append('ImageFiles', f);
+            });
+
+            const res = await api.post('/CenterHome/save', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (res.status === 200) {
+                toast.success('Đã lưu thay đổi thành công!');
+                setSaved({ ...draft });
+                setEditMode(false);
+                setShowCmsHub(false);
+                setFileBuffer({ hero: {}, staff: {}, gallery: {}, intro: null, quote: null });
+                setLogoFile(null);
+                await fetchCenterData();
+            }
+        } catch (err) {
+            console.error('Save error:', err);
+            toast.error('Có lỗi xảy ra khi lưu: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleCancel = () => {
+        setDraft({ ...saved });
+        setEditMode(false);
+        setShowCmsHub(false);
+        setLogoFile(null);
+        setFileBuffer({ hero: {}, staff: {}, gallery: {}, intro: null, quote: null });
+    };
+
     const handleLogoUpload = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = ev => set('logo', ev.target.result);
-        reader.readAsDataURL(file);
+        setLogoFile(file);
+        const url = URL.createObjectURL(file);
+        set('logo', url);
     };
 
-    /* Highlight helpers */
-    const addHighlight = () =>
-        setDraft(p => ({ ...p, highlights: [...p.highlights, { icon: 'Star', text: 'Điểm nổi bật mới' }] }));
-    const removeHighlight = i =>
-        setDraft(p => ({ ...p, highlights: p.highlights.filter((_, idx) => idx !== i) }));
-
-    /* Course helpers */
-    const addCourse = () =>
-        setDraft(p => ({ ...p, courses: [...p.courses, { value: `course_${Date.now()}`, label: 'Khóa học mới' }] }));
-    const removeCourse = i =>
-        setDraft(p => ({ ...p, courses: p.courses.filter((_, idx) => idx !== i) }));
-
-    /* Image helpers */
-    const addImage = () =>
-        setDraft(p => ({ ...p, images: [...p.images, 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=500&fit=crop'] }));
-    const removeImage = i =>
-        setDraft(p => ({ ...p, images: p.images.filter((_, idx) => idx !== i) }));
-
-    /* Data source */
     const d = editMode ? draft : saved;
+    const config = JSON.parse(d.displayConfig || INIT.displayConfig);
 
-    /* Hero Slider */
-    const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
-
+    /* Hero Slider Auto-play */
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentHeroSlide(prev => (prev + 1) % (d.heroImages?.length || 1));
@@ -159,24 +673,46 @@ const CenterHome = ({ isAdmin = false }) => {
         return () => clearInterval(interval);
     }, [d.heroImages]);
 
-    return (
-        <div className={`center-home${isAdmin ? ' has-admin-bar' : ''}`}>
 
-            {/* ── Admin Top Bar ── */}
+    return (
+        <div className={`center-home${editMode ? ' admin-mode' : ''}`}>
+            <BrandingStyles primaryColor={d.primaryColor} backgroundColor={d.backgroundColor} />
+
+            {/* ── Admin Toolbar ── */}
             {isAdmin && (
                 <div className={`admin-top-bar${editMode ? ' editing' : ''}`}>
                     <div className="admin-top-bar-left">
-                        {editMode ? <><Pencil size={15} /><span>Đang chỉnh sửa trang</span></>
-                            : <><Eye size={15} /><span>Bạn đang xem với tư cách <strong>Quản trị viên</strong></span></>}
+                        {editMode ? (
+                            <>
+                                <Pencil size={15} />
+                                <span>Đang chỉnh sửa trang</span>
+                            </>
+                        ) : (
+                            <>
+                                <Eye size={15} />
+                                <span>
+                                    Bạn đang xem với tư cách <strong>Quản trị viên</strong>
+                                </span>
+                            </>
+                        )}
                     </div>
                     <div className="admin-top-bar-actions">
                         {editMode ? (
                             <>
-                                <button className="admin-bar-btn save" onClick={handleSave}><Check size={15} /> Lưu thay đổi</button>
-                                <button className="admin-bar-btn cancel" onClick={handleCancel}><X size={15} /> Hủy</button>
+                                <button className="admin-bar-btn cms-toggle" onClick={() => setShowCmsHub(!showCmsHub)}>
+                                    <LayoutDashboard size={15} /> {showCmsHub ? 'Ẩn bảng Cài đặt' : 'Mở bảng Cài đặt'}
+                                </button>
+                                <button className="admin-bar-btn save" onClick={handleActualSave} disabled={isSaving}>
+                                    {isSaving ? 'Đang lưu...' : <><Check size={15} /> Lưu thay đổi</>}
+                                </button>
+                                <button className="admin-bar-btn cancel" onClick={handleCancel} disabled={isSaving}>
+                                    <X size={15} /> Hủy
+                                </button>
                             </>
                         ) : (
-                            <button className="admin-bar-btn edit" onClick={() => setEditMode(true)}><Pencil size={15} /> Chỉnh sửa trang</button>
+                            <button className="admin-bar-btn edit" onClick={() => { setEditMode(true); setShowCmsHub(true); }}>
+                                <Pencil size={15} /> Chỉnh sửa trang
+                            </button>
                         )}
                         <button className="admin-bar-btn manage" onClick={() => navigate('/center/dashboard')}>
                             <LayoutDashboard size={15} /> Quản lý
@@ -185,39 +721,270 @@ const CenterHome = ({ isAdmin = false }) => {
                 </div>
             )}
 
+            {/* ── Admin CMS Hub (Visible in Edit Mode) ── */}
+            {editMode && showCmsHub && (
+                <div className="admin-cms-overlay">
+                    <div className="admin-cms-hub">
+                        <div className="admin-cms-header">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                <h3><LayoutDashboard size={18} /> Cấu hình Mini CMS</h3>
+                                <button
+                                    onClick={() => setShowCmsHub(false)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                                    title="Ẩn bảng điều khiển"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="admin-cms-tabs">
+                                <button
+                                    className={`admin-cms-tab ${activeAdminTab === 'branding' ? 'active' : ''}`}
+                                    onClick={() => setActiveAdminTab('branding')}
+                                >
+                                    <TrendingUp size={16} /> Thương hiệu
+                                </button>
+                                <button
+                                    className={`admin-cms-tab ${activeAdminTab === 'slides' ? 'active' : ''}`}
+                                    onClick={() => setActiveAdminTab('slides')}
+                                >
+                                    <ImageIcon size={16} /> Slide
+                                </button>
+                                <button
+                                    className={`admin-cms-tab ${activeAdminTab === 'sections' ? 'active' : ''}`}
+                                    onClick={() => setActiveAdminTab('sections')}
+                                >
+                                    <LayoutDashboard size={16} /> Bố cục
+                                </button>
+
+                            </div>
+                        </div>
+
+                        <div className="admin-cms-content">
+                            {activeAdminTab === 'branding' && (
+                                <div className="admin-cms-branding-grid">
+                                    <div className="admin-cms-field">
+                                        <label>Màu sắc chủ đạo</label>
+                                        <div className="color-picker-wrapper">
+                                            <input
+                                                type="color"
+                                                value={draft.primaryColor || '#007bff'}
+                                                onChange={e => set('primaryColor', e.target.value)}
+                                            />
+                                            <span>{draft.primaryColor || '#007bff'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="admin-cms-field">
+                                        <label>Màu nền trang</label>
+                                        <div className="color-picker-wrapper">
+                                            <input
+                                                type="color"
+                                                value={draft.backgroundColor || '#f0f4f8'}
+                                                onChange={e => set('backgroundColor', e.target.value)}
+                                            />
+                                            <span>{draft.backgroundColor || '#f0f4f8'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="admin-cms-field">
+                                        <label>Facebook URL</label>
+                                        <input
+                                            type="text"
+                                            value={draft.facebookUrl || ''}
+                                            onChange={e => set('facebookUrl', e.target.value)}
+                                            placeholder="https://facebook.com/..."
+                                        />
+                                    </div>
+                                    <div className="admin-cms-field">
+                                        <label>Youtube URL</label>
+                                        <input
+                                            type="text"
+                                            value={draft.youtubeUrl || ''}
+                                            onChange={e => set('youtubeUrl', e.target.value)}
+                                            placeholder="https://youtube.com/..."
+                                        />
+                                    </div>
+                                    <div className="admin-cms-field">
+                                        <label>Instagram URL</label>
+                                        <input
+                                            type="text"
+                                            value={draft.instagramUrl || ''}
+                                            onChange={e => set('instagramUrl', e.target.value)}
+                                            placeholder="https://instagram.com/..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeAdminTab === 'sections' && (
+                                <div className="admin-cms-sections-list">
+                                    <p className="admin-cms-hint">Nhấn vào mắt để ẩn/hiện, nhấn mũi tên để thay đổi thứ tự.</p>
+                                    {config.sections.map((sec, idx) => (
+                                        <div key={sec.id} className={`admin-cms-section-item ${!sec.enabled ? 'disabled' : ''}`}>
+                                            <div className="sec-info">
+                                                <span className="sec-name">{sec.title}</span>
+                                                <span className="sec-id">#{sec.id}</span>
+                                            </div>
+                                            <div className="sec-actions">
+                                                <button
+                                                    className="sec-btn toggle"
+                                                    title={sec.enabled ? 'Ẩn' : 'Hiện'}
+                                                    onClick={() => {
+                                                        const newSections = [...config.sections];
+                                                        newSections[idx].enabled = !newSections[idx].enabled;
+                                                        set('displayConfig', JSON.stringify({ ...config, sections: newSections }));
+                                                    }}
+                                                >
+                                                    {sec.enabled ? <Eye size={16} /> : <Eye size={16} stroke="#ccc" />}
+                                                </button>
+                                                <button
+                                                    className="sec-btn move"
+                                                    disabled={idx === 0}
+                                                    onClick={() => {
+                                                        const newSections = [...config.sections];
+                                                        [newSections[idx], newSections[idx - 1]] = [newSections[idx - 1], newSections[idx]];
+                                                        set('displayConfig', JSON.stringify({ ...config, sections: newSections }));
+                                                    }}
+                                                >
+                                                    <ChevronRight size={16} className="rotate--90" />
+                                                </button>
+                                                <button
+                                                    className="sec-btn move"
+                                                    disabled={idx === config.sections.length - 1}
+                                                    onClick={() => {
+                                                        const newSections = [...config.sections];
+                                                        [newSections[idx], newSections[idx + 1]] = [newSections[idx + 1], newSections[idx]];
+                                                        set('displayConfig', JSON.stringify({ ...config, sections: newSections }));
+                                                    }}
+                                                >
+                                                    <ChevronRight size={16} className="rotate-90" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {activeAdminTab === 'slides' && (
+                                <div className="admin-cms-slides-list">
+                                    <div className="slides-grid-edit">
+                                        {(draft.heroImages || []).map((hero, idx) => {
+                                            const imgUrl = hero.imageUrl || hero;
+                                            return (
+                                                <div key={idx} className="slide-card-edit">
+                                                    <div className="slide-preview-edit">
+                                                        <img src={imgUrl} alt="slide" />
+                                                        <div className="slide-actions-overlay">
+                                                            <button
+                                                                className="slide-upload-btn-overlay"
+                                                                title="Đổi ảnh slide"
+                                                                onClick={() => triggerImageUpload((url, file) => {
+                                                                    const newHero = [...draft.heroImages];
+                                                                    newHero[idx] = { ...newHero[idx], imageUrl: url };
+                                                                    set('heroImages', newHero);
+                                                                    setFileBuffer(p => ({ ...p, hero: { ...p.hero, [idx]: file } }));
+                                                                })}
+                                                            >
+                                                                <Upload size={16} />
+                                                            </button>
+                                                            <button
+                                                                className="slide-delete-btn"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newHero = draft.heroImages.filter((_, i) => i !== idx);
+                                                                    set('heroImages', newHero);
+                                                                }}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="slide-fields-edit">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Tiêu đề Slide"
+                                                            value={hero.title || ''}
+                                                            onChange={e => {
+                                                                const newHero = [...draft.heroImages];
+                                                                newHero[idx] = { ...newHero[idx], title: e.target.value };
+                                                                set('heroImages', newHero);
+                                                            }}
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Mô tả phụ"
+                                                            value={hero.subTitle || ''}
+                                                            onChange={e => {
+                                                                const newHero = [...draft.heroImages];
+                                                                newHero[idx] = { ...newHero[idx], subTitle: e.target.value };
+                                                                set('heroImages', newHero);
+                                                            }}
+                                                        />
+                                                        <div className="slide-fields-row">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Text Nút"
+                                                                value={hero.buttonText || ''}
+                                                                onChange={e => {
+                                                                    const newHero = [...draft.heroImages];
+                                                                    newHero[idx] = { ...newHero[idx], buttonText: e.target.value };
+                                                                    set('heroImages', newHero);
+                                                                }}
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Link Nút"
+                                                                value={hero.buttonLink || ''}
+                                                                onChange={e => {
+                                                                    const newHero = [...draft.heroImages];
+                                                                    newHero[idx] = { ...newHero[idx], buttonLink: e.target.value };
+                                                                    set('heroImages', newHero);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        <button className="add-slide-btn" onClick={addHeroImage}>
+                                            <Plus size={24} />
+                                            <span>Thêm Slide mới</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+
+
             {/* ── Header ── */}
-            <header className="center-header">
+            <header className={`center-header ${scrolled ? 'scrolled' : ''} header-entrance`}>
                 <div className="center-header-content">
-                    {/* Logo – not a link (center's own page) */}
                     <div className="center-logo">
                         {editMode ? (
-                            /* Logo editor */
                             <div className="logo-edit-wrapper">
-                                <div
-                                    className="logo-upload-target"
-                                    onClick={() => logoInputRef.current?.click()}
-                                    title="Nhấn để đổi logo"
-                                >
-                                    {draft.logo
-                                        ? <img src={draft.logo} alt="logo preview" className="center-logo-img" />
-                                        : <BookOpen size={24} />}
+                                <div className="logo-upload-target" onClick={() => logoInputRef.current?.click()} title="Nhấn để đổi logo">
+                                    {draft.logo ? (
+                                        <img src={draft.logo} alt="logo preview" className="center-logo-img" />
+                                    ) : (
+                                        <BookOpen size={24} />
+                                    )}
                                     <div className="logo-upload-overlay">
                                         <Upload size={16} />
                                     </div>
                                 </div>
-                                <input
-                                    ref={logoInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={handleLogoUpload}
-                                />
+                                <input ref={logoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} />
                                 {draft.logo && (
                                     <button className="admin-remove-btn logo-remove" onClick={() => set('logo', null)} title="Xóa logo">
                                         <X size={12} />
                                     </button>
                                 )}
-                                <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="logo-name-field" />
+                                <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="logo-name-field" maxLength={50} />
                             </div>
                         ) : (
                             <LogoDisplay logoSrc={d.logo} name={d.name} />
@@ -227,12 +994,17 @@ const CenterHome = ({ isAdmin = false }) => {
                         {user ? (
                             <>
                                 <Link to="/profile" className="center-header-user-link">
-                                    <div className="center-header-avatar">
-                                        {(user.fullName || user.username || '?').charAt(0).toUpperCase()}
-                                    </div>
+                                    <div className="center-header-avatar">{(user.fullName || user.username || '?').charAt(0).toUpperCase()}</div>
                                     <span className="center-header-user">{user.fullName || user.username}</span>
                                 </Link>
-                                <button onClick={() => { logout(); navigate('/center'); }} className="center-header-logout" title="Đăng xuất">
+                                <button
+                                    onClick={() => {
+                                        logout();
+                                        navigate('/center');
+                                    }}
+                                    className="center-header-logout"
+                                    title="Đăng xuất"
+                                >
                                     <LogOut size={18} />
                                 </button>
                             </>
@@ -246,277 +1018,657 @@ const CenterHome = ({ isAdmin = false }) => {
                 </div>
             </header>
 
-            {/* ── Hero ── */}
-            <section className="center-hero">
-                {d.heroImages?.map((img, idx) => (
-                    <div
-                        key={idx}
-                        className={`hero-slide-bg ${idx === currentHeroSlide ? 'active' : ''}`}
-                        style={{ backgroundImage: `url(${img})` }}
-                    />
-                ))}
-                <div className="center-hero-overlay"></div>
+            {/* ── Main Content Sections Rendered Dynamically (Fix for Reordering) ── */}
+            <div className="center-main-content">
+                {config.sections.map((sec) => {
+                    const isSectionEnabled = sec.enabled;
+                    if (!isSectionEnabled && !editMode) return null;
+                    const isHidden = !isSectionEnabled && editMode;
+                    const sectionClass = isHidden ? 'section-disabled' : '';
 
-                <div className="center-hero-content">
-                    {/* <div className="center-welcome-badge"><BookOpen size={16} /> CHÀO MỪNG ĐẾN VỚI EDUCEN</div> */}
-                    {editMode
-                        ? <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="hero-name-field" />
-                        : <h1>{d.name}</h1>}
-                    {editMode
-                        ? <InlineEditField draft={draft} set={set} field="tagline" multiline rows={3} placeholder="Tagline / mô tả ngắn" className="hero-tagline-field" />
-                        : <p>{d.tagline}</p>}
-                    <div className="center-hero-buttons">
-                        <a href="#enrollment" className="center-btn-hero">Tham Gia Khóa Học Của Chúng Tôi Ngay</a>
-                    </div>
-                </div>
+                    switch (sec.id) {
+                        case 'hero':
+                            return (
+                                <section key="hero" className={`center-hero ${sectionClass}`}>
+                                    {d.heroImages?.map((hero, idx) => {
+                                        const imgUrl = typeof hero === 'string' ? hero : (hero?.imageUrl || '');
+                                        const isActive = idx === currentHeroSlide;
+                                        
+                                        // Kiểm tra nếu slide có nội dung chữ
+                                        const hasTitle = hero?.title?.trim();
+                                        const hasSub = hero?.subTitle?.trim();
+                                        const hasBtn = hero?.buttonText?.trim();
+                                        const hasAnyContent = hasTitle || hasSub || hasBtn;
 
-                <div className="hero-slide-indicators">
-                    {d.heroImages?.map((_, idx) => (
-                        <div
-                            key={idx}
-                            className={`hero-indicator ${idx === currentHeroSlide ? 'active' : ''}`}
-                            onClick={() => setCurrentHeroSlide(idx)}
-                        />
-                    ))}
-                </div>
-            </section>
-
-            {/* ── Main Content ── */}
-            <div className="center-container">
-
-                {/* Our Center */}
-                <section className="center-our-center">
-                    <div className="center-about-split">
-
-                        {/* LEFT – Intro */}
-                        <div className="center-about-content">
-                            <div className="center-section-badge"><BookOpen size={16} /> VỀ CHÚNG TÔI</div>
-                            {editMode
-                                ? <InlineEditField draft={draft} set={set} field="introTitle" placeholder="Tiêu đề giới thiệu" className="intro-title-field" />
-                                : <h2>{d.introTitle}</h2>}
-                            {editMode
-                                ? <InlineEditField draft={draft} set={set} field="introDescription" multiline rows={5} placeholder="Mô tả giới thiệu" className="intro-desc-field" />
-                                : <p className="center-intro-text">{d.introDescription}</p>}
-
-                            {/* Highlights */}
-                            <div className="center-highlights">
-                                {(editMode ? draft : saved).highlights.map((item, i) => (
-                                    <div key={i} className={`center-highlight-item${editMode ? ' editable' : ''}`}>
-                                        <div className="center-highlight-icon">{ICON_MAP[item.icon] || <Star size={20} />}</div>
-                                        {editMode ? (
-                                            <div className="highlight-edit-row">
-                                                <input
-                                                    className="admin-edit-field highlight-text-field"
-                                                    value={item.text}
-                                                    onChange={e => setNested('highlights', i, 'text', e.target.value)}
-                                                    placeholder="Nội dung điểm nổi bật"
+                                        return (
+                                            <React.Fragment key={idx}>
+                                                <div
+                                                    className={`hero-slide-bg ${isActive ? 'active' : ''}`}
+                                                    style={{ backgroundImage: `url("${imgUrl}")` }}
                                                 />
-                                                <button className="admin-remove-btn" onClick={() => removeHighlight(i)} title="Xóa">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <span>{item.text}</span>
-                                        )}
-                                    </div>
-                                ))}
-                                {editMode && (
-                                    <button className="admin-add-btn" onClick={addHighlight}>
-                                        <Plus size={14} /> Thêm điểm nổi bật
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                                                {isActive && (
+                                                    <div className="center-hero-content reveal slide-up" style={{ transition: 'all 0.6s ease' }}>
+                                                        {editMode ? (
+                                                            <input 
+                                                                type="text" 
+                                                                className="hero-name-field"
+                                                                placeholder="Tiêu đề Slide (Để trống dùng tên trung tâm)"
+                                                                value={draft.heroImages[idx]?.title || ''}
+                                                                maxLength={50}
+                                                                onChange={e => {
+                                                                    const newImg = [...draft.heroImages];
+                                                                    newImg[idx] = { ...newImg[idx], title: e.target.value };
+                                                                    set('heroImages', newImg);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <h1>{hero.title?.trim() || d.name}</h1>
+                                                        )}
+                                                        
+                                                        {editMode ? (
+                                                            <textarea 
+                                                                className="hero-tagline-field"
+                                                                placeholder="Mô tả phụ (Để trống dùng khẩu hiệu trung tâm)"
+                                                                value={draft.heroImages[idx]?.subTitle || ''}
+                                                                onChange={e => {
+                                                                    const newImg = [...draft.heroImages];
+                                                                    newImg[idx] = { ...newImg[idx], subTitle: e.target.value };
+                                                                    set('heroImages', newImg);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <p>{hero.subTitle?.trim() || d.tagline}</p>
+                                                        )}
 
-                        {/* RIGHT – Images */}
-                        <div className="center-about-images">
-                            <div className={`center-image-grid${editMode ? ' edit-mode' : ''}`}>
-                                {(editMode ? draft : saved).images.map((img, i) => (
-                                    <div key={i} className={`center-image-item item-${i}`}>
-                                        <img src={img} alt={`Trung tâm ${i + 1}`} />
-                                        {editMode && (
-                                            <div className="image-edit-overlay">
-                                                <div className="image-edit-controls">
-                                                    <input
-                                                        className="image-url-input"
-                                                        value={img}
-                                                        onChange={e => {
-                                                            const arr = [...draft.images];
-                                                            arr[i] = e.target.value;
-                                                            setDraft(p => ({ ...p, images: arr }));
-                                                        }}
-                                                        placeholder="URL ảnh"
-                                                    />
-                                                    <button className="admin-remove-btn white" onClick={() => removeImage(i)} title="Xóa ảnh">
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                                {editMode && draft.images.length < 4 && (
-                                    <div className="add-image-slot" onClick={addImage}>
-                                        <ImageIcon size={28} />
-                                        <span>Thêm ảnh</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                                                        <div className="center-hero-buttons">
+                                                            {editMode ? (
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="center-btn-hero"
+                                                                    placeholder="Text Nút (Mặc định: Tham gia)"
+                                                                    value={draft.heroImages[idx]?.buttonText || ''}
+                                                                    onChange={e => {
+                                                                        const newImg = [...draft.heroImages];
+                                                                        newImg[idx] = { ...newImg[idx], buttonText: e.target.value };
+                                                                        set('heroImages', newImg);
+                                                                    }}
+                                                                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px dashed' }}
+                                                                />
+                                                            ) : (
+                                                                <a href={hero.buttonLink?.trim() || '#enrollment'} className="center-btn-hero">
+                                                                    {hero.buttonText?.trim() || "Tham Gia Khóa Học Của Chúng Tôi Ngay"}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                    <div className="center-hero-overlay"></div>
 
-                    </div>
-                </section>
-
-                {/* ── Class Schedule (live from ScheduleManagement) ── */}
-                <section className="center-operating-hours">
-                    <h2>Lịch Học Các Lớp</h2>
-                    <div className="center-schedule">
-                        <div className="center-schedule-grid">
-                            {DAY_LABELS.map((dayLabel, colIdx) => {
-                                // colIdx: 0=Mon...5=Sat, 6=Sun
-                                const dayClasses = scheduledClasses.filter(c => dayToColumnIndex(c.day) === colIdx);
-                                return (
-                                    <div key={colIdx} className="center-schedule-day">
-                                        <div className="center-schedule-day-header">
-                                            <Clock size={14} /><span>{dayLabel}</span>
-                                        </div>
-                                        <div className="center-schedule-slots">
-                                            {dayClasses.length > 0 ? dayClasses.map((cls) => (
-                                                <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
-                                                    <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
-                                                    <span className="center-slot-subject">{cls.name}</span>
-                                                    {cls.teacher && (
-                                                        <span className="center-slot-teacher">{cls.teacher}</span>
-                                                    )}
-                                                </div>
-                                            )) : (
-                                                <div className="center-schedule-closed">NGHỈ</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </section>
-
-                {/* Enrollment Section */}
-                <section id="enrollment" className="center-journey-section">
-                    <div className="center-journey-badge"><BookOpen size={16} /> BẮT ĐẦU ĐĂNG KÝ</div>
-                    <h2>Bắt Đầu Hành Trình Của Bạn Ngay Hôm Nay</h2>
-                    <p className="center-journey-subtitle">
-                        Điền vào mẫu đăng ký dưới đây để tham gia các lớp học sắp tới. Đội ngũ của chúng tôi sẽ liên hệ với bạn trong vòng 24 giờ để xác nhận.
-                    </p>
-                    <div className="center-journey-content">
-
-                        {/* Form */}
-                        <div className="center-enrollment-form-wrapper">
-                            {editMode ? (
-                                <div className="course-editor">
-                                    <div className="course-editor-title">
-                                        <Pencil size={15} /> Chỉnh sửa danh sách khóa học
-                                    </div>
-                                    <div className="course-editor-list">
-                                        {draft.courses.map((course, i) => (
-                                            <div key={i} className="course-editor-item">
-                                                <input
-                                                    className="admin-edit-field course-label-field"
-                                                    value={course.label}
-                                                    onChange={e => setNested('courses', i, 'label', e.target.value)}
-                                                    placeholder="Tên khóa học"
-                                                />
-                                                <button className="admin-remove-btn" onClick={() => removeCourse(i)} title="Xóa">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
+                                    <div className="hero-slide-indicators">
+                                        {d.heroImages?.map((_, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`hero-indicator ${idx === currentHeroSlide ? 'active' : ''}`}
+                                                onClick={() => setCurrentHeroSlide(idx)}
+                                            />
                                         ))}
                                     </div>
-                                    <button className="admin-add-btn" onClick={addCourse}>
-                                        <Plus size={14} /> Thêm khóa học
-                                    </button>
-                                    <p className="course-editor-hint">Danh sách này sẽ hiển thị trong dropdown chọn khóa học của form đăng ký.</p>
+                                </section>
+                            );
+
+                        case 'about':
+                            return (
+                                <div key="about" className="center-container">
+                                    <section className={`center-our-center ${sectionClass}`}>
+                                        <div className="center-about-split reveal fade-in">
+                                            {/* LEFT: text + highlights */}
+                                            <div className="center-about-content reveal slide-left-fade stagger-1">
+                                                <div className="center-section-badge reveal fade-in stagger-2"><BookOpen size={16} /> VỀ CHÚNG TÔI</div>
+                                                {editMode ? (
+                                                    <InlineEditField draft={draft} set={set} field="introTitle" placeholder="Tiêu đề giới thiệu" className="intro-title-field" />
+                                                ) : (
+                                                    <h2 className="reveal slide-up stagger-3">{d.introTitle}</h2>
+                                                )}
+                                                {editMode ? (
+                                                    <InlineEditField draft={draft} set={set} field="introDescription" multiline rows={5} placeholder="Mô tả giới thiệu" className="intro-desc-field" />
+                                                ) : (
+                                                    <p className="center-intro-text">{d.introDescription}</p>
+                                                )}
+
+                                                {/* Highlights */}
+                                                <div className="center-highlights" style={editMode ? { display: 'flex', flexDirection: 'column', gap: '0.75rem' } : {}}>
+                                                    {(editMode ? draft.highlights : d.highlights).map((item, i) => (
+                                                        <div key={i} className={`center-highlight-item ${editMode ? 'highlight-item-edit' : ''}`}>
+                                                            {editMode ? (
+                                                                <select
+                                                                    className="highlight-icon-select"
+                                                                    value={item.icon || 'Star'}
+                                                                    onChange={e => {
+                                                                        const nh = [...draft.highlights];
+                                                                        nh[i] = { ...nh[i], icon: e.target.value };
+                                                                        set('highlights', nh);
+                                                                    }}
+                                                                >
+                                                                    <option value="Users">👥 Users</option>
+                                                                    <option value="Award">🏆 Award</option>
+                                                                    <option value="Star">⭐ Star</option>
+                                                                    <option value="TrendingUp">📈 TrendingUp</option>
+                                                                </select>
+                                                            ) : (
+                                                                <div className="center-highlight-icon">{ICON_MAP[item.icon] || <Star size={20} />}</div>
+                                                            )}
+                                                            {editMode ? (
+                                                                <input
+                                                                    className="highlight-edit-input"
+                                                                    value={item.text || ''}
+                                                                    style={{ flex: 1 }}
+                                                                    onChange={e => {
+                                                                        const nh = [...draft.highlights];
+                                                                        nh[i] = { ...nh[i], text: e.target.value };
+                                                                        set('highlights', nh);
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <span>{item.text}</span>
+                                                            )}
+                                                            {editMode && (
+                                                                <button
+                                                                    className="highlight-delete-btn"
+                                                                    onClick={() => removeHighlight(i)}
+                                                                    title="Xóa"
+                                                                >
+                                                                    <X size={12} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {editMode && (
+                                                        <button className="highlight-add-btn" onClick={addHighlight}>
+                                                            <Plus size={16} /> Thêm nổi bật
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* RIGHT: image grid */}
+                                            <div className="center-about-images">
+                                                <div className={`center-image-grid reveal zoom-in stagger-2 ${editMode ? 'image-grid-edit-mode' : ''}`}>
+                                                    {(editMode ? draft.images : (d.images && d.images.length > 0 ? d.images : [
+                                                        'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=500&fit=crop',
+                                                        'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&h=500&fit=crop',
+                                                        'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&h=500&fit=crop',
+                                                    ])).map((img, i) => (
+                                                        <div key={i} className="center-image-item" style={{ position: 'relative' }}>
+                                                            <img src={img || 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=500&fit=crop'} alt={`Gallery ${i}`} />
+                                                            {editMode && (
+                                                                <div className="image-item-actions">
+                                                                    <button
+                                                                        className="img-action-btn replace"
+                                                                        title="Thay ảnh"
+                                                                        onClick={() => triggerImageUpload((url, file) => {
+                                                                            const ni = [...(draft.images || [])];
+                                                                            ni[i] = url;
+                                                                            set('images', ni);
+                                                                            setFileBuffer(p => ({ ...p, gallery: { ...p.gallery, [i]: file } }));
+                                                                        })}
+                                                                    >
+                                                                        <Upload size={14} />
+                                                                    </button>
+                                                                    <button
+                                                                        className="img-action-btn remove"
+                                                                        title="Xóa ảnh"
+                                                                        onClick={() => {
+                                                                            const ni = (draft.images || []).filter((_, idx) => idx !== i);
+                                                                            set('images', ni);
+                                                                        }}
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {editMode && (draft.images || []).length < 10 && (
+                                                        <button
+                                                            className="image-add-slot"
+                                                            onClick={() => {
+                                                                const ni = [...(draft.images || []), 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=600&h=500&fit=crop'];
+                                                                set('images', ni);
+                                                            }}
+                                                        >
+                                                            <Plus size={28} />
+                                                            <span>Thêm ảnh</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
                                 </div>
-                            ) : (
-                                <form onSubmit={handleSubmit} className="center-enrollment-form">
-                                    <div className="center-form-row">
-                                        <div className="center-form-group">
-                                            <label>Họ</label>
-                                            <input type="text" name="firstName" value={form.firstName} onChange={handleFormChange} placeholder="Nhập họ của bạn" required />
+                            );
+
+
+                        case 'teachers':
+                            return (
+                                <div key="teachers" className="center-container">
+                                    <section className={`center-teachers-section reveal slide-up ${sectionClass}`}>
+                                        <div className="teachers-section-header">
+                                            <div className="reveal slide-left">
+                                                <div className="center-section-badge"><Users size={16} /> ĐỘI NGŨ GIÁO VIÊN</div>
+                                                <h2 className="teachers-title">Đội ngũ giáo viên chuyên nghiệp</h2>
+                                                <div className="teachers-title-underline"></div>
+                                            </div>
+                                            {editMode && (
+                                                <button className="teacher-add-btn-top" onClick={addStaff}>
+                                                    <Plus size={18} /> Thêm giáo viên
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="center-form-group">
-                                            <label>Tên</label>
-                                            <input type="text" name="lastName" value={form.lastName} onChange={handleFormChange} placeholder="Nhập tên của bạn" required />
-                                        </div>
-                                    </div>
-                                    <div className="center-form-group">
-                                        <label>Địa chỉ Email</label>
-                                        <input type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="email@example.com" required />
-                                    </div>
-                                    <div className="center-form-group">
-                                        <label>Số điện thoại</label>
-                                        <input type="tel" name="phone" value={form.phone} onChange={handleFormChange} placeholder="0912345678" required />
-                                    </div>
-                                    <div className="center-form-group">
-                                        <label>Khóa học mong muốn</label>
-                                        <select name="preferredCourse" value={form.preferredCourse} onChange={handleFormChange} required>
-                                            <option value="">Chọn khóa học</option>
-                                            {saved.courses.map(c => (
-                                                <option key={c.value} value={c.value}>{c.label}</option>
+
+                                        <div className="teachers-grid-new">
+                                            {(editMode ? draft.staffs : d.staffs).map((staff, i) => (
+                                                <div key={i} className={`teacher-card-new reveal slide-up stagger-${(i % 6) + 1} ${editMode ? 'editable' : ''}`}>
+                                                    {editMode && (
+                                                        <button
+                                                            className="teacher-inline-delete"
+                                                            onClick={() => removeStaff(i)}
+                                                            title="Xóa giáo viên"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    )}
+
+                                                    {/* Avatar */}
+                                                    <div
+                                                        className={`teacher-avatar-new ${editMode ? 'editable-avatar' : ''}`}
+                                                        onClick={editMode ? () => triggerImageUpload((url, file) => {
+                                                            const ns = [...draft.staffs];
+                                                            ns[i] = { ...ns[i], avatarUrl: url };
+                                                            set('staffs', ns);
+                                                            setFileBuffer(p => ({ ...p, staff: { ...p.staff, [i]: file } }));
+                                                        }) : undefined}
+                                                        title={editMode ? 'Nhấn để thay ảnh' : ''}
+                                                    >
+                                                        <img
+                                                            src={staff.avatarUrl && staff.avatarUrl.trim() !== '' ? staff.avatarUrl
+                                                                : `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name || 'GV')}&size=300&background=0066FF&color=fff&bold=true`}
+                                                            alt={staff.name}
+                                                        />
+                                                        {editMode && (
+                                                            <div className="teacher-avatar-edit-hint">
+                                                                <Upload size={20} />
+                                                                <span>Thay ảnh</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Info */}
+                                                    <div className="teacher-info-new">
+                                                        {editMode ? (
+                                                            <input
+                                                                className="teacher-inline-name"
+                                                                value={staff.name || ''}
+                                                                placeholder="Tên giáo viên"
+                                                                onChange={e => {
+                                                                    const ns = [...draft.staffs];
+                                                                    ns[i] = { ...ns[i], name: e.target.value };
+                                                                    set('staffs', ns);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <h3 className="teacher-name-new">{staff.name || 'Giáo viên'}</h3>
+                                                        )}
+
+                                                        {editMode ? (
+                                                            <input
+                                                                className="teacher-inline-role"
+                                                                value={staff.role || ''}
+                                                                placeholder="Chức vụ / môn dạy"
+                                                                onChange={e => {
+                                                                    const ns = [...draft.staffs];
+                                                                    ns[i] = { ...ns[i], role: e.target.value };
+                                                                    set('staffs', ns);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <span className="teacher-role-new">{staff.role || 'Giảng viên'}</span>
+                                                        )}
+
+                                                        {editMode ? (
+                                                            <textarea
+                                                                className="teacher-inline-bio"
+                                                                value={staff.bio || ''}
+                                                                rows={5}
+                                                                placeholder="Giới thiệu ngắn về giáo viên..."
+                                                                onChange={e => {
+                                                                    const ns = [...draft.staffs];
+                                                                    ns[i] = { ...ns[i], bio: e.target.value };
+                                                                    set('staffs', ns);
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <p className="teacher-bio-new">{staff.bio || 'Giáo viên giàu kinh nghiệm, luôn tận tâm đồng hành cùng học sinh trên con đường chinh phục tri thức.'}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             ))}
-                                        </select>
-                                    </div>
-                                    <button type="submit" className="center-btn-submit">Gửi đăng ký</button>
-                                </form>
-                            )}
-                        </div>
 
-                        {/* Quote card */}
-                        <div className="center-testimonial-card">
-                            <div className="center-quote-icon"><Quote size={48} /></div>
-                            <div className="center-testimonial-content">
-                                {editMode ? (
-                                    <textarea
-                                        className="admin-edit-textarea quote-text-field"
-                                        value={draft.quoteText}
-                                        onChange={e => set('quoteText', e.target.value)}
-                                        rows={6}
-                                        placeholder="Nội dung trích dẫn"
-                                    />
-                                ) : (
-                                    <p className="center-testimonial-text">{d.quoteText}</p>
-                                )}
-                                <div className="center-quote-footer">
-                                    <BookOpen size={20} />
-                                    <span>Sứ mệnh của chúng tôi</span>
+                                            {editMode && (
+                                                <button className="teacher-add-card" onClick={addStaff}>
+                                                    <Plus size={36} />
+                                                    <span>Thêm giáo viên</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </section>
                                 </div>
-                            </div>
-                        </div>
+                            );
 
-                    </div>
-                </section>
+                        case 'schedule':
+                            return (
+                                <div key="schedule" className="center-container">
+                                    <section className={`center-operating-hours reveal slide-up ${sectionClass}`}>
+                                        <h2>Lịch Học Các Lớp</h2>
+                                        <div className="center-schedule reveal fade-in">
+                                            <div className="center-schedule-grid">
+                                                {(() => {
+                                                    // Calculate dates for current week (Mon-Sun)
+                                                    const today = new Date();
+                                                    const currentDay = today.getDay(); // 0=Sun, 1=Mon...
+                                                    const mondayDiff = currentDay === 0 ? -6 : 1 - currentDay;
+                                                    const monday = new Date(today);
+                                                    monday.setDate(today.getDate() + mondayDiff);
+                                                    monday.setHours(0, 0, 0, 0);
+
+                                                    return DAY_LABELS.map((dayLabel, colIdx) => {
+                                                        const targetDate = new Date(monday);
+                                                        targetDate.setDate(monday.getDate() + colIdx);
+                                                        const check = targetDate.getTime();
+
+                                                        const dayClasses = scheduledClasses.filter(c => {
+                                                            const isSameDay = dayToColumnIndex(c.day) === colIdx;
+                                                            if (!isSameDay) return false;
+
+                                                            // Filter by date range
+                                                            const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
+                                                            const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
+
+                                                            return check >= start && check <= end;
+                                                        });
+
+                                                        return (
+                                                            <div key={colIdx} className={`center-schedule-day reveal slide-up stagger-${colIdx + 1}`}>
+                                                                <div className="center-schedule-day-header">
+                                                                    <Clock size={14} /><span>{dayLabel}</span>
+                                                                </div>
+                                                                <div className="center-schedule-slots">
+                                                                    {dayClasses.length > 0 ? (
+                                                                        dayClasses.map((cls) => (
+                                                                            <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
+                                                                                <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
+                                                                                <span className="center-slot-subject">{cls.name}</span>
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <div className="center-schedule-closed">NGHỈ</div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            );
+
+                        case 'upcoming-classes':
+                            if (upcomingClasses.length === 0 && !editMode) return null;
+                            return (
+                                <div key="upcoming-classes" className="center-container">
+                                    <section className={`center-upcoming-classes reveal slide-up ${sectionClass}`}>
+                                        <div className="center-section-badge reveal fade-in"><Calendar size={16} /> LỚP HỌC SẮP KHAI GIẢNG</div>
+                                        <h2 className="section-title reveal slide-up stagger-1">Cơ hội học tập mới dành cho bạn</h2>
+                                        <div className="section-title-underline reveal slide-up stagger-2"></div>
+                                        
+                                        <div className="classes-grid">
+                                            {(showAllClasses ? upcomingClasses : upcomingClasses.slice(0, 4)).concat(editMode && upcomingClasses.length === 0 ? [
+                                                { classId: -1, className: 'Lớp học mẫu 1', subjectName: 'Toán học', teacherName: 'Nguyễn Văn A', startDate: new Date().toISOString(), scheduleSummary: 'Thứ 2, 4, 6 (18:00 - 20:00)' },
+                                                { classId: -2, className: 'Lớp học mẫu 2', subjectName: 'Tiếng Anh', teacherName: 'Trần Thị B', startDate: new Date().toISOString(), scheduleSummary: 'Thứ 3, 5, 7 (17:30 - 19:30)' }
+                                            ] : []).map((cls, i) => (
+                                                <div key={cls.classId} className={`class-card-home reveal slide-up stagger-${(i % 3) + 1}`}>
+                                                    <div className="class-card-header">
+                                                        <span className="class-subject-tag">{cls.subjectName || 'Khóa học'}</span>
+                                                        <div className="class-status-dot"></div>
+                                                    </div>
+                                                    <h3 className="home-class-name">{cls.className}</h3>
+                                                    <div className="home-class-info-list">
+                                                        <div className="home-class-info-row">
+                                                            <Users size={14} /> <span>Giáo viên: <b>{cls.teacherName || 'Đang cập nhật'}</b></span>
+                                                        </div>
+                                                        <div className="home-class-info-row">
+                                                            <Calendar size={14} /> <span>Khai giảng: <b>{cls.startDate ? new Date(cls.startDate).toLocaleDateString('vi-VN') : 'Sắp tới'}</b></span>
+                                                        </div>
+                                                        <div className="home-class-info-row">
+                                                            <Clock size={14} /> <span>Lịch học: <i>{cls.scheduleSummary}</i></span>
+                                                        </div>
+                                                        <div className="home-class-info-row">
+                                                            <Users size={14} /> <span>Sĩ số: {cls.studentCount} / {cls.maxStudents || '-'}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="class-card-footer">
+                                                        {(() => {
+                                                            const isFull = cls.maxStudents > 0 && cls.studentCount >= cls.maxStudents;
+                                                            return isFull ? (
+                                                                <button
+                                                                    type="button"
+                                                                    className="class-enroll-link-btn"
+                                                                    disabled
+                                                                    style={{ background: '#fee2e2', color: '#b91c1c', cursor: 'not-allowed', border: '1px solid #fecaca', opacity: 0.9 }}
+                                                                >
+                                                                    🔒 Lớp đã đầy
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    className="class-enroll-link-btn"
+                                                                    onClick={() => handleClassSelect(cls)}
+                                                                >
+                                                                    Đăng ký ngay <ArrowRight size={16} />
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {upcomingClasses.length > 4 && (
+                                            <div className="classes-view-more">
+                                                <button 
+                                                    className="center-btn-view-all"
+                                                    onClick={() => setShowAllClasses(!showAllClasses)}
+                                                >
+                                                    {showAllClasses ? 'Thu gọn' : `Xem tất cả ${upcomingClasses.length} lớp học`}
+                                                    {showAllClasses ? <ChevronUp size={20} /> : <ArrowRight size={20} />}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </section>
+                                </div>
+                            );
+
+                        case 'enrollment':
+                            return (
+                                <div key="enrollment" className="center-container">
+                                    <section id="enrollment" className={`center-journey-section reveal slide-up ${sectionClass}`}>
+                                        <div className="center-journey-badge reveal fade-in"><BookOpen size={16} /> BẮT ĐẦU ĐĂNG KÝ</div>
+                                        <h2 className="reveal slide-up stagger-1">Bắt Đầu Hành Trình Của Bạn</h2>
+                                        <div className="center-journey-content">
+                                            <div className="center-enrollment-form-wrapper reveal slide-left">
+                                                <form onSubmit={handleSubmitEnrollment} className="center-enrollment-form">
+                                                    <div className="center-form-row">
+                                                        <div className="center-form-group">
+                                                            <label>Họ</label>
+                                                            <input type="text" name="firstName" value={form.firstName} onChange={handleFormChange} placeholder="Nhập họ" required />
+                                                        </div>
+                                                        <div className="center-form-group">
+                                                            <label>Tên</label>
+                                                            <input type="text" name="lastName" value={form.lastName} onChange={handleFormChange} placeholder="Nhập tên" required />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="center-form-row">
+                                                        <div className="center-form-group">
+                                                            <label>Địa chỉ Email</label>
+                                                            <input type="email" name="email" value={form.email} onChange={handleFormChange} placeholder="email@example.com" required />
+                                                        </div>
+                                                        <div className={`center-form-group ${formErrors.phone ? 'has-error' : ''}`}>
+                                                            <label>Số điện thoại</label>
+                                                            <input type="tel" name="phone" value={form.phone} onChange={handleFormChange} placeholder="0912345678" required />
+                                                            {formErrors.phone && <span className="center-form-error-msg"><X size={14} /> {formErrors.phone}</span>}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="center-form-row">
+                                                        <div className="center-form-group">
+                                                            <label>Khối lớp *</label>
+                                                            <select 
+                                                                name="gradeId" 
+                                                                value={form.gradeId} 
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setForm(p => ({ ...p, gradeId: val, classId: '' }));
+                                                                }} 
+                                                                required
+                                                            >
+                                                                <option value="">Chọn khối lớp</option>
+                                                                {grades.map(g => (
+                                                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div className="center-form-group">
+                                                            <label>Môn học *</label>
+                                                            <select 
+                                                                name="preferredCourse" 
+                                                                value={form.preferredCourse || ''} 
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    setForm(p => ({ ...p, preferredCourse: val, classId: '' }));
+                                                                }} 
+                                                                required
+                                                            >
+                                                                <option value="">Chọn môn học</option>
+                                                                {availableSubjects.map((s, idx) => (
+                                                                    <option key={idx} value={s}>{s}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="center-form-group">
+                                                        <label>Lớp học mong muốn (Tùy chọn)</label>
+                                                        <select 
+                                                            name="classId" 
+                                                            value={form.classId} 
+                                                            onChange={handleFormChange}
+                                                        >
+                                                            <option value="">Chọn lớp học</option>
+                                                            {upcomingClasses
+                                                                .filter(c => !form.gradeId || (c.gradeId && c.gradeId.toString() === form.gradeId.toString()))
+                                                                .filter(c => !form.preferredCourse || c.subjectName === form.preferredCourse)
+                                                                .map(c => (
+                                                                    <option key={c.classId} value={c.classId}>{c.className} ({c.teacherName || 'Chưa XL'})</option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                    </div>
+
+                                                    <div className="center-form-group">
+                                                        <label>Địa chỉ</label>
+                                                        <input type="text" name="address" value={form.address} onChange={handleFormChange} placeholder="Nhập địa chỉ" />
+                                                    </div>
+
+                                                    <div className="center-form-optional-toggle">
+                                                        <button 
+                                                            type="button" 
+                                                            className="center-btn-toggle-optional"
+                                                            onClick={() => setShowParentInfo(!showParentInfo)}
+                                                        >
+                                                            {showParentInfo ? <ChevronUp size={18} /> : <Plus size={18} />}
+                                                            Thông tin phụ huynh (Không bắt buộc)
+                                                        </button>
+                                                    </div>
+
+                                                    {showParentInfo && (
+                                                        <div className="center-form-optional-content">
+                                                            <div className="center-form-group">
+                                                                <label>Họ tên phụ huynh</label>
+                                                                <input type="text" name="parentName" value={form.parentName} onChange={handleFormChange} placeholder="Nhập họ tên phụ huynh" />
+                                                            </div>
+                                                            <div className="center-form-row">
+                                                                <div className={`center-form-group ${formErrors.parentPhone ? 'has-error' : ''}`}>
+                                                                    <label>SĐT phụ huynh</label>
+                                                                    <input type="tel" name="parentPhone" value={form.parentPhone} onChange={handleFormChange} placeholder="09xxxxxxxx" />
+                                                                    {formErrors.parentPhone && <span className="center-form-error-msg"><X size={14} /> {formErrors.parentPhone}</span>}
+                                                                </div>
+                                                                <div className="center-form-group">
+                                                                    <label>Email phụ huynh</label>
+                                                                    <input type="email" name="parentEmail" value={form.parentEmail} onChange={handleFormChange} placeholder="parent@example.com" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <button type="submit" className="center-btn-submit" disabled={isSubmittingEnrollment}>
+                                                        {isSubmittingEnrollment ? 'Đang gửi...' : 'Gửi đăng ký'}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <div className="center-testimonial-card reveal slide-right stagger-2">
+                                                <div className="center-quote-icon"><Quote size={48} /></div>
+                                                {editMode ? (
+                                                    <InlineEditField draft={draft} set={set} field="quoteText" multiline rows={6} placeholder="Câu châm ngôn truyền cảm hứng" className="quote-textarea-edit" />
+                                                ) : (
+                                                    <p className="center-testimonial-text">{d.quoteText}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            );
+
+                        default:
+                            return null;
+                    }
+                })}
             </div>
 
             {/* ── Footer ── */}
-            <footer className="center-footer">
+            <footer className="center-footer reveal slide-up">
                 <div className="center-footer-main">
-
-                    {/* Brand */}
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-1">
                         <h3>
-                            {d.logo
-                                ? <img src={d.logo} alt="logo" className="center-logo-img footer-logo" />
-                                : <BookOpen size={20} />}
-                            {editMode
-                                ? <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="footer-name-field" />
-                                : d.name}
+                            {d.logo ? <img src={d.logo} alt="logo" className="center-logo-img footer-logo" /> : <BookOpen size={20} />}
+                            {editMode ? (
+                                <InlineEditField draft={draft} set={set} field="name" placeholder="Tên trung tâm" className="footer-name-field" />
+                            ) : (
+                                d.name
+                            )}
                         </h3>
-                        {editMode
-                            ? <InlineEditField draft={draft} set={set} field="footerTagline" multiline rows={2} placeholder="Tagline footer" className="footer-tagline-field" />
-                            : <p className="center-footer-tagline">{d.footerTagline}</p>}
+                        {editMode ? (
+                            <InlineEditField draft={draft} set={set} field="footerTagline" multiline rows={2} placeholder="Tagline footer" className="footer-tagline-field" />
+                        ) : (
+                            <p className="center-footer-tagline">{d.footerTagline}</p>
+                        )}
                     </div>
 
-                    {/* Address */}
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-2">
                         <h4><MapPin size={18} /> Địa chỉ</h4>
                         {editMode ? (
                             <>
@@ -531,8 +1683,7 @@ const CenterHome = ({ isAdmin = false }) => {
                         )}
                     </div>
 
-                    {/* Contact */}
-                    <div className="center-footer-section">
+                    <div className="center-footer-section reveal slide-up stagger-3">
                         <h4><Phone size={18} /> Liên hệ</h4>
                         {editMode ? (
                             <div className="footer-contact-edit">
@@ -558,21 +1709,37 @@ const CenterHome = ({ isAdmin = false }) => {
                         )}
                     </div>
 
-                    {/* Links */}
-                    <div className="center-footer-section">
-                        <h4>Liên kết</h4>
-                        <div className="center-footer-links">
-                            <a href="#privacy">Chính sách bảo mật</a>
-                            <a href="#terms">Điều khoản dịch vụ</a>
-                            <a href="#support">Hỗ trợ</a>
+                    <div className="center-footer-section reveal slide-up stagger-4">
+                        <h4>Mạng xã hội</h4>
+                        <div className="center-footer-social">
+                            {d.facebookUrl && (
+                                <a href={d.facebookUrl} target="_blank" rel="noopener noreferrer" className="social-icon facebook hover-lift" title="Facebook">
+                                    <Facebook size={20} />
+                                </a>
+                            )}
+                            {d.youtubeUrl && (
+                                <a href={d.youtubeUrl} target="_blank" rel="noopener noreferrer" className="social-icon youtube hover-lift" title="Youtube">
+                                    <Youtube size={20} />
+                                </a>
+                            )}
+                            {d.instagramUrl && (
+                                <a href={d.instagramUrl} target="_blank" rel="noopener noreferrer" className="social-icon instagram hover-lift" title="Instagram">
+                                    <Instagram size={20} />
+                                </a>
+                            )}
+                            {!d.facebookUrl && !d.youtubeUrl && !d.instagramUrl && (
+                                <p className="no-social-msg">Chưa cập nhật liên kết mxh.</p>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                <div className="center-footer-bottom">
-                    {editMode
-                        ? <InlineEditField draft={draft} set={set} field="copyright" placeholder="Bản quyền" className="footer-copyright-field" />
-                        : <p>{d.copyright}</p>}
+                <div className="center-footer-bottom reveal fade-in stagger-2">
+                    {editMode ? (
+                        <InlineEditField draft={draft} set={set} field="copyright" placeholder="Bản quyền" className="footer-copyright-field" />
+                    ) : (
+                        <p>{d.copyright}</p>
+                    )}
                 </div>
             </footer>
         </div>

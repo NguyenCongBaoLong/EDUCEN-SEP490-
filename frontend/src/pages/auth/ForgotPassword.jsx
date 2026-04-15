@@ -1,125 +1,130 @@
 import { useState } from 'react';
-import { ArrowLeft, BookOpen, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, AlertCircle, CheckCircle, Mail, Loader2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import '../../css/pages/auth/Login.css';
-
+import api from '../../services/api';
+import '../../css/pages/auth/ForgotPassword.css';
+  
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
-
-    const handleSubmit = (e) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [emailError, setEmailError] = useState('');
+  
+    const validateEmail = (email) => {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    };
+  
+    const handleEmailChange = (e) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (value && !validateEmail(value)) {
+            setEmailError('Vui lòng nhập địa chỉ email hợp lệ');
+        } else {
+            setEmailError('');
+        }
+    };
+  
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
+        setEmailError('');
+  
         if (!email) {
-            setError('Vui lòng nhập địa chỉ email.');
+            setEmailError('Vui lòng nhập địa chỉ email');
             return;
         }
-
-        // Simulate API call
-        console.log('Reset link sent to:', email);
-        setSubmitted(true);
+  
+        if (!validateEmail(email)) {
+            setEmailError('Địa chỉ email không hợp lệ');
+            return;
+        }
+  
+        setIsLoading(true);
+  
+        try {
+            await api.post('/auth/reset-password', { email: email.trim() });
+            setSubmitted(true);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div className="login-container">
-            {/* Left Side - Branding (Reused) */}
-            <div className="login-left">
-                <div className="login-branding">
-                    <Link to="/" className="logo">
-                        <BookOpen size={40} strokeWidth={2.5} />
-                        <span className="logo-text-white">Hệ thống EduCen</span>
-                    </Link>
+        <div className="fp-bg">
+            {/* Stars */}
+            <div className="fp-stars" />
 
-                    <h1 className="tagline">
-                        Khôi phục quyền truy cập<br />tài khoản của bạn.
-                    </h1>
-
-                    <p className="subtitle">
-                        Đừng lo lắng, chúng tôi sẽ giúp bạn lấy lại mật khẩu<br />
-                        và quay trở lại quản lý lớp học ngay lập tức.
-                    </p>
-                </div>
+            {/* Scenery */}
+            <div className="fp-scenery">
+                <svg viewBox="0 0 1440 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#2d1b69" d="M0,224L60,213.3C120,203,240,181,360,181.3C480,181,600,203,720,213.3C840,224,960,224,1080,208C1200,192,1320,160,1380,144L1440,128L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z" />
+                    <path fill="#1a0f3d" d="M0,288L80,272C160,256,320,224,480,218.7C640,213,800,235,960,240C1120,245,1280,235,1360,229.3L1440,224L1440,320L1360,320C1280,320,1120,320,960,320C800,320,640,320,480,320C320,320,160,320,80,320L0,320Z" />
+                    {[30, 80, 140, 220, 310, 420, 530, 650, 780, 900, 1020, 1140, 1260, 1350, 1410].map((x, i) => (
+                        <polygon key={i} fill="#0f0926" points={`${x},${270 - (i % 3) * 20} ${x - 18},300 ${x + 18},300`} />
+                    ))}
+                </svg>
             </div>
 
-            {/* Right Side - Form */}
-            <div className="login-right">
-                <div className="login-form-container">
-                    <div className="login-header">
-                        <h1>Quên Mật Khẩu?</h1>
-                        <p>Nhập địa chỉ email đã đăng ký để nhận liên kết đặt lại mật khẩu</p>
-                    </div>
+            {/* Card */}
+            <div className="fp-card">
+                <h1 className="fp-title">Quên mật khẩu?</h1>
 
-                    {!submitted ? (
-                        <form onSubmit={handleSubmit} className="login-form">
-                            <div className="form-group">
-                                <label htmlFor="email">Địa chỉ Email</label>
+                {!submitted ? (
+                    <>
+                        <p className="fp-subtitle">
+                            Nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu của bạn.
+                        </p>
+                        <form onSubmit={handleSubmit} className="fp-form">
+                            <div className="fp-input-wrap">
                                 <input
                                     type="email"
                                     id="email"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="tutor@example.com"
-                                    className="form-input"
-                                    required
+                                    onChange={handleEmailChange}
+                                    placeholder="Nhập email của bạn"
+                                    className="fp-input"
+                                    autoComplete="email"
+                                    disabled={isLoading}
                                 />
+                                <Mail size={18} className="fp-input-icon" />
                             </div>
 
-                            {error && (
-                                <div className="alert alert-error">
+                            {(error || emailError) && (
+                                <div className="fp-error">
                                     <AlertCircle size={16} />
-                                    <span>{error}</span>
+                                    <span>{error || emailError}</span>
                                 </div>
                             )}
 
-                            <button type="submit" className="submit-btn" style={{ justifyContent: 'center' }}>
-                                Gửi liên kết đặt lại
+                            <button type="submit" className="fp-submit" disabled={isLoading}>
+                                {isLoading ? <><Loader2 size={18} className="spin-icon" /> Đang gửi...</> : 'Gửi mã xác thực'}
                             </button>
-
-                            <div className="signup-link">
-                                <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                    <ArrowLeft size={16} /> Quay lại Đăng nhập
-                                </Link>
-                            </div>
                         </form>
-                    ) : (
-                        <div className="success-state" style={{ textAlign: 'center' }}>
-                            <div style={{
-                                background: '#DEF7EC',
-                                color: '#03543F',
-                                width: '64px',
-                                height: '64px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 1.5rem auto'
-                            }}>
-                                <CheckCircle size={32} />
-                            </div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Kiểm tra email của bạn</h3>
-                            <p style={{ color: '#6B7280', marginBottom: '2rem' }}>
-                                Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến <strong>{email}</strong>
-                            </p>
-
-                            {/* For Checkpoint simulation only - normally this would be in the email */}
-                            <div className="alert alert-warning" style={{ marginBottom: '2rem' }}>
-                                <strong>Môi trường thử nghiệm:</strong>
-                                <p>Nhấp vào bên dưới để tiếp tục đến trang đặt lại mật khẩu</p>
-                            </div>
-
-                            <Link to="/reset-password" className="submit-btn" style={{ textDecoration: 'none', marginBottom: '1rem' }}>
-                                Đi đến trang Đặt lại mật khẩu
-                            </Link>
-
-                            <div className="signup-link">
-                                <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                    <ArrowLeft size={16} /> Quay lại Đăng nhập
-                                </Link>
-                            </div>
+                    </>
+                ) : (
+                    <div className="fp-success">
+                        <div className="fp-success-icon">
+                            <CheckCircle size={32} />
                         </div>
-                    )}
+                        <h3 style={{ color: 'white', marginBottom: '0.5rem', fontWeight: '700' }}>Kiểm tra email</h3>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '1.5rem', fontSize: '0.9375rem' }}>
+                            Nếu email tồn tại, chúng tôi đã gửi mã xác thực đến <strong>{email}</strong>.
+                        </p>
+
+                        <Link to="/reset-password" state={{ email }} className="fp-success-btn">
+                            Đi đến trang đặt lại
+                        </Link>
+                    </div>
+                )}
+
+                <div className="fp-footer">
+                    <Link to="/login">
+                        <ArrowLeft size={16} /> Quay lại Đăng nhập
+                    </Link>
                 </div>
             </div>
         </div>

@@ -16,11 +16,26 @@ namespace EducenAPI.DTOs.Schedules
         [Required(ErrorMessage = "EndTime is required")]
         public TimeSpan EndTime { get; set; }
 
+        public int? RoomId { get; set; }
+
+        private string? _notes;
+        private string? _status;
+
         [StringLength(200, ErrorMessage = "Notes cannot exceed 200 characters")]
-        public string? Notes { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Notes cannot be only whitespace")]
+        public string? Notes 
+        { 
+            get => _notes;
+            set => _notes = value?.Trim();
+        }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        public string? Status { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        public string? Status 
+        { 
+            get => _status;
+            set => _status = value?.Trim();
+        }
     }
 
     public class UpdateScheduleDto
@@ -31,11 +46,24 @@ namespace EducenAPI.DTOs.Schedules
 
         public TimeSpan? EndTime { get; set; }
 
+        private string? _notes;
+        private string? _status;
+
         [StringLength(200, ErrorMessage = "Notes cannot exceed 200 characters")]
-        public string? Notes { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Notes cannot be only whitespace")]
+        public string? Notes 
+        { 
+            get => _notes;
+            set => _notes = value?.Trim();
+        }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        public string? Status { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        public string? Status 
+        { 
+            get => _status;
+            set => _status = value?.Trim();
+        }
     }
 
     public class ScheduleDto
@@ -43,11 +71,21 @@ namespace EducenAPI.DTOs.Schedules
         public int ScheduleId { get; set; }
         public int ClassId { get; set; }
         public string ClassName { get; set; } = string.Empty;
+        public int? SubjectId { get; set; }
+        public string? SubjectName { get; set; }
+        public int DayOfWeek { get; set; }
         public DateTime ScheduleDate { get; set; }
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public string? TeacherName { get; set; }
         public string? Notes { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        
+        // Room information
+        public int? RoomId { get; set; }
+        public string? RoomName { get; set; }
     }
 }

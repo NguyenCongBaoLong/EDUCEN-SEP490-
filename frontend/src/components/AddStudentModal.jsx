@@ -1,26 +1,30 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, User, BookOpen, Users, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/CreateClassModal.css';
+import '../css/components/AddParentModal.css';
 
-const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingStudents = [] }) => {
+const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingStudents = [], parentList = [], gradeList = [], allUsers = [] }) => {
     const [formData, setFormData] = useState({
         name: '',
-        avatar: null, // New field for avatar
+        avatar: null,
+        email: '',
+        phone: '',
         grade: '',
-        class: '',
         dateOfBirth: '',
         gender: 'male',
-        parentName: '',
-        parentPhone: '',
-        parentEmail: '',
         address: '',
-        enrollmentDate: new Date().toISOString().split('T')[0],
         status: 'active',
-        notes: ''
+        notes: '',
+        // Parent linking
+        linkedParentIds: [],
+        // Account tracking
+        accountSent: false
     });
 
     const [errors, setErrors] = useState({});
+    const [showParentSection, setShowParentSection] = useState(false);
+    const [parentSearch, setParentSearch] = useState('');
 
     useEffect(() => {
         if (isOpen) {
@@ -29,30 +33,35 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                     ...editingStudent,
                     avatar: editingStudent.avatar || null,
                     dateOfBirth: editingStudent.dateOfBirth || '',
-                    enrollmentDate: editingStudent.enrollmentDate || new Date().toISOString().split('T')[0],
-                    status: editingStudent.status || 'active'
+                    status: editingStudent.status || 'active',
+                    accountSent: editingStudent.accountSent || false,
+                    linkedParentIds: editingStudent.linkedParentIds || []
                 });
+                // Expand parent section if editing student has linked parents
+                setShowParentSection(!!(editingStudent.linkedParentIds && editingStudent.linkedParentIds.length > 0));
             } else {
                 setFormData({
                     name: '',
                     avatar: null,
+                    email: '',
+                    phone: '',
                     grade: '',
-                    class: '',
                     dateOfBirth: '',
                     gender: 'male',
-                    parentName: '',
-                    parentPhone: '',
-                    parentEmail: '',
                     address: '',
-                    enrollmentDate: new Date().toISOString().split('T')[0],
                     status: 'active',
-                    notes: ''
+                    notes: '',
+                    linkedParentIds: [],
+                    accountSent: false
                 });
+                setShowParentSection(false);
             }
             setErrors({});
+            setParentSearch('');
         }
     }, [editingStudent, isOpen]);
 
+    /* ─── Validators ─── */
     const validateName = (name) => {
         if (!name || name.trim().length < 3) return 'Tên phải có ít nhất 3 ký tự';
         const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵýỷỹ\s]+$/;
@@ -60,24 +69,72 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
         return '';
     };
 
-    const validatePhone = (phone) => {
-        const phoneRegex = /^(0[0-9]{9,10})$/;
-        if (!phone || !phoneRegex.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
+    const validateEmail = (email, allUsersList = []) => {
+        if (!email || email.trim() === '') return 'Email là bắt buộc';
+        
+        // Check if it's a valid email format first
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            // More specific error messages
+            if (!email.includes('@')) {
+                return 'Email phải chứa ký tự @ (vd: student@example.com)';
+            }
+            if (!email.includes('.')) {
+                return 'Email phải chứa tên miền (vd: student@example.com)';
+            }
+            return 'Email không hợp lệ (vd: student@example.com)';
+        }
+        
+        // Check duplicate email across ALL users (teachers, students, parents, admins)
+        const isDuplicate = allUsersList.some(user => {
+            // Skip current user if editing
+            if (editingStudent && user.userId && user.userId.toString() === editingStudent.id) {
+                return false;
+            }
+            return user.email && user.email.toLowerCase() === email.toLowerCase();
+        });
+        
+        if (isDuplicate) return 'Email này đã được sử dụng bởi người dùng khác trong hệ thống';
         return '';
     };
 
-    const validateEmail = (email) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (email && !emailRegex.test(email)) return 'Email không hợp lệ';
+    const validatePhone = (phone, allUsersList = []) => {
+        if (!phone || phone.trim() === '') return ''; // optional
+        const phoneRegex = /^(0[0-9]{9,10})$/;
+        if (!phoneRegex.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
+
+        // Validate uniqueness within SAME ROLE only (roleId=3 for Student)
+        const STUDENT_ROLE_ID = 3;
+        const isDuplicate = allUsersList.some(user => {
+            if (user.roleId !== STUDENT_ROLE_ID) return false;
+            // Skip current user if editing
+            if (editingStudent && user.userId && user.userId.toString() === editingStudent.id) return false;
+            return user.phoneNumber && user.phoneNumber === phone.trim();
+        });
+        if (isDuplicate) return 'Số điện thoại này đã được sử dụng bởi học sinh khác trong hệ thống';
         return '';
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-
-        if (errors[name]) {
+        if (name === 'email') {
+            const emailErr = validateEmail(value, allUsers);
+            setErrors(prev => ({ ...prev, email: emailErr }));
+        } else if (name === 'phone') {
+            const phoneErr = validatePhone(value, allUsers);
+            setErrors(prev => ({ ...prev, phone: phoneErr }));
+        } else if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name, value } = e.target;
+        if (name === 'email') {
+            setErrors(prev => ({ ...prev, email: validateEmail(value, allUsers) }));
+        } else if (name === 'phone') {
+            setErrors(prev => ({ ...prev, phone: validatePhone(value, allUsers) }));
         }
     };
 
@@ -86,11 +143,9 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
 
         const newErrors = {
             name: validateName(formData.name),
-            parentName: validateName(formData.parentName),
-            parentPhone: validatePhone(formData.parentPhone),
-            parentEmail: validateEmail(formData.parentEmail),
-            grade: !formData.grade ? 'Vui lòng chọn khối' : '',
-            class: !formData.class ? 'Vui lòng chọn lớp' : ''
+            email: validateEmail(formData.email, allUsers),
+            phone: validatePhone(formData.phone, allUsers),
+            grade: !formData.grade ? 'Vui lòng chọn khối' : ''
         };
 
         Object.keys(newErrors).forEach(key => {
@@ -99,10 +154,16 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
+            // Auto-expand parent section if there are parent errors
+            if (newErrors.parentName || newErrors.parentPhone || newErrors.parentEmail) {
+                setShowParentSection(true);
+            }
             return;
         }
 
-        const submitData = editingStudent ? { ...formData, id: editingStudent.id } : formData;
+        const submitData = editingStudent
+            ? { ...formData, id: editingStudent.id }
+            : { ...formData };
         onSubmit(submitData);
         onClose();
     };
@@ -110,6 +171,22 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
     if (!isOpen) return null;
 
     const title = editingStudent ? 'Chỉnh Sửa Thông Tin Học Sinh' : 'Thêm Học Sinh Mới';
+    const hasParentInfo = formData.linkedParentIds && formData.linkedParentIds.length > 0;
+
+    const filteredParents = parentList.filter(p =>
+        p.name.toLowerCase().includes(parentSearch.toLowerCase()) ||
+        p.id?.toLowerCase().includes(parentSearch.toLowerCase()) ||
+        p.phone?.includes(parentSearch)
+    );
+
+    const toggleParent = (id) => {
+        setFormData(prev => ({
+            ...prev,
+            linkedParentIds: prev.linkedParentIds.includes(id)
+                ? prev.linkedParentIds.filter(x => x !== id)
+                : [...prev.linkedParentIds, id]
+        }));
+    };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -120,8 +197,12 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                 </div>
 
                 <form onSubmit={handleSubmit} className="modal-form">
-                    {/* Student Info Section */}
-                    <div className="form-section-title">Thông Tin Cá Nhân</div>
+
+                    {/* ── Thông Tin Cá Nhân ── */}
+                    <div className="form-section-title">
+                        <User size={16} style={{ marginRight: 6 }} />
+                        Thông Tin Cá Nhân
+                    </div>
 
                     <div className="form-group">
                         <label>Họ và Tên *</label>
@@ -134,6 +215,34 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                             className={errors.name ? 'input-error' : ''}
                         />
                         {errors.name && <span className="error-message">{errors.name}</span>}
+                    </div>
+
+                    <div className="form-group">
+                        <label>Email học sinh * <span style={{ color: '#94a3b8', fontWeight: 400 }}>(dùng để gửi tài khoản)</span></label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            placeholder="student@example.com"
+                            className={errors.email ? 'input-error' : ''}
+                        />
+                        {errors.email && <span className="error-message">{errors.email}</span>}
+                    </div>
+
+                    <div className="form-group">
+                        <label>Số điện thoại</label>
+                        <input
+                            type="tel"
+                            name="phone"
+                            value={formData.phone || ''}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            placeholder="VD: 0901234567"
+                            className={errors.phone ? 'input-error' : ''}
+                        />
+                        {errors.phone && <span className="error-message">{errors.phone}</span>}
                     </div>
 
                     <div className="form-row">
@@ -166,8 +275,11 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                         />
                     </div>
 
-                    {/* Academic Info Section */}
-                    <div className="form-section-title">Thông Tin Học Tập</div>
+                    {/* ── Thông Tin Học Tập ── */}
+                    <div className="form-section-title">
+                        <BookOpen size={16} style={{ marginRight: 6 }} />
+                        Thông Tin Học Tập
+                    </div>
 
                     <div className="form-row">
                         <div className="form-group">
@@ -179,89 +291,111 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
                                 className={errors.grade ? 'input-error' : ''}
                             >
                                 <option value="">Chọn khối</option>
-                                {[6, 7, 8, 9, 10, 11, 12].map(g => (
-                                    <option key={g} value={g}>Khối {g}</option>
+                                {gradeList.map(g => (
+                                    <option key={g.gradeId} value={g.gradeName}>{g.gradeName}</option>
                                 ))}
                             </select>
                             {errors.grade && <span className="error-message">{errors.grade}</span>}
                         </div>
-                        <div className="form-group">
-                            <label>Lớp *</label>
-                            <input
-                                type="text"
-                                name="class"
-                                value={formData.class}
-                                onChange={handleChange}
-                                placeholder="VD: 6A"
-                                className={errors.class ? 'input-error' : ''}
-                            />
-                            {errors.class && <span className="error-message">{errors.class}</span>}
-                        </div>
-                    </div>
-
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label>Ngày nhập học</label>
-                            <input
-                                type="date"
-                                name="enrollmentDate"
-                                value={formData.enrollmentDate}
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label>Trạng thái</label>
-                            <select name="status" value={formData.status} onChange={handleChange}>
-                                <option value="active">Hoạt động</option>
-                                <option value="inactive">Không hoạt động</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Parent Info Section */}
-                    <div className="form-section-title">Thông Tin Phụ Huynh</div>
-
-                    <div className="form-group">
-                        <label>Họ Tên Phụ Huynh *</label>
-                        <input
-                            type="text"
-                            name="parentName"
-                            value={formData.parentName}
-                            onChange={handleChange}
-                            placeholder="VD: Nguyễn Văn Ba"
-                            className={errors.parentName ? 'input-error' : ''}
-                        />
-                        {errors.parentName && <span className="error-message">{errors.parentName}</span>}
-                    </div>
-
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label>Số Điện Thoại *</label>
-                            <input
-                                type="tel"
-                                name="parentPhone"
-                                value={formData.parentPhone}
-                                onChange={handleChange}
-                                placeholder="0912345678"
-                                className={errors.parentPhone ? 'input-error' : ''}
-                            />
-                            {errors.parentPhone && <span className="error-message">{errors.parentPhone}</span>}
-                        </div>
-                        <div className="form-group">
-                            <label>Email</label>
-                            <input
-                                type="email"
-                                name="parentEmail"
-                                value={formData.parentEmail}
-                                onChange={handleChange}
-                                placeholder="parent@example.com"
-                                className={errors.parentEmail ? 'input-error' : ''}
-                            />
-                            {errors.parentEmail && <span className="error-message">{errors.parentEmail}</span>}
-                        </div>
                     </div>
 
                     <div className="form-group">
+                        <label>Trạng thái</label>
+                        <select name="status" value={formData.status} onChange={handleChange}>
+                            <option value="active">Hoạt động</option>
+                            <option value="inactive">Không hoạt động</option>
+                        </select>
+                    </div>
+
+                    {/* ── Thông Tin Phụ Huynh (Optional, collapsible) ── */}
+                    <button
+                        type="button"
+                        className="form-section-title"
+                        onClick={() => setShowParentSection(p => !p)}
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'none',
+                            border: 'none',
+                            padding: '10px 0 8px',
+                            cursor: 'pointer',
+                            fontSize: 'inherit',
+                            fontFamily: 'inherit',
+                            color: 'inherit',
+                            textAlign: 'left'
+                        }}
+                    >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Users size={16} />
+                            Thông Tin Phụ Huynh
+                            <span style={{
+                                fontSize: '0.75rem',
+                                color: '#94a3b8',
+                                fontWeight: 400,
+                                marginLeft: 4
+                            }}>
+                                (tuỳ chọn{hasParentInfo ? ' — đã có thông tin' : ''})
+                            </span>
+                        </span>
+                        {showParentSection ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+
+                    {showParentSection && (
+                        <div style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+                            <div className="form-group">
+                                <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                                    <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                                    <input
+                                        type="text"
+                                        value={parentSearch}
+                                        onChange={e => setParentSearch(e.target.value)}
+                                        placeholder="Tìm phụ huynh theo tên, SĐT hoặc ID..."
+                                        style={{ paddingLeft: '2.2rem' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="student-link-list">
+                                {filteredParents.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem', padding: '1rem 0' }}>
+                                        Không tìm thấy phụ huynh
+                                    </p>
+                                ) : (
+                                    filteredParents.map(p => {
+                                        const checked = formData.linkedParentIds.includes(p.id);
+                                        return (
+                                            <label key={p.id} className={`student-link-item ${checked ? 'checked' : ''}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    onChange={() => toggleParent(p.id)}
+                                                />
+                                                <div className="student-link-avatar" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                                                    {p.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{p.name}</div>
+                                                    <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
+                                                        {p.id} · {p.phone}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })
+                                )}
+                            </div>
+                            {formData.linkedParentIds.length > 0 && (
+                                <p style={{ fontSize: '0.8rem', color: '#3b82f6', textAlign: 'right', margin: '4px 0 0' }}>
+                                    Đã chọn {formData.linkedParentIds.length} phụ huynh
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Ghi chú ── */}
+                    <div className="form-group" style={{ marginTop: 8 }}>
                         <label>Ghi chú</label>
                         <textarea
                             name="notes"
@@ -291,7 +425,9 @@ AddStudentModal.propTypes = {
     onClose: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
     editingStudent: PropTypes.object,
-    existingStudents: PropTypes.array
+    existingStudents: PropTypes.array,
+    parentList: PropTypes.array,
+    gradeList: PropTypes.array
 };
 
 export default AddStudentModal;

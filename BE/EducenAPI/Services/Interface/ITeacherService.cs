@@ -10,5 +10,6 @@ namespace EducenAPI.Services.Interface
         Task<bool> UpdateTeacherAsync(int id, UpdateTeacherDto dto);
         Task<bool> DeleteTeacherAsync(int id);
         Task<object> GetTeacherClassesAsync(int id);
+        Task<bool> SendAccountAsync(int teacherId);
     }
 }

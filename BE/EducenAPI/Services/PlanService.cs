@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Plans;
+using EducenAPI.DTOs.Plans;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -15,9 +15,14 @@ namespace EducenAPI.Services
             _context = context;
         }
 
-        public async Task<List<Plan>> GetAllPlansAsync()
+        public async Task<List<Plan>> GetAllPlansAsync(bool includeInactive = false)
         {
-            return await _context.Plans.ToListAsync();
+            var query = _context.Plans.AsQueryable();
+            if (!includeInactive)
+            {
+                query = query.Where(p => p.IsActive);
+            }
+            return await query.OrderByDescending(p => p.Price).ToListAsync();
         }
 
         public async Task<Plan?> GetPlanByIdAsync(string id)
@@ -32,11 +37,9 @@ namespace EducenAPI.Services
 
             var name = request.PlanName.Trim();
 
-            var exists = await _context.Plans
-                .AnyAsync(p => p.PlanName == name);
-
+            var exists = await _context.Plans.AnyAsync(p => p.PlanName == name);
             if (exists)
-                throw new Exception("Plan name already exists.");
+                throw new InvalidOperationException("Tên gói dịch vụ đã tồn tại.");
 
             var plan = new Plan
             {
@@ -45,7 +48,8 @@ namespace EducenAPI.Services
                 Price = request.Price,
                 LimitUsers = request.LimitUsers,
                 Features = request.Features?.Trim(),
-                StorageLimit = request.StorageLimit
+                StorageLimit = request.StorageLimit,
+                IsActive = true
             };
 
             _context.Plans.Add(plan);
@@ -66,12 +70,6 @@ namespace EducenAPI.Services
 
             var name = request.PlanName.Trim();
 
-            var duplicate = await _context.Plans
-                .AnyAsync(p => p.PlanName == name && p.PlanId != id);
-
-            if (duplicate)
-                throw new Exception("Plan name already exists.");
-
             existingPlan.PlanName = name;
             existingPlan.Price = request.Price;
             existingPlan.LimitUsers = request.LimitUsers;
@@ -86,19 +84,25 @@ namespace EducenAPI.Services
         public async Task<bool> DeletePlanAsync(string id)
         {
             var plan = await _context.Plans
-                .Include(p => p.Subscriptions)
                 .FirstOrDefaultAsync(p => p.PlanId == id);
 
             if (plan == null)
                 return false;
-
-            if (plan.Subscriptions != null && plan.Subscriptions.Any())
-                throw new Exception("Cannot delete plan because it has subscriptions.");
-
-            _context.Plans.Remove(plan);
+            // Always soft delete to keep historical references for subscriptions/invoices.
+            // Inactive plans are excluded by listing queries (GetAllPlansAsync).
+            plan.IsActive = false;
 
             await _context.SaveChangesAsync();
 
+            return true;
+        }
+
+        public async Task<bool> SetPlanActiveStatusAsync(string id, bool isActive)
+        {
+            var plan = await _context.Plans.FirstOrDefaultAsync(p => p.PlanId == id);
+            if (plan == null) return false;
+            plan.IsActive = isActive;
+            await _context.SaveChangesAsync();
             return true;
         }
     }

@@ -1,11 +1,15 @@
 using EducenAPI.DTOs.Students;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using System.Data;
 using System.Text;
-using ExcelDataReader;
+using EducenAPI.Persistence.Contexts;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using EducenAPI.Models;
 
 namespace EducenAPI.Controllers
 {
@@ -15,14 +19,28 @@ namespace EducenAPI.Controllers
     public class StudentsController : ControllerBase
     {
         private readonly IStudentService _studentService;
+        private readonly EducenV2Context _context;
+        private readonly MailService _mailService;
+        private readonly IClassService _classService;
+        private readonly IStudentImportService _studentImportService;
 
-        public StudentsController(IStudentService studentService)
+        public StudentsController(
+            IStudentService studentService, 
+            EducenV2Context context, 
+            MailService mailService, 
+            IClassService classService,
+            IStudentImportService studentImportService)
         {
             _studentService = studentService;
+            _context = context;
+            _mailService = mailService;
+            _classService = classService;
+            _studentImportService = studentImportService;
         }
 
         // GET: api/Students
         [HttpGet]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetStudents()
         {
             var students = await _studentService.GetAllStudentsAsync();
@@ -31,18 +49,20 @@ namespace EducenAPI.Controllers
 
         // GET: api/Students/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,Teacher,Assistant")]
         public async Task<IActionResult> GetStudent(int id)
         {
             var student = await _studentService.GetStudentByIdAsync(id);
 
             if (student == null)
-                return NotFound(new { message = "Student not found" });
+                return NotFound(new { message = "Không tìm thấy học sinh." });
 
             return Ok(student);
         }
 
         // POST: api/Students
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateStudent(CreateStudentDto dto)
         {
             try
@@ -52,19 +72,25 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                // Return 409 for conflicts (duplicate username/email)
+                if (ex.Message.Contains("đã tồn tại"))
+                    return Conflict(new { message = ex.Message });
+                
+                // Return 400 for other errors
+                return BadRequest(new { message = ex.Message });
             }
         }
 
         // PUT: api/Students/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateStudent(int id, UpdateStudentDto dto)
         {
             try
             {
                 var success = await _studentService.UpdateStudentAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Student not found" });
+                    return NotFound(new { message = "Không tìm thấy học sinh." });
 
                 return NoContent();
             }
@@ -76,13 +102,14 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Students/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteStudent(int id)
         {
             try
             {
                 var success = await _studentService.DeleteStudentAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Student not found" });
+                    return NotFound(new { message = "Không tìm thấy học sinh." });
 
                 return NoContent();
             }
@@ -92,87 +119,202 @@ namespace EducenAPI.Controllers
             }
         }
 
-        // POST: api/Students/import
+        // POST: api/Students/import?classId=1
         [HttpPost("import")]
-        public async Task<IActionResult> ImportStudents(IFormFile file)
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> ImportStudents(IFormFile file, [FromQuery] int? classId)
         {
             try
             {
                 if (file == null || file.Length == 0)
-                    return BadRequest(new { message = "No file uploaded" });
+                    return BadRequest(new { message = "Chưa tải tệp lên." });
 
                 var extension = System.IO.Path.GetExtension(file.FileName).ToLower();
                 if (extension != ".xlsx" && extension != ".xls")
-                    return BadRequest(new { message = "Only Excel files (.xlsx, .xls) are allowed" });
+                    return BadRequest(new { message = "Chỉ cho phép các tệp Excel (.xlsx, .xls)." });
 
-                var importResults = new ImportResults();
-
-                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-
-                using var stream = file.OpenReadStream();
-                using var reader = ExcelReaderFactory.CreateReader(stream);
-                
-                var dataSet = reader.AsDataSet();
-                var worksheet = dataSet.Tables[0];
-                
-                if (worksheet == null)
-                    return BadRequest(new { message = "No worksheet found in Excel file" });
-
-                // Process Excel data
-                for (int row = 1; row < worksheet.Rows.Count; row++)
+                // Validate classId if provided
+                if (classId.HasValue)
                 {
-                    importResults.Total++;
-                    
-                    try
-                    {
-                        var rowData = worksheet.Rows[row];
-                        
-                        if (rowData.ItemArray.Length < 3)
-                        {
-                            importResults.Failed++;
-                            importResults.Errors.Add($"Row {row + 1}: Insufficient data columns (need at least Username, Full Name, Email)");
-                            continue;
-                        }
-
-                        var createStudentDto = new CreateStudentDto
-                        {
-                            Username = rowData.ItemArray[0]?.ToString()?.Trim() ?? "",
-                            FullName = rowData.ItemArray[1]?.ToString()?.Trim() ?? "",
-                            Email = rowData.ItemArray[2]?.ToString()?.Trim() ?? "",
-                            PhoneNumber = rowData.ItemArray.Length > 3 ? rowData.ItemArray[3]?.ToString()?.Trim() : null,
-                            Password = (rowData.ItemArray[0]?.ToString()?.Trim() ?? "") + "123", // Default password
-                            EnrollmentStatus = "Active"
-                        };
-
-                        await _studentService.CreateStudentAsync(createStudentDto);
-                        importResults.Success++;
-                    }
-                    catch (Exception ex)
-                    {
-                        importResults.Failed++;
-                        importResults.Errors.Add($"Row {row + 1}: Error - {ex.Message}");
-                    }
+                    var classExists = await _context.Classes.FindAsync(classId.Value);
+                    if (classExists == null)
+                        return BadRequest(new { message = $"Không tìm thấy lớp học với mã {classId}" });
                 }
 
-                return Ok(new
-                {
-                    message = "Import completed",
-                    importResults,
-                    defaultPasswordNote = "Default passwords are: username + '123'"
-                });
+                // Use StudentImportService to handle import logic (pass classId)
+                var result = await _studentImportService.ImportStudentsAsync(file, classId);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = $"Import failed: {ex.Message}" });
+                return BadRequest(new { message = $"Nhập dữ liệu thất bại: {ex.Message}" });
+            }
+        }
+        [HttpPost("send-account/{studentId}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> SendAccount(int studentId)
+        {
+            var user = await _context.Users
+        .Include(x => x.Student)
+        .FirstOrDefaultAsync(x => x.UserId == studentId);
+
+            if (user == null)
+                return NotFound("Người dùng không tồn tại");
+
+            if (string.IsNullOrEmpty(user.Email))
+                return BadRequest("Người dùng chưa có email");
+
+            // Nếu chưa có username thì mặc định dùng email luôn
+            if (string.IsNullOrEmpty(user.Username))
+            {
+                user.Username = user.Email;
+            }
+
+            // tạo password mới
+            string newPassword = PasswordGenerator.GenerateSecurePassword();
+
+            // hash password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            user.IsAccountSent = true;
+            user.AccountStatus = "Active"; // Kích hoạt tài khoản khi gửi mail
+            await _context.SaveChangesAsync();
+
+            // gửi mail
+            await _mailService.SendStudentAccount(user.Email, user.Username!, newPassword);
+
+            return Ok("Đã gửi tài khoản thành công");
+        }
+
+        [HttpPost("create-account/{studentId}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> CreateAccountForStudent(int studentId, [FromBody] CreateAccountRequest request)
+        {
+            try
+            {
+                var student = await _context.Students.FindAsync(studentId);
+                if (student == null)
+                    return NotFound("Không tìm thấy học sinh.");
+
+                // Since UserId is now non-nullable and always created with User, check if User exists
+                var userExists = await _context.Users.AnyAsync(u => u.UserId == student.UserId);
+                if (userExists)
+                    return BadRequest("Học sinh này đã có tài khoản.");
+
+                // Validate request
+                if (string.IsNullOrWhiteSpace(request.Username))
+                    return BadRequest("Tên đăng nhập là bắt buộc.");
+
+                if (string.IsNullOrWhiteSpace(request.Password))
+                    return BadRequest("Mật khẩu là bắt buộc.");
+
+                // Check duplicate username
+                var existingUsername = await _context.Users
+                    .AnyAsync(u => u.Username == request.Username);
+                if (existingUsername)
+                    return Conflict("Tên đăng nhập đã tồn tại.");
+
+                // Create user account
+                var studentRole = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.RoleName == "Student");
+                if (studentRole == null)
+                    return BadRequest("Không tìm thấy vai trò Học sinh.");
+
+                // Lấy email từ User nếu đã có, hoặc từ Student nếu chưa có User
+                var userEmail = student.StudentNavigation?.Email ?? student.Email;
+                
+                var user = new User
+                {
+                    Username = request.Username,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    RoleId = studentRole.RoleId,
+                    FullName = request.FullName ?? "",
+                    Email = userEmail,
+                    PhoneNumber = request.PhoneNumber,
+                    AccountStatus = "Active",
+                    IsAccountSent = true
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                // Link student to user
+                student.UserId = user.UserId;
+                await _context.SaveChangesAsync();
+
+                // Send account email
+                await _mailService.SendStudentAccount(userEmail ?? "", request.Username, request.Password);
+
+                return Ok(new { message = "Tài khoản đã được tạo và gửi thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
+        [HttpGet("profile")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetProfile()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+                int studentUserId = int.Parse(userIdClaim.Value);
+
+                var student = await _studentService.GetStudentProfileAsync(studentUserId);
+                if (student == null) return NotFound(new { message = "Không tìm thấy hồ sơ học sinh." });
+
+                return Ok(student);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("performance-report")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetPerformanceReport()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null) return Unauthorized();
+                int studentUserId = int.Parse(userIdClaim.Value);
+
+                var report = await _studentService.GetStudentPerformanceReportAsync(studentUserId);
+                if (report == null) return NotFound(new { message = "Không tìm thấy dữ liệu học sinh." });
+
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         private sealed class ImportResults
         {
             public int Total { get; set; }
             public int Success { get; set; }
             public int Failed { get; set; }
             public List<string> Errors { get; set; } = new();
+        }
+
+        public class CreateAccountRequest
+        {
+            [Required]
+            public string Username { get; set; } = string.Empty;
+            
+            [Required]
+            public string Password { get; set; } = string.Empty;
+            
+            public string? FullName { get; set; }
+            public string? PhoneNumber { get; set; }
         }
     }
 }

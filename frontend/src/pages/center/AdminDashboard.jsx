@@ -1,132 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
-    CheckCircle, AlertCircle, Info, ChevronRight, BookOpen,
-    TrendingUp, MessageSquare, X, Inbox, Star, ShieldAlert,
-    MessageCircle, ArrowLeft, Mail, MailOpen
+    CheckCircle, XCircle, AlertCircle, TrendingUp, MessageSquare, 
+    BookOpen, HardDrive, Inbox, ClipboardCheck
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, Legend
+    ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import zaloOAService from '../../services/zaloOAService';
+import notificationService from '../../services/notificationService';
+import NotificationMailbox from '../../components/NotificationMailbox';
+import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
-
-/* ─── Mock Data ─────────────────────────────────────── */
-const enrollmentData = [
-    { month: 'T8', students: 42 },
-    { month: 'T9', students: 67 },
-    { month: 'T10', students: 58 },
-    { month: 'T11', students: 74 },
-    { month: 'T12', students: 55 },
-    { month: 'T1', students: 80 },
-    { month: 'T2', students: 91 },
-];
-
-const subjectData = [
-    { name: 'Toán học', value: 35, color: '#3b82f6' },
-    { name: 'Tiếng Anh', value: 28, color: '#8b5cf6' },
-    { name: 'Vật lý', value: 18, color: '#f59e0b' },
-    { name: 'Hóa học', value: 12, color: '#10b981' },
-    { name: 'Khác', value: 7, color: '#6b7280' },
-];
-
-const initialNotifications = [
-    {
-        id: 1,
-        title: 'Thông báo nghỉ Tết Nguyên Đán 2025',
-        content: 'Trung tâm sẽ nghỉ từ 26/01 đến 03/02. Lịch học sẽ tiếp tục từ 04/02.',
-        sentAt: '2025-01-20T08:30:00',
-        recipients: 312,
-        status: 'sent',
-        target: 'all',
-    },
-    {
-        id: 2,
-        title: 'Thay đổi lịch học lớp Toán 12A',
-        content: 'Lớp Toán 12A chuyển từ thứ 3 sang thứ 4 hàng tuần kể từ 10/02.',
-        sentAt: '2025-02-08T14:00:00',
-        recipients: 28,
-        status: 'sent',
-        target: 'Toán 12A',
-    },
-    {
-        id: 3,
-        title: 'Khai giảng lớp Tiếng Anh IELTS',
-        content: 'Lớp IELTS mới khai giảng ngày 15/02. Đăng ký trước 12/02 để nhận ưu đãi.',
-        sentAt: '2025-02-10T09:00:00',
-        recipients: 185,
-        status: 'sent',
-        target: 'all',
-    },
-];
-
-const upcomingClasses = [
-    { id: 1, name: 'Toán nâng cao 10', subject: 'Toán học', startDate: '25/02/2025', students: 0, maxStudents: 20 },
-    { id: 2, name: 'IELTS 6.5+', subject: 'Tiếng Anh', startDate: '01/03/2025', students: 5, maxStudents: 15 },
-    { id: 3, name: 'Lý cơ bản 11', subject: 'Vật lý', startDate: '05/03/2025', students: 3, maxStudents: 20 },
-];
-
-const initialInboxMessages = [
-    {
-        id: 1,
-        type: 'admin',
-        senderName: 'Admin Tổng Hệ Thống',
-        senderRole: 'Quản trị viên',
-        subject: '[QUAN TRỌNG] Cập nhật chính sách học phí 2025',
-        preview: 'Kính gửi các trung tâm, từ tháng 3/2025 hệ thống sẽ áp dụng chính sách mới...',
-        content: 'Kính gửi các trung tâm,\n\nTừ tháng 3/2025, hệ thống sẽ áp dụng chính sách học phí mới như sau:\n\n1. Học phí sẽ được thu theo kỳ (3 tháng/kỳ) thay vì theo tháng.\n2. Học sinh đăng ký trước ngày 01/03 sẽ được giữ nguyên mức học phí cũ đến hết học kỳ 1.\n3. Các trường hợp miễn giảm học phí cần nộp hồ sơ trước ngày 20/02.\n\nVui lòng thông báo đến phụ huynh và học sinh. Mọi thắc mắc liên hệ phòng hỗ trợ.\n\nTrân trọng,\nPhòng Quản Lý Hệ Thống',
-        sentAt: '2025-02-18T09:00:00',
-        isRead: false,
-        priority: 'high',
-    },
-    {
-        id: 2,
-        type: 'admin',
-        senderName: 'Admin Tổng Hệ Thống',
-        senderRole: 'Quản trị viên',
-        subject: 'Bảo trì hệ thống ngày 22/02/2025',
-        preview: 'Hệ thống sẽ tạm ngưng hoạt động từ 23:00 ngày 22/02 đến 02:00 ngày 23/02...',
-        content: 'Kính gửi các trung tâm,\n\nHệ thống sẽ tạm ngưng hoạt động để bảo trì theo lịch:\n\n- Thời gian: 23:00 ngày 22/02 đến 02:00 ngày 23/02/2025\n- Ảnh hưởng: Không thể đăng nhập, xem lịch học, hoặc nhắn tin trong thời gian này.\n\nXin lỗi vì sự bất tiện này. Chúng tôi sẽ cố gắng hoàn thành sớm nhất có thể.\n\nTrân trọng,\nPhòng Kỹ Thuật',
-        sentAt: '2025-02-17T14:30:00',
-        isRead: true,
-        priority: 'normal',
-    },
-    {
-        id: 3,
-        type: 'feedback',
-        senderName: 'Nguyễn Thị Hoa',
-        senderRole: 'Phụ huynh – Lớp Toán 12A',
-        subject: 'Góp ý về lịch học buổi tối',
-        preview: 'Cho em hỏi lớp Toán 12A tối thứ 3 có thể dời sang 19h30 thay vì 19h không ạ...',
-        content: 'Kính gửi Ban Giám Đốc Trung Tâm,\n\nCon tôi đang học lớp Toán 12A. Tôi muốn góp ý nhỏ: buổi học tối thứ 3 hiện bắt đầu lúc 19h, nhưng nhiều bé tan học ở trường lúc 18h30 và cần về ăn cơm, đi xa khá vất vả.\n\nNếu được, nhờ trung tâm xem xét dời sang 19h30 sẽ thuận tiện hơn cho các bé.\n\nCảm ơn trung tâm đã lắng nghe!\n\nTrân trọng,\nNguyễn Thị Hoa',
-        sentAt: '2025-02-19T20:15:00',
-        isRead: false,
-        priority: 'normal',
-    },
-    {
-        id: 4,
-        type: 'feedback',
-        senderName: 'Trần Văn Minh',
-        senderRole: 'Học sinh – Lớp IELTS',
-        subject: 'Phản hồi về tài liệu học tập',
-        preview: 'Em muốn góp ý là tài liệu đọc hiểu của lớp IELTS tuần trước có một số lỗi đánh máy...',
-        content: 'Kính gửi thầy/cô,\n\nEm là Trần Văn Minh, học lớp IELTS 6.5+. Em muốn phản hồi rằng tài liệu phần Reading tuần 3 (trang 12-13) có một số lỗi đánh máy nhỏ ở phần câu hỏi số 4 và 7, làm em hơi nhầm khi làm bài.\n\nNgoài ra em rất hài lòng với cách dạy của thầy. Cảm ơn trung tâm!\n\nEm,\nTrần Văn Minh',
-        sentAt: '2025-02-15T16:00:00',
-        isRead: true,
-        priority: 'normal',
-    },
-];
-
-const kpiData = [
-    { label: 'Tổng học sinh', value: '312', icon: Users, color: 'blue', change: '+12 tháng này' },
-    { label: 'Lớp đang học', value: '18', icon: BookOpen, color: 'purple', change: '3 sắp khai giảng' },
-    { label: 'Nhân viên', value: '24', icon: UserCheck, color: 'green', change: '20 đang active' },
-    { label: 'Đăng ký mới', value: '91', icon: TrendingUp, color: 'orange', change: 'Tháng 2/2025' },
-];
 
 /* ─── Helpers ────────────────────────────────────────── */
 function formatDateTime(iso) {
+    if (!iso) return '';
     const d = new Date(iso);
     return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
@@ -143,90 +36,257 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
+const normalizeNotifications = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== 'object') return [];
+    const possibleArrays = [payload.data, payload.notifications, payload.items];
+    for (const arr of possibleArrays) {
+        if (Array.isArray(arr)) return arr;
+    }
+    return [];
+};
+
 /* ─── Main Component ─────────────────────────────────── */
 const AdminDashboard = () => {
-    const [notifications, setNotifications] = useState(initialNotifications);
+    const { user, centerBranding } = useAuth();
+    const [dashboardData, setDashboardData] = useState({
+        overview: {
+            totalStudents: 0,
+            newStudentsThisMonth: 0,
+            totalClasses: 0,
+            upcomingClasses: 0,
+            totalStaff: 0,
+            activeStaff: 0,
+            currentUsers: 0,
+            maxUsers: 0,
+            currentStorageMB: 0,
+            maxStorageMB: 0
+        },
+        studentRegistrationChart: [],
+        studentsBySubject: [],
+    });
+    const [loading, setLoading] = useState(true);
+    const [notifications, setNotifications] = useState([]);
     const [form, setForm] = useState({ title: '', content: '', target: 'all' });
     const [sending, setSending] = useState(false);
     const [sendSuccess, setSendSuccess] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [oaStatus, setOaStatus] = useState(null);
+    const [classes, setClasses] = useState([]);
+    const [sendError, setSendError] = useState('');
 
     // Inbox state
-    const [inboxMessages, setInboxMessages] = useState(initialInboxMessages);
+    const [supportRequests, setSupportRequests] = useState([]);
+    const [systemNotifications, setSystemNotifications] = useState([]);
     const [inboxOpen, setInboxOpen] = useState(false);
     const [selectedMessage, setSelectedMessage] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [replying, setReplying] = useState(false);
+
+    const tenantId = useMemo(() => {
+        const isValidTenantId = (value) => (
+            !!value && value !== 'undefined' && value !== 'null'
+        );
+        if (isValidTenantId(user?.tenantId)) return user.tenantId;
+        const storedTenantId = localStorage.getItem('tenantId');
+        return isValidTenantId(storedTenantId) ? storedTenantId : null;
+    }, [user?.tenantId]);
+
+    const inboxMessages = useMemo(() => [
+        ...systemNotifications.map(n => ({
+            id: `notif-${n.notificationId}`,
+            notificationId: n.notificationId,
+            type: n.category === 'Subscription' ? 'subscription' : 'system',
+            senderName: 'Hệ thống',
+            senderRole: n.category === 'Subscription' ? 'Thông báo gói dịch vụ' : 'Thông báo',
+            subject: n.title || 'Thông báo',
+            content: n.message || '',
+            sentAt: n.createdAt,
+            isRead: n.isRead,
+            priority: n.type === 'Warning' ? 'high' : 'normal',
+        })),
+        ...supportRequests.map(sr => ({
+            id: `sr-${sr.id}`,
+            srId: sr.id,
+            type: sr.senderRoleName?.toLowerCase().includes('parent') ? 'feedback' : 'support',
+            senderName: sr.senderName || 'Người dùng',
+            senderRole: sr.senderRoleName || 'Yêu cầu',
+            subject: sr.title || 'Hỗ trợ',
+            content: sr.content || '',
+            sentAt: sr.createdAt,
+            isRead: sr.isRead,
+            priority: 'normal',
+            adminResponse: sr.adminResponse,
+        }))
+    ].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)), [systemNotifications, supportRequests]);
+
+    const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
     useEffect(() => {
+        const fetchAllData = async () => {
+            setLoading(true);
+            try {
+                const [dashboardRes, zaloStatusRes, zaloHistoryRes, classesRes] = await Promise.all([
+                    api.get('/CenterDashboard'),
+                    zaloOAService.getStatus().catch(() => ({ data: null })),
+                    zaloOAService.getMessageHistory().catch(() => ({ data: [] })),
+                    api.get('/Classes').catch(() => ({ data: [] })),
+                ]);
+
+                if (dashboardRes.data) setDashboardData(dashboardRes.data);
+                if (zaloStatusRes.data) setOaStatus(zaloStatusRes.data);
+                if (zaloHistoryRes.data) {
+                    setNotifications((zaloHistoryRes.data || []).map(h => ({
+                        id: h.notificationId,
+                        title: h.title,
+                        content: h.message,
+                        sentAt: h.createdAt,
+                        recipients: 0,
+                    })));
+                }
+                if (classesRes.data) setClasses(classesRes.data || []);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllData();
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
 
-    const handleSend = () => {
+    const fetchInbox = async () => {
+        try {
+            const [srRes, snRes] = await Promise.all([
+                notificationService.getSupportRequests(),
+                notificationService.getSystemNotifications(tenantId)
+            ]);
+            setSupportRequests(normalizeNotifications(srRes.data));
+            setSystemNotifications(normalizeNotifications(snRes.data));
+        } catch (error) {
+            console.error('Lỗi khi tải inbox:', error);
+        }
+    };
+
+    useEffect(() => { if (inboxOpen) fetchInbox(); }, [inboxOpen]);
+
+    const handleSend = async () => {
         if (!form.title.trim() || !form.content.trim()) return;
         setSending(true);
-        setTimeout(() => {
-            const newNotif = {
-                id: notifications.length + 1,
+        setSendError('');
+        try {
+            const res = await zaloOAService.sendBatch(form.title, form.content, form.target);
+            const result = res.data;
+            setNotifications([{
+                id: Date.now(),
                 title: form.title,
                 content: form.content,
                 sentAt: new Date().toISOString(),
-                recipients: form.target === 'all' ? 312 : Math.floor(Math.random() * 30 + 10),
-                status: 'sent',
-                target: form.target === 'all' ? 'all' : form.target,
-            };
-            setNotifications([newNotif, ...notifications]);
+                recipients: result.sent,
+            }, ...notifications]);
             setForm({ title: '', content: '', target: 'all' });
-            setSending(false);
             setSendSuccess(true);
             setTimeout(() => setSendSuccess(false), 3000);
-        }, 1500);
+        } catch (error) {
+            setSendError(error.response?.data?.message || 'Gửi thông báo thất bại.');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleMarkAsRead = async (message) => {
+        try {
+            if (message.type === 'feedback' || message.type === 'support') {
+                await notificationService.markSupportRequestAsRead(message.srId);
+            } else {
+                await notificationService.markAsRead(message.notificationId);
+            }
+            fetchInbox();
+        } catch (error) {
+            console.error('Lỗi khi đánh dấu đã đọc:', error);
+        }
+    };
+
+    const handleReply = async (message) => {
+        if (!replyText.trim()) return;
+        setReplying(true);
+        try {
+            await notificationService.replyToSupportRequest(message.srId, replyText);
+            toast.success('Đã gửi phản hồi!');
+            setReplyText('');
+            setSelectedMessage(null);
+            fetchInbox();
+        } catch (error) {
+            toast.error('Gửi phản hồi thất bại');
+        } finally {
+            setReplying(false);
+        }
     };
 
     const formattedDate = currentTime.toLocaleDateString('vi-VN', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
 
+    const { overview, studentRegistrationChart, studentsBySubject } = dashboardData;
+    const kpiData = [
+        { label: 'Tổng học sinh', value: overview.totalStudents, icon: Users, color: 'blue', change: `+${overview.newStudentsThisMonth} tháng này` },
+        { label: 'Lớp đang học', value: overview.totalClasses, icon: BookOpen, color: 'purple', change: 'Hoạt động' },
+        { label: 'Sắp khai giảng', value: overview.upcomingClasses, icon: Bell, color: 'green', change: 'Đang tuyển sinh' },
+        { label: 'Nhân viên', value: overview.totalStaff, icon: UserCheck, color: 'orange', change: `${overview.activeStaff} đang làm việc` },
+    ];
+
+    const enrollmentData = useMemo(() => {
+        const dataMap = {};
+        const now = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthLabel = `Tháng ${d.getMonth() + 1}`;
+            dataMap[d.getMonth() + 1] = { month: monthLabel, students: 0, sortKey: d.getTime() };
+        }
+        if (studentRegistrationChart) {
+            studentRegistrationChart.forEach(item => { if (dataMap[item.month]) dataMap[item.month].students = item.students; });
+        }
+        return Object.values(dataMap).sort((a, b) => a.sortKey - b.sortKey).map(item => ({ month: item.month, students: item.students }));
+    }, [studentRegistrationChart]);
+
+    const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+    const subjectData = studentsBySubject.map((item, index) => ({
+        name: item.subject,
+        value: item.percentage,
+        count: item.totalStudents,
+        color: COLORS[index % COLORS.length]
+    }));
+
     return (
         <div className="admin-dashboard">
-            <Sidebar />
+            <Sidebar showNotifications={false} />
             <main className="dashboard-main">
-
-                {/* ── Header ── */}
                 <div className="dashboard-header">
                     <div>
                         <h1 className="dashboard-title">Tổng Quan</h1>
                         <p className="dashboard-date">{formattedDate}</p>
                     </div>
                     <div className="dashboard-header-actions">
-                        {/* Hộp thư button */}
-                        <button
-                            className="inbox-trigger-btn"
-                            onClick={() => { setInboxOpen(true); }}
-                        >
+                        <button className="inbox-trigger-btn" onClick={() => setInboxOpen(true)}>
                             <Inbox size={18} />
                             Hộp Thư
-                            {inboxMessages.filter(m => !m.isRead).length > 0 && (
-                                <span className="inbox-trigger-badge">
-                                    {inboxMessages.filter(m => !m.isRead).length}
-                                </span>
-                            )}
+                            {unreadCount > 0 && <span className="inbox-trigger-badge">{unreadCount}</span>}
                         </button>
                         <div className="dashboard-center-badge">
                             <GraduationCap size={18} />
-                            Trung Tâm Gia Sư TutorCenter
+                            {centerBranding.name}
                         </div>
                     </div>
                 </div>
 
-                {/* ── KPI Cards ── */}
                 <div className="kpi-grid">
                     {kpiData.map((kpi) => {
                         const Icon = kpi.icon;
                         return (
                             <div key={kpi.label} className={`kpi-card kpi-${kpi.color}`}>
-                                <div className="kpi-icon-wrap">
-                                    <Icon size={22} />
-                                </div>
+                                <div className="kpi-icon-wrap"><Icon size={22} /></div>
                                 <div className="kpi-info">
                                     <div className="kpi-value">{kpi.value}</div>
                                     <div className="kpi-label">{kpi.label}</div>
@@ -237,62 +297,76 @@ const AdminDashboard = () => {
                     })}
                 </div>
 
-                {/* ── Content Grid ── */}
+                <div className="kpi-grid" style={{ marginTop: '1rem' }}>
+                    <div className="kpi-card kpi-blue" style={{ flex: 1 }}>
+                        <div className="kpi-icon-wrap"><Users size={22} /></div>
+                        <div className="kpi-info" style={{ flex: 1 }}>
+                            <div className="kpi-value">{loading ? '...' : `${overview.currentUsers || 0} / ${overview.maxUsers || 0}`}</div>
+                            <div className="kpi-label">Người Dùng</div>
+                            <div className="storage-progress-container" style={{ marginTop: '8px' }}>
+                                <div className="storage-progress-bar" style={{
+                                    width: `${loading ? 0 : Math.min(((overview.currentUsers || 0) / (overview.maxUsers || 1)) * 100, 100)}%`,
+                                    background: ((overview.currentUsers || 0) / (overview.maxUsers || 1)) > 0.9 ? '#ef4444' : '#3b82f6'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="kpi-card storage-card">
+                        <div className="storage-icon-container"><HardDrive size={24} /></div>
+                        <div className="storage-content">
+                            <div className="storage-value">
+                                <span className="storage-number">
+                                    {loading ? '...' : (
+                                        <>
+                                            {overview.currentStorageMB < 1024 
+                                                ? `${(overview.currentStorageMB || 0).toFixed(1)} MB` 
+                                                : `${((overview.currentStorageMB || 0) / 1024).toFixed(1)} GB`
+                                            }
+                                            <span style={{ margin: '0 8px', color: '#9ca3af' }}>/</span>
+                                            {`${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}
+                                        </>
+                                    )}
+                                </span>
+                            </div>
+                            <div className="storage-label">Dung Lượng</div>
+                            <div className="storage-progress-container">
+                                <div className="storage-progress-bar" style={{ 
+                                    width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) * 100, 100)}%`,
+                                    background: '#8b5cf6'
+                                }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="dashboard-content-grid">
-
-                    {/* Left column – Charts */}
                     <div className="dashboard-charts-col">
-
-                        {/* Line Chart */}
                         <div className="chart-card">
                             <div className="chart-card-header">
-                                <h2 className="chart-card-title">
-                                    <TrendingUp size={18} />
-                                    Học Sinh Đăng Ký Theo Tháng
-                                </h2>
+                                <h2 className="chart-card-title"><TrendingUp size={18} /> Học Sinh Đăng Ký Theo Tháng</h2>
                                 <span className="chart-card-badge">7 tháng gần đây</span>
                             </div>
                             <ResponsiveContainer width="100%" height={220}>
-                                <LineChart data={enrollmentData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
+                                <LineChart data={enrollmentData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="month" tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                                     <Tooltip content={<CustomTooltip />} />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="students"
-                                        stroke="#3b82f6"
-                                        strokeWidth={2.5}
-                                        dot={{ fill: '#3b82f6', r: 4 }}
-                                        activeDot={{ r: 6 }}
-                                    />
+                                    <Line type="monotone" dataKey="students" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: '#3b82f6', r: 4 }} activeDot={{ r: 6 }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
 
-                        {/* Pie Chart */}
                         <div className="chart-card">
                             <div className="chart-card-header">
-                                <h2 className="chart-card-title">
-                                    <BookOpen size={18} />
-                                    Phân Bố Học Sinh Theo Môn
-                                </h2>
+                                <h2 className="chart-card-title"><BookOpen size={18} /> Phân Bố Học Sinh Theo Môn</h2>
                             </div>
                             <div className="pie-chart-wrap">
                                 <ResponsiveContainer width="55%" height={200}>
                                     <PieChart>
-                                        <Pie
-                                            data={subjectData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={85}
-                                            paddingAngle={3}
-                                            dataKey="value"
-                                        >
-                                            {subjectData.map((entry) => (
-                                                <Cell key={entry.name} fill={entry.color} />
-                                            ))}
+                                        <Pie data={subjectData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3} dataKey="value">
+                                            {subjectData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
                                         </Pie>
                                         <Tooltip formatter={(v) => `${v}%`} />
                                     </PieChart>
@@ -310,101 +384,50 @@ const AdminDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Right column – Zalo OA */}
                     <div className="zalo-col">
                         <div className="zalo-card">
-                            {/* Header */}
                             <div className="zalo-card-header">
                                 <div className="zalo-title-row">
-                                    <div className="zalo-icon">
-                                        <MessageSquare size={18} />
-                                    </div>
+                                    <div className="zalo-icon"><MessageSquare size={18} /></div>
                                     <h2 className="zalo-title">Gửi Thông Báo</h2>
                                 </div>
                                 <span className="zalo-oa-badge">Zalo OA</span>
                             </div>
-
-                            {/* Form */}
                             <div className="zalo-form">
+                                {oaStatus && !oaStatus.isConfigured && (
+                                    <div className="zalo-error-banner"><AlertCircle size={16} /> Zalo OA chưa được cấu hình.</div>
+                                )}
                                 <div className="zalo-field">
                                     <label className="zalo-label">Tiêu đề</label>
-                                    <input
-                                        className="zalo-input"
-                                        type="text"
-                                        placeholder="Nhập tiêu đề thông báo..."
-                                        value={form.title}
-                                        onChange={(e) => setForm({ ...form, title: e.target.value })}
-                                    />
+                                    <input className="zalo-input" placeholder="Tiêu đề..." value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                                 </div>
                                 <div className="zalo-field">
-                                    <label className="zalo-label">Đối tượng nhận</label>
-                                    <select
-                                        className="zalo-select"
-                                        value={form.target}
-                                        onChange={(e) => setForm({ ...form, target: e.target.value })}
-                                    >
-                                        <option value="all">Tất cả học sinh &amp; phụ huynh</option>
-                                        <option value="Toán 12A">Lớp Toán 12A</option>
-                                        <option value="Tiếng Anh IELTS">Lớp IELTS</option>
-                                        <option value="Lý 11">Lớp Vật Lý 11</option>
+                                    <label className="zalo-label">Đối tượng</label>
+                                    <select className="zalo-select" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })}>
+                                        <option value="all">Tất cả</option>
+                                        {classes.map(c => <option key={c.classId} value={c.className}>{c.className}</option>)}
                                     </select>
                                 </div>
                                 <div className="zalo-field">
                                     <label className="zalo-label">Nội dung</label>
-                                    <textarea
-                                        className="zalo-textarea"
-                                        placeholder="Nhập nội dung thông báo..."
-                                        rows={4}
-                                        value={form.content}
-                                        onChange={(e) => setForm({ ...form, content: e.target.value })}
-                                    />
+                                    <textarea className="zalo-textarea" rows={4} placeholder="Nội dung..." value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
                                 </div>
-
-                                {sendSuccess && (
-                                    <div className="zalo-success-banner">
-                                        <CheckCircle size={16} />
-                                        Thông báo đã được gửi thành công!
-                                    </div>
-                                )}
-
-                                <button
-                                    className="zalo-send-btn"
-                                    onClick={handleSend}
-                                    disabled={sending || !form.title.trim() || !form.content.trim()}
-                                >
-                                    {sending ? (
-                                        <span className="zalo-sending-dot" />
-                                    ) : (
-                                        <Send size={16} />
-                                    )}
-                                    {sending ? 'Đang gửi...' : 'Gửi qua Zalo OA'}
+                                <button className="zalo-send-btn" onClick={handleSend} disabled={sending || !form.title.trim()}>
+                                    <Send size={16} /> {sending ? 'Đang gửi...' : 'Gửi qua Zalo OA'}
                                 </button>
                             </div>
-
-                            {/* History */}
                             <div className="zalo-history">
-                                <h3 className="zalo-history-title">Lịch Sử Đã Gửi</h3>
+                                <h3 className="zalo-history-title">Lịch Sử</h3>
                                 <div className="zalo-history-list">
-                                    {notifications.map((n) => (
+                                    {notifications.map(n => (
                                         <div key={n.id} className="zalo-history-item">
                                             <div className="zalo-history-item-header">
-                                                <span className="zalo-history-title-text">{n.title}</span>
-                                                <span className="zalo-status-badge sent">
-                                                    <CheckCircle size={11} /> Đã gửi
-                                                </span>
+                                                <span>{n.title}</span>
+                                                <span className="zalo-status-badge sent"><CheckCircle size={11} /> Đã gửi</span>
                                             </div>
                                             <div className="zalo-history-meta">
-                                                <span className="zalo-meta-time">
-                                                    <Clock size={12} />
-                                                    {formatDateTime(n.sentAt)}
-                                                </span>
-                                                <span className="zalo-meta-recipients">
-                                                    <Users size={12} />
-                                                    {n.recipients} người
-                                                </span>
-                                                {n.target !== 'all' && (
-                                                    <span className="zalo-meta-target">{n.target}</span>
-                                                )}
+                                                <span><Clock size={12} /> {formatDateTime(n.sentAt)}</span>
+                                                <span><Users size={12} /> {n.recipients} người</span>
                                             </div>
                                         </div>
                                     ))}
@@ -413,160 +436,25 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-
-
-
-
-                {/* ── Upcoming Classes Table ── */}
-                <div className="upcoming-card">
-                    <div className="upcoming-header">
-                        <h2 className="upcoming-title">
-                            <Bell size={18} />
-                            Lớp Sắp Khai Giảng
-                        </h2>
-                        <button className="upcoming-view-all">
-                            Xem tất cả <ChevronRight size={15} />
-                        </button>
-                    </div>
-                    <table className="upcoming-table">
-                        <thead>
-                            <tr>
-                                <th>Tên lớp</th>
-                                <th>Môn học</th>
-                                <th>Ngày khai giảng</th>
-                                <th>Đã đăng ký</th>
-                                <th>Trạng thái</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {upcomingClasses.map((cls) => (
-                                <tr key={cls.id}>
-                                    <td className="upcoming-class-name">{cls.name}</td>
-                                    <td>
-                                        <span className="upcoming-subject-tag">{cls.subject}</span>
-                                    </td>
-                                    <td className="upcoming-date">{cls.startDate}</td>
-                                    <td>
-                                        <div className="upcoming-enrollment">
-                                            <div className="enrollment-bar-wrap">
-                                                <div
-                                                    className="enrollment-bar-fill"
-                                                    style={{ width: `${(cls.students / cls.maxStudents) * 100}%` }}
-                                                />
-                                            </div>
-                                            <span>{cls.students}/{cls.maxStudents}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`upcoming-status-badge ${cls.students === 0 ? 'not-started' : 'enrolling'}`}>
-                                            {cls.students === 0 ? 'Chưa có đăng ký' : 'Đang tuyển sinh'}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
             </main>
 
-            {/* ── Inbox Drawer Overlay ── */}
-            {inboxOpen && (
-                <div
-                    className="inbox-overlay"
-                    onClick={() => { setInboxOpen(false); setSelectedMessage(null); }}
-                />
-            )}
-
-            {/* ── Inbox Drawer ── */}
-            <div className={`inbox-drawer ${inboxOpen ? 'open' : ''}`}>
-                {/* Header */}
-                <div className="inbox-drawer-header">
-                    {selectedMessage ? (
-                        <button className="inbox-back-btn" onClick={() => setSelectedMessage(null)}>
-                            <ArrowLeft size={16} /> Tất cả thông báo
-                        </button>
-                    ) : (
-                        <div className="inbox-drawer-title">
-                            <Inbox size={18} />
-                            <span>Hộp Thư</span>
-                            {inboxMessages.filter(m => !m.isRead).length > 0 && (
-                                <span className="drawer-unread-badge">
-                                    {inboxMessages.filter(m => !m.isRead).length}
-                                </span>
-                            )}
-                        </div>
-                    )}
-                    <button
-                        className="inbox-drawer-close"
-                        onClick={() => { setInboxOpen(false); setSelectedMessage(null); }}
-                    >
-                        <X size={20} />
-                    </button>
-                </div>
-
-                {/* Body */}
-                {selectedMessage ? (
-                    <div className="inbox-drawer-detail">
-                        <div className="drawer-detail-sender-row">
-                            <div className={`inbox-avatar ${selectedMessage.type}`}>
-                                {selectedMessage.senderName.charAt(0)}
-                            </div>
-                            <div className="drawer-detail-sender-info">
-                                <div className="drawer-detail-sender-name">{selectedMessage.senderName}</div>
-                                <div className="drawer-detail-sender-role">{selectedMessage.senderRole}</div>
-                            </div>
-                            <div className="drawer-detail-time">
-                                <Clock size={12} />
-                                {formatDateTime(selectedMessage.sentAt)}
-                            </div>
-                        </div>
-                        <h3 className="drawer-detail-subject">{selectedMessage.subject}</h3>
-                        <div className="drawer-detail-body">
-                            {selectedMessage.content.split('\n').map((line, i) => (
-                                <p key={i}>{line || '\u00a0'}</p>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="inbox-drawer-list">
-                        {inboxMessages.length === 0 ? (
-                            <div className="inbox-empty">
-                                <MailOpen size={36} />
-                                <p>Không có tin nhắn nào</p>
-                            </div>
-                        ) : inboxMessages.map(msg => (
-                            <div
-                                key={msg.id}
-                                className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''}`}
-                                onClick={() => {
-                                    setSelectedMessage(msg);
-                                    setInboxMessages(prev =>
-                                        prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m)
-                                    );
-                                }}
-                            >
-                                <div className={`inbox-avatar ${msg.type}`}>
-                                    {msg.senderName.charAt(0)}
-                                </div>
-                                <div className="drawer-msg-body">
-                                    <div className="drawer-msg-top">
-                                        <span className="drawer-msg-sender">{msg.senderName}</span>
-                                        <span className="drawer-msg-time">{formatDateTime(msg.sentAt)}</span>
-                                    </div>
-                                    <div className="drawer-msg-subject">
-                                        {!msg.isRead && <span className="unread-dot" />}
-                                        {msg.priority === 'high' && <Star size={12} className="priority-star" />}
-                                        {msg.subject}
-                                    </div>
-                                    <div className="drawer-msg-preview">{msg.preview}</div>
-                                </div>
-                            </div>
-                        ))}
+            <NotificationMailbox
+                variant="drawer"
+                open={inboxOpen}
+                showOverlay={inboxOpen}
+                onOverlayClick={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
+                onClose={() => { setInboxOpen(false); setSelectedMessage(null); setReplyText(''); }}
+                messages={inboxMessages}
+                selectedMessage={selectedMessage}
+                onSelectedMessageChange={setSelectedMessage}
+                onMarkAsRead={handleMarkAsRead}
+                renderDetailExtra={(msg) => msg?.type === 'feedback' && !msg.adminResponse && (
+                    <div style={{ marginTop: '1rem' }}>
+                        <textarea className="zalo-textarea" rows={3} placeholder="Phản hồi..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                        <button className="zalo-send-btn" style={{ marginTop: '0.5rem' }} disabled={replying} onClick={() => handleReply(msg)}>Gửi trả lời</button>
                     </div>
                 )}
-            </div>
-
+            />
         </div>
     );
 };

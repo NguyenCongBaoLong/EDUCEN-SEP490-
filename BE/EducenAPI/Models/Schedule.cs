@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace EducenAPI.Models;
@@ -14,8 +14,11 @@ public partial class Schedule
     public TimeOnly StartTime { get; set; }
 
     public TimeOnly EndTime { get; set; }
-
-    public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+    
+    public int? RoomId { get; set; }
 
     public virtual Class Class { get; set; } = null!;
+    public virtual Room? Room { get; set; }
+    public virtual ICollection<ClassSession> Sessions { get; set; } = new List<ClassSession>();
+
 }

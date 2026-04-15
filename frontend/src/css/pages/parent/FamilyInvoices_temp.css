@@ -1,0 +1,14 @@
+/* Student name styling */
+.student-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.student-names {
+    font-weight: 500;
+    color: var(--text-primary);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

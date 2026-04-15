@@ -10,7 +10,7 @@ namespace EducenAPI.Controllers
 {
     [ApiController]
     [Route("api/tenantadmin/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class SubjectsController : ControllerBase
     {
         private readonly ISubjectService _subjectService;
@@ -20,8 +20,9 @@ namespace EducenAPI.Controllers
             _subjectService = subjectService;
         }
 
-        // GET: api/Subjects
+        // GET: api/Subjects (public - cho phép trang chủ lấy danh sách môn học)
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSubjects()
         {
             var subjects = await _subjectService.GetAllSubjectsAsync();
@@ -70,7 +71,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _subjectService.UpdateSubjectAsync(id, request);
                 if (!success)
-                    return NotFound(new { message = "Subject not found" });
+                    return NotFound(new { message = "Không tìm thấy môn học." });
 
                 return NoContent();
             }
@@ -89,7 +90,7 @@ namespace EducenAPI.Controllers
             {
                 var success = await _subjectService.DeleteSubjectAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Subject not found" });
+                    return NotFound(new { message = "Không tìm thấy môn học." });
 
                 return NoContent();
             }

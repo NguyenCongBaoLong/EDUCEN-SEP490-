@@ -1,34 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, Clock, Search, FileText, Download, Check, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, Search, FileText, Download, Check, X, AlertCircle, Send, Loader2, AlertTriangle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import TeacherSidebar from '../../components/TeacherSidebar';
+import api from '../../services/api';
 import '../../css/pages/teacher/AssignmentGrading.css';
-
-// Mock data (in a real app, this would be fetched based on assignmentId)
-const ASSIGNMENT_DATA = {
-    id: 1,
-    title: 'Bài tập về nhà Chương 1: Hàm số',
-    className: 'Đại Số Nâng Cao',
-    dueDate: '2023-10-15T23:59',
-    description: 'Hoàn thành các bài tập từ 1 đến 15 trang 42 SGK. Trình bày rõ ràng các bước giải.',
-    totalStudents: 15,
-};
-
-const STUDENTS_MOCK = [
-    { id: 1, name: 'Nguyễn Văn A', avatar: 'NA', status: 'submitted', score: null, feedback: '', submittedAt: '2023-10-14T15:30:00', fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', fileType: 'pdf' },
-    { id: 2, name: 'Trần Thị B', avatar: 'TB', status: 'late', score: 8.5, feedback: 'Thiếu bước kết luận bài 3', submittedAt: '2023-10-16T08:15:00', fileUrl: 'https://images.unsplash.com/photo-1633478062482-790e3b5dd810?auto=format&fit=crop&q=80&w=800', fileType: 'image' },
-    { id: 3, name: 'Lê Hoàng C', avatar: 'LC', status: 'missing', score: null, feedback: '', submittedAt: null, fileUrl: null, fileType: null },
-    { id: 4, name: 'Phạm Minh D', avatar: 'PD', status: 'submitted', score: 10, feedback: 'Làm bài rất tốt', submittedAt: '2023-10-15T20:00:00', fileUrl: '#', fileType: 'docx' },
-    { id: 5, name: 'Đặng Thái E', avatar: 'DE', status: 'submitted', score: null, feedback: '', submittedAt: '2023-10-15T22:45:00', fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', fileType: 'pdf' },
-];
+import '../../css/components/DeleteModal.css';
 
 const AssignmentGrading = ({ isTA = false }) => {
     const { assignmentId } = useParams();
     const navigate = useNavigate();
 
-    // State
-    const [students, setStudents] = useState(STUDENTS_MOCK);
-    const [selectedStudent, setSelectedStudent] = useState(STUDENTS_MOCK[0]);
+    // Data State
+    const [assignmentInfo, setAssignmentInfo] = useState(null);
+    const [students, setStudents] = useState([]);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Filter/Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -36,17 +25,54 @@ const AssignmentGrading = ({ isTA = false }) => {
     const [gradeInput, setGradeInput] = useState('');
     const [feedbackInput, setFeedbackInput] = useState('');
     const [isSaving, setIsSaving] = useState(false);
-    const [showSuccess, setShowSuccess] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [isPublishingAll, setIsPublishingAll] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
+    const [showResetModal, setShowResetModal] = useState(false);
     const [gradeError, setGradeError] = useState('');
-
-    // Calculate if form is dirty (has changes)
     const [isDirty, setIsDirty] = useState(false);
+    const [activeFileUrl, setActiveFileUrl] = useState(null);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        return localStorage.getItem('teacher-sidebar-collapsed') === 'true';
+    });
+
+    const fetchGradingData = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get(`/Assignments/${assignmentId}/grading`);
+            const { assignment, students: studentList } = response.data;
+            
+            setAssignmentInfo(assignment);
+            setStudents(studentList);
+            
+            if (studentList.length > 0 && !selectedStudent) {
+                setSelectedStudent(studentList[0]);
+            } else if (selectedStudent) {
+                // Refresh the currently selected student data
+                const updatedSelected = studentList.find(s => s.studentId === selectedStudent.studentId);
+                if (updatedSelected) setSelectedStudent(updatedSelected);
+            }
+        } catch (error) {
+            console.error('Error fetching grading data:', error);
+            toast.error('Không thể tải dữ liệu chấm điểm');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [assignmentId, selectedStudent]);
 
     useEffect(() => {
-        if (!selectedStudent) return;
+        fetchGradingData();
+    }, [assignmentId]);
 
-        const originalScore = selectedStudent.score !== null ? selectedStudent.score.toString() : '';
-        const originalFeedback = selectedStudent.feedback || '';
+    // Check if form is dirty
+    useEffect(() => {
+        if (!selectedStudent) {
+            setIsDirty(false);
+            return;
+        }
+
+        const originalScore = selectedStudent.submission?.score != null ? selectedStudent.submission.score.toString() : '';
+        const originalFeedback = selectedStudent.submission?.teacherComment || '';
 
         const scoreChanged = gradeInput.toString() !== originalScore;
         const feedbackChanged = feedbackInput !== originalFeedback;
@@ -54,27 +80,46 @@ const AssignmentGrading = ({ isTA = false }) => {
         setIsDirty(scoreChanged || feedbackChanged);
     }, [gradeInput, feedbackInput, selectedStudent]);
 
-    // Filter students
-    const filteredStudents = students.filter(student => {
-        const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
-
     // Update form when selecting a new student
     useEffect(() => {
         if (selectedStudent) {
-            setGradeInput(selectedStudent.score !== null ? selectedStudent.score : '');
-            setFeedbackInput(selectedStudent.feedback || '');
-            setShowSuccess(false); // Reset success message on student change
+            if (selectedStudent.submission) {
+                setGradeInput(selectedStudent.submission.score != null ? selectedStudent.submission.score : '');
+                setFeedbackInput(selectedStudent.submission.teacherComment || '');
+                
+                // Set default active file
+                const firstFile = selectedStudent.submission.fileUrls?.[0] || selectedStudent.submission.fileUrl;
+                setActiveFileUrl(firstFile);
+            } else {
+                setGradeInput('');
+                setFeedbackInput('');
+                setActiveFileUrl(null);
+            }
             setGradeError('');
         }
     }, [selectedStudent]);
 
-    const isScoreRequired = selectedStudent?.status !== 'missing' && selectedStudent?.score === null && gradeInput === '';
+    // Filter students
+    const filteredStudents = students.filter(student => {
+        const matchesSearch = student.fullName.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        let status = 'NotSubmitted';
+        if (student.submission) {
+            status = student.submission.status;
+        }
 
-    const handleSaveGrade = () => {
-        if (!isDirty || isScoreRequired) return;
+        const matchesStatus = statusFilter === 'all' || 
+            (statusFilter === 'missing' && (status === 'NotSubmitted' || status === 'Chưa nộp')) ||
+            (statusFilter === 'submitted' && (status === 'Đã nộp' || status === 'Nộp muộn' || status === 'Graded' || status === 'Published' || status === 'Submitted' || status === 'LateSubmitted')) ||
+            (statusFilter === 'graded' && (status === 'Graded' || status === 'Published' || status === 'Đã chấm' || status === 'Công bố'));
+
+        return matchesSearch && matchesStatus;
+    });
+
+    const isScoreRequired = (selectedStudent?.submission?.score === null || !selectedStudent?.submission) && gradeInput === '';
+
+    const handleSaveGrade = async () => {
+        if (!isDirty || isScoreRequired || !selectedStudent) return;
 
         if (gradeInput !== '') {
             const numGrade = parseFloat(gradeInput);
@@ -84,54 +129,127 @@ const AssignmentGrading = ({ isTA = false }) => {
             }
         }
 
-        setGradeError('');
-        setIsSaving(true);
-        setShowSuccess(false);
-        // Simulate API call
-        setTimeout(() => {
-            const updatedStudents = students.map(s => {
-                if (s.id === selectedStudent.id) {
-                    return {
-                        ...s,
-                        score: gradeInput !== '' ? parseFloat(gradeInput) : null,
-                        feedback: feedbackInput
-                    };
-                }
-                return s;
-            });
-            setStudents(updatedStudents);
+        try {
+            setGradeError('');
+            setIsSaving(true);
+            
+            if (selectedStudent.submission) {
+                await api.put(`/Submissions/${selectedStudent.submission.subId}/grade`, {
+                    score: parseFloat(gradeInput),
+                    teacherComment: feedbackInput
+                });
+            } else {
+                await api.put(`/Submissions/assignment/${assignmentId}/student/${selectedStudent.studentId}/grade`, {
+                    score: parseFloat(gradeInput),
+                    teacherComment: feedbackInput
+                });
+            }
 
-            // Update selected student ref
-            setSelectedStudent({
-                ...selectedStudent,
-                score: gradeInput !== '' ? parseFloat(gradeInput) : null,
-                feedback: feedbackInput
-            });
-
+            toast.success('Đã lưu điểm thành công');
+            setIsDirty(false);
+            
+            // Refresh data to get updated status and database state
+            await fetchGradingData();
+        } catch (error) {
+            console.error('Error saving grade:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi khi lưu điểm');
+        } finally {
             setIsSaving(false);
-            setShowSuccess(true);
-            setIsDirty(false); // Reset dirty state
-
-            // Hide success message after 2.5s
-            setTimeout(() => {
-                setShowSuccess(false);
-            }, 2500);
-
-            // Auto select next student needing grading
-            // const nextStudentIndex = students.findIndex(s => s.id === selectedStudent.id) + 1;
-            // if (nextStudentIndex < students.length) {
-            //    setSelectedStudent(students[nextStudentIndex]);
-            // }
-        }, 600);
+        }
     };
 
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'submitted': return { text: 'Đã nộp', class: 'status-submitted', icon: <CheckCircle size={14} /> };
-            case 'late': return { text: 'Nộp trễ', class: 'status-late', icon: <Clock size={14} /> };
-            case 'missing': return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
-            default: return { text: '', class: '', icon: null };
+    const handlePublishAll = async (isPublish) => {
+        const gradedCount = students.filter(s => s.submission && s.submission.score != null).length;
+        if (gradedCount === 0) {
+            toast.error('Không có bài nào đã chấm để công bố');
+            return;
         }
+
+        try {
+            setIsPublishingAll(true);
+            await api.put(`/Submissions/assignment/${assignmentId}/publish-all`, {
+                isPublished: isPublish
+            });
+
+            toast.success(isPublish ? 'Đã công bố tất cả điểm' : 'Đã hủy công bố tất cả điểm');
+            await fetchGradingData();
+        } catch (error) {
+            console.error('Error publishing all grades:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi công bố hàng loạt');
+        } finally {
+            setIsPublishingAll(false);
+        }
+    };
+
+    const handlePublishGrade = async (isPublish) => {
+        if (!selectedStudent?.submission) return;
+
+        try {
+            setIsPublishing(true);
+            await api.put(`/Submissions/${selectedStudent.submission.subId}/publish`, {
+                isPublished: isPublish
+            });
+
+            toast.success(isPublish ? 'Đã công bố điểm cho học sinh' : 'Đã hủy công bố điểm');
+            await fetchGradingData();
+        } catch (error) {
+            console.error('Error publishing grade:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi khi thay đổi trạng thái công bố');
+        } finally {
+            setIsPublishing(false);
+        }
+    };
+
+    const handleResetGrade = async () => {
+        if (!selectedStudent?.submission) return;
+        setShowResetModal(true);
+    };
+
+    const confirmResetGrade = async () => {
+        try {
+            setShowResetModal(false);
+            setIsResetting(true);
+            await api.put(`/Submissions/${selectedStudent.submission.subId}/reset`);
+            
+            toast.success('Đã hủy đánh giá. Học sinh có thể nộp lại bài.');
+            
+            // Clear local inputs
+            setGradeInput('');
+            setFeedbackInput('');
+            setIsDirty(false);
+            
+            await fetchGradingData();
+        } catch (error) {
+            console.error('Error resetting grade:', error);
+            toast.error(error.response?.data?.message || 'Có lỗi khi hủy đánh giá');
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
+    const getStatusInfo = (student) => {
+        const sub = student.submission;
+        if (!sub) return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
+        
+        const status = sub.status || 'Submitted';
+        
+        if (status === 'Published' || status === 'Công bố') {
+            return { text: 'Đã công bố', class: 'status-published', icon: <CheckCircle size={14} /> };
+        }
+        if (status === 'Graded' || status === 'Đã chấm') {
+            return { text: 'Đã chấm', class: 'status-graded', icon: <CheckCircle size={14} />, isGraded: true };
+        }
+
+        // Dynamic check for late submission
+        if (assignmentInfo?.endTime && sub.submittedAt) {
+            const submittedAt = new Date(sub.submittedAt);
+            const dueDate = new Date(assignmentInfo.endTime);
+            if (submittedAt > dueDate) {
+                return { text: 'Nộp trễ', class: 'status-late', icon: <Clock size={14} /> };
+            }
+        }
+        
+        return { text: 'Đã nộp', class: 'status-submitted', icon: <CheckCircle size={14} /> };
     };
 
     const formatDate = (dateString) => {
@@ -144,16 +262,36 @@ const AssignmentGrading = ({ isTA = false }) => {
     };
 
     const stats = {
-        graded: students.filter(s => s.score !== null).length,
-        submitted: students.filter(s => s.status === 'submitted' || s.status === 'late').length,
+        graded: students.filter(s => s.submission && (s.submission.status === 'Graded' || s.submission.status === 'Published')).length,
+        submitted: students.filter(s => s.submission).length,
         total: students.length
     };
 
-    return (
-        <div className="assignment-grading-page">
-            <TeacherSidebar isTA={isTA} />
+    const getFileType = (url) => {
+        if (!url) return null;
+        const ext = url.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'image';
+        if (ext === 'pdf') return 'pdf';
+        return ext;
+    };
 
-            <main className="grading-main">
+    if (isLoading && !assignmentInfo) {
+        return (
+            <div className="assignment-grading-page">
+                <TeacherSidebar isTA={isTA} />
+                <div className="loading-container">
+                    <Loader2 className="animate-spin" size={48} />
+                    <p>Đang tải dữ liệu chấm điểm...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`assignment-grading-page ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+            <TeacherSidebar isTA={isTA} onCollapseChange={setIsSidebarCollapsed} />
+
+            <main className={`grading-main ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 {/* Header (Top Bar) */}
                 <header className="grading-header">
                     <div className="grading-header-left">
@@ -162,16 +300,23 @@ const AssignmentGrading = ({ isTA = false }) => {
                             Trở về
                         </button>
                         <div className="grading-assignment-info">
-                            <h1>{ASSIGNMENT_DATA.title}</h1>
-                            <span className="class-badge">{ASSIGNMENT_DATA.className}</span>
+                            <h1>{assignmentInfo?.title}</h1>
+                            {assignmentInfo?.originalFileName && (
+                                <span className="class-badge">{assignmentInfo.originalFileName}</span>
+                            )}
                         </div>
                     </div>
 
                     <div className="grading-header-right">
                         <div className="grading-stats">
                             <div className="stat-item">
+                                <span className="stat-label">Tổng sĩ số:</span>
+                                <span className="stat-value">{stats.total}</span>
+                            </div>
+                            <div className="stat-divider"></div>
+                            <div className="stat-item">
                                 <span className="stat-label">Đã nộp:</span>
-                                <span className="stat-value">{stats.submitted}/{stats.total}</span>
+                                <span className="stat-value">{stats.submitted}</span>
                             </div>
                             <div className="stat-divider"></div>
                             <div className="stat-item">
@@ -179,6 +324,20 @@ const AssignmentGrading = ({ isTA = false }) => {
                                 <span className="stat-value highlight">{stats.graded}/{stats.submitted}</span>
                             </div>
                         </div>
+
+                        <button 
+                            className={`btn-publish-all ${stats.graded === 0 ? 'disabled' : ''}`}
+                            onClick={() => handlePublishAll(true)}
+                            disabled={isPublishingAll || stats.graded === 0}
+                        >
+                            {isPublishingAll ? (
+                                <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Send size={18} /> Công bố tất cả
+                                </>
+                            )}
+                        </button>
                     </div>
                 </header>
 
@@ -204,8 +363,8 @@ const AssignmentGrading = ({ isTA = false }) => {
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                 >
                                     <option value="all">Tất cả trạng thái</option>
-                                    <option value="submitted">Đã nộp đúng hạn</option>
-                                    <option value="late">Nộp trễ</option>
+                                    <option value="submitted">Đã nộp bài</option>
+                                    <option value="graded">Đã chấm điểm</option>
                                     <option value="missing">Chưa nộp</option>
                                 </select>
                             </div>
@@ -213,19 +372,21 @@ const AssignmentGrading = ({ isTA = false }) => {
 
                         <div className="grading-student-list">
                             {filteredStudents.map(student => {
-                                const statusInfo = getStatusText(student.status);
+                                const statusInfo = getStatusInfo(student);
+                                const initials = student.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                                
                                 return (
                                     <div
-                                        key={student.id}
-                                        className={`grading-student-item ${selectedStudent?.id === student.id ? 'active' : ''} ${student.score !== null ? 'is-graded' : ''}`}
+                                        key={student.studentId}
+                                        className={`grading-student-item ${selectedStudent?.studentId === student.studentId ? 'active' : ''} ${student.submission?.score != null ? 'is-graded' : ''}`}
                                         onClick={() => setSelectedStudent(student)}
                                     >
-                                        <div className="student-avatar">{student.avatar}</div>
+                                        <div className="student-avatar">{initials}</div>
                                         <div className="student-info">
                                             <div className="student-name-row">
-                                                <span className="student-name">{student.name}</span>
-                                                {student.score !== null && (
-                                                    <span className="student-score-badge">{student.score}đ</span>
+                                                <span className="student-name">{student.fullName}</span>
+                                                {student.submission?.score != null && (
+                                                    <span className="student-score-badge">{student.submission.score}đ</span>
                                                 )}
                                             </div>
                                             <div className="student-meta">
@@ -244,52 +405,65 @@ const AssignmentGrading = ({ isTA = false }) => {
                     <div className="grading-workspace">
                         {selectedStudent ? (
                             <>
-                                {/* Workspace Header */}
-                                <div className="workspace-header">
-                                    <div className="workspace-student">
-                                        <div className="workspace-avatar">{selectedStudent.avatar}</div>
-                                        <div>
-                                            <h2>{selectedStudent.name}</h2>
-                                            <p className="submission-time">Nộp lúc: {formatDate(selectedStudent.submittedAt)}</p>
-                                        </div>
-                                    </div>
-                                    <div className="workspace-actions">
-                                        {selectedStudent.fileUrl && (
-                                            <button className="btn-download">
-                                                <Download size={16} /> Tải file về máy
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
                                 <div className="workspace-body">
                                     {/* Submission Viewer */}
                                     <div className="submission-viewer">
-                                        {selectedStudent.status === 'missing' ? (
+                                        {!selectedStudent.submission ? (
                                             <div className="empty-submission">
                                                 <AlertCircle size={48} />
                                                 <p>Học sinh chưa nộp bài</p>
                                             </div>
                                         ) : (
                                             <div className="submission-file">
-                                                {selectedStudent.fileType === 'pdf' ? (
+                                                {selectedStudent.submission.fileUrls && selectedStudent.submission.fileUrls.length > 1 && (
+                                                    <div className="file-selector-tabs" style={{ 
+                                                        display: 'flex', 
+                                                        gap: '8px', 
+                                                        marginBottom: '6px', /* Reduced from 12px */
+                                                        padding: '2px', /* Reduced from 4px */
+                                                        background: '#f1f5f9',
+                                                        borderRadius: '6px'
+                                                    }}>
+                                                        {selectedStudent.submission.fileUrls.map((url, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => setActiveFileUrl(url)}
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    border: 'none',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.85rem',
+                                                                    fontWeight: '500',
+                                                                    cursor: 'pointer',
+                                                                    background: activeFileUrl === url ? '#fff' : 'transparent',
+                                                                    color: activeFileUrl === url ? '#3b82f6' : '#64748b',
+                                                                    boxShadow: activeFileUrl === url ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                                                                }}
+                                                            >
+                                                                File {i + 1}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {activeFileUrl && getFileType(activeFileUrl) === 'pdf' ? (
                                                     <iframe
-                                                        src={selectedStudent.fileUrl}
+                                                        src={activeFileUrl}
                                                         className="document-preview-iframe"
                                                         title="PDF Preview"
                                                     ></iframe>
-                                                ) : selectedStudent.fileType === 'image' ? (
+                                                ) : activeFileUrl && getFileType(activeFileUrl) === 'image' ? (
                                                     <div className="image-preview-container">
-                                                        <img src={selectedStudent.fileUrl} alt="Bài làm" className="image-preview" />
+                                                        <img src={activeFileUrl} alt="Bài làm" className="image-preview" />
                                                     </div>
                                                 ) : (
                                                     <div className="unsupported-file-preview">
                                                         <FileText size={64} className="file-icon" />
-                                                        <h4>Bài làm của {selectedStudent.name}.{selectedStudent.fileType}</h4>
-                                                        <p>2.4 MB</p>
+                                                        <h4>Bài làm của {selectedStudent.fullName}</h4>
+                                                        <p>Định dạng không hỗ trợ xem trực tiếp</p>
                                                         <div className="viewer-placeholder">
                                                             Trình duyệt không hỗ trợ xem trước định dạng file này.<br />
-                                                            Vui lòng bấm <strong>Tải file về máy</strong> để xem chi tiết.
+                                                            Vui lòng bấm vào các nút <strong>Tải file</strong> để xem chi tiết.
                                                         </div>
                                                     </div>
                                                 )}
@@ -299,7 +473,56 @@ const AssignmentGrading = ({ isTA = false }) => {
 
                                     {/* Grading Form Panel */}
                                     <div className="grading-panel">
-                                        <h3>Chấm điểm & Nhận xét</h3>
+                                        {/* New Student Context Section */}
+                                        <div className="grading-student-context">
+                                            <div className="context-student-info">
+                                                <div className="context-avatar">
+                                                    {selectedStudent.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                                                </div>
+                                                <div className="context-name-box">
+                                                    <h3>{selectedStudent.fullName}</h3>
+                                                    <p className="context-time">
+                                                        {selectedStudent.submission 
+                                                            ? `Nộp: ${formatDate(selectedStudent.submission.submittedAt)}`
+                                                            : 'Chưa có bài nộp'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="context-file-actions">
+                                                {selectedStudent.submission?.fileUrls && selectedStudent.submission.fileUrls.length > 0 ? (
+                                                    selectedStudent.submission.fileUrls.map((url, i) => (
+                                                        <a 
+                                                            key={i}
+                                                            href={url} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="btn-mini-download"
+                                                            title={`Tải file ${i + 1}`}
+                                                        >
+                                                            <Download size={14} /> File {i + 1}
+                                                        </a>
+                                                    ))
+                                                ) : selectedStudent.submission?.fileUrl && (
+                                                    <a 
+                                                        href={selectedStudent.submission.fileUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="btn-mini-download"
+                                                    >
+                                                        <Download size={14} /> Tải bài làm
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="panel-header">
+                                            <h3>Chấm điểm & Nhận xét</h3>
+                                            {selectedStudent.submission?.isPublished && (
+                                                <div className="published-badge">
+                                                    <Check size={12} /> Đã công bố
+                                                </div>
+                                            )}
+                                        </div>
 
                                         <div className="grading-form">
                                             <div className="form-group">
@@ -307,7 +530,7 @@ const AssignmentGrading = ({ isTA = false }) => {
                                                 <input
                                                     type="number"
                                                     min="0" max="10" step="0.25"
-                                                    disabled={selectedStudent.status === 'missing'}
+                                                    disabled={isSaving}
                                                     value={gradeInput}
                                                     onChange={(e) => {
                                                         setGradeInput(e.target.value);
@@ -315,39 +538,76 @@ const AssignmentGrading = ({ isTA = false }) => {
                                                     }}
                                                     placeholder="VD: 8.5"
                                                     className={`score-input ${gradeError ? 'error-border' : ''}`}
-                                                    style={gradeError ? { borderColor: '#ef4444' } : {}}
                                                 />
-                                                {gradeError && <span style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>{gradeError}</span>}
+                                                {gradeError && <span className="error-text">{gradeError}</span>}
                                             </div>
 
                                             <div className="form-group">
                                                 <label>Nhận xét cho học sinh</label>
                                                 <textarea
                                                     rows={4}
-                                                    disabled={selectedStudent.status === 'missing'}
+                                                    disabled={isSaving}
                                                     value={feedbackInput}
                                                     onChange={(e) => setFeedbackInput(e.target.value)}
-                                                    placeholder="Nhập nhận xét chi tiết để học sinh rút kinh nghiệm..."
+                                                    placeholder="Nhập nhận xét chi tiết..."
                                                 ></textarea>
                                             </div>
 
                                             <div className="grading-actions">
-                                                {showSuccess && (
-                                                    <div className="save-success-msg">
-                                                        <CheckCircle size={16} /> Lưu đánh giá thành công!
-                                                    </div>
-                                                )}
                                                 <button
-                                                    className={`btn-save-grade ${!isDirty && (selectedStudent.score !== null || selectedStudent.feedback) ? 'btn-saved' : ''}`}
+                                                    className="btn-save-grade"
                                                     onClick={handleSaveGrade}
-                                                    disabled={selectedStudent.status === 'missing' || isScoreRequired || isSaving || (!isDirty && (selectedStudent.score !== null || selectedStudent.feedback))}
+                                                    disabled={!isDirty || isSaving || isScoreRequired}
                                                 >
-                                                    {isSaving ? 'Đang lưu...' : (
+                                                    {isSaving ? (
                                                         <>
-                                                            <Check size={18} /> {(!isDirty && (selectedStudent.score !== null || selectedStudent.feedback)) ? 'Đã lưu đánh giá' : 'Lưu đánh giá'}
+                                                            <Loader2 size={18} className="animate-spin" /> Đang lưu...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Check size={18} /> Lưu đánh giá
                                                         </>
                                                     )}
                                                 </button>
+
+                                                {selectedStudent.submission?.score != null && (
+                                                    <div className="btn-group-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                        <button
+                                                            className={`btn-publish ${selectedStudent.submission?.isPublished ? 'published' : ''}`}
+                                                            onClick={() => handlePublishGrade(!selectedStudent.submission.isPublished)}
+                                                            disabled={isPublishing || isSaving || isResetting}
+                                                        >
+                                                            {isPublishing ? (
+                                                                <Loader2 size={18} className="animate-spin" />
+                                                            ) : selectedStudent.submission.isPublished ? (
+                                                                <>
+                                                                    <X size={18} /> Hủy công bố
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Send size={18} /> Công bố điểm
+                                                                </>
+                                                            )}
+                                                        </button>
+
+                                                        {!selectedStudent.submission.isPublished && (
+                                                            <button
+                                                                className="btn-reset-grade"
+                                                                onClick={handleResetGrade}
+                                                                disabled={isResetting || isSaving || isPublishing}
+                                                                title="Hủy kết quả chấm để học sinh nộp lại"
+                                                            >
+                                                                {isResetting ? (
+                                                                    <Loader2 size={18} className="animate-spin" />
+                                                                ) : (
+                                                                    <>
+                                                                        <X size={18} /> Hủy đánh giá
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -362,6 +622,48 @@ const AssignmentGrading = ({ isTA = false }) => {
                     </div>
                 </div>
             </main>
+
+            {/* Reset Grade Confirmation Modal */}
+            {showResetModal && (
+                <div className="delete-modal-overlay" onClick={() => setShowResetModal(false)}>
+                    <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="delete-modal-header">
+                            <h3>Hủy Kết Quả Đánh Giá</h3>
+                            <button className="delete-modal-close" onClick={() => setShowResetModal(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="delete-modal-body">
+                            <div className="delete-modal-warning">
+                                <div className="delete-modal-warning-icon">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div className="delete-modal-warning-content">
+                                    <h4>Bạn có chắc chắn muốn hủy đánh giá này?</h4>
+                                    <p>
+                                        Học sinh <strong>{selectedStudent?.fullName}</strong> sẽ có thể nộp lại bản mới. 
+                                        Điểm số và nhận xét hiện tại sẽ bị xóa hoàn toàn.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="delete-modal-footer">
+                            <button className="btn-delete-cancel" onClick={() => setShowResetModal(false)}>
+                                Hủy bỏ
+                            </button>
+                            <button
+                                className="btn-delete-confirm"
+                                onClick={confirmResetGrade}
+                                disabled={isResetting}
+                            >
+                                {isResetting ? <Loader2 size={18} className="animate-spin" /> : 'Xác Nhận Hủy'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

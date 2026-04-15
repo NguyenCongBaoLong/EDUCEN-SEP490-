@@ -229,3 +229,38 @@
         grid-template-columns: 1fr;
     }
 }
+/* Enrollment Detail Extras */
+.requested-class-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.request-type-tag {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.request-type-tag.student {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.request-type-tag.guest {
+    background: #f1f5f9;
+    color: #475569;
+}

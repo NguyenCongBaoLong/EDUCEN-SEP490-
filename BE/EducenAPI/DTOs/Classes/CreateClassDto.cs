@@ -4,54 +4,119 @@ namespace EducenAPI.DTOs.Classes
 {
     public class CreateClassDto
     {
+        private string _className = string.Empty;
+        private string? _description;
+        private string? _syllabusContent;
+        private string? _status;
+
         [Required(ErrorMessage = "ClassName is required")]
         [StringLength(100, ErrorMessage = "ClassName cannot exceed 100 characters")]
-        public string ClassName { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "ClassName cannot be only whitespace")]
+        public string ClassName 
+        { 
+            get => _className;
+            set => _className = value?.Trim() ?? string.Empty;
+        }
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        public string? Description { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Description cannot be only whitespace")]
+        public string? Description 
+        { 
+            get => _description;
+            set => _description = value?.Trim();
+        }
 
         [StringLength(1000, ErrorMessage = "SyllabusContent cannot exceed 1000 characters")]
-        public string? SyllabusContent { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SyllabusContent cannot be only whitespace")]
+        public string? SyllabusContent 
+        { 
+            get => _syllabusContent;
+            set => _syllabusContent = value?.Trim();
+        }
 
         [Required(ErrorMessage = "SubjectId is required")]
         public int SubjectId { get; set; }
 
-        public int? TeacherId { get; set; }
+        public int? RoomId { get; set; }
+
+        public int? GradeId { get; set; }
+
+        [Required(ErrorMessage = "TeacherId is required")]
+        public int TeacherId { get; set; }
 
         public int? AssistantId { get; set; }
+
+        [Required(ErrorMessage = "MaxStudents is required")]
+        [Range(1, 1000, ErrorMessage = "MaxStudents must be between 1 and 1000")]
+        public int MaxStudents { get; set; }
 
         public DateTime? StartDate { get; set; }
 
         public DateTime? EndDate { get; set; }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        public string? Status { get; set; }
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        public string? Status 
+        { 
+            get => _status;
+            set => _status = value?.Trim();
+        }
+
+        public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
+
+        public decimal? PricePerSession { get; set; }
+    }
+
+    public class CreateScheduleSlotDto
+    {
+        public int? Slot { get; set; }
+        [Range(0, 6, ErrorMessage = "DayOfWeek must be between 0 and 6")]
+        public int DayOfWeek { get; set; } // 0 = Sunday, 1 = Monday, ...
+        [Required]
+        public string StartTime { get; set; } = string.Empty; // Format "HH:mm"
+        [Required]
+        public string EndTime { get; set; } = string.Empty;   // Format "HH:mm"
+        public int? RoomId { get; set; }
+        public string? RoomName { get; set; }
     }
 
     public class UpdateClassDto
     {
         [StringLength(100, ErrorMessage = "ClassName cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "ClassName cannot be only whitespace")]
         public string? ClassName { get; set; }
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Description cannot be only whitespace")]
         public string? Description { get; set; }
 
         [StringLength(1000, ErrorMessage = "SyllabusContent cannot exceed 1000 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SyllabusContent cannot be only whitespace")]
         public string? SyllabusContent { get; set; }
 
         public int? SubjectId { get; set; }
 
+        public int? RoomId { get; set; }
+
+        public int? GradeId { get; set; }
+
         public int? TeacherId { get; set; }
 
         public int? AssistantId { get; set; }
+
+        public int? MaxStudents { get; set; }
 
         public DateTime? StartDate { get; set; }
 
         public DateTime? EndDate { get; set; }
 
         [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
         public string? Status { get; set; }
+
+        public List<CreateScheduleSlotDto>? ScheduleSlots { get; set; }
+
+        public decimal? PricePerSession { get; set; }
     }
 
     public class ClassDto
@@ -66,10 +131,24 @@ namespace EducenAPI.DTOs.Classes
         public string? TeacherName { get; set; }
         public int? AssistantId { get; set; }
         public string? AssistantName { get; set; }
+        public int? RoomId { get; set; }
+        public string? RoomName { get; set; }
+        public int? GradeId { get; set; }
+        public string? GradeName { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? Status { get; set; }
+        public int MaxStudents { get; set; }
         public int StudentCount { get; set; }
+        public int TotalSessions { get; set; }
+        public int CompletedSessions { get; set; }
         public DateTime CreatedAt { get; set; }
+        public decimal? PricePerSession { get; set; }
+        public List<CreateScheduleSlotDto> ScheduleSlots { get; set; } = new List<CreateScheduleSlotDto>();
+    }
+    public class UpdateClassPriceDto
+    {
+        [Range(0, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 0")]
+        public decimal Price { get; set; }
     }
 }

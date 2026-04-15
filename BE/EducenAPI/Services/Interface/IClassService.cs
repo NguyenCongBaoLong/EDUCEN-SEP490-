@@ -1,4 +1,7 @@
 using EducenAPI.DTOs.Classes;
+using EducenAPI.DTOs.Students;
+using EducenAPI.Services;
+
 
 namespace EducenAPI.Services.Interface
 {
@@ -13,5 +16,14 @@ namespace EducenAPI.Services.Interface
         Task<bool> AssignAssistantAsync(int classId, int assistantId);
         Task<bool> AddStudentToClassAsync(int classId, int studentId);
         Task<bool> RemoveStudentFromClassAsync(int classId, int studentId);
+        Task<bool> ClassExistsAsync(int id);
+        Task<ImportStudentToClassResult> ImportStudentToClassAsync(int classId, CreateStudentDto studentDto);
+
+        Task<IEnumerable<StudentDto>> GetStudentsByClassIdAsync(int classId);
+        Task<IEnumerable<SessionResponseDto>> GetSessionsByClassIdAsync(int classId);
+        Task<StudentClassDetailDto?> GetStudentClassDetailAsync(int studentId, int classId, string baseUrl);
+        Task<IEnumerable<StudentClassListItemDto>> GetStudentClassesAsync(int studentId);
+        Task<IEnumerable<ClassDto>> GetClassesByTeacherIdAsync(int teacherId);
+        Task<bool> UpdateClassPriceAsync(int classId, decimal price);
     }
 }

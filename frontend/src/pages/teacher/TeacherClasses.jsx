@@ -1,66 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, GraduationCap } from 'lucide-react';
 import TeacherSidebar from '../../components/TeacherSidebar';
 import ClassCard from '../../components/ClassCard';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import '../../css/pages/center/ClassesManagement.css';
 
-// Mock data: chỉ hiển thị lớp mà giáo viên này dạy
-const MY_CLASSES = [
-    {
-        id: 101,
-        name: 'Đại Số Nâng Cao',
-        subject: 'MATHEMATICS',
-        gradeLevel: 'high',
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM' },
-        assistant: { name: 'Cô Lê Hoa', initials: 'LH' },
-        currentStudents: 12,
-        maxStudents: 15,
-        schedule: 'Thứ Hai & Thứ Tư • 16:30',
-        status: 'active',
-    },
-    {
-        id: 102,
-        name: 'Giải Tích Cơ Bản',
-        subject: 'MATHEMATICS',
-        gradeLevel: 'high',
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM' },
-        assistant: null,
-        currentStudents: 10,
-        maxStudents: 15,
-        schedule: 'Thứ Ba & Thứ Năm • 17:00',
-        status: 'active',
-    },
-    {
-        id: 103,
-        name: 'Toán Nâng Cao Lớp 12',
-        subject: 'MATHEMATICS',
-        gradeLevel: 'high',
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM' },
-        assistant: { name: 'Cô Trần Lan', initials: 'TL' },
-        currentStudents: 8,
-        maxStudents: 12,
-        schedule: 'Thứ Sáu • 15:00',
-        status: 'active',
-    },
-    {
-        id: 104,
-        name: 'Ôn Thi THPT Quốc Gia - Toán',
-        subject: 'MATHEMATICS',
-        gradeLevel: 'high',
-        mainTeacher: { name: 'Thầy Nguyễn Minh', initials: 'NM' },
-        assistant: null,
-        currentStudents: 15,
-        maxStudents: 15,
-        schedule: 'Thứ Bảy & Chủ Nhật • 8:00',
-        status: 'inactive',
-    },
-];
-
 const TeacherClasses = ({ isTA = false }) => {
+    const { user } = useAuth();
+    const [classes, setClasses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    const filteredClasses = MY_CLASSES.filter(cls => {
+    useEffect(() => {
+        if (!user?.userId) return;
+        const fetchClasses = async () => {
+            try {
+                setLoading(true);
+                const endpoint = isTA
+                    ? `/Assistants/${user.userId}/classes`
+                    : `/Teachers/${user.userId}/classes`;
+                const res = await api.get(endpoint);
+                // Normalize data to match ClassCard expected shape
+                const normalized = (res.data || []).map(c => {
+                    // Format schedule: "T2, T4 (18:00 - 20:00)"
+                    let scheduleStr = 'Chưa xếp lịch';
+                    if (c.scheduleSlots && c.scheduleSlots.length > 0) {
+                        const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                        const days = c.scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(', ');
+                        const time = `${c.scheduleSlots[0].startTime} - ${c.scheduleSlots[0].endTime}`;
+                        scheduleStr = `${days} (${time})`;
+                    }
+
+                    return {
+                        id: c.classId,
+                        name: c.className,
+                        subject: c.subjectName || '',
+                        gradeName: c.gradeName || '',
+                        mainTeacher: { 
+                            name: c.teacherName || 'Chưa phân công', 
+                            initials: (c.teacherName || '?').split(' ').pop().charAt(0).toUpperCase() 
+                        },
+                        assistant: c.assistantName ? { 
+                            name: c.assistantName, 
+                            initials: c.assistantName.split(' ').pop().charAt(0).toUpperCase() 
+                        } : null,
+                        currentStudents: c.studentCount ?? 0,
+                        maxStudents: c.maxStudents || c.MaxStudents || 30,
+                        schedule: scheduleStr,
+                        status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
+                        startDate: c.startDate,
+                        totalSessions: c.totalSessions || 0,
+                        completedSessions: c.completedSessions || 0
+                    };
+                });
+                setClasses(normalized);
+            } catch (err) {
+                setError('Không thể tải danh sách lớp học.');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchClasses();
+    }, [user, isTA]);
+
+    const filteredClasses = classes.filter(cls => {
         const matchesSearch = cls.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = !statusFilter || cls.status === statusFilter;
         return matchesSearch && matchesStatus;
@@ -82,12 +89,11 @@ const TeacherClasses = ({ isTA = false }) => {
                         </div>
                     </div>
 
-                    {/* Tabs giả để đồng bộ giao diện */}
                     <div className="cm-tabs">
                         <button className="cm-tab active">
                             <GraduationCap size={17} />
                             Lớp học
-                            <span className="cm-tab-badge">{MY_CLASSES.length}</span>
+                            <span className="cm-tab-badge">{classes.length}</span>
                         </button>
                     </div>
                 </div>
@@ -118,9 +124,18 @@ const TeacherClasses = ({ isTA = false }) => {
                 {/* Classes Grid */}
                 <div className="classes-overview">
                     <h2>Tổng quan lớp học của tôi</h2>
-                    {filteredClasses.length === 0 ? (
+
+                    {loading ? (
                         <div className="classes-empty">
-                            <p>Không tìm thấy lớp học phù hợp với bộ lọc.</p>
+                            <p>Đang tải danh sách lớp...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="classes-empty">
+                            <p style={{ color: '#ef4444' }}>{error}</p>
+                        </div>
+                    ) : filteredClasses.length === 0 ? (
+                        <div className="classes-empty">
+                            <p>Không tìm thấy lớp học phù hợp.</p>
                         </div>
                     ) : (
                         <div className="classes-grid">

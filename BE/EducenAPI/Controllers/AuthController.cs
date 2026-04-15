@@ -1,5 +1,7 @@
 ﻿using EducenAPI.DTOs.Auth;
+using EducenAPI.DTOs.Common;
 using EducenAPI.Services.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,61 +19,80 @@ namespace EducenAPI.Controllers
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
             try
             {
                 await _auth.Register(dto);
-                return Ok("Đăng ký thành công");
+                return Ok(ApiResponse<string>.SuccessResponse("Đăng ký thành công", "Registration successful"));
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
             }
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login(LoginDto dto)
         {
             try
             {
                 var token = await _auth.Login(dto);
-                return Ok(token);
+                return Ok(ApiResponse<string>.SuccessResponse(token, "Login successful"));
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
             }
         }
 
         [HttpPost("reset-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> RequestResetPassword(ResetPasswordDto dto)
         {
             try
             {
                 var result = await _auth.RequestResetPassword(dto);
-                return Ok(new { message = result });
+                return Ok(ApiResponse<string>.SuccessResponse(result, "Password reset request processed"));
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
             }
         }
 
         [HttpPost("reset-password/confirm")]
+        [AllowAnonymous]
         public async Task<IActionResult> ConfirmResetPassword(ResetPasswordConfirmDto dto)
         {
             try
             {
                 var success = await _auth.ConfirmResetPassword(dto);
                 if (success)
-                    return Ok(new { message = "Password reset successfully" });
+                    return Ok(ApiResponse<bool>.SuccessResponse(true, "Password reset successfully"));
                 
-                return BadRequest(new { message = "Failed to reset password" });
+                return BadRequest(ApiResponse<bool>.ErrorResponse("Failed to reset password"));
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("generate-student-account/{studentId}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> GenerateStudentAccount(int studentId)
+        {
+            try
+            {
+                var result = await _auth.GenerateStudentAccount(studentId);
+                return Ok(ApiResponse<GeneratedAccountDto>.SuccessResponse(result, "Student account generated"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
             }
         }
     }

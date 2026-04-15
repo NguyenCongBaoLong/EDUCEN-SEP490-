@@ -1,7 +1,9 @@
 using EducenAPI.DTOs.Schedules;
+using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Controllers
 {
@@ -11,42 +13,106 @@ namespace EducenAPI.Controllers
     public class SchedulesController : ControllerBase
     {
         private readonly IScheduleService _scheduleService;
+        private readonly EducenV2Context _context;
 
-        public SchedulesController(IScheduleService scheduleService)
+        public SchedulesController(IScheduleService scheduleService, EducenV2Context context)
         {
             _scheduleService = scheduleService;
+            _context = context;
         }
 
-        // GET: api/Schedules
+        // GET: api/Schedules (public - no auth required for center home page)
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSchedules()
         {
             var schedules = await _scheduleService.GetAllSchedulesAsync();
             return Ok(schedules);
         }
 
-        // GET: api/Schedules/class/5
+        // GET: api/Schedules/class/5 (public)
         [HttpGet("class/{classId:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedulesByClass(int classId)
         {
             var schedules = await _scheduleService.GetSchedulesByClassIdAsync(classId);
             return Ok(schedules);
         }
 
+        // GET: api/Schedules/teacher/me - Get current teacher's schedule
+        [HttpGet("teacher/me")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetMyTeacherSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            // Get teacher by userId
+            var teacher = await _scheduleService.GetTeacherScheduleAsync(userId);
+            return Ok(teacher);
+        }
+
+        // GET: api/Schedules/teacher/{teacherId} - Get specific teacher's schedule
+        [HttpGet("teacher/{teacherId:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> GetTeacherSchedule(int teacherId)
+        {
+            var schedules = await _scheduleService.GetTeacherScheduleAsync(teacherId);
+            return Ok(schedules);
+        }
+
+        // GET: api/Schedules/assistant/me - Get current assistant's schedule
+        [HttpGet("assistant/me")]
+        [Authorize(Roles = "Assistant")]
+        public async Task<IActionResult> GetMyAssistantSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            var schedules = await _scheduleService.GetAssistantScheduleAsync(userId);
+            return Ok(schedules);
+        }
+
+        // GET: api/Schedules/student/me - Get current student's schedule
+        [HttpGet("student/me")]
+        [Authorize(Roles = "Student")]
+        public async Task<IActionResult> GetMyStudentSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            var schedules = await _scheduleService.GetStudentScheduleAsync(userId);
+            return Ok(schedules);
+        }
+
+        // GET: api/Schedules/student/{studentId} - Get specific student's schedule
+        [HttpGet("student/{studentId:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
+        public async Task<IActionResult> GetStudentSchedule(int studentId)
+        {
+            var schedules = await _scheduleService.GetStudentScheduleAsync(studentId);
+            return Ok(schedules);
+        }
+
         // GET: api/Schedules/5
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
         public async Task<IActionResult> GetSchedule(int id)
         {
             var schedule = await _scheduleService.GetScheduleByIdAsync(id);
 
             if (schedule == null)
-                return NotFound(new { message = "Schedule not found" });
+                return NotFound(new { message = "Không tìm thấy lịch học." });
 
             return Ok(schedule);
         }
 
         // POST: api/Schedules
         [HttpPost]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> CreateSchedule(CreateScheduleDto dto)
         {
             try
@@ -56,19 +122,25 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                // Return 409 for conflicts
+                if (ex.Message.Contains("overlap") || ex.Message.Contains("conflict"))
+                    return Conflict(new { message = ex.Message });
+                
+                // Return 400 for validation errors
+                return BadRequest(new { message = ex.Message });
             }
         }
 
         // PUT: api/Schedules/5
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> UpdateSchedule(int id, UpdateScheduleDto dto)
         {
             try
             {
                 var success = await _scheduleService.UpdateScheduleAsync(id, dto);
                 if (!success)
-                    return NotFound(new { message = "Schedule not found" });
+                    return NotFound(new { message = "Không tìm thấy lịch học." });
 
                 return NoContent();
             }
@@ -80,13 +152,14 @@ namespace EducenAPI.Controllers
 
         // DELETE: api/Schedules/5
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
         public async Task<IActionResult> DeleteSchedule(int id)
         {
             try
             {
                 var success = await _scheduleService.DeleteScheduleAsync(id);
                 if (!success)
-                    return NotFound(new { message = "Schedule not found" });
+                    return NotFound(new { message = "Không tìm thấy lịch học." });
 
                 return NoContent();
             }
@@ -96,45 +169,25 @@ namespace EducenAPI.Controllers
             }
         }
 
-        // PUT: api/Schedules/5/approve
-        [HttpPut("{id:int}/approve")]
-        public async Task<IActionResult> ApproveSchedule(int id)
+        // GET: api/Schedules/parent/child/{childId} - Get schedule for a specific child (Parent role)
+        [HttpGet("parent/child/{childId:int}")]
+        [Authorize(Roles = "Parent")]
+        public async Task<IActionResult> GetChildSchedule(int childId)
         {
-            try
-            {
-                var success = await _scheduleService.ApproveScheduleAsync(id);
-                if (!success)
-                    return NotFound(new { message = "Schedule not found" });
+            var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out int parentId)) return Unauthorized();
 
-                return Ok(new { message = "Schedule approved successfully", scheduleId = id, status = "Approved" });
-            }
-            catch (Exception ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
+            // Ownership check via DB
+            var isLinked = await _context.Parents
+                .Where(p => p.UserId == parentId)
+                .SelectMany(p => p.Students)
+                .AnyAsync(s => s.UserId == childId);
+
+            if (!isLinked) return Forbid();
+
+            var schedules = await _scheduleService.GetStudentScheduleAsync(childId);
+            return Ok(schedules);
         }
-
-        // PUT: api/Schedules/5/reject
-        [HttpPut("{id:int}/reject")]
-        public async Task<IActionResult> RejectSchedule(int id, [FromBody] RejectScheduleRequest? request)
-        {
-            try
-            {
-                var success = await _scheduleService.RejectScheduleAsync(id, request?.Reason);
-                if (!success)
-                    return NotFound(new { message = "Schedule not found" });
-
-                return Ok(new { message = "Schedule rejected successfully", scheduleId = id, status = "Rejected" });
-            }
-            catch (Exception ex)
-            {
-                return Conflict(new { message = ex.Message });
-            }
-        }
-    }
-
-    public class RejectScheduleRequest
-    {
-        public string? Reason { get; set; }
     }
 }
+

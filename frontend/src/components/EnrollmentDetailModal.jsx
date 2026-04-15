@@ -61,11 +61,20 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
 
                         <div className="student-badges">
                             <span className="info-badge grade-badge-large">
-                                Đăng ký Khối {request.desiredGrade}
+                                {request.gradeName || (request.gradeId ? `Khối ${request.gradeId}` : '—')}
                             </span>
                             <span className={`status-badge-large ${getStatusClass(request.status)}`}>
                                 {getStatusLabel(request.status)}
                             </span>
+                        </div>
+                        {request.className && (
+                            <div className="requested-class-badge">
+                                <BookOpen size={14} />
+                                <span>Lớp: {request.className}</span>
+                            </div>
+                        )}
+                        <div className={`request-type-tag ${request.requestType === 'ExistingStudentEnrollment' ? 'student' : 'guest'}`}>
+                            {request.requestType === 'ExistingStudentEnrollment' ? 'Học sinh cũ' : 'Khách vãng lai'}
                         </div>
                     </div>
 
@@ -79,7 +88,7 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                                     Thông tin duyệt
                                 </div>
                                 <p style={{ color: '#065f46', fontSize: '0.9rem' }}>
-                                    Đã được duyệt vào lúc {formatDate(request.reviewedAt)}
+                                    Yêu cầu đã được duyệt thành công
                                 </p>
                             </div>
                         )}
@@ -87,15 +96,67 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                             <div className="detail-section" style={{ background: '#fef2f2', borderColor: '#fee2e2' }}>
                                 <div className="section-title" style={{ color: '#b91c1c', borderBottomColor: '#fecaca' }}>
                                     <AlertCircle size={20} />
-                                    Lý do từ chối
+                                    Yêu cầu bị từ chối
                                 </div>
                                 <p style={{ color: '#991b1b', fontSize: '0.9rem' }}>
-                                    {request.rejectionReason || 'Không có lý do cụ thể'}
+                                    Yêu cầu đăng ký đã bị từ chối
                                 </p>
                             </div>
                         )}
 
-                        {/* Request Info */}
+                        {/* Request Info - API version TEMP DISABLED */}
+                        {/* <div className="detail-section">
+                            <div className="section-title">
+                                <BookOpen size={20} />
+                                Thông Tin Đăng Ký
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Khóa học mong muốn</span>
+                                    <span className="info-value">{request.desiredGrade || 'Chưa chọn'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Ngày gửi yêu cầu</span>
+                                    <span className="info-value">
+                                        <Clock size={16} className="info-icon" />
+                                        {formatDate(request.requestDate)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        Contact Info - API version TEMP DISABLED
+                        <div className="detail-section">
+                            <div className="section-title">
+                                <User size={20} />
+                                Thông Tin Liên Hệ
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Email</span>
+                                    <span className="info-value">
+                                        <Mail size={16} className="info-icon" />
+                                        {request.email}
+                                    </span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Số điện thoại</span>
+                                    <span className="info-value">
+                                        <Phone size={16} className="info-icon" />
+                                        {request.phone}
+                                    </span>
+                                </div>
+                                <div className="info-item" style={{ gridColumn: '1 / -1' }}>
+                                    <span className="info-label">Địa chỉ</span>
+                                    <span className="info-value">
+                                        <MapPin size={16} className="info-icon" />
+                                        {request.address || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div> */}
+
+                        {/* Mock version - Original fields */}
                         <div className="detail-section">
                             <div className="section-title">
                                 <BookOpen size={20} />
@@ -104,13 +165,27 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                             <div className="info-grid">
                                 <div className="info-item">
                                     <span className="info-label">Khối đăng ký</span>
-                                    <span className="info-value">Khối {request.desiredGrade}</span>
+                                    <span className="info-value">{request.gradeName || (request.gradeId ? `Khối ${request.gradeId}` : '—')}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Môn học mong muốn</span>
+                                    <span className="info-value">{request.preferredCourse || '—'}</span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Lớp chỉ định</span>
+                                    <span className="info-value">{request.className || 'Chưa chọn lớp cụ thể'}</span>
                                 </div>
                                 <div className="info-item">
                                     <span className="info-label">Ngày gửi yêu cầu</span>
                                     <span className="info-value">
                                         <Clock size={16} className="info-icon" />
                                         {formatDate(request.requestDate)}
+                                    </span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Hình thức</span>
+                                    <span className="info-value">
+                                        {request.requestType === 'ExistingStudentEnrollment' ? 'Đăng ký thêm lớp' : 'Đăng ký mới'}
                                     </span>
                                 </div>
                             </div>
@@ -123,6 +198,20 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                                 Thông Tin Học Sinh
                             </div>
                             <div className="info-grid">
+                                <div className="info-item" style={{ gridColumn: '1 / -1' }}>
+                                    <span className="info-label">Email</span>
+                                    <span className="info-value">
+                                        <Mail size={16} className="info-icon" />
+                                        {request.email || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Số điện thoại</span>
+                                    <span className="info-value">
+                                        <Phone size={16} className="info-icon" />
+                                        {request.phone || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
                                 <div className="info-item">
                                     <span className="info-label">Ngày sinh</span>
                                     <span className="info-value">
@@ -133,14 +222,14 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                                 <div className="info-item">
                                     <span className="info-label">Giới tính</span>
                                     <span className="info-value">
-                                        {request.gender === 'male' ? 'Nam' : 'Nữ'}
+                                        {request.gender === 'male' ? 'Nam' : request.gender === 'female' ? 'Nữ' : 'Chưa cập nhật'}
                                     </span>
                                 </div>
                                 <div className="info-item" style={{ gridColumn: '1 / -1' }}>
                                     <span className="info-label">Địa chỉ</span>
                                     <span className="info-value">
                                         <MapPin size={16} className="info-icon" />
-                                        {request.address}
+                                        {request.address || 'Chưa cập nhật'}
                                     </span>
                                 </div>
                             </div>
@@ -156,20 +245,20 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                                 <div className="info-grid">
                                     <div className="info-item">
                                         <span className="info-label">Họ tên phụ huynh</span>
-                                        <span className="info-value">{request.parentName}</span>
+                                        <span className="info-value">{request.parentName || 'Chưa cập nhật'}</span>
                                     </div>
                                     <div className="info-item">
                                         <span className="info-label">Số điện thoại</span>
                                         <span className="info-value">
                                             <Phone size={16} className="info-icon" />
-                                            {request.parentPhone}
+                                            {request.parentPhone || 'Chưa cập nhật'}
                                         </span>
                                     </div>
                                     <div className="info-item" style={{ gridColumn: '1 / -1' }}>
                                         <span className="info-label">Email liên hệ</span>
                                         <span className="info-value">
                                             <Mail size={16} className="info-icon" />
-                                            {request.parentEmail}
+                                            {request.parentEmail || 'Chưa cập nhật'}
                                         </span>
                                     </div>
                                 </div>

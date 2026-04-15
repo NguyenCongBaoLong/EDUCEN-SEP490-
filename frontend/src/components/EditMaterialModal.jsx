@@ -1,193 +1,156 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, UploadCloud, CheckCircle, FileText, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Save, FileText } from 'lucide-react';
+import api from '../services/api';
+import toast from 'react-hot-toast';
 
-const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData }) => {
-    if (!isOpen || !materialData) return null;
-
+const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [] }) => {
     const [formData, setFormData] = useState({
         title: '',
-        description: '',
+        gradeId: '',
     });
-
-    const [file, setFile] = useState(null);
-    const [isDragging, setIsDragging] = useState(false);
-    const fileInputRef = useRef(null);
-
-    // Xử lý kéo thả
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        setIsDragging(false);
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        setIsDragging(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleSingleFile(e.dataTransfer.files[0]);
-        }
-    };
-
-    const handleFileChange = (e) => {
-        if (e.target.files && e.target.files.length > 0) {
-            handleSingleFile(e.target.files[0]);
-        }
-    };
-
-    const handleSingleFile = (pickedFile) => {
-        setFile({
-            file: pickedFile,
-            name: pickedFile.name,
-            size: (pickedFile.size / (1024 * 1024)).toFixed(2) + ' MB',
-            type: pickedFile.name.split('.').pop().toLowerCase()
-        });
-
-        // Cập nhật tên theo file nếu người dùng chưa đổi tên
-        if (!formData.title || formData.title === materialData.name) {
-            setFormData(prev => ({ ...prev, title: pickedFile.name }));
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-    };
+    const [newFile, setNewFile] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (materialData) {
             setFormData({
-                title: materialData.name || '',
-                description: materialData.description || ''
+                title: materialData.title || '',
+                gradeId: materialData.gradeId || materialData.GradeId || '',
             });
+            setNewFile(null);
         }
     }, [materialData]);
+
+    if (!isOpen || !materialData) return null;
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setNewFile(e.target.files[0]);
+        }
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        try {
+            setIsSubmitting(true);
+            
+            const data = new FormData();
+            data.append('Title', formData.title);
+            if (formData.gradeId) data.append('GradeId', formData.gradeId);
+            if (materialData.sessionId) data.append('SessionId', materialData.sessionId);
+            if (materialData.classId) data.append('ClassId', materialData.classId);
+            
+            if (newFile) {
+                data.append('File', newFile);
+            }
 
-        if (!formData.title.trim()) {
-            alert("Tiêu đề không được để trống.");
-            return;
+            // materialData.id được map từ materialId trong TeacherClassDetail
+            await api.put(`/Materials/${materialData.id}`, data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            toast.success("Cập nhật tài liệu thành công!");
+            onUpdate();
+            onClose();
+        } catch (error) {
+            console.error('Error updating material:', error);
+            const msg = error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật tài liệu.';
+            toast.error(msg);
+        } finally {
+            setIsSubmitting(false);
         }
-
-        const updatePayload = {
-            id: materialData.id,
-            name: formData.title,
-            description: formData.description
-        };
-
-        if (file) {
-            updatePayload.rawFile = file.file;
-            updatePayload.size = file.size;
-            updatePayload.type = file.type === 'pdf' ? 'pdf' : (['doc', 'docx'].includes(file.type) ? 'word' : (['mp4', 'mov'].includes(file.type) ? 'video' : 'other'));
-            updatePayload.uploadDate = new Date().toLocaleDateString('vi-VN');
-        }
-
-        onUpdate(updatePayload);
     };
 
     return (
         <div className="cam-overlay">
             <div className="cam-modal" style={{ maxWidth: '500px' }}>
                 <div className="cam-header">
-                    <h2 className="cam-title">Chỉnh sửa thông tin tài liệu</h2>
+                    <h2 className="cam-title">Chỉnh sửa tài liệu</h2>
                     <button className="cam-close" onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
 
-                <form className="cam-form" onSubmit={handleSubmit}>
-                    <div className="cam-field">
-                        <label className="cam-label">Thay đổi file tài liệu (Tùy chọn)</label>
-                        {!file ? (
-                            <div
-                                className={`cam-upload-area ${isDragging ? 'dragging' : ''}`}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                                onClick={() => fileInputRef.current.click()}
-                                style={{ padding: '2rem', textAlign: 'center', border: '2px dashed #d1d5db', borderRadius: '12px', cursor: 'pointer', background: isDragging ? '#eff6ff' : '#f9fafb', borderColor: isDragging ? '#3b82f6' : '#d1d5db', transition: 'all 0.2s' }}
+                <form className="cam-form" onSubmit={handleSubmit} style={{ padding: '0 1.5rem 1.5rem' }}>
+                    <div className="cam-form-grid" style={{ gridTemplateColumns: '1fr', gap: '1rem' }}>
+                        <div className="cam-field">
+                            <label className="cam-label">Tiêu đề hiển thị <span className="cam-required">*</span></label>
+                            <input
+                                type="text"
+                                className="cam-input"
+                                name="title"
+                                required
+                                value={formData.title}
+                                onChange={handleChange}
+                            />
+                        </div>
+
+                        <div className="cam-field">
+                            <label className="cam-label">Khối lớp (Tùy chọn)</label>
+                            <select
+                                className="cam-input"
+                                name="gradeId"
+                                value={formData.gradeId}
+                                onChange={handleChange}
                             >
+                                <option value="">-- Chọn khối lớp --</option>
+                                {grades.map(g => (
+                                    <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="cam-field">
+                            <label className="cam-label">File hiện tại</label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '8px' }}>
+                                <FileText size={18} color="#64748b" />
+                                <span style={{ fontSize: '0.875rem', color: '#334155', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {materialData.fileName}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="cam-field">
+                            <label className="cam-label">Thay thế file mới (Tùy chọn)</label>
+                            <div className="custom-file-upload">
                                 <input
                                     type="file"
-                                    ref={fileInputRef}
-                                    className="cam-file-input"
+                                    id="edit-material-file"
                                     onChange={handleFileChange}
                                     style={{ display: 'none' }}
                                     accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.zip,.rar"
                                 />
-                                <UploadCloud size={40} color={isDragging ? "#3b82f6" : "#9ca3af"} style={{ marginBottom: '1rem' }} />
-                                <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#475569', marginBottom: '0.5rem' }}>
-                                    Kéo thả hoặc click để chọn file thay thế
-                                </div>
-                                <div style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
-                                    File hiện tại: <strong>{materialData.name}</strong>
-                                </div>
-                            </div>
-                        ) : (
-                            <div style={{ padding: '0.75rem 1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <FileText size={20} />
-                                    </div>
-                                    <div>
-                                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {file.name}
-                                            <CheckCircle size={14} color="#16a34a" />
-                                        </div>
-                                        <div style={{ fontSize: '0.75rem', color: '#16a34a', opacity: 0.8 }}>{file.size} • Sẽ thay thế file cũ</div>
-                                    </div>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={removeFile}
-                                    style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.5rem' }}
-                                    title="Hủy chọn file này"
+                                <label 
+                                    htmlFor="edit-material-file" 
+                                    style={{ 
+                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', 
+                                        border: '1px dashed #3b82f6', borderRadius: '8px', cursor: 'pointer',
+                                        color: '#3b82f6', background: '#eff6ff', fontSize: '0.875rem', fontWeight: 600
+                                    }}
                                 >
-                                    <Trash2 size={18} />
-                                </button>
+                                    <Save size={16} />
+                                    {newFile ? newFile.name : 'Chọn file thay thế...'}
+                                </label>
                             </div>
-                        )}
+                        </div>
                     </div>
 
-                    <div className="cam-field">
-                        <label className="cam-label">Tiêu đề hiển thị <span className="cam-required">*</span></label>
-                        <input
-                            type="text"
-                            className="cam-input"
-                            name="title"
-                            placeholder="Ví dụ: Slide Bài 1"
-                            value={formData.title}
-                            onChange={handleChange}
-                        />
-                    </div>
-
-                    <div className="cam-field">
-                        <label className="cam-label">Mô tả ngắn (Tùy chọn)</label>
-                        <textarea
-                            className="cam-input cam-textarea"
-                            name="description"
-                            placeholder="Ghi chú thêm về bộ tài liệu này cho học sinh..."
-                            value={formData.description}
-                            onChange={handleChange}
-                            rows={3}
-                        ></textarea>
-                    </div>
-
-                    <div className="cam-footer" style={{ marginTop: '1rem' }}>
-                        <button type="button" className="cam-btn-cancel" onClick={onClose}>
+                    <div className="cam-footer" style={{ borderTop: 'none', padding: '1.5rem 0 0' }}>
+                        <button type="button" className="cam-btn-cancel" onClick={onClose} disabled={isSubmitting}>
                             Hủy bỏ
                         </button>
-                        <button type="submit" className="cam-btn-submit">
-                            Lưu thay đổi
+                        <button type="submit" className="cam-btn-submit" disabled={isSubmitting || !formData.title.trim()}>
+                            {isSubmitting ? 'Đang lưu...' : (
+                                <>
+                                    <Save size={18} style={{ marginRight: '8px' }} />
+                                    Lưu thay đổi
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

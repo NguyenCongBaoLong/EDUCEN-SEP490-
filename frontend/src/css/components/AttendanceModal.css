@@ -401,3 +401,243 @@
     font-size: 0.8125rem;
     color: #92400e;
 }
+
+.atm-req-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.atm-req-status-badge.present {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.atm-req-status-badge.absent {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.atm-req-status-badge.pending {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.atm-original-status-panel {
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #dbe7f5;
+    background: #f8fbff;
+}
+
+.atm-original-status-title {
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e3a8a;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.atm-original-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.atm-original-status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-radius: 8px;
+    border: 1px solid #dbe2ea;
+    background: #fff;
+    padding: 6px 8px;
+}
+
+.atm-original-student-name {
+    font-size: 13px;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.atm-request-field {
+    margin-bottom: 18px;
+}
+
+.atm-request-field-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.atm-required {
+    color: #ef4444;
+}
+
+.atm-request-status-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.atm-request-status-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    border-radius: 10px;
+    border: 1px solid #dbe2ea;
+    background: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.atm-request-status-option input {
+    accent-color: #1d4ed8;
+}
+
+.atm-request-status-option.active-present {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.atm-request-status-option.active-absent {
+    border-color: #dc2626;
+    background: #fff5f5;
+    color: #991b1b;
+}
+
+.atm-request-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #0f172a;
+    resize: vertical;
+    min-height: 100px;
+    transition: all 0.2s ease;
+}
+
+.atm-request-textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+/* ─── History Table in Modal ───────────────────────── */
+.atm-history-container {
+    padding: 0 1.5rem 1.5rem;
+    overflow-x: auto;
+}
+
+.atm-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+}
+
+.atm-table th {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.atm-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.atm-table tr:hover td {
+    background: #fcfdfe;
+}
+
+.atm-table tr:last-child td {
+    border-bottom: none;
+}
+
+.atm-student-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.atm-student-name-bold {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.atm-session-info {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.atm-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.atm-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.atm-status-approved {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.atm-status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.atm-change-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #475569;
+}
+
+.atm-change-arrow {
+    color: #94a3b8;
+}
+
+.atm-note-text {
+    font-size: 0.8125rem;
+    color: #64748b;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.atm-note-tooltip {
+    cursor: help;
+    border-bottom: 1px dotted #cbd5e1;
+}

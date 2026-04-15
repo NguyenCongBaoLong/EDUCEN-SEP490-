@@ -1,112 +1,135 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, X, AlertTriangle, BookOpen, GraduationCap, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, X, AlertTriangle, GraduationCap } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import ClassCard from '../../components/ClassCard';
 import CreateClassModal from '../../components/CreateClassModal';
-import SubjectModal from '../../components/SubjectModal';
+import api from '../../services/api';
+import { showValidationError } from '../../services/toastHelper';
 import '../../css/pages/center/ClassesManagement.css';
 import '../../css/components/DeleteModal.css';
 
-const API_BASE = 'http://localhost:5062/api';
-
 const ClassesManagement = () => {
-    // ── Tab state ─────────────────────────────────────────────────────────────
-    const [activeTab, setActiveTab] = useState('classes'); // 'classes' | 'subjects'
-
-    // ── Classes state ─────────────────────────────────────────────────────────
+    // ── Primary state ─────────────────────────────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingClass, setEditingClass] = useState(null);
     const [deleteModal, setDeleteModal] = useState({ show: false, classItem: null });
     const [searchQuery, setSearchQuery] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
-    const [gradeFilter, setGradeFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    // Mock data cho classes (giữ nguyên như cũ cho đến khi có classes API)
-    const [classes, setClasses] = useState([
-        {
-            id: 1,
-            name: 'Advanced Algebra II',
-            subject: 'MATHEMATICS',
-            gradeLevel: 'high',
-            mainTeacher: { name: 'Mr. David Harrison', initials: 'DH' },
-            assistant: { name: 'Elena Rodriguez', initials: 'ER' },
-            currentStudents: 12,
-            maxStudents: 15,
-            schedule: 'Mon, Wed • 4:30 PM',
-            status: 'active'
-        },
-        {
-            id: 2,
-            name: 'Biology: Cell Structures',
-            subject: 'SCIENCE',
-            gradeLevel: 'high',
-            mainTeacher: { name: 'Dr. Amanda Lee', initials: 'AL' },
-            assistant: null,
-            currentStudents: 15,
-            maxStudents: 15,
-            schedule: 'Tue, Thu • 3:00 PM',
-            status: 'active'
-        },
-        {
-            id: 3,
-            name: 'Creative Writing Workshop',
-            subject: 'ENGLISH',
-            gradeLevel: 'middle',
-            mainTeacher: { name: 'Marcus Thorne', initials: 'MT' },
-            assistant: { name: 'Lila Vance', initials: 'LV' },
-            currentStudents: 8,
-            maxStudents: 12,
-            schedule: 'Friday • 5:00 PM',
-            status: 'active'
-        },
-        {
-            id: 4,
-            name: 'Mechanics & Dynamics',
-            subject: 'PHYSICS',
-            gradeLevel: 'high',
-            mainTeacher: { name: 'Dr. Robert Chen', initials: 'RC' },
-            assistant: { name: 'Sarah Miller', initials: 'SM' },
-            currentStudents: 10,
-            maxStudents: 10,
-            schedule: 'Wed, Fri • 4:00 PM',
-            status: 'active'
-        },
-    ]);
-
-    // ── Subjects state ────────────────────────────────────────────────────────
+    const [classes, setClasses] = useState([]);
+    const [teachers, setTeachers] = useState([]);
+    const [assistants, setAssistants] = useState([]);
     const [subjects, setSubjects] = useState([]);
-    const [subjectsLoading, setSubjectsLoading] = useState(false);
-    const [subjectsError, setSubjectsError] = useState('');
-    const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
+    const [rooms, setRooms] = useState([]);
+    const [grades, setGrades] = useState([]);
+    const [classesLoading, setClassesLoading] = useState(false);
 
-    const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
-    const [editingSubject, setEditingSubject] = useState(null);
-    const [deleteSubjectModal, setDeleteSubjectModal] = useState({ show: false, subject: null });
-    const [deleteSubjectError, setDeleteSubjectError] = useState('');
-    const [deletingSubject, setDeletingSubject] = useState(false);
+    // Helper function to format schedule slots for display
+    const formatScheduleForDisplay = useCallback((slots) => {
+        if (!slots || slots.length === 0) return 'Chưa có lịch';
+        const dayMap = {
+            'CN': 'CN', 'Thứ 2': 'T2', 'Thứ 3': 'T3', 'Thứ 4': 'T4',
+            'Thứ 5': 'T5', 'Thứ 6': 'T6', 'Thứ 7': 'T7'
+        };
+        const groups = {};
+        slots.forEach(slot => {
+            const timeKey = `${slot.startTime} - ${slot.endTime}`;
+            if (!groups[timeKey]) groups[timeKey] = [];
+            groups[timeKey].push(dayMap[slot.day] || slot.day);
+        });
+        const groupEntries = Object.entries(groups);
+        if (groupEntries.length === 1) {
+            const [time, days] = groupEntries[0];
+            return `${days.join(', ')} • ${time}`;
+        }
+        return slots.map(s => `${dayMap[s.day] || s.day}: ${s.startTime}-${s.endTime}`).join('; ');
+    }, []);
 
-    // ── Fetch subjects from API ───────────────────────────────────────────────
-    const fetchSubjects = useCallback(async () => {
-        setSubjectsLoading(true);
-        setSubjectsError('');
+    const fetchClasses = useCallback(async () => {
+        setClassesLoading(true);
         try {
-            const res = await fetch(`${API_BASE}/Subjects`);
-            if (!res.ok) throw new Error('Không thể tải danh sách môn học');
-            const data = await res.json();
-            setSubjects(data);
-        } catch (err) {
-            setSubjectsError(err.message || 'Lỗi kết nối server');
+            const res = await api.get('/Classes');
+            const reverseDayMap = { 0: 'CN', 1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7' };
+
+            const mappedClasses = res.data.map(c => ({
+                id: c.classId,
+                name: c.className,
+                description: c.description || '',
+                syllabusContent: c.syllabusContent || '',
+                subjectId: c.subjectId,
+                subject: c.subjectName,
+                teacherId: c.teacherId,
+                mainTeacher: c.teacherName ? { id: c.teacherId, name: c.teacherName, initials: c.teacherName.substring(0, 2).toUpperCase() } : { name: '', initials: '' },
+                assistantId: c.assistantId,
+                assistant: c.assistantName ? { id: c.assistantId, name: c.assistantName, initials: c.assistantName.substring(0, 2).toUpperCase() } : null,
+                currentStudents: c.studentCount,
+                scheduleSlots: (c.scheduleSlots || c.ScheduleSlots || []).map(slot => ({
+                    day: reverseDayMap[slot.dayOfWeek] || reverseDayMap[slot.DayOfWeek] || 'Thứ 2',
+                    startTime: slot.startTime || slot.StartTime,
+                    endTime: slot.endTime || slot.EndTime,
+                    roomId: slot.roomId || slot.RoomId,
+                    roomName: slot.roomName || slot.RoomName
+                })),
+                schedule: formatScheduleForDisplay((c.scheduleSlots || c.ScheduleSlots || []).map(slot => ({
+                    day: reverseDayMap[slot.dayOfWeek] || reverseDayMap[slot.DayOfWeek] || 'Thứ 2',
+                    startTime: slot.startTime || slot.StartTime,
+                    endTime: slot.endTime || slot.EndTime
+                }))),
+                status: c.status?.toLowerCase() || 'active',
+                startDate: c.startDate ? c.startDate.split('T')[0] : '',
+                endDate: c.endDate ? c.endDate.split('T')[0] : '',
+                totalSessions: c.totalSessions || 0,
+                completedSessions: c.completedSessions || 0,
+                gradeId: c.gradeId || c.GradeId,
+                gradeName: c.gradeName || c.GradeName,
+                roomId: c.roomId || c.RoomId,
+                roomName: c.roomName || c.RoomName,
+                pricePerSession: c.pricePerSession ?? c.PricePerSession ?? '',
+                maxStudents: c.maxStudents || c.MaxStudents || 0
+            }));
+            setClasses(mappedClasses);
+        } catch (error) {
+            console.error(error);
         } finally {
-            setSubjectsLoading(false);
+            setClassesLoading(false);
+        }
+    }, [formatScheduleForDisplay]);
+
+    const fetchData = useCallback(async () => {
+        try {
+            const [tRes, aRes, sRes, rRes, gRes] = await Promise.all([
+                api.get('/Teachers'),
+                api.get('/Assistants'),
+                api.get('/tenantadmin/Subjects'),
+                api.get('/Rooms'),
+                api.get('/Grades')
+            ]);
+
+            const mapStaff = (staff, title) => ({
+                id: staff.userId || staff.teacherId || staff.assistantId,
+                name: staff.fullName,
+                title: title,
+                avatar: staff.fullName ? staff.fullName.substring(0, 2).toUpperCase() : 'ST'
+            });
+
+            setTeachers(tRes.data.map(t => mapStaff(t, 'Giáo viên')));
+            setAssistants(aRes.data.map(a => mapStaff(a, 'Trợ giảng')));
+            setSubjects(sRes.data);
+            setRooms(rRes.data);
+            setGrades(gRes.data);
+        } catch (error) {
+            console.error('Lỗi tải dữ liệu cơ sở', error);
         }
     }, []);
 
     useEffect(() => {
-        fetchSubjects();
-    }, [fetchSubjects]);
+        fetchClasses();
+        fetchData();
+    }, [fetchClasses, fetchData]);
 
-    // ── Classes handlers ──────────────────────────────────────────────────────
+    // ── Handlers ──────────────────────────────────────────────────────────────
     const handleCreateClass = () => {
         setEditingClass(null);
         setIsModalOpen(true);
@@ -121,299 +144,157 @@ const ClassesManagement = () => {
         setDeleteModal({ show: true, classItem: classData });
     };
 
-    const confirmDelete = () => {
-        if (deleteModal.classItem) {
-            setClasses(classes.filter(c => c.id !== deleteModal.classItem.id));
+    const confirmDelete = async () => {
+        if (!deleteModal.classItem) return;
+        try {
+            await api.delete(`/Classes/${deleteModal.classItem.id}`);
+            fetchClasses();
             setDeleteModal({ show: false, classItem: null });
+            toast.success(`Đã xóa lớp "${deleteModal.classItem.name}" thành công!`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Xóa lớp thất bại!');
         }
     };
 
-    const cancelDelete = () => {
-        setDeleteModal({ show: false, classItem: null });
-    };
+    const handleSubmitClass = async (classData) => {
+        try {
+            const subject = subjects.find(s => s.subjectName === classData.subject);
+            if (!subject) {
+                toast.error('Vui lòng chọn môn học hợp lệ!');
+                return;
+            }
 
-    const handleSubmitClass = (classData) => {
-        if (editingClass) {
-            setClasses(classes.map(c => c.id === classData.id ? classData : c));
-        } else {
-            const newClass = { ...classData, id: Date.now() };
-            setClasses([...classes, newClass]);
+            const dayMap = { 'CN': 0, 'Thứ 2': 1, 'Thứ 3': 2, 'Thứ 4': 3, 'Thứ 5': 4, 'Thứ 6': 5, 'Thứ 7': 6 };
+            const scheduleSlots = (classData.scheduleSlots || []).map(slot => ({
+                dayOfWeek: dayMap[slot.day] ?? 1,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                roomId: slot.roomId
+            }));
+
+            const payload = {
+                className: classData.name,
+                description: classData.description || '',
+                syllabusContent: classData.syllabusContent || '',
+                subjectId: subject.subjectId,
+                teacherId: classData.mainTeacher?.id || null,
+                assistantId: classData.assistant?.id || null,
+                startDate: classData.startDate ? new Date(classData.startDate).toISOString() : null,
+                endDate: classData.endDate ? new Date(classData.endDate).toISOString() : null,
+                status: classData.status === 'active' ? 'Active' : classData.status === 'completed' ? 'Completed' : 'Inactive',
+                scheduleSlots: scheduleSlots,
+                roomId: classData.roomId || null,
+                gradeId: classData.gradeId || null,
+                maxStudents: parseInt(classData.maxStudents) || 30,
+                pricePerSession: classData.pricePerSession ? parseFloat(classData.pricePerSession) : null
+            };
+
+            if (editingClass) {
+                await api.put(`/Classes/${editingClass.id}`, payload);
+                toast.success(`Đã cập nhật lớp "${classData.name}" thành công!`);
+            } else {
+                await api.post('/Classes', payload);
+                toast.success(`Đã tạo lớp "${classData.name}" thành công!`);
+            }
+
+            fetchClasses();
+            setIsModalOpen(false);
+            setEditingClass(null);
+        } catch (error) {
+            showValidationError(error, 'Có lỗi xảy ra khi lưu lớp học');
         }
     };
 
-    // ── Filter classes ────────────────────────────────────────────────────────
     const filteredClasses = classes.filter(classItem => {
         const matchesSearch = classItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             classItem.mainTeacher.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesSubject = !subjectFilter || classItem.subject === subjectFilter;
-        const matchesGrade = !gradeFilter || classItem.gradeLevel === gradeFilter;
         const matchesStatus = !statusFilter || classItem.status === statusFilter;
-        return matchesSearch && matchesSubject && matchesGrade && matchesStatus;
+        return matchesSearch && matchesSubject && matchesStatus;
     });
-
-    // ── Subject handlers ──────────────────────────────────────────────────────
-    const handleAddSubject = () => {
-        setEditingSubject(null);
-        setIsSubjectModalOpen(true);
-    };
-
-    const handleEditSubject = (subject) => {
-        setEditingSubject(subject);
-        setIsSubjectModalOpen(true);
-    };
-
-    const handleDeleteSubjectClick = (subject) => {
-        setDeleteSubjectError('');
-        setDeleteSubjectModal({ show: true, subject });
-    };
-
-    const confirmDeleteSubject = async () => {
-        if (!deleteSubjectModal.subject) return;
-        setDeletingSubject(true);
-        setDeleteSubjectError('');
-        try {
-            const res = await fetch(`${API_BASE}/Subjects/${deleteSubjectModal.subject.subjectId}`, {
-                method: 'DELETE'
-            });
-            if (res.status === 400) {
-                const text = await res.text();
-                setDeleteSubjectError(text || 'Môn học đang được sử dụng, không thể xóa!');
-                return;
-            }
-            if (!res.ok) throw new Error('Xóa môn học thất bại!');
-            await fetchSubjects();
-            setDeleteSubjectModal({ show: false, subject: null });
-        } catch (err) {
-            setDeleteSubjectError(err.message);
-        } finally {
-            setDeletingSubject(false);
-        }
-    };
-
-    const cancelDeleteSubject = () => {
-        setDeleteSubjectModal({ show: false, subject: null });
-        setDeleteSubjectError('');
-    };
-
-    // ── Filter subjects ───────────────────────────────────────────────────────
-    const filteredSubjects = subjects.filter(s =>
-        s.subjectName?.toLowerCase().includes(subjectSearchQuery.toLowerCase()) ||
-        s.description?.toLowerCase().includes(subjectSearchQuery.toLowerCase())
-    );
 
     return (
         <div className="classes-management">
             <Sidebar />
 
             <main className="classes-main">
-                {/* Header */}
                 <div className="classes-header">
                     <div className="classes-header-top">
                         <div>
                             <h1>Quản lý lớp học</h1>
                             <p className="classes-subtitle">
-                                Quản lý lớp học và môn học của trung tâm
+                                Xem và điều chỉnh danh sách các lớp học đang hoạt động tại trung tâm
                             </p>
                         </div>
-                        {activeTab === 'classes' ? (
-                            <button className="btn-create-class" onClick={handleCreateClass}>
-                                <Plus size={20} />
-                                Tạo lớp học mới
-                            </button>
-                        ) : (
-                            <button className="btn-create-class" onClick={handleAddSubject}>
-                                <Plus size={20} />
-                                Thêm môn học
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="cm-tabs">
-                        <button
-                            className={`cm-tab ${activeTab === 'classes' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('classes')}
-                        >
-                            <GraduationCap size={17} />
-                            Lớp học
-                            <span className="cm-tab-badge">{classes.length}</span>
-                        </button>
-                        <button
-                            className={`cm-tab ${activeTab === 'subjects' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('subjects')}
-                        >
-                            <BookOpen size={17} />
-                            Môn học
-                            <span className="cm-tab-badge">{subjects.length}</span>
+                        <button className="btn-create-class" onClick={handleCreateClass}>
+                            <Plus size={20} />
+                            Tạo lớp học mới
                         </button>
                     </div>
                 </div>
 
-                {/* ── CLASSES TAB ── */}
-                {activeTab === 'classes' && (
-                    <>
-                        <div className="classes-filters">
-                            <div className="filter-search">
-                                <Search size={20} />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm kiếm theo tên lớp, giáo viên..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-
-                            <select
-                                className="filter-select"
-                                value={subjectFilter}
-                                onChange={(e) => setSubjectFilter(e.target.value)}
-                            >
-                                <option value="">Tất cả môn học</option>
-                                {subjects.map(s => (
-                                    <option key={s.subjectId} value={s.subjectName}>{s.subjectName}</option>
-                                ))}
-                            </select>
-
-                            <select
-                                className="filter-select"
-                                value={gradeFilter}
-                                onChange={(e) => setGradeFilter(e.target.value)}
-                            >
-                                <option value="">Cấp học</option>
-                                <option value="elementary">Tiểu học</option>
-                                <option value="middle">THCS</option>
-                                <option value="high">THPT</option>
-                                <option value="college">Luyện thi đại học</option>
-                            </select>
-
-                            <select
-                                className="filter-select"
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                            >
-                                <option value="">Trạng thái</option>
-                                <option value="active">Đang hoạt động</option>
-                                <option value="inactive">Tạm dừng</option>
-                            </select>
-                        </div>
-
-                        <div className="classes-overview">
-                            <h2>Tổng quan tất cả lớp học</h2>
-                            {filteredClasses.length === 0 ? (
-                                <div className="classes-empty">
-                                    <p>Không tìm thấy lớp học phù hợp với bộ lọc.</p>
-                                </div>
-                            ) : (
-                                <div className="classes-grid">
-                                    {filteredClasses.map((classItem) => (
-                                        <ClassCard
-                                            key={classItem.id}
-                                            classData={classItem}
-                                            onEdit={handleEditClass}
-                                            onDelete={handleDeleteClass}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <button className="btn-create-floating" onClick={handleCreateClass} title="Tạo lớp học mới">
-                            <Plus size={24} />
-                        </button>
-                    </>
-                )}
-
-                {/* ── SUBJECTS TAB ── */}
-                {activeTab === 'subjects' && (
-                    <div className="subjects-section">
-                        {/* Search bar */}
-                        <div className="subjects-search-bar">
-                            <div className="filter-search">
-                                <Search size={20} />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm kiếm môn học..."
-                                    value={subjectSearchQuery}
-                                    onChange={(e) => setSubjectSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        {subjectsLoading ? (
-                            <div className="subjects-loading">
-                                <div className="loading-spinner" />
-                                <p>Đang tải danh sách môn học...</p>
-                            </div>
-                        ) : subjectsError ? (
-                            <div className="subjects-error">
-                                <p>⚠️ {subjectsError}</p>
-                                <button onClick={fetchSubjects} className="btn-retry">Thử lại</button>
-                            </div>
-                        ) : filteredSubjects.length === 0 ? (
-                            <div className="subjects-empty">
-                                <BookOpen size={48} />
-                                <h3>Chưa có môn học nào</h3>
-                                <p>Thêm môn học để sử dụng khi tạo lớp học.</p>
-                                <button className="btn-create-class" onClick={handleAddSubject}>
-                                    <Plus size={18} />
-                                    Thêm môn học đầu tiên
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="subjects-table-wrapper">
-                                <table className="subjects-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Tên môn học</th>
-                                            <th>Mô tả</th>
-                                            <th>Thao tác</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredSubjects.map((subject, idx) => (
-                                            <tr key={subject.subjectId}>
-                                                <td className="subject-idx">{idx + 1}</td>
-                                                <td>
-                                                    <div className="subject-name-cell">
-                                                        <div className="subject-icon-badge">
-                                                            <BookOpen size={16} />
-                                                        </div>
-                                                        <span className="subject-name">{subject.subjectName}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="subject-desc">
-                                                    {subject.description || <span className="no-desc">Chưa có mô tả</span>}
-                                                </td>
-                                                <td>
-                                                    <div className="subject-actions">
-                                                        <button
-                                                            className="btn-subject-edit"
-                                                            onClick={() => handleEditSubject(subject)}
-                                                            title="Chỉnh sửa"
-                                                        >
-                                                            <Pencil size={15} />
-                                                        </button>
-                                                        <button
-                                                            className="btn-subject-delete"
-                                                            onClick={() => handleDeleteSubjectClick(subject)}
-                                                            title="Xóa"
-                                                        >
-                                                            <Trash2 size={15} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                <div className="classes-filters">
+                    <div className="filter-search">
+                        <Search size={20} />
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm theo tên lớp, giáo viên..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                     </div>
-                )}
+
+                    <select
+                        className="filter-select"
+                        value={subjectFilter}
+                        onChange={(e) => setSubjectFilter(e.target.value)}
+                    >
+                        <option value="">Tất cả môn học</option>
+                        {subjects.map(s => (
+                            <option key={s.subjectId} value={s.subjectName}>{s.subjectName}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        className="filter-select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="">Trạng thái</option>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Tạm dừng</option>
+                        <option value="completed">Đã hoàn thành</option>
+                    </select>
+                </div>
+
+                <div className="classes-overview">
+                    <h2>Danh sách lớp ({filteredClasses.length})</h2>
+                    {classesLoading ? (
+                        <div className="classes-empty"><p>Đang tải dữ liệu...</p></div>
+                    ) : filteredClasses.length === 0 ? (
+                        <div className="classes-empty">
+                            <GraduationCap size={48} color="#d1d5db" style={{ marginBottom: '1rem' }} />
+                            <p>Không tìm thấy lớp học nào phù hợp.</p>
+                        </div>
+                    ) : (
+                        <div className="classes-grid">
+                            {filteredClasses.map((classItem) => (
+                                <ClassCard
+                                    key={classItem.id}
+                                    classData={classItem}
+                                    onEdit={handleEditClass}
+                                    onDelete={handleDeleteClass}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <button className="btn-create-floating" onClick={handleCreateClass} title="Tạo lớp học mới">
+                    <Plus size={24} />
+                </button>
             </main>
 
-            {/* ── CREATE/EDIT CLASS MODAL ── */}
             <CreateClassModal
                 isOpen={isModalOpen}
                 onClose={() => { setIsModalOpen(false); setEditingClass(null); }}
@@ -421,23 +302,18 @@ const ClassesManagement = () => {
                 editingClass={editingClass}
                 existingClasses={classes}
                 subjects={subjects}
+                teachersList={teachers}
+                assistantsList={assistants}
+                roomsList={rooms}
+                gradesList={grades}
             />
 
-            {/* ── CREATE/EDIT SUBJECT MODAL ── */}
-            <SubjectModal
-                isOpen={isSubjectModalOpen}
-                onClose={() => { setIsSubjectModalOpen(false); setEditingSubject(null); }}
-                onSuccess={fetchSubjects}
-                editingSubject={editingSubject}
-            />
-
-            {/* ── DELETE CLASS MODAL ── */}
             {deleteModal.show && (
-                <div className="delete-modal-overlay" onClick={cancelDelete}>
+                <div className="delete-modal-overlay" onClick={() => setDeleteModal({ show: false, classItem: null })}>
                     <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="delete-modal-header">
                             <h3>Xóa Lớp Học</h3>
-                            <button className="delete-modal-close" onClick={cancelDelete}>
+                            <button className="delete-modal-close" onClick={() => setDeleteModal({ show: false, classItem: null })}>
                                 <X size={20} />
                             </button>
                         </div>
@@ -447,56 +323,13 @@ const ClassesManagement = () => {
                                     <AlertTriangle size={20} />
                                 </div>
                                 <div className="delete-modal-warning-content">
-                                    <h4>Bạn có chắc muốn xóa lớp này?</h4>
-                                    <p>
-                                        Hành động này sẽ xóa vĩnh viễn lớp <strong>{deleteModal.classItem?.name}</strong>.
-                                        Tất cả dữ liệu liên quan đến lớp học này sẽ bị xóa.
-                                    </p>
+                                    Xác nhận xóa lớp học <strong>{deleteModal.classItem.name}</strong>? Hành động này không thể hoàn tác.
                                 </div>
                             </div>
                         </div>
                         <div className="delete-modal-footer">
-                            <button className="btn-delete-cancel" onClick={cancelDelete}>Hủy</button>
-                            <button className="btn-delete-confirm" onClick={confirmDelete}>Xóa Lớp</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ── DELETE SUBJECT MODAL ── */}
-            {deleteSubjectModal.show && (
-                <div className="delete-modal-overlay" onClick={cancelDeleteSubject}>
-                    <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="delete-modal-header">
-                            <h3>Xóa Môn Học</h3>
-                            <button className="delete-modal-close" onClick={cancelDeleteSubject}>
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="delete-modal-body">
-                            <div className="delete-modal-warning">
-                                <div className="delete-modal-warning-icon">
-                                    <AlertTriangle size={20} />
-                                </div>
-                                <div className="delete-modal-warning-content">
-                                    <h4>Bạn có chắc muốn xóa môn học này?</h4>
-                                    <p>
-                                        Môn học <strong>{deleteSubjectModal.subject?.subjectName}</strong> sẽ bị xóa vĩnh viễn.
-                                        Nếu môn học đang được dùng bởi lớp học, bạn không thể xóa.
-                                    </p>
-                                    {deleteSubjectError && (
-                                        <div className="delete-subject-error">
-                                            ⚠️ {deleteSubjectError}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="delete-modal-footer">
-                            <button className="btn-delete-cancel" onClick={cancelDeleteSubject} disabled={deletingSubject}>Hủy</button>
-                            <button className="btn-delete-confirm" onClick={confirmDeleteSubject} disabled={deletingSubject}>
-                                {deletingSubject ? 'Đang xóa...' : 'Xóa Môn Học'}
-                            </button>
+                            <button className="btn-delete-cancel" onClick={() => setDeleteModal({ show: false, classItem: null })}>Hủy</button>
+                            <button className="btn-delete-confirm" onClick={confirmDelete}>Xác nhận xóa</button>
                         </div>
                     </div>
                 </div>

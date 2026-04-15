@@ -7,7 +7,7 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border: 1px solid #e5e7eb;
     overflow: hidden;
-    animation: fadeIn 0.4s ease-out;
+    animation: studentTableFadeIn 0.4s ease-out;
 }
 
 /* Filters Section */
@@ -87,7 +87,7 @@
 
 .student-table th {
     background: #f9fafb;
-    padding: 1rem 1.5rem;
+    padding: 0.875rem 0.75rem;
     text-align: left;
     font-size: 0.75rem;
     font-weight: 600;
@@ -98,10 +98,10 @@
 }
 
 .student-table td {
-    padding: 1rem 1.5rem;
+    padding: 0.875rem 0.75rem;
     border-bottom: 1px solid #e5e7eb;
     color: #374151;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     vertical-align: middle;
 }
 
@@ -113,7 +113,15 @@
 .student-info {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
+}
+
+.student-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 140px;
+    /* Prevents cell from expanding infinitely */
 }
 
 .student-avatar {
@@ -137,26 +145,65 @@
     object-fit: cover;
 }
 
-.student-details h4 {
-    margin: 0;
-    font-size: 0.9375rem;
-    font-weight: 600;
+.parent-info-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.parent-info-name {
+    font-weight: 500;
     color: #111827;
 }
 
-.student-details span {
-    font-size: 0.8125rem;
+.parent-info-phone {
+    font-size: 0.8rem;
     color: #6b7280;
+}
+
+/* Linked parent badges (matching ParentTable linked students) */
+.linked-parents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.linked-parent-badge {
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid #dbeafe;
+}
+
+.student-details h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-details span {
+    font-size: 0.75rem;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Grade & Class Badge */
 .grade-badge,
 .class-badge {
     display: inline-flex;
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.6rem;
     border-radius: 9999px;
     font-size: 0.8125rem;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .grade-badge {
@@ -264,6 +311,41 @@
     border-color: #d1fae5;
 }
 
+.action-btn.send-account:hover {
+    color: #3b82f6;
+    background: #eff6ff;
+    border-color: #dbeafe;
+}
+
+.action-btn.send-account.disabled,
+.action-btn.email.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Account Badge */
+.account-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.account-badge.sent {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.account-badge.pending {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
 /* Pagination */
 .pagination {
     display: flex;
@@ -322,7 +404,7 @@
     border-color: #f3f4f6;
 }
 
-@keyframes fadeIn {
+@keyframes studentTableFadeIn {
     from {
         opacity: 0;
         transform: translateY(10px);

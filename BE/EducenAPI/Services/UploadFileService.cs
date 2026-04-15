@@ -1,0 +1,66 @@
+using EducenAPI.DTOs.FileUpload;
+using EducenAPI.Services.Interface;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
+namespace EducenAPI.Services
+{
+    public class UploadFileService : IFileUploadService
+    {
+        public async Task<List<FileUploadDto>> UploadResourceFile(IFormFileCollection files)
+        {
+            try
+            {
+                var results = new List<FileUploadDto>();
+                if(files == null || files.Count == 0)
+                {
+                    throw new Exception("Không tìm thấy tệp đã chọn.");
+                }
+                var date = DateTime.Now.ToString("yyyyMMdd");
+                foreach (var file in files)
+                {
+                    if(file == null || file.Length == 0)
+                    {
+                        throw new Exception("Tệp tải lên trống!");
+                    }
+                    var extension = Path.GetExtension(file.FileName)
+                                        .Replace(".", "")
+                                        .ToLower();
+
+                    var directoryPath = Path.Combine("wwwroot/uploads", "files", date);
+                    if (!Directory.Exists(directoryPath))
+                    {
+                        Directory.CreateDirectory(directoryPath);
+                    }
+
+                    var id = Guid.NewGuid();
+                    var safeFileName = Path.GetFileName(file.FileName).Replace(" ", "_");
+                    var fileName = $"{id}_{safeFileName}";
+                    var filePath = Path.Combine(directoryPath, fileName);
+                    
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await file.CopyToAsync(stream);
+                    }
+
+                    var dbPath = $"uploads/files/{date}/{fileName}";
+                    
+                    var dto = new FileUploadDto
+                    {
+                        ContentType = file.ContentType,
+                        Extension = extension,
+                        FileName = fileName,
+                        FilePath = dbPath,
+                        FileSize = file.Length / 1024,                        
+                    };
+
+                    results.Add(dto);
+                }
+                return results;
+            }
+            catch(Exception ex)
+            {
+                throw;
+            }
+        }
+    }
+}

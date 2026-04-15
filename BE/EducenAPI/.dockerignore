@@ -1,0 +1,15 @@
+bin/
+obj/
+out/
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.dotsettings.user
+.idea/
+.git/
+.gitignore
+docker-compose*
+Dockerfile*
+node_modules/
+.env

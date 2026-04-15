@@ -1,23 +1,9 @@
-import { X } from 'lucide-react';
+import { X, User, Phone, Mail, MapPin, Briefcase, GraduationCap, FileText } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/StaffDetailModal.css';
 
 const StaffDetailModal = ({ isOpen, onClose, staff }) => {
     if (!isOpen || !staff) return null;
-
-    const formatDate = (dateString) => {
-        if (!dateString) return 'Chưa cập nhật';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN');
-    };
-
-    const getRoleLabel = (role) => {
-        return role === 'teacher' ? 'Giảng Viên' : 'Trợ Giảng';
-    };
-
-    const getStatusLabel = (status) => {
-        return status === 'active' ? 'Hoạt động' : 'Không hoạt động';
-    };
 
     const getInitials = (name) => {
         return name
@@ -28,81 +14,122 @@ const StaffDetailModal = ({ isOpen, onClose, staff }) => {
             .slice(0, 2);
     };
 
+    const getRoleLabel = (role) => {
+        return role === 'teacher' ? 'Giảng Viên' : 'Trợ Giảng';
+    };
+
     return (
-        <div className="staff-detail-overlay" onClick={onClose}>
-            <div className="staff-detail-modal" onClick={(e) => e.stopPropagation()}>
-                {/* Header */}
-                <div className="staff-detail-header">
-                    <h3>Thông Tin Nhân Viên</h3>
-                    <button className="staff-detail-close" onClick={onClose}>
-                        <X size={20} />
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="staff-detail-modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Hồ Sơ Nhân Viên</h2>
+                    <button className="close-btn" onClick={onClose}>
+                        <X size={24} />
                     </button>
                 </div>
 
-                {/* Body */}
-                <div className="staff-detail-body">
-                    {/* Avatar & Basic Info */}
-                    <div className="staff-detail-profile">
-                        <div className="staff-detail-avatar">
+                <div className="modal-body">
+                    {/* Left Column: Profile Card */}
+                    <div className="detail-left-col">
+                        <div className="detail-avatar-large">
                             {staff.avatar ? (
                                 <img src={staff.avatar} alt={staff.name} />
                             ) : (
-                                <div className="staff-detail-avatar-initials">
+                                <span className="detail-initials-large">
                                     {getInitials(staff.name)}
-                                </div>
+                                </span>
                             )}
                         </div>
-                        <div className="staff-detail-profile-info">
-                            <h2>{staff.name}</h2>
-                            <p className="staff-detail-id">ID: {staff.id}</p>
-                            <div className="staff-detail-badges">
-                                <span className={`role-badge ${staff.role}`}>
-                                    {getRoleLabel(staff.role)}
-                                </span>
-                                <span className={`status-badge ${staff.status}`}>
-                                    {getStatusLabel(staff.status)}
-                                </span>
-                            </div>
+                        <h3 className="staff-name-large">{staff.name}</h3>
+                        <span className="staff-id-large">ID: {staff.id}</span>
+
+                        <div className="staff-badges">
+                            <span className="role-badge-large">
+                                {getRoleLabel(staff.role)}
+                            </span>
+                            <span className={`status-badge-large ${staff.status}`}>
+                                {staff.status === 'active' ? 'Hoạt động' : 'Tạm khóa'}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Information Grid */}
-                    <div className="staff-detail-grid">
-                        <div className="detail-item">
-                            <label>Email</label>
-                            <p>{staff.email}</p>
+                    {/* Right Column: Details */}
+                    <div className="detail-right-col">
+                        {/* Professional Info */}
+                        <div className="detail-section">
+                            <div className="section-title">
+                                <Briefcase size={20} />
+                                Thông Tin Nghề Nghiệp
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">
+                                        {staff.role === 'teacher' ? 'Chuyên môn' : 'Cấp độ hỗ trợ'}
+                                    </span>
+                                    <span className="info-value">
+                                        {staff.subject || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                                {staff.role === 'teacher' && (
+                                    <div className="info-item">
+                                        <span className="info-label">Bằng cấp</span>
+                                        <span className="info-value">
+                                            <GraduationCap size={16} className="info-icon" />
+                                            {staff.notes || 'Chưa cập nhật'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="detail-item">
-                            <label>Số điện thoại</label>
-                            <p>{staff.phone}</p>
+                        {/* Contact Info */}
+                        <div className="detail-section">
+                            <div className="section-title">
+                                <User size={20} />
+                                Thông Tin Liên Hệ
+                            </div>
+                            <div className="info-grid">
+                                <div className="info-item">
+                                    <span className="info-label">Email</span>
+                                    <span className="info-value">
+                                        <Mail size={16} className="info-icon" />
+                                        {staff.email || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                                <div className="info-item">
+                                    <span className="info-label">Số điện thoại</span>
+                                    <span className="info-value">
+                                        <Phone size={16} className="info-icon" />
+                                        {staff.phone || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                                <div className="info-item" style={{ gridColumn: '1 / -1' }}>
+                                    <span className="info-label">Địa chỉ</span>
+                                    <span className="info-value">
+                                        <MapPin size={16} className="info-icon" />
+                                        {staff.address || 'Chưa cập nhật'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="detail-item">
-                            <label>Môn học</label>
-                            <p>{staff.subject}</p>
-                        </div>
-
-                        <div className="detail-item">
-                            <label>Ngày sinh</label>
-                            <p>{formatDate(staff.dateOfBirth)}</p>
-                        </div>
-
-                        <div className="detail-item full-width">
-                            <label>Địa chỉ</label>
-                            <p>{staff.address || 'Chưa cập nhật'}</p>
-                        </div>
-
-                        <div className="detail-item full-width">
-                            <label>Ghi chú</label>
-                            <p className="notes-text">{staff.notes || 'Không có ghi chú'}</p>
-                        </div>
+                        {/* Notes - If any additional info */}
+                        {staff.role === 'assistant' && staff.notes && (
+                            <div className="detail-section">
+                                <div className="section-title">
+                                    <FileText size={20} />
+                                    Ghi chú
+                                </div>
+                                <p className="notes-text" style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.4' }}>
+                                    {staff.notes}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="staff-detail-footer">
-                    <button className="btn-detail-close" onClick={onClose}>
+                <div className="modal-footer">
+                    <button className="btn-secondary" onClick={onClose}>
                         Đóng
                     </button>
                 </div>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowRight, BookOpen, Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import adminApi from '../../services/adminApi';
 import '../../css/pages/auth/Signup.css';
 
 const Signup = () => {
@@ -12,6 +14,9 @@ const Signup = () => {
         message: ''
     });
 
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -20,19 +25,32 @@ const Signup = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Form submitted:', formData);
-        // TODO: Send to backend API
-        alert('Cảm ơn bạn đã đăng ký! Chúng tôi sẽ liên hệ sớm.');
-        // Reset form
-        setFormData({
-            fullName: '',
-            email: '',
-            phone: '',
-            centerName: '',
-            message: ''
-        });
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                CenterName: formData.centerName,
+                ContactPerson: formData.fullName,
+                Email: formData.email,
+                PhoneNumber: formData.phone,
+                Message: formData.message
+            };
+            await adminApi.post('/registrations', payload);
+            setIsSuccess(true);
+            setFormData({
+                fullName: '',
+                email: '',
+                phone: '',
+                centerName: '',
+                message: ''
+            });
+        } catch (error) {
+            console.error('Lỗi khi gửi đăng ký:', error);
+            toast.error('Có lỗi xảy ra khi gửi đăng ký. Vui lòng thử lại sau.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -47,7 +65,7 @@ const Signup = () => {
 
                     <h1 className="signup-tagline">
                         Mở Rộng Doanh Nghiệp<br />
-                        Gia Sư Của Bạn
+                        Trung tâm Của Bạn
                     </h1>
 
                     <p className="signup-subtitle">
@@ -101,97 +119,113 @@ const Signup = () => {
             {/* Right Side - Signup Form */}
             <div className="signup-right">
                 <div className="signup-form-container">
-                    <div className="signup-header">
-                        <h1>Yêu cầu tư vấn</h1>
-                        <p>Điền vào form bên dưới và chúng tôi sẽ liên hệ sớm</p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="signup-form">
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label htmlFor="fullName">Họ và tên</label>
-                                <input
-                                    type="text"
-                                    id="fullName"
-                                    name="fullName"
-                                    value={formData.fullName}
-                                    onChange={handleChange}
-                                    placeholder="Nguyễn Văn A"
-                                    className="form-input"
-                                    required
-                                />
+                    {isSuccess ? (
+                        <div className="signup-success-message" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '3rem 1rem', gap: '1.5rem' }}>
+                            <CheckCircle2 size={64} color="#10B981" />
+                            <h2 style={{ color: '#1f2937', fontSize: '1.75rem', margin: 0 }}>Gửi yêu cầu thành công!</h2>
+                            <p style={{ color: '#6b7280', lineHeight: 1.6, marginBottom: '1rem' }}>
+                                Cảm ơn bạn đã quan tâm đến hệ thống EduCen. Chúng tôi đã nhận được yêu cầu của bạn và Bộ phận tư vấn của chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất để tư vấn và hỗ trợ thiết lập hệ thống.
+                            </p>
+                            <button className="submit-btn" onClick={() => window.location.href = '/'}>
+                                <span>Về trang chủ chính</span>
+                                <ArrowRight size={18} />
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="signup-header">
+                                <h1>Yêu cầu tư vấn</h1>
+                                <p>Điền vào form bên dưới và chúng tôi sẽ liên hệ sớm</p>
                             </div>
 
-                            <div className="form-group">
-                                <label htmlFor="email">Email công việc</label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="email@congty.com"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
-                        </div>
+                            <form onSubmit={handleSubmit} className="signup-form">
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label htmlFor="fullName">Họ và tên</label>
+                                        <input
+                                            type="text"
+                                            id="fullName"
+                                            name="fullName"
+                                            value={formData.fullName}
+                                            onChange={handleChange}
+                                            placeholder="Nguyễn Văn A"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
 
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label htmlFor="phone">Số điện thoại</label>
-                                <input
-                                    type="tel"
-                                    id="phone"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="+84 (555) 000-0000"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
+                                    <div className="form-group">
+                                        <label htmlFor="email">Email công việc</label>
+                                        <input
+                                            type="email"
+                                            id="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            placeholder="email@congty.com"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                            <div className="form-group">
-                                <label htmlFor="centerName">Tên trung tâm gia sư</label>
-                                <input
-                                    type="text"
-                                    id="centerName"
-                                    name="centerName"
-                                    value={formData.centerName}
-                                    onChange={handleChange}
-                                    placeholder="VD: Elite Academy"
-                                    className="form-input"
-                                    required
-                                />
-                            </div>
-                        </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label htmlFor="phone">Số điện thoại</label>
+                                        <input
+                                            type="tel"
+                                            id="phone"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            placeholder="+84 (555) 000-0000"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
 
-                        <div className="form-group">
-                            <label htmlFor="message">Tin nhắn/Yêu cầu</label>
-                            <textarea
-                                id="message"
-                                name="message"
-                                value={formData.message}
-                                onChange={handleChange}
-                                placeholder="Cho chúng tôi biết về yêu cầu của bạn..."
-                                className="form-textarea"
-                                rows="4"
-                            />
-                        </div>
+                                    <div className="form-group">
+                                        <label htmlFor="centerName">Tên trung tâm gia sư</label>
+                                        <input
+                                            type="text"
+                                            id="centerName"
+                                            name="centerName"
+                                            value={formData.centerName}
+                                            onChange={handleChange}
+                                            placeholder="VD: Elite Academy"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
+                                </div>
 
-                        {/* Submit Button */}
-                        <button type="submit" className="submit-btn">
-                            <span>Gửi yêu cầu</span>
-                            <ArrowRight size={18} />
-                        </button>
+                                <div className="form-group">
+                                    <label htmlFor="message">Tin nhắn/Yêu cầu</label>
+                                    <textarea
+                                        id="message"
+                                        name="message"
+                                        value={formData.message}
+                                        onChange={handleChange}
+                                        placeholder="Cho chúng tôi biết về yêu cầu của bạn..."
+                                        className="form-textarea"
+                                        rows="4"
+                                    />
+                                </div>
 
-                        <div className="form-footer">
-                            Bằng việc nhấn "Gửi yêu cầu", bạn đồng ý với{' '}
-                            <a href="/#privacy">Chính sách bảo mật</a> và{' '}
-                            <a href="/#terms">Điều khoản dịch vụ</a>
-                        </div>
-                    </form>
+                                {/* Submit Button */}
+                                <button type="submit" className="submit-btn" disabled={isSubmitting}>
+                                    <span>{isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</span>
+                                    <ArrowRight size={18} />
+                                </button>
+
+                                <div className="form-footer">
+                                    Bằng việc nhấn "Gửi yêu cầu", bạn đồng ý với{' '}
+                                    <a href="/#privacy">Chính sách bảo mật</a> và{' '}
+                                    <a href="/#terms">Điều khoản dịch vụ</a>
+                                </div>
+                            </form>
+                        </>
+                    )}
 
                     {/* Login Link */}
                     <div className="login-link">

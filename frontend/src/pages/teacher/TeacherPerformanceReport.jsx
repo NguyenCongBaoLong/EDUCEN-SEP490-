@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Filter, Star, Calendar as CalendarIcon, FileCheck, TrendingUp, MoreVertical, Search, Bell
 } from 'lucide-react';
@@ -7,91 +7,8 @@ import {
     LineChart, Line
 } from 'recharts';
 import TeacherSidebar from '../../components/TeacherSidebar';
+import api from '../../services/api';
 import '../../css/pages/teacher/TeacherPerformanceReport.css';
-
-/* ─── Mock Data ─────────────────────────────────────── */
-const MOCK_DATA = {
-    'math-10a': {
-        metrics: {
-            avgGrade: { value: '84.2%', trend: '+2.4% ↗', trendClass: 'positive' },
-            attendance: { value: '96.8%', trend: 'Không đổi -', trendClass: 'neutral' },
-            assignments: { value: '92%', trend: '-1.2% ↘', trendClass: 'negative' },
-            growth: { value: '12.5%', trend: '+5.1% ↗', trendClass: 'positive' }
-        },
-        gradeData: [
-            { grade: 'F', count: 2 },
-            { grade: 'D', count: 5 },
-            { grade: 'C', count: 12 },
-            { grade: 'B', count: 18 },
-            { grade: 'A', count: 8 },
-        ],
-        attendanceData: [
-            { week: 'Tuần 1', rate: 92 },
-            { week: 'Tuần 2', rate: 88 },
-            { week: 'Tuần 3', rate: 95 },
-            { week: 'Tuần 4', rate: 85 },
-            { week: 'Tuần 5', rate: 96 },
-        ],
-        topStudents: [
-            { id: '#STU-1024', name: 'Benjamin Wright', score: 98.5, attendance: 100, status: 'Xuất sắc', statusColor: 'green', avatar: 'BW' },
-            { id: '#STU-1088', name: 'Sarah Jenkins', score: 96.2, attendance: 98, status: 'Giỏi', statusColor: 'green', avatar: 'SJ' }
-        ]
-    },
-    'math-10b': {
-        metrics: {
-            avgGrade: { value: '76.5%', trend: '+1.2% ↗', trendClass: 'positive' },
-            attendance: { value: '91.2%', trend: '-0.5% ↘', trendClass: 'negative' },
-            assignments: { value: '88%', trend: '+3.4% ↗', trendClass: 'positive' },
-            growth: { value: '8.2%', trend: '+2.1% ↗', trendClass: 'positive' }
-        },
-        gradeData: [
-            { grade: 'F', count: 4 },
-            { grade: 'D', count: 8 },
-            { grade: 'C', count: 20 },
-            { grade: 'B', count: 10 },
-            { grade: 'A', count: 3 },
-        ],
-        attendanceData: [
-            { week: 'Tuần 1', rate: 95 },
-            { week: 'Tuần 2', rate: 92 },
-            { week: 'Tuần 3', rate: 90 },
-            { week: 'Tuần 4', rate: 88 },
-            { week: 'Tuần 5', rate: 91 },
-        ],
-        topStudents: [
-            { id: '#STU-1099', name: 'Emily Clark', score: 92.0, attendance: 100, status: 'Giỏi', statusColor: 'green', avatar: 'EC' },
-            { id: '#STU-1102', name: 'Michael Scott', score: 89.5, attendance: 95, status: 'Khá', statusColor: 'blue', avatar: 'MS' },
-            { id: '#STU-1105', name: 'Pam Beesly', score: 88.0, attendance: 96, status: 'Khá', statusColor: 'blue', avatar: 'PB' }
-        ]
-    },
-    'math-12c': {
-        metrics: {
-            avgGrade: { value: '89.1%', trend: '+4.5% ↗', trendClass: 'positive' },
-            attendance: { value: '99.5%', trend: '+0.5% ↗', trendClass: 'positive' },
-            assignments: { value: '98%', trend: 'Không đổi -', trendClass: 'neutral' },
-            growth: { value: '15.0%', trend: '+6.2% ↗', trendClass: 'positive' }
-        },
-        gradeData: [
-            { grade: 'F', count: 0 },
-            { grade: 'D', count: 2 },
-            { grade: 'C', count: 8 },
-            { grade: 'B', count: 20 },
-            { grade: 'A', count: 18 },
-        ],
-        attendanceData: [
-            { week: 'Tuần 1', rate: 98 },
-            { week: 'Tuần 2', rate: 99 },
-            { week: 'Tuần 3', rate: 100 },
-            { week: 'Tuần 4', rate: 100 },
-            { week: 'Tuần 5', rate: 99 },
-        ],
-        topStudents: [
-            { id: '#STU-2001', name: 'Jim Halpert', score: 99.5, attendance: 100, status: 'Xuất sắc', statusColor: 'green', avatar: 'JH' },
-            { id: '#STU-2005', name: 'Dwight Schrute', score: 99.0, attendance: 100, status: 'Xuất sắc', statusColor: 'green', avatar: 'DS' },
-            { id: '#STU-2010', name: 'Angela Martin', score: 98.2, attendance: 100, status: 'Xuất sắc', statusColor: 'green', avatar: 'AM' }
-        ]
-    }
-};
 
 // Reusable Custom Tooltip for charts
 const CustomTooltip = ({ active, payload, label, suffix = '' }) => {
@@ -110,10 +27,80 @@ const CustomTooltip = ({ active, payload, label, suffix = '' }) => {
 };
 
 const TeacherPerformanceReport = ({ isTA = false }) => {
-    const [filterClass, setFilterClass] = useState('math-10a');
+    const [classes, setClasses] = useState([]);
+    const [filterClass, setFilterClass] = useState('all');
+    const [reportData, setReportData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    // Lấy dữ liệu tương ứng với lớp đang chọn (hoặc mặc định nếu lớp không tồn tại)
-    const currentData = MOCK_DATA[filterClass] || MOCK_DATA['math-10a'];
+    // 1. Định nghĩa hàm fetchReport TRƯỚC khi sử dụng
+    const fetchReport = async (classId) => {
+        if (!classId) return;
+        try {
+            setLoading(true);
+            const endpoint = classId === 'all' ? '/teacher/report/overall' : `/teacher/report/${classId}`;
+            const response = await api.get(endpoint);
+            setReportData(response.data);
+        } catch (error) {
+            console.error("Lỗi khi tải báo cáo:", error);
+            setReportData(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 2. Fetch danh sách lớp khi vào trang
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                // Đảm bảo đường dẫn này đúng với cấu hình api của bạn (không trùng lặp /api)
+                const response = await api.get('/Classes/teacher/my-classes');
+
+                if (response.data && response.data.length > 0) {
+                    setClasses(response.data);
+                    // Mặc định xem tổng tất cả các lớp
+                    setFilterClass('all');
+                } else {
+                    setLoading(false);
+                }
+            } catch (error) {
+                console.error("Lỗi fetch danh sách lớp:", error);
+                setLoading(false);
+            }
+        };
+        fetchClasses();
+    }, []);
+
+    // 3. Tự động tải báo cáo khi filterClass thay đổi
+    useEffect(() => {
+        if (filterClass) {
+            fetchReport(filterClass);
+        }
+    }, [filterClass]);
+
+    // Trạng thái loading
+    if (loading && !reportData) {
+        return (
+            <div className="teacher-report-layout">
+                <TeacherSidebar isTA={isTA} />
+                <main className="report-main-content">
+                    <div className="loading-container">Đang tải dữ liệu báo cáo...</div>
+                </main>
+            </div>
+        );
+    }
+
+    // Dữ liệu an toàn để render
+    const currentData = {
+        metrics: {
+            avgGrade: reportData?.metrics?.avgGrade || { value: "0", trend: "N/A", trendClass: "neutral" },
+            attendance: reportData?.metrics?.attendance || { value: "0%", trend: "N/A", trendClass: "neutral" },
+            assignments: reportData?.metrics?.assignments || { value: "0%", trend: "N/A", trendClass: "neutral" },
+            growth: reportData?.metrics?.growth || { value: "0%", trend: "N/A", trendClass: "neutral" }
+        },
+        gradeData: reportData?.gradeData || [],
+        attendanceData: reportData?.attendanceData || [],
+        topStudents: reportData?.topStudents || []
+    };
 
     return (
         <div className="teacher-report-layout">
@@ -130,10 +117,21 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                     <div className="filter-group single-filter">
                         <label>CHỌN LỚP CỦA TÔI</label>
                         <select value={filterClass} onChange={e => setFilterClass(e.target.value)}>
-                            <option value="math-10a">Đại Số Nâng Cao (Lớp 10A)</option>
-                            <option value="math-10b">Giải Tích Cơ Bản (Lớp 11B)</option>
-                            <option value="math-12c">Toán Nâng Cao (Lớp 12C)</option>
+                            <option value="all">Tổng các lớp cá nhân</option>
+                            {classes.map((cls) => (
+                                <option key={cls.classId} value={cls.classId}>
+                                    {cls.className}{cls.classCode ? ` (${cls.classCode})` : ''}
+                                </option>
+                            ))}
                         </select>
+                    </div>
+
+                    <div className="filter-stat">
+                        <div className="filter-stat-icon"><CalendarIcon size={16} /></div>
+                        <div className="filter-stat-info">
+                            <span className="filter-stat-label">Lớp đang dạy</span>
+                            <span className="filter-stat-value">{classes.filter(c => c.status === 'Active').length}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -213,7 +211,7 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                         <div className="chart-header">
                             <div>
                                 <h3>Xu hướng chuyên cần</h3>
-                                <p>Tỷ lệ chuyên cần hàng tuần theo thời gian</p>
+                                <p>Tỷ lệ chuyên cần trong 7 buổi học gần nhất</p>
                             </div>
                             <div className="chart-legend">
                                 <span className="legend-item current"><span className="dot"></span> Hiện tại</span>
@@ -267,7 +265,8 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                             <tr>
                                 <th>XẾP HẠNG</th>
                                 <th>HỌC SINH</th>
-                                <th>TỔNG ĐIỂM</th>
+                                {filterClass === 'all' && <th>LỚP</th>}
+                                <th>ĐIỂM TRUNG BÌNH</th>
                                 <th>CHUYÊN CẦN</th>
                                 <th>TRẠNG THÁI</th>
                             </tr>
@@ -287,18 +286,25 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                                             </div>
                                         </div>
                                     </td>
+                                    {filterClass === 'all' && (
+                                        <td>
+                                            <span className="class-name-value">{student.className || '-'}</span>
+                                        </td>
+                                    )}
                                     <td>
-                                        <div className="score-cell">
-                                            <span className="score-value">{student.score}%</span>
+                                        <span className="score-value">{student.score}</span>
+                                    </td>
+                                    <td className="attendance-cell">
+                                        <div className="attendance-info">
+                                            <span className="attendance-value">{student.attendance}%</span>
                                             <div className="progress-bar-wrap">
                                                 <div
                                                     className="progress-bar-fill"
-                                                    style={{ width: `${student.score}%`, backgroundColor: '#10B981' }}
+                                                    style={{ width: `${student.attendance}%`, backgroundColor: '#10B981' }}
                                                 ></div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="attendance-cell">{student.attendance}%</td>
                                     <td>
                                         <span className={`status-badge ${student.statusColor}`}>
                                             {student.status}

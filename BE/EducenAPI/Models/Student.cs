@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,9 +15,15 @@ public partial class Student
 
     public string? EnrollmentStatus { get; set; }
 
+    public string? Grade { get; set; }
+    public int? GradeId { get; set; }
+
+    public DateTime? DateOfBirth { get; set; }
+
+    public string? Gender { get; set; }
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
-    public virtual User StudentNavigation { get; set; } = null!;
+    public virtual User? StudentNavigation { get; set; } = null;
 
     public virtual ICollection<Submission> Submissions { get; set; } = new List<Submission>();
 
