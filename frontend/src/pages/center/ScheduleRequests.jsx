@@ -20,7 +20,6 @@ const ScheduleRequests = () => {
         setLoading(true);
         try {
             const res = await notificationService.getSupportRequests();
-            // Normalize data to handle different response structures
             let data = res.data;
             if (!Array.isArray(data)) {
                 data = data?.data || data?.notifications || data?.items || [];
@@ -38,7 +37,6 @@ const ScheduleRequests = () => {
                     || content.includes('requestedslot:');
             };
 
-            // Log all titles to debug
             data.forEach((req, index) => {
                 const title = req.title || req.Title || '';
                 const titleLower = title.toLowerCase();
@@ -91,7 +89,6 @@ const ScheduleRequests = () => {
         };
     }, [fetchRequests]);
 
-    // Fetch thông tin class khi chọn request
     useEffect(() => {
         const fetchClassData = async () => {
             if (selectedRequest) {
@@ -102,7 +99,6 @@ const ScheduleRequests = () => {
                         const classData = classRes.data;
                         setSelectedClassData(classData);
                         
-                        // Validate schedule change
                         const validation = await validateScheduleChange(slotInfo, classData);
                         setValidationResults(validation);
                     } catch (error) {
@@ -129,11 +125,9 @@ const ScheduleRequests = () => {
         if (!slotInfo.newSlot || !classData) return conflicts;
 
         try {
-            // Parse new slot info
             const [newStartTime, newEndTime] = slotInfo.newSlot.time.split(' - ');
             const newDayOfWeek = getDayOfWeekFromLabel(slotInfo.newSlot.dayLabel);
 
-            // Check teacher schedule conflicts
             if (classData.teacherId) {
                 const teacherSchedulesRes = await api.get(`/Schedules/teacher/${classData.teacherId}`);
                 const teacherSchedules = teacherSchedulesRes.data || [];
@@ -143,10 +137,8 @@ const ScheduleRequests = () => {
                     const scheduleStart = schedule.startTime ?? schedule.StartTime;
                     const scheduleEnd = schedule.endTime ?? schedule.EndTime;
                     
-                    // Skip the current class being changed
                     if (schedule.classId === classData.classId) return false;
                     
-                    // Check if same day and time overlap
                     if (scheduleDay === newDayOfWeek) {
                         return (newStartTime < scheduleEnd && newEndTime > scheduleStart);
                     }
@@ -163,12 +155,10 @@ const ScheduleRequests = () => {
                 }
             }
 
-            // Check room conflicts if room is being changed
             if (slotInfo.newRoom) {
                 const roomSchedulesRes = await api.get('/Schedules');
                 const roomSchedules = roomSchedulesRes.data || [];
                 
-                // Find roomId for the new room
                 const roomsRes = await api.get('/Rooms');
                 const rooms = roomsRes.data || [];
                 const newRoom = rooms.find(r => r.roomName === slotInfo.newRoom);
@@ -179,7 +169,6 @@ const ScheduleRequests = () => {
                     const scheduleEnd = schedule.endTime ?? schedule.EndTime;
                     const scheduleRoomId = schedule.roomId ?? schedule.RoomId;
                     
-                    // Skip the current class being changed
                     if (schedule.classId === classData.classId) return false;
                     
                     if (scheduleRoomId === newRoom?.roomId) {
@@ -210,18 +199,15 @@ const ScheduleRequests = () => {
         setProcessing(true);
         try {
             console.log('[ScheduleRequests] Approving request:', requestId);
-            // Tìm request từ danh sách
             const request = requests.find(r => r.id === requestId);
             if (!request) {
                 toast.error('Không tìm thấy yêu cầu.');
                 return;
             }
 
-            // Parse thông tin từ content
             const slotInfo = parseSlotInfo(request.content || request.Content || '');
             console.log('[ScheduleRequests] Slot info:', slotInfo);
             
-            // Kiểm tra validation
             if (validationResults?.hasConflict) {
                 toast.error('Không thể duyệt: Có xung đột lịch/phòng. Vui lòng kiểm tra cảnh báo.');
                 return;
@@ -412,7 +398,7 @@ const ScheduleRequests = () => {
                                                             <div className="adm-schedule-sender">{req?.senderName || 'Không xác định'}</div>
                                                             <div className="adm-schedule-role">{req?.senderRoleName || 'Người dùng'}</div>
                                                         </div>
-                                                        <span className="adm-schedule-processed">Đã xử lý</span>
+                                                        <span className="adm-schedule-processed">ĐÃ XỬ LÝ</span>
                                                     </div>
                                                     <div className="adm-schedule-meta">
                                                         <strong>Tiêu đề:</strong> {req?.title || 'Yêu cầu đổi lịch'}
@@ -457,10 +443,6 @@ const ScheduleRequests = () => {
                                                     <div style={{ marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                                         <div className="adm-schedule-field-label" style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>📚 Thông tin lớp học</div>
                                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem', fontSize: '0.8rem' }}>
-                                                            {/* <div>
-                                                                <span style={{ color: '#64748b', fontWeight: 600 }}>Mã lớp:</span>
-                                                                <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.code || selectedClassData.Code || 'N/A'}</span>
-                                                            </div> */}
                                                             <div>
                                                                 <span style={{ color: '#64748b', fontWeight: 600 }}>Tên lớp:</span>
                                                                 <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.name || selectedClassData.Name || 'N/A'}</span>
@@ -472,10 +454,7 @@ const ScheduleRequests = () => {
                                                             <div>
                                                                 <span style={{ color: '#64748b', fontWeight: 600 }}>Môn học:</span>
                                                                 <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.subjectName || selectedClassData.SubjectName || 'N/A'}</span>
-                                                            </div>{/* <div>
-                                                                <span style={{ color: '#64748b', fontWeight: 600 }}>Trạng thái:</span>
-                                                                <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.status || selectedClassData.Status || 'N/A'}</span>
-                                                            </div> */}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )}
@@ -502,7 +481,6 @@ const ScheduleRequests = () => {
                                                     console.log('[ScheduleRequests] Parsed slotInfo:', slotInfo);
                                                     console.log('[ScheduleRequests] Selected class data:', selectedClassData);
                                                     
-                                                    // Nếu không có currentSlot trong content, lấy từ classData
                                                     let displayCurrentSlot = slotInfo.currentSlot;
                                                     let displayCurrentRoom = null;
                                                     
@@ -518,7 +496,7 @@ const ScheduleRequests = () => {
                                                             s.startTime === (firstSlot.startTime ?? firstSlot.StartTime)
                                                         )?.roomId : null;
                                                     } else if (slotInfo.currentSlot && selectedClassData?.scheduleSlots) {
-                                                        // TÃ¬m room cho current slot
+                                                        // Tìm room cho current slot
                                                         const [currentStartTime, currentEndTime] = slotInfo.currentSlot.time.split(' - ');
                                                         const currentDayOfWeek = getDayOfWeekFromLabel(slotInfo.currentSlot.dayLabel);
                                                         displayCurrentRoom = selectedClassData.scheduleSlots.find(s => 
@@ -527,7 +505,7 @@ const ScheduleRequests = () => {
                                                         )?.roomId;
                                                     }
                                                     
-                                                    // Láº¥y room name tá»« classData
+                                                    // Lấy room name từ classData
                                                     const getRoomName = (roomId) => {
                                                         if (!roomId) return 'Chưa phân công';
                                                         const room = selectedClassData?.rooms?.find(r => r.roomId === roomId) || 
@@ -628,4 +606,3 @@ const ScheduleRequests = () => {
 };
 
 export default ScheduleRequests;
-

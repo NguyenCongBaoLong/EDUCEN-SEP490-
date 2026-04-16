@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -25,7 +25,6 @@ import AssignmentDetailModal from '../../components/AssignmentDetailModal';
 import '../../css/pages/center/ClassDetail.css';
 import '../../css/components/AttendanceModal.css';
 
-/* â”€â”€â”€ Date helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const parseDate = (str) => {
     const [d, m, y] = str.split('/');
     return new Date(Number(y), Number(m) - 1, Number(d));
@@ -44,7 +43,6 @@ const formatSize = (bytes) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-/* â”€â”€â”€ Helpers format ngÃ y tá»« API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const DAY_LABELS = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const SCHEDULE_CHANGE_TAG = '[SCHEDULE_CHANGE]';
 
@@ -56,17 +54,11 @@ function formatDateVN(isoDate) {
     return `${dd}/${mm}/${yyyy}`;
 }
 
-
-
-// Removed INITIAL_ATTENDANCE to use real data from API
-
-/* â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-
 function formatGrade(grade) {
-    if (!grade || grade === 'â€”' || grade === 'None' || grade === '') return 'â€”';
+    if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
     let g = String(grade).trim();
     if (g.endsWith('.0')) g = g.slice(0, -2);
-    if (!g.toLowerCase().includes('khá»‘i')) return `Khá»‘i ${g}`;
+    if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
     return g;
 }
 const AttendanceBar = ({ value }) => {
@@ -96,12 +88,11 @@ const ActivityIcon = ({ type }) => {
     return <div className="cd-activity-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>;
 };
 
-// Mock Library Data (would be fetched from API)
 const LIBRARY_MATERIALS = [
-    { id: 101, name: 'GiÃ¡o trÃ¬nh ToÃ¡n Há»c Äáº¡i cÆ°Æ¡ng Táº­p 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'SÃ¡ch giÃ¡o khoa Ä‘iá»‡n tá»­ chÆ°Æ¡ng trÃ¬nh cÆ¡ báº£n.' },
-    { id: 102, name: 'Video HÆ°á»›ng dáº«n Giáº£i PhÆ°Æ¡ng trÃ¬nh Báº­c 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'CÃ¡ch báº¥m mÃ¡y tÃ­nh Casio Ä‘á»ƒ giáº£i nhanh.' },
-    { id: 103, name: 'BÃ i Táº­p Tráº¯c Nghiá»‡m ChÆ°Æ¡ng 1 (Báº£n gá»‘c).docx', size: '1.2 MB', uploadDate: '10/09/2023', type: 'word', description: 'DÃ¹ng Ä‘á»ƒ soáº¡n Ä‘á» cho cÃ¡c lá»›p.' },
-    { id: 104, name: 'TÃ i liá»‡u Ã”n Táº­p Giá»¯a Ká»³.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'CÃ¡c dáº¡ng toÃ¡n thÆ°á»ng ra trong Ä‘á» thi.' },
+    { id: 101, name: 'Giáo trình Toán Học Đại cương Tập 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Sách giáo khoa điện tử chương trình cơ bản.' },
+    { id: 102, name: 'Video Hướng dẫn Giải Phương trình Bậc 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'Cách bấm máy tính Casio để giải nhanh.' },
+    { id: 103, name: 'Bài Tập Trắc Nghiệm Chương 1 (Bản gốc).docx', size: '1.2 MB', uploadDate: '10/09/2023', type: 'word', description: 'Dùng để soạn đề cho các lớp.' },
+    { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.' },
 ];
 
 const groupUnique = (list) => {
@@ -115,16 +106,15 @@ const groupUnique = (list) => {
     }, []);
 };
 
-// Centralized mapping functions to ensure consistency
 const mapMaterial = (m) => ({
     id: m.materialId || m.MaterialId,
     materialId: m.materialId || m.MaterialId,
     name: m.title || m.Title || '',
-    title: m.title || m.Title || '', // Added title for EditMaterialModal consumption
+    title: m.title || m.Title || '',
     size: formatSize(m.fileSize || m.FileSize),
     fileSize: m.fileSize || m.FileSize,
     originalFileName: m.originalFileName || m.OriginalFileName || '',
-    fileName: m.originalFileName || m.OriginalFileName || '', // For modal consistency
+    fileName: m.originalFileName || m.OriginalFileName || '',
     uploadDate: '',
     type: (m.contentType || m.ContentType)?.toLowerCase().includes('pdf') ? 'pdf'
         : (m.contentType || m.ContentType)?.toLowerCase().includes('word') ? 'word'
@@ -141,24 +131,22 @@ const mapAssignment = (a) => ({
     asmId: a.asmId || a.AsmId,
     title: a.title || a.Title || '',
     description: a.description || a.Description || '',
-    dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'ChÆ°a thiáº¿t láº­p',
+    dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
     endTime: a.endTime || a.EndTime,
     startTime: a.startTime || a.StartTime,
     submissionsCount: a.submissionsCount || a.SubmissionsCount || 0,
     fileUrl: a.fileUrl || a.FileUrl,
     fileSize: a.fileSize || a.FileSize,
     originalFileName: a.originalFileName || a.OriginalFileName || '',
-    fileName: a.originalFileName || a.OriginalFileName || '', // For modal consistency
+    fileName: a.originalFileName || a.OriginalFileName || '',
     sessionId: a.sessionId || a.SessionId,
     classId: a.classId || a.ClassId,
     gradeId: a.gradeId || a.GradeId
 });
 
-/* â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
 
-    // API data state
     const [classInfo, setClassInfo] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [students, setStudents] = useState([]);
@@ -167,7 +155,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [libraryAssignments, setLibraryAssignments] = useState([]);
     const [grades, setGrades] = useState([]);
 
-    // classData dÃ¹ng trong UI â€” gá»™p tá»« API + defaults
     const [classData, setClassData] = useState({
         id: null, name: '', subject: '', gradeLevel: '', status: 'active',
         schedule: '', scheduleTime: '', startDate: '', duration: '',
@@ -179,7 +166,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
         totalClasses: 0,
     });
 
-    // Fetch all data
     const fetchClassData = async (isRefresh = false) => {
         if (!classId) return;
         if (!isRefresh) setLoading(true);
@@ -196,7 +182,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
             const rawStudents = studentsRes.data || [];
             const attendanceSummary = attendanceSummaryRes.data || [];
 
-            // Map sessions
             const mappedSessions = rawSessions.map((s, idx) => {
                 const summary = attendanceSummary.find(sum => sum.sessionId === s.sessionId);
                 return {
@@ -205,7 +190,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     date: formatDateVN(s.sessionDate),
                     dayLabel: s.dayLabel || DAY_LABELS[new Date(s.sessionDate).getDay()],
                     time: s.time || '',
-                    title: s.title || `Buá»•i ${idx + 1}`,
+                    title: s.title || `Buổi ${idx + 1}`,
                     status: s.status,
                     presentCount: summary?.presentCount || 0,
                     absentCount: summary?.absentCount || 0,
@@ -214,7 +199,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 };
             });
 
-            // Map students
             const mappedStudents = rawStudents.map(st => {
                 const name = st.fullName || st.username || '';
                 return {
@@ -222,12 +206,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     name: name,
                     avatar: name.trim().split(' ').map(w => w[0]).slice(-2).join('').toUpperCase(),
                     attendance: st.attendanceRate || 0,
-                    grade: st.grade || 'â€”',
-                    averageScore: st.averageScore || 'â€”',
+                    grade: st.grade || '—',
+                    averageScore: st.averageScore || '—',
                 };
             });
 
-            // Schedule info
             const scheduleSlots = c.scheduleSlots || [];
             const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
             const scheduleStr = scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(' & ');
@@ -245,7 +228,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 scheduleTime: timeStr,
                 startDate: c.startDate ? formatDateVN(c.startDate) : '',
                 duration: c.startDate && c.endDate
-                    ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuáº§n`
+                    ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuần`
                     : '',
                 mainTeacher: {
                     name: c.teacherName || '',
@@ -263,7 +246,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 }) : mappedSessions,
                 classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
                 totalClasses: mappedSessions.length,
-                roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'ChÆ°a gÃ¡n phÃ²ng'),
+                roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'Chưa gán phòng'),
             }));
 
             setStudents(mappedStudents);
@@ -273,7 +256,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
             }) : mappedSessions);
 
             if (!isRefresh) {
-                // Initial load: Fetch materials/assignments and libraries
                 const sessionsWithItems = await Promise.all(
                     mappedSessions.map(async (s) => {
                         try {
@@ -288,7 +270,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 setClassData(prev => ({ ...prev, sessions: sessionsWithItems }));
                 setSessions(sessionsWithItems);
 
-                // Fetch libraries
                 const [libMatRes, libAsmRes, gradesRes] = await Promise.all([
                     api.get('/Materials'), api.get('/Assignments'), api.get('/Grades')
                 ]);
@@ -298,7 +279,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             }
         } catch (err) {
             console.error('Failed to fetch class detail:', err);
-            if (!isRefresh) toast.error('KhÃ´ng thá»ƒ táº£i thÃ´ng tin lá»›p há»c.');
+            if (!isRefresh) toast.error('Không thể tải thông tin lớp học.');
         } finally {
             if (!isRefresh) setLoading(false);
         }
@@ -308,21 +289,16 @@ const TeacherClassDetail = ({ isTA = false }) => {
         fetchClassData();
     }, [classId]);
 
-
-    // Modals state
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
-    const [uploadTargetSession, setUploadTargetSession] = useState(null); // know which session getting the upload
+    const [uploadTargetSession, setUploadTargetSession] = useState(null);
 
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
 
-    // Tab State
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Expand/Collapse sessions
     const [expandedSessionId, setExpandedSessionId] = useState(null);
 
-    // Pagination for students tab
     const [studentPage, setStudentPage] = useState(1);
     const studentsPerPage = 10;
 
@@ -341,27 +317,22 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [canAttend, setCanAttend] = useState(true);
     const [lockMessage, setLockMessage] = useState('');
 
-    // Import Modal
     const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
 
-    // Assignment Modals
     const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
     const [createAssignmentSession, setCreateAssignmentSession] = useState(null);
     const [editAssignment, setEditAssignment] = useState(null);
     const [detailAssignment, setDetailAssignment] = useState(null);
 
-    // Reset page when searching
     useEffect(() => {
         setStudentPage(1);
     }, [studentSearch]);
 
-    // State cho Modal lá»‹ch sá»­ yÃªu cáº§u sá»­a Ä‘iá»ƒm danh
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [classRequests, setClassRequests] = useState([]);
     const [loadingRequests, setLoadingRequests] = useState(false);
     const [historyStatusFilter, setHistoryStatusFilter] = useState('All');
 
-    // State cho Modal yÃªu cáº§u thay Ä‘á»•i (Ä‘á»•i lá»‹ch)
     const [requestOpen, setRequestOpen] = useState(false);
     const [requestInitialData, setRequestInitialData] = useState(null);
 
@@ -369,12 +340,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setLoadingRequests(true);
         try {
             const res = await api.get('/attendance/modification-requests/my');
-            // Lá»c theo classId hiá»‡n táº¡i
             const filtered = (res.data || []).filter(r => String(r.classId) === String(classId));
             setClassRequests(filtered);
         } catch (error) {
             console.error('Error fetching class attendance requests:', error);
-            toast.error('KhÃ´ng thá»ƒ táº£i lá»‹ch sá»­ yÃªu cáº§u sá»­a Ä‘iá»ƒm danh');
+            toast.error('Không thể tải lịch sử yêu cầu sửa điểm danh');
         } finally {
             setLoadingRequests(false);
         }
@@ -395,7 +365,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
         }
     };
 
-    // Fetch materials/assignments for a single session (re-fetch sau khi upload/import)
     const refreshSessionMaterials = async (sessionId) => {
         try {
             const [matRes, asmRes] = await Promise.all([
@@ -418,7 +387,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
 
     const handleUploadMaterial = async () => {
-        // UploadMaterialModal Ä‘Ã£ tá»± gá»i API vÃ  upload xong â†’ chá»‰ cáº§n refresh
         if (uploadTargetSession) {
             await refreshSessionMaterials(uploadTargetSession);
         }
@@ -440,10 +408,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 });
                 return { ...prev, sessions: newSessions };
             });
-            toast.success("ÄÃ£ xÃ³a tÃ i liá»‡u khá»i buá»•i há»c!");
+            toast.success("Đã xóa tài liệu khỏi buổi học!");
         } catch (err) {
             console.error('Delete material error:', err);
-            toast.error('KhÃ´ng thá»ƒ xÃ³a tÃ i liá»‡u. Vui lÃ²ng thá»­ láº¡i.');
+            toast.error('Không thể xóa tài liệu. Vui lòng thử lại.');
         } finally {
             setDeleteMaterialId(null);
             setDeleteTargetSession(null);
@@ -464,10 +432,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 });
                 return { ...prev, sessions: newSessions };
             });
-            toast.success("ÄÃ£ xÃ³a bÃ i táº­p khá»i buá»•i há»c!");
+            toast.success("Đã xóa bài tập khỏi buổi học!");
         } catch (err) {
             console.error('Delete assignment error:', err);
-            toast.error('KhÃ´ng thá»ƒ xÃ³a bÃ i táº­p. Vui lÃ²ng thá»­ láº¡i.');
+            toast.error('Không thể xóa bài tập. Vui lòng thử lại.');
         } finally {
             setDeleteAssignmentId(null);
             setDeleteTargetSession(null);
@@ -475,14 +443,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
 
     const handleUpdateMaterial = (updatedData) => {
-        // updatedData cÃ³ thá»ƒ lÃ  null náº¿u modal gá»i onClose/onUpdate() khÃ´ng kÃ¨m tham sá»‘
-        // ChÃºng ta váº«n cáº§n refresh náº¿u cÃ³ editTargetSession
         const sessId = editTargetSession;
         
         setEditMaterial(null);
         setEditTargetSession(null);
         
-        // LuÃ´n refresh Ä‘á»ƒ Ä‘áº£m báº£o ID vÃ  meta chuáº©n tá»« server
         if (sessId) {
             refreshSessionMaterials(sessId);
         }
@@ -500,17 +465,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
         try {
             const endpoint = type === 'material' ? '/Materials/import' : '/Assignments/import';
             
-            // TÃ¬m buá»•i tiáº¿p theo Ä‘á»ƒ lÃ m háº¡n ná»™p máº·c Ä‘á»‹nh (náº¿u lÃ  assignment)
             let defaultEndTime = null;
             if (type === 'assignment') {
                 const currentIdx = classData.sessions.findIndex(s => Number(s.sessionId) === Number(targetSession));
                 const nextSess = classData.sessions[currentIdx + 1];
                 if (nextSess && nextSess.date) {
-                    // Chuyá»ƒn format DD/MM/YYYY sang YYYY-MM-DD Ä‘á»ƒ táº¡o Date object
                     const [d, m, y] = nextSess.date.split('/');
                     defaultEndTime = new Date(`${y}-${m}-${d}T23:59:00`).toISOString();
                 } else {
-                    // Máº·c Ä‘á»‹nh 7 ngÃ y sau buá»•i hiá»‡n táº¡i
                     const currSess = classData.sessions[currentIdx];
                     if (currSess && currSess.date) {
                         const [d, m, y] = currSess.date.split('/');
@@ -529,11 +491,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 })
             ));
 
-            toast.success(`ÄÃ£ import ${selectedItems.length} má»¥c vÃ o buá»•i há»c!`);
+            toast.success(`Đã import ${selectedItems.length} mục vào buổi học!`);
             await refreshSessionMaterials(targetSession);
         } catch (err) {
             console.error('Import error:', err);
-            const msg = err.response?.data?.message || 'Lá»—i khi import tá»« thÆ° viá»‡n.';
+            const msg = err.response?.data?.message || 'Lỗi khi import từ thư viện.';
             toast.error(msg);
         }
         setImportModal({ isOpen: false, type: 'material', targetSession: null });
@@ -551,7 +513,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         } else if (downloadUrl) {
-            toast.success(`Äang táº£i xuá»‘ng: ${item.name || item.title}`);
+            toast.success(`Đang tải xuống: ${item.name || item.title}`);
             const a = document.createElement('a');
             a.href = downloadUrl;
             a.download = item.name || item.title;
@@ -560,10 +522,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
             a.click();
             document.body.removeChild(a);
         } else {
-            toast.error("KhÃ´ng cÃ³ Ä‘Æ°á»ng dáº«n táº£i vá»");
+            toast.error("Không có đường dẫn tải về");
         }
     };
-
 
     const handleSaveAssignment = async (assignmentFormData) => {
         try {
@@ -573,13 +534,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 savedAsm = res.data;
-                toast.success("Cáº­p nháº­t bÃ i táº­p thÃ nh cÃ´ng!");
+                toast.success("Cập nhật bài tập thành công!");
             } else {
                 const res = await api.post('/Assignments/Create-Assignments', assignmentFormData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 savedAsm = res.data;
-                toast.success("Táº¡o bÃ i táº­p thÃ nh cÃ´ng!");
+                toast.success("Tạo bài tập thành công!");
             }
 
             const targetSessionId = editTargetSession || createAssignmentSession || (savedAsm && (savedAsm.sessionId || savedAsm.SessionId));
@@ -589,18 +550,16 @@ const TeacherClassDetail = ({ isTA = false }) => {
             setEditTargetSession(null);
             setCreateAssignmentSession(null);
 
-            // Cáº­p nháº­t state local ngay láº­p tá»©c hoáº·c refresh
             if (targetSessionId) {
                 await refreshSessionMaterials(targetSessionId);
                 
-                // Náº¿u Ä‘ang xem chi tiáº¿t bÃ i táº­p nÃ y -> cáº­p nháº­t luÃ´n detail
                 if (savedAsm && detailAssignment && (detailAssignment.id === (savedAsm.asmId || savedAsm.AsmId || savedAsm.id || savedAsm.Id))) {
                     setDetailAssignment(mapAssignment({ ...savedAsm, sessionId: targetSessionId, classId: classData.id }));
                 }
             }
         } catch (error) {
             console.error('Error saving assignment:', error);
-            const msg = error.response?.data?.message || error.message || 'CÃ³ lá»—i xáº£y ra khi lÆ°u bÃ i táº­p.';
+            const msg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu bài tập.';
             toast.error(msg);
         }
     };
@@ -609,16 +568,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setExpandedSessionId(prev => prev === id ? null : id);
     };
 
-    /* --- derived --- */
     const filteredStudents = students.filter(s =>
         s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
         s.id.toLowerCase().includes(studentSearch.toLowerCase())
     );
 
-    // Filter students cho tab Overview (chá»‰ show max 5)
     const displayedStudentsOverview = showAllStudents ? filteredStudents : filteredStudents.slice(0, 5);
 
-    // Pagination students cho tab Há»c Sinh
     const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
     const currentStudentsPage = filteredStudents.slice((studentPage - 1) * studentsPerPage, studentPage * studentsPerPage);
 
@@ -626,12 +582,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
         ? Math.round(students.reduce((s, st) => s + st.attendance, 0) / students.length)
         : 0;
 
-    // Buá»•i tiáº¿p theo chÆ°a Ä‘iá»ƒm danh VÃ€ Ä‘Ã£ Ä‘áº¿n ngÃ y
     const nextSession = classData.sessions.find(
         s => (s.presentCount === 0 && s.absentCount === 0) && isPast(s.date)
     );
-
-    // Removed getSessionSummary as counts are now in session object
 
     const handleOpen = async (session) => {
         setSelectedSession(session);
@@ -643,7 +596,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 setLockMessage(res.data.message || '');
             } catch (err) {
                 console.error('Error checking canAttend:', err);
-                setCanAttend(true); // Default to allow
+                setCanAttend(true);
                 setLockMessage('');
             }
         } else {
@@ -655,20 +608,17 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
     const handleClose = () => { setAttendanceOpen(false); setSelectedSession(null); };
     
-    // Refresh all data after attendance is saved
     const handleSave = async () => {
         handleClose();
-        await fetchClassData(true); // Update all numbers and lists immediately (refresh mode)
+        await fetchClassData(true);
     };
 
-    /* Sessions Ä‘Ã£ qua, má»›i nháº¥t trÆ°á»›c */
     const pastSessions = [...classData.sessions]
         .filter(s => isPast(s.date))
         .reverse();
 
     const futureSessions = classData.sessions.filter(s => isFuture(s.date));
 
-    // Stats
     const materialsCount = classData.sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
     const assignmentsCount = classData.sessions.reduce((acc, s) => acc + (s.assignments?.length || 0), 0);
 
@@ -677,7 +627,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             <div className="class-detail">
                 <TeacherSidebar isTA={isTA} />
                 <main className="cd-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-                    <p style={{ color: '#64748b', fontSize: '1rem' }}>Äang táº£i thÃ´ng tin lá»›p há»c...</p>
+                    <p style={{ color: '#64748b', fontSize: '1rem' }}>Đang tải thông tin lớp học...</p>
                 </main>
             </div>
         );
@@ -688,16 +638,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
             <TeacherSidebar isTA={isTA} />
 
             <main className="cd-main">
-                {/* Breadcrumb */}
                 <div className="cd-breadcrumb">
                     <Link to={isTA ? "/ta/classes" : "/teacher/classes"} className="cd-back">
-                        <ChevronLeft size={16} /> Quay láº¡i lá»›p cá»§a tÃ´i
+                        <ChevronLeft size={16} /> Quay lại lớp của tôi
                     </Link>
                     <span className="cd-breadcrumb-sep">/</span>
                     <span className="cd-breadcrumb-current">{classData.name}</span>
                 </div>
 
-                {/* Header */}
                 <div className="cd-page-header">
                     <div className="cd-title-block">
                         <div className="cd-title-row">
@@ -708,8 +656,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     ? (classData.classesCompleted === 0 && !hasStarted ? 'notstarted' : 'active') 
                                     : 'inactive';
                                 const statusLabel = classData.status === 'active' 
-                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'ChÆ°a há»c' : 'Äang hoáº¡t Ä‘á»™ng') 
-                                    : 'Táº¡m dá»«ng';
+                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'Chưa học' : 'Đang hoạt động') 
+                                    : 'Tạm dừng';
                                 return (
                                     <span className={`cd-status-badge ${statusKey}`}>
                                         {statusLabel}
@@ -718,7 +666,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             })()}
                         </div>
                         <p className="cd-title-meta">
-                            MÃ´n: {classData.subject} &nbsp;â€¢&nbsp; MÃ£ lá»›p: {classData.code} &nbsp;â€¢&nbsp; {classData.gradeLevel}
+                            Môn: {classData.subject} &nbsp;•&nbsp; Mã lớp: {classData.code} &nbsp;•&nbsp; {classData.gradeLevel}
                         </p>
                     </div>
                     <button className="ts-btn-request" onClick={() => {
@@ -742,14 +690,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         setRequestOpen(true);
                     }}>
                         <MessageSquare size={18} />
-                        YÃªu cáº§u Ä‘á»•i lá»‹ch
+                        Yêu cầu đổi lịch
                     </button>
                 </div>
 
-                {/* Info Cards */}
                 <div className="cd-info-cards">
                     <div className="cd-info-card">
-                        <div className="cd-info-card-label"><Calendar size={16} /> Lá»ŠCH Há»ŒC</div>
+                        <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
                         <div className="cd-info-card-value">{classData.schedule}</div>
                         <div className="cd-info-card-sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <span>{classData.scheduleTime}</span>
@@ -757,48 +704,43 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                     </div>
                     <div className="cd-info-card">
-                        <div className="cd-info-card-label"><Clock size={16} /> THá»œI GIAN</div>
+                        <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
                         <div className="cd-info-card-value">{classData.duration}</div>
-                        <div className="cd-info-card-sub">Báº¯t Ä‘áº§u {classData.startDate}</div>
+                        <div className="cd-info-card-sub">Bắt đầu {classData.startDate}</div>
                     </div>
                 </div>
 
-                {/* Tabs Nav */}
                 <div className="cd-tabs-nav">
                     <button
                         className={`cd-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
                         onClick={() => setActiveTab('overview')}
                     >
-                        Tá»•ng quan
+                        Tổng quan
                     </button>
                     <button
                         className={`cd-tab-btn ${activeTab === 'students' ? 'active' : ''}`}
                         onClick={() => setActiveTab('students')}
                     >
-                        Há»c sinh ({students.length})
+                        Học sinh ({students.length})
                     </button>
                     <button
                         className={`cd-tab-btn ${activeTab === 'roadmap' ? 'active' : ''}`}
                         onClick={() => setActiveTab('roadmap')}
                     >
-                        Lá»™ trÃ¬nh há»c ({classData.sessions.length} buá»•i)
+                        Lộ trình học ({classData.sessions.length} buổi)
                     </button>
                 </div>
 
                 <div className="cd-tab-content">
                     {activeTab === 'overview' && (
                         <div className="cd-content-grid">
-                            {/* LEFT */}
                             <div className="cd-left">
-
-
-                                {/* â”€â”€ Lá»‹ch sá»­ Ä‘iá»ƒm danh â”€â”€ */}
                                 <div className="cd-card">
                                     <div className="cd-card-header">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <h3>Lá»‹ch sá»­ Ä‘iá»ƒm danh</h3>
+                                            <h3>Lịch sử điểm danh</h3>
                                             <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 500 }}>
-                                                {pastSessions.length} buá»•i Ä‘Ã£ qua
+                                                {pastSessions.length} buổi đã qua
                                             </span>
                                         </div>
                                         <button 
@@ -807,23 +749,23 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                             onClick={() => setHistoryModalOpen(true)}
                                         >
                                             <History size={14} />
-                                            Lá»‹ch sá»­ sá»­a
+                                            Lịch sử sửa
                                         </button>
                                     </div>
 
                                     {pastSessions.length === 0 ? (
                                         <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
-                                            ChÆ°a cÃ³ buá»•i há»c nÃ o.
+                                            Chưa có buổi học nào.
                                         </p>
                                     ) : (
                                         <div className="att-history-scroll">
                                             <table className="att-history-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>NGÃ€Y</th>
-                                                        <th style={{ textAlign: 'center' }}>CÃ“ Máº¶T</th>
-                                                        <th style={{ textAlign: 'center' }}>Váº®NG</th>
-                                                        <th style={{ textAlign: 'right' }}>THAO TÃC</th>
+                                                        <th>NGÀY</th>
+                                                        <th style={{ textAlign: 'center' }}>CÓ MẶT</th>
+                                                        <th style={{ textAlign: 'center' }}>VẮNG</th>
+                                                        <th style={{ textAlign: 'right' }}>THAO TÁC</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -834,7 +776,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             <tr key={session.sessionId}>
                                                                 <td>
                                                                     <div className="att-date-cell">
-                                                                        <span className="att-session-num">Buá»•i {session.sessionNum} - {session.title}</span>
+                                                                        <span className="att-session-num">Buổi {session.sessionNum} - {session.title}</span>
                                                                         <span className="att-session-date">
                                                                             {session.dayLabel}, {session.date}
                                                                         </span>
@@ -843,13 +785,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                 <td style={{ textAlign: 'center' }}>
                                                                     {hasAttendance
                                                                         ? <span className="att-badge present">{present}</span>
-                                                                        : <span className="att-badge pending">â€”</span>
+                                                                        : <span className="att-badge pending">—</span>
                                                                     }
                                                                 </td>
                                                                 <td style={{ textAlign: 'center' }}>
                                                                     {hasAttendance
                                                                         ? <span className={`att-badge ${absent > 0 ? 'absent' : 'present'}`}>{absent}</span>
-                                                                        : <span className="att-badge pending">â€”</span>
+                                                                        : <span className="att-badge pending">—</span>
                                                                     }
                                                                 </td>
                                                                 <td style={{ textAlign: 'right' }}>
@@ -857,16 +799,16 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         <button
                                                                             className="att-btn-edit"
                                                                             onClick={() => handleOpen(session)}
-                                                                            title="Sá»­a Ä‘iá»ƒm danh"
+                                                                            title="Sửa điểm danh"
                                                                         >
-                                                                            <Pencil size={13} /> Sá»­a
+                                                                            <Pencil size={13} /> Sửa
                                                                         </button>
                                                                     ) : (
                                                                         <button
                                                                             className="att-btn-take"
                                                                             onClick={() => handleOpen(session)}
                                                                         >
-                                                                            <CheckCircle size={13} /> Äiá»ƒm danh
+                                                                            <CheckCircle size={13} /> Điểm danh
                                                                         </button>
                                                                     )}
                                                                 </td>
@@ -878,21 +820,19 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         </div>
                                     )}
 
-                                    {/* Buá»•i tÆ°Æ¡ng lai */}
                                     {futureSessions.length > 0 && (
                                         <div className="att-future-notice">
                                             <Lock size={13} />
                                             <span>
-                                                {futureSessions.length} buá»•i sáº¯p tá»›i chÆ°a má»Ÿ Ä‘iá»ƒm danh
-                                                &nbsp;(buá»•i gáº§n nháº¥t: Buá»•i {futureSessions[0].sessionNum})
+                                                {futureSessions.length} buổi sắp tới chưa mở điểm danh
+                                                &nbsp;(buổi gần nhất: Buổi {futureSessions[0].sessionNum})
                                             </span>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Nháº­t kÃ½ hoáº¡t Ä‘á»™ng */}
                                 <div className="cd-card">
-                                    <div className="cd-card-header"><h3>Nháº­t kÃ½ hoáº¡t Ä‘á»™ng</h3></div>
+                                    <div className="cd-card-header"><h3>Nhật ký hoạt động</h3></div>
                                     <div className="cd-activity-list">
                                         {classData.activities.map(act => (
                                             <div key={act.id} className="cd-activity-item">
@@ -900,7 +840,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                 <div className="cd-activity-content">
                                                     <div className="cd-activity-title">{act.title}</div>
                                                     <div className="cd-activity-desc">{act.desc}</div>
-                                                    <div className="cd-activity-meta">{act.time} â€¢ Bá»Ÿi {act.by}</div>
+                                                    <div className="cd-activity-meta">{act.time} • Bởi {act.by}</div>
                                                 </div>
                                             </div>
                                         ))}
@@ -908,16 +848,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 </div>
                             </div>
 
-                            {/* RIGHT */}
                             <div className="cd-right">
-                                {/* GiÃ¡o viÃªn phá»¥ trÃ¡ch */}
                                 <div className="cd-card">
-                                    <div className="cd-card-header"><h3>GiÃ¡o viÃªn phá»¥ trÃ¡ch</h3></div>
+                                    <div className="cd-card-header"><h3>Giáo viên phụ trách</h3></div>
                                     <div className="cd-staff-list">
                                         <div className="cd-staff-item">
                                             <div className="cd-staff-avatar">{classData.mainTeacher.initials}</div>
                                             <div className="cd-staff-info">
-                                                <div className="cd-staff-role">GIÃO VIÃŠN CHÃNH</div>
+                                                <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
                                                 <div className="cd-staff-name">{classData.mainTeacher.name}</div>
                                                 <div className="cd-staff-sub">{classData.mainTeacher.subject}</div>
                                             </div>
@@ -926,7 +864,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                             <div className="cd-staff-item">
                                                 <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
                                                 <div className="cd-staff-info">
-                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trá»£ giáº£ng (TA)</div>
+                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trợ giảng (TA)</div>
                                                     <div className="cd-staff-name">{classData.assistant.name}</div>
                                                     <div className="cd-staff-sub">{classData.assistant.subject}</div>
                                                 </div>
@@ -935,35 +873,34 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     </div>
                                 </div>
 
-                                {/* Tá»•ng quan */}
                                 <div className="cd-card cd-overview-card">
-                                    <div className="cd-card-header"><h3>Tá»•ng quan lá»›p há»c</h3></div>
+                                    <div className="cd-card-header"><h3>Tổng quan lớp học</h3></div>
                                     <div className="cd-overview-stats">
                                         <div className="cd-overview-row">
-                                            <span>Tá»•ng há»c sinh</span>
+                                            <span>Tổng học sinh</span>
                                             <span className="cd-overview-val">
                                                 {students.length}{classData.maxStudents ? ` / ${classData.maxStudents}` : ''}
                                             </span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>ChuyÃªn cáº§n TB</span>
+                                            <span>Chuyên cần TB</span>
                                             <span className="cd-overview-val green">{avgAttendance}%</span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>Buá»•i Ä‘Ã£ há»c</span>
+                                            <span>Buổi đã học</span>
                                             <span className="cd-overview-val">{classData.classesCompleted} / {classData.totalClasses}</span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>ÄÃ£ Ä‘iá»ƒm danh</span>
+                                            <span>Đã điểm danh</span>
                                             <span className="cd-overview-val">
-                                                {pastSessions.filter(s => s.presentCount > 0 || s.absentCount > 0).length} / {pastSessions.length} buá»•i
+                                                {pastSessions.filter(s => s.presentCount > 0 || s.absentCount > 0).length} / {pastSessions.length} buổi
                                             </span>
                                         </div>
                                     </div>
 
                                     <div className="cd-progress-wrap">
                                         <div className="cd-progress-label">
-                                            <span>Tiáº¿n Ä‘á»™ khÃ³a há»c</span>
+                                            <span>Tiến độ khóa học</span>
                                             <span>{Math.round(classData.classesCompleted / classData.totalClasses * 100)}%</span>
                                         </div>
                                         <div className="cd-progress-track">
@@ -974,36 +911,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* NÃºt Ä‘iá»ƒm danh buá»•i tiáº¿p theo */}
-                                    {nextSession ? (
-                                        <>
-                                            <div className="cd-next-session">
-                                                <CalendarClock size={14} />
-                                                <span>Buá»•i cáº§n Ä‘iá»ƒm danh: {nextSession.dayLabel}, {nextSession.date}</span>
-                                            </div>
-                                            <button
-                                                className="cd-btn-attendance"
-                                                onClick={() => handleOpen(nextSession)}
-                                            >
-                                                <CheckCircle size={16} />
-                                                Äiá»ƒm danh buá»•i {nextSession.date}
+                                    {nextSession && (
+                                        <div className="cd-next-session">
+                                            <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
+                                            <button className="cd-btn-take" onClick={() => handleOpen(nextSession)}>
+                                                <CheckCircle size={16} /> Điểm danh buổi {nextSession.date}
                                             </button>
-                                        </>
-                                    ) : futureSessions.length > 0 ? (
-                                        <>
-                                            <div className="cd-next-session">
-                                                <CalendarClock size={14} />
-                                                <span>Buá»•i tiáº¿p theo: Buá»•i {futureSessions[0].sessionNum} - {futureSessions[0].date}</span>
-                                            </div>
-                                            {/* Disabled â€” chÆ°a Ä‘áº¿n ngÃ y */}
-                                            <button className="cd-btn-attendance" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                                                <Lock size={16} />
-                                                ChÆ°a Ä‘áº¿n ngÃ y há»c
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#16a34a', padding: '0.75rem', background: '#f0fdf4', borderRadius: '8px' }}>
-                                            âœ“ ÄÃ£ Ä‘iá»ƒm danh táº¥t cáº£ cÃ¡c buá»•i
                                         </div>
                                     )}
                                 </div>
@@ -1014,12 +927,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     {activeTab === 'students' && (
                         <div className="cd-students-tab">
                             <div className="cd-section-header">
-                                <h2>Danh sÃ¡ch há»c sinh cá»§a lá»›p</h2>
+                                <h2>Danh sách học sinh của lớp</h2>
                                 <div className="student-search-box">
                                     <Search size={16} />
                                     <input
                                         type="text"
-                                        placeholder="TÃ¬m há»c sinh theo tÃªn/mÃ£..."
+                                        placeholder="Tìm học sinh theo tên/mã..."
                                         value={studentSearch}
                                         onChange={(e) => setStudentSearch(e.target.value)}
                                     />
@@ -1029,10 +942,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             <table className="cd-roster-table">
                                 <thead>
                                     <tr>
-                                        <th>Há»Œ VÃ€ TÃŠN</th>
-                                        <th>KHá»I</th>
-                                        <th>ÄIá»‚M TRUNG BÃŒNH</th>
-                                        <th>CHUYÃŠN Cáº¦N</th>
+                                        <th>HỌ VÀ TÊN</th>
+                                        <th>KHỐI</th>
+                                        <th>ĐIỂM TRUNG BÌNH</th>
+                                        <th>CHUYÊN CẦN</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1050,8 +963,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                         fontSize: '0.75rem',
                                                         padding: '2px 10px',
                                                         borderRadius: 12,
-                                                        background: student.grade && student.grade !== 'â€”' ? '#eff6ff' : '#f1f5f9',
-                                                        color: student.grade && student.grade !== 'â€”' ? '#2563eb' : '#94a3b8',
+                                                        background: student.grade && student.grade !== '—' ? '#eff6ff' : '#f1f5f9',
+                                                        color: student.grade && student.grade !== '—' ? '#2563eb' : '#94a3b8',
                                                         fontWeight: 600
                                                     }}>
                                                         {formatGrade(student.grade)}
@@ -1064,18 +977,17 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     ) : (
                                         <tr>
                                             <td colSpan="4" className="text-center py-4 text-gray-500">
-                                                KhÃ´ng tÃ¬m tháº¥y há»c sinh nÃ o phÃ¹ há»£p.
+                                                Không tìm thấy học sinh nào phù hợp.
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
 
-                            {/* Pagination Controls */}
                             {totalStudentPages > 1 && (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
                                     <div style={{ fontSize: '13px', color: '#64748b' }}>
-                                        Hiá»ƒn thá»‹ <strong>{(studentPage - 1) * studentsPerPage + 1}</strong> - <strong>{Math.min(studentPage * studentsPerPage, filteredStudents.length)}</strong> trong <strong>{filteredStudents.length}</strong> há»c sinh
+                                        Hiển thị <strong>{(studentPage - 1) * studentsPerPage + 1}</strong> - <strong>{Math.min(studentPage * studentsPerPage, filteredStudents.length)}</strong> trong <strong>{filteredStudents.length}</strong> học sinh
                                     </div>
                                     <div style={{ display: 'flex', gap: '4px' }}>
                                         <button
@@ -1112,8 +1024,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     {activeTab === 'roadmap' && (
                         <div className="cd-roadmap-tab" style={{ '--accent': '#3b82f6' }}>
                             <div style={{ marginBottom: 16 }}>
-                                <h2>Lá»™ trÃ¬nh há»c & TÃ i liá»‡u</h2>
-                                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: 4 }}>Quáº£n lÃ½ bÃ i giáº£ng vÃ  bÃ i táº­p theo tá»«ng buá»•i há»c. Gá»“m {materialsCount} tÃ i liá»‡u vÃ  {assignmentsCount} bÃ i táº­p.</p>
+                                <h2>Lộ trình học & Tài liệu</h2>
+                                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: 4 }}>Quản lý bài giảng và bài tập theo từng buổi học. Gồm {materialsCount} tài liệu và {assignmentsCount} bài tập.</p>
                             </div>
 
                             {classData.sessions.map((session) => {
@@ -1126,12 +1038,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     <div key={session.sessionId} className="cd-session-card">
                                         <div className="cd-session-header" onClick={() => handleToggleSession(session.sessionId)}>
                                             <div className="cd-session-info">
-                                                <div className="cd-session-num">Buá»•i {session.sessionNum}</div>
+                                                <div className="cd-session-num">Buổi {session.sessionNum}</div>
                                                 <div className="cd-session-title">
-                                                    <h4>{session.title || `Buá»•i há»c ${session.date}`}</h4>
+                                                    <h4>{session.title || `Buổi học ${session.date}`}</h4>
                                                     <div className="cd-session-meta">
                                                         <Calendar size={13} /> {session.dayLabel}, {session.date}
-                                                        <span className="dot">â€¢</span>
+                                                        <span className="dot">•</span>
                                                         <Clock size={13} /> {session.time}
                                                     </div>
                                                 </div>
@@ -1150,10 +1062,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
                                         {isExpanded && (
                                             <div className="cd-session-content">
-                                                {/* Materials Section */}
                                                 <div className="cd-session-section">
                                                     <div className="cd-session-section-header">
-                                                        <h5><BookOpen size={16} /> TÃ i liá»‡u bÃ i giáº£ng</h5>
+                                                        <h5><BookOpen size={16} /> Tài liệu bài giảng</h5>
                                                         {!isTA && (
                                                             <div style={{ display: 'flex' }}>
                                                                 <button
@@ -1163,13 +1074,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         setImportModal({ isOpen: true, type: 'material', targetSession: session.sessionId });
                                                                     }}
                                                                 >
-                                                                    <Library size={14} /> ThÃªm tá»« ThÆ° viá»‡n
+                                                                    <Library size={14} /> Thêm từ Thư viện
                                                                 </button>
                                                                 <button className="cd-btn-add-item" style={{ marginLeft: 12 }} onClick={() => {
                                                                     setUploadTargetSession(session.sessionId);
                                                                     setUploadModalOpen(true);
                                                                 }}>
-                                                                    <Plus size={14} /> Táº£i lÃªn má»›i
+                                                                    <Plus size={14} /> Tải lên mới
                                                                 </button>
                                                             </div>
                                                         )}
@@ -1182,14 +1093,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     <div className="material-icon">{getFileIcon(item.type)}</div>
                                                                     <div className="material-info">
                                                                         <h4 className="material-name">{item.name}</h4>
-                                                                        <div className="material-meta"><span>{item.size}</span><span className="dot">â€¢</span><span>{item.uploadDate}</span></div>
+                                                                        <div className="material-meta"><span>{item.size}</span><span className="dot">•</span><span>{item.uploadDate}</span></div>
                                                                     </div>
                                                                     <div className="material-actions" onClick={(e) => e.stopPropagation()}>
-                                                                        <button className="btn-icon" title="Táº£i xuá»‘ng" onClick={() => handleDownloadMaterial(item)}><Download size={16} /></button>
+                                                                        <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}><Download size={16} /></button>
                                                                         {!isTA && (
                                                                             <>
-                                                                                <button className="btn-icon text-blue-600" title="Chá»‰nh sá»­a" onClick={() => { setEditTargetSession(session.sessionId); setEditMaterial({ ...item, sessionId: session.sessionId, classId: classData.id }); }}><Edit2 size={16} /></button>
-                                                                                <button className="btn-icon text-red-600" title="XÃ³a" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
+                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => { setEditTargetSession(session.sessionId); setEditMaterial({ ...item, sessionId: session.sessionId, classId: classData.id }); }}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -1197,59 +1108,39 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>ChÆ°a cÃ³ tÃ i liá»‡u Ä‘Ã­nh kÃ¨m.</p>
+                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có tài liệu đính kèm.</p>
                                                     )}
                                                 </div>
 
-                                                {/* Assignments Section */}
-                                                <div className="cd-session-section" style={{ marginTop: 32 }}>
+                                                <div className="cd-session-section">
                                                     <div className="cd-session-section-header">
-                                                        <h5><CheckSquare size={16} /> BÃ i táº­p vá» nhÃ </h5>
+                                                        <h5><FileText size={16} /> Bài tập</h5>
                                                         {!isTA && (
-                                                            <div style={{ display: 'flex' }}>
-                                                                <button
-                                                                    className="cd-btn-import-lib"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setImportModal({ isOpen: true, type: 'assignment', targetSession: session.sessionId });
-                                                                    }}
-                                                                >
-                                                                    <Library size={14} /> ThÃªm tá»« Bá»™ Ä‘á»
-                                                                </button>
-                                                                <button
-                                                                    className="cd-btn-add-item"
-                                                                    style={{ marginLeft: 12 }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setCreateAssignmentSession(session.sessionId);
-                                                                        setIsCreateAssignmentOpen(true);
-                                                                    }}
-                                                                >
-                                                                    <Plus size={14} /> Táº¡o bÃ i táº­p
-                                                                </button>
-                                                            </div>
+                                                            <button className="cd-btn-add-item" onClick={() => { setCreateAssignmentSession(session.sessionId); setIsCreateAssignmentOpen(true); }}>
+                                                                <Plus size={14} /> Thêm bài tập
+                                                            </button>
                                                         )}
                                                     </div>
 
                                                     {asms.length > 0 ? (
-                                                        <div className="material-items-grid">
+                                                        <div className="assignment-items-grid">
                                                             {asms.map(asm => (
-                                                                <div key={asm.id} className="material-card" style={{ borderLeft: '3px solid #f59e0b', cursor: 'pointer' }} onClick={() => setDetailAssignment(asm)}>
-                                                                    <div className="material-icon" style={{ color: '#f59e0b' }}><CheckSquare size={24} /></div>
-                                                                    <div className="material-info">
-                                                                        <h4 className="material-name">{asm.title}</h4>
-                                                                        <div className="material-meta"><Clock size={12} /> Háº¡n: {asm.dueDate} &nbsp;â€¢&nbsp; {asm.submissionsCount} bÃ i ná»™p</div>
+                                                                <div key={asm.id} className="assignment-card" onClick={() => setDetailAssignment(asm)} style={{ cursor: 'pointer' }}>
+                                                                    <div className="assignment-icon"><FileText size={20} color="#8b5cf6" /></div>
+                                                                    <div className="assignment-info">
+                                                                        <h4 className="assignment-name">{asm.title}</h4>
+                                                                        <div className="assignment-meta">
+                                                                            <span>Hạn: {asm.dueDate}</span>
+                                                                            <span className="dot">•</span>
+                                                                            <span>{asm.submissionsCount} nộp</span>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="material-actions" onClick={(e) => e.stopPropagation()}>
-                                                                        {!isTA && (
-                                                                            <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Cháº¥m bÃ i" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
-                                                                                Cháº¥m bÃ i
-                                                                            </Link>
-                                                                        )}
+                                                                    <div className="assignment-actions" onClick={(e) => e.stopPropagation()}>
+                                                                        <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(asm)}><Download size={16} /></button>
                                                                         {!isTA && (
                                                                             <>
-                                                                                <button className="btn-icon text-blue-600" title="Chá»‰nh sá»­a" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId, classId: classData.id }, session.sessionId)}><Edit2 size={16} /></button>
-                                                                                <button className="btn-icon text-red-600" title="XÃ³a" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
+                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId }, session.sessionId)}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -1257,10 +1148,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>ChÆ°a cÃ³ bÃ i táº­p Ä‘Ã­nh kÃ¨m.</p>
+                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có bài tập đính kèm.</p>
                                                     )}
                                                 </div>
-
                                             </div>
                                         )}
                                     </div>
@@ -1269,33 +1159,25 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                     )}
                 </div>
-            </main>
 
-            {/* Attendance Modal */}
-            {
-                attendanceOpen && selectedSession && (
+                {attendanceOpen && selectedSession && (
                     <AttendanceModal
                         isOpen={attendanceOpen}
                         onClose={handleClose}
                         onSave={handleSave}
                         session={selectedSession}
-                        students={students}
-                        existingRecords={attendanceData[selectedSession.sessionId]}
-                        sessionId={selectedSession.sessionId}
+                        classId={classData.id}
                         canAttend={canAttend}
                         lockMessage={lockMessage}
-                        onRequestModification={() => fetchClassData(true)}
+                        isTA={isTA}
                     />
-                )
-            }
+                )}
 
-            {/* Request Change Modal */}
-            {
-                requestOpen && (
+                {requestOpen && (
                     <ScheduleRequestModal
                         isOpen={requestOpen}
                         onClose={() => setRequestOpen(false)}
-                        onSend={async (payload) => {
+                        onSubmit={async (payload) => {
                             try {
                                 const targetSlot = payload?.requestedSlot;
                                 const classInfoPayload = payload?.classInfo || {};
@@ -1308,7 +1190,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     endTime: targetSlot?.endTime
                                 });
                                 if (!validateRes?.data?.isValid) {
-                                    toast.error(validateRes?.data?.errors?.[0] || 'Slot Ä‘á» xuáº¥t khÃ´ng há»£p lá»‡.');
+                                    toast.error(validateRes?.data?.errors?.[0] || 'Slot đề xuất không hợp lệ.');
                                     return;
                                 }
 
@@ -1326,23 +1208,20 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 ].join('\n');
 
                                 await api.post('/support-requests', { title, content });
-                                toast.success('ÄÃ£ gá»­i yÃªu cáº§u Ä‘á»•i lá»‹ch dáº¡y');
+                                toast.success('Đã gửi yêu cầu đổi lịch dạy');
                                 window.dispatchEvent(new Event('teacher-inbox-refresh'));
                             } catch (error) {
                                 console.error('Submit schedule change request failed:', error);
-                                toast.error('KhÃ´ng thá»ƒ gá»­i yÃªu cáº§u Ä‘á»•i lá»‹ch');
+                                toast.error('Không thể gửi yêu cầu đổi lịch');
                             } finally {
                                 setRequestOpen(false);
                             }
                         }}
                         initialData={requestInitialData}
                     />
-                )
-            }
+                )}
 
-            {/* Upload Material Modal */}
-            {
-                uploadModalOpen && (
+                {uploadModalOpen && (
                     <UploadMaterialModal
                         isOpen={uploadModalOpen}
                         onClose={() => setUploadModalOpen(false)}
@@ -1350,12 +1229,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         sessionId={uploadTargetSession}
                         grades={grades}
                     />
-                )
-            }
+                )}
 
-            {/* Edit Material Modal */}
-            {
-                editMaterial && (
+                {editMaterial && (
                     <EditMaterialModal
                         isOpen={!!editMaterial}
                         onClose={() => { setEditMaterial(null); setEditTargetSession(null); }}
@@ -1363,210 +1239,194 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         materialData={editMaterial}
                         grades={grades}
                     />
-                )
-            }
+                )}
 
-            {/* Delete Material Modal */}
-            {
-                deleteMaterialId && (
+                {deleteMaterialId && (
                     <DeleteMaterialModal
                         isOpen={!!deleteMaterialId}
                         onClose={() => { setDeleteMaterialId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteMaterial}
-                        itemName="tÃ i liá»‡u"
+                        itemName="tài liệu"
                     />
-                )
-            }
+                )}
 
-            {/* Delete Assignment Modal */}
-            {
-                deleteAssignmentId && (
+                {deleteAssignmentId && (
                     <DeleteMaterialModal
                         isOpen={!!deleteAssignmentId}
                         onClose={() => { setDeleteAssignmentId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteAssignment}
-                        itemName="bÃ i táº­p"
+                        itemName="bài tập"
                     />
-                )
-            }
+                )}
 
-            {/* Material Detail Modal */}
-            {
-                detailMaterial && (
+                {detailMaterial && (
                     <MaterialDetailModal
                         isOpen={!!detailMaterial}
                         onClose={() => setDetailMaterial(null)}
                         material={detailMaterial}
                         onDownload={handleDownloadMaterial}
                     />
-                )
-            }
+                )}
 
-            {/* Import Library Modal */}
-            {importModal.isOpen && (
-                <ImportLibraryModal
-                    isOpen={importModal.isOpen}
-                    onClose={() => setImportModal({ isOpen: false, type: 'material', targetSession: null })}
-                    onImport={handleImportFromLibrary}
-                    type={importModal.type}
-                    libraryItems={importModal.type === 'material' ? libraryMaterials : libraryAssignments}
-                    existingItems={
-                        classData.sessions.find(s => Number(s.sessionId) === Number(importModal.targetSession))?.[importModal.type === 'material' ? 'materials' : 'assignments'] || []
-                    }
-                />
-            )}
+                {importModal.isOpen && (
+                    <ImportLibraryModal
+                        isOpen={importModal.isOpen}
+                        onClose={() => setImportModal({ isOpen: false, type: 'material', targetSession: null })}
+                        onImport={handleImportFromLibrary}
+                        type={importModal.type}
+                        libraryItems={importModal.type === 'material' ? libraryMaterials : libraryAssignments}
+                        existingItems={
+                            classData.sessions.find(s => Number(s.sessionId) === Number(importModal.targetSession))?.[importModal.type === 'material' ? 'materials' : 'assignments'] || []
+                        }
+                    />
+                )}
 
-            {/* Create Assignment Modal */}
-            {isCreateAssignmentOpen && (
-                <CreateAssignmentModal
-                    isOpen={isCreateAssignmentOpen}
-                    onClose={() => { setIsCreateAssignmentOpen(false); setEditAssignment(null); setCreateAssignmentSession(null); }}
-                    onSave={handleSaveAssignment}
-                    sessionId={createAssignmentSession || editTargetSession}
-                    initialData={editAssignment}
-                    classes={[{ classId: classData.id, className: classData.name }]}
-                    currentClassId={classData.id}
-                    grades={grades}
-                />
-            )}
+                {isCreateAssignmentOpen && (
+                    <CreateAssignmentModal
+                        isOpen={isCreateAssignmentOpen}
+                        onClose={() => { setIsCreateAssignmentOpen(false); setEditAssignment(null); setCreateAssignmentSession(null); }}
+                        onSave={handleSaveAssignment}
+                        sessionId={createAssignmentSession || editTargetSession}
+                        initialData={editAssignment}
+                        classes={[{ classId: classData.id, className: classData.name }]}
+                        currentClassId={classData.id}
+                        grades={grades}
+                    />
+                )}
 
-            {/* Assignment Detail Modal */}
-            {detailAssignment && (
-                <AssignmentDetailModal
-                    isOpen={!!detailAssignment}
-                    onClose={() => setDetailAssignment(null)}
-                    assignment={{ ...detailAssignment, className: classData.name }}
-                    onDownload={handleDownloadMaterial}
-                />
-            )}
+                {detailAssignment && (
+                    <AssignmentDetailModal
+                        isOpen={!!detailAssignment}
+                        onClose={() => setDetailAssignment(null)}
+                        assignment={{ ...detailAssignment, className: classData.name }}
+                        onDownload={handleDownloadMaterial}
+                    />
+                )}
 
-            {/* Modal Lá»‹ch sá»­ sá»­a Ä‘iá»ƒm danh (Table Refactored) */}
-            {historyModalOpen && (
-                <div className="atm-overlay">
-                    <div className="atm-modal" style={{ width: '900px', maxWidth: '95vw' }}>
-                        <div className="atm-header">
-                            <div>
-                                <h3>Lá»‹ch sá»­ sá»­a Ä‘iá»ƒm danh</h3>
-                                <div className="atm-session-meta">
-                                    <History size={14} /> 
-                                    <span>Lá»›p: {classData.name}</span>
+                {historyModalOpen && (
+                    <div className="atm-overlay">
+                        <div className="atm-modal" style={{ width: '900px', maxWidth: '95vw' }}>
+                            <div className="atm-header">
+                                <div>
+                                    <h3>Lịch sử sửa điểm danh</h3>
+                                    <div className="atm-session-meta">
+                                        <History size={14} /> 
+                                        <span>Lớp: {classData.name}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <button className="atm-close" onClick={() => setHistoryModalOpen(false)}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Filter Bar */}
-                        <div style={{ padding: '12px 24px', background: '#fcfdfe', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bá»™ lá»c:</span>
-                            {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
-                                <button
-                                    key={status}
-                                    onClick={() => setHistoryStatusFilter(status)}
-                                    style={{
-                                        padding: '4px 14px',
-                                        borderRadius: '20px',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        border: '1px solid',
-                                        transition: 'all 0.15s',
-                                        background: historyStatusFilter === status ? '#3b82f6' : 'white',
-                                        color: historyStatusFilter === status ? 'white' : '#64748b',
-                                        borderColor: historyStatusFilter === status ? '#3b82f6' : '#e2e8f0',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {status === 'All' ? 'Táº¥t cáº£' : status === 'Pending' ? 'Äang chá»' : status === 'Approved' ? 'ÄÃ£ duyá»‡t' : 'Tá»« chá»‘i'}
+                                <button className="atm-close" onClick={() => setHistoryModalOpen(false)}>
+                                    <X size={20} />
                                 </button>
-                            ))}
-                        </div>
-                        
-                        <div className="atm-body" style={{ padding: 0, overflow: 'hidden' }}>
-                            {loadingRequests ? (
-                                <div style={{ textAlign: 'center', padding: '60px' }}>
-                                    <div className="attendance-spinner" style={{ margin: '0 auto 16px' }}></div>
-                                    <p style={{ color: '#64748b' }}>Äang táº£i dá»¯ liá»‡u...</p>
-                                </div>
-                            ) : classRequests.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
-                                    <ClipboardCheck size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '1rem' }}>KhÃ´ng cÃ³ lá»‹ch sá»­ yÃªu cáº§u sá»­a cho lá»›p nÃ y.</p>
-                                </div>
-                            ) : (
-                                <div className="atm-history-container" style={{ maxHeight: '60vh' }}>
-                                    <table className="atm-table">
-                                        <thead>
-                                            <tr>
-                                                <th>NgÃ y gá»­i</th>
-                                                <th>Há»c sinh</th>
-                                                <th>Buá»•i há»c</th>
-                                                <th>Ná»™i dung sá»­a</th>
-                                                <th>Tráº¡ng thÃ¡i</th>
-                                                <th>Ghi chÃº / Pháº£n há»“i</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {classRequests
-                                                .filter(req => historyStatusFilter === 'All' || req.status === historyStatusFilter)
-                                                .map((req) => {
-                                                const statusKey = req.status?.toLowerCase() || 'pending';
-                                                return (
-                                                    <tr key={req.requestId}>
-                                                        <td style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                                                            {req.requestedAt?.split(' ')[0]}<br/>
-                                                            <small>{req.requestedAt?.split(' ')[1]}</small>
-                                                        </td>
-                                                        <td>
-                                                            <div className="atm-student-name-bold">{req.studentName}</div>
-                                                        </td>
-                                                        <td style={{ whiteSpace: 'nowrap' }}>
-                                                            <div style={{ fontWeight: 500, fontSize: '0.8125rem' }}>{req.sessionDate}</div>
-                                                        </td>
-                                                        <td>
-                                                            <div className="atm-change-preview">
-                                                                <span style={{ color: req.currentStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                                    {req.currentStatus?.toLowerCase() === 'present' ? 'CÃ³ máº·t' : 'Váº¯ng máº·t'}
+                            </div>
+
+                            <div style={{ padding: '12px 24px', background: '#fcfdfe', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bộ lọc:</span>
+                                {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setHistoryStatusFilter(status)}
+                                        style={{
+                                            padding: '4px 14px',
+                                            borderRadius: '20px',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            border: '1px solid',
+                                            transition: 'all 0.15s',
+                                            background: historyStatusFilter === status ? '#3b82f6' : 'white',
+                                            color: historyStatusFilter === status ? 'white' : '#64748b',
+                                            borderColor: historyStatusFilter === status ? '#3b82f6' : '#e2e8f0',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {status === 'All' ? 'Tất cả' : status === 'Pending' ? 'Đang chờ' : status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <div className="atm-body" style={{ padding: 0, overflow: 'hidden' }}>
+                                {loadingRequests ? (
+                                    <div style={{ textAlign: 'center', padding: '60px' }}>
+                                        <div className="attendance-spinner" style={{ margin: '0 auto 16px' }}></div>
+                                        <p style={{ color: '#64748b' }}>Đang tải dữ liệu...</p>
+                                    </div>
+                                ) : classRequests.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
+                                        <ClipboardCheck size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
+                                        <p style={{ fontSize: '1rem' }}>Không có lịch sử yêu cầu sửa cho lớp này.</p>
+                                    </div>
+                                ) : (
+                                    <div className="atm-history-container" style={{ maxHeight: '60vh' }}>
+                                        <table className="atm-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ngày gửi</th>
+                                                    <th>Học sinh</th>
+                                                    <th>Buổi học</th>
+                                                    <th>Nội dung sửa</th>
+                                                    <th>Trạng thái</th>
+                                                    <th>Ghi chú / Phản hồi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {classRequests
+                                                    .filter(req => historyStatusFilter === 'All' || req.status === historyStatusFilter)
+                                                    .map((req) => {
+                                                    const statusKey = req.status?.toLowerCase() || 'pending';
+                                                    return (
+                                                        <tr key={req.requestId}>
+                                                            <td style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                                {req.requestedAt?.split(' ')[0]}<br/>
+                                                                <small>{req.requestedAt?.split(' ')[1]}</small>
+                                                            </td>
+                                                            <td>
+                                                                <div className="atm-student-name-bold">{req.studentName}</div>
+                                                            </td>
+                                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                                <div style={{ fontWeight: 500, fontSize: '0.8125rem' }}>{req.sessionDate}</div>
+                                                            </td>
+                                                            <td>
+                                                                <div className="atm-change-preview">
+                                                                    <span style={{ color: req.currentStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                                        {req.currentStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                    </span>
+                                                                    <ChevronRight size={12} className="atm-change-arrow" />
+                                                                    <span style={{ color: req.requestedStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                                        {req.requestedStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <span className={`atm-status-badge atm-status-${statusKey}`}>
+                                                                    {statusKey === 'pending' ? 'Chờ duyệt' : statusKey === 'approved' ? 'Đã duyệt' : 'Từ chối'}
                                                                 </span>
-                                                                <ChevronRight size={12} className="atm-change-arrow" />
-                                                                <span style={{ color: req.requestedStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                                    {req.requestedStatus?.toLowerCase() === 'present' ? 'CÃ³ máº·t' : 'Váº¯ng máº·t'}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`atm-status-badge atm-status-${statusKey}`}>
-                                                                {statusKey === 'pending' ? 'Chá» duyá»‡t' : statusKey === 'approved' ? 'ÄÃ£ duyá»‡t' : 'Tá»« chá»‘i'}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <div className="atm-note-text" title={req.reviewNote || req.reason}>
-                                                                {req.status === 'Rejected' ? (
-                                                                    <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bá»‹ tá»« chá»‘i'}</span>
-                                                                ) : (
-                                                                    req.reason || 'â€”'
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="atm-footer">
-                            <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>ÄÃ³ng</button>
+                                                            </td>
+                                                            <td>
+                                                                <div className="atm-note-text" title={req.reviewNote || req.reason}>
+                                                                    {req.status === 'Rejected' ? (
+                                                                        <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bị từ chối'}</span>
+                                                                    ) : (
+                                                                        req.reason || '—'
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="atm-footer">
+                                <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>Đóng</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </main>
         </div>
     );
 };
 
 export default TeacherClassDetail;
-
-
