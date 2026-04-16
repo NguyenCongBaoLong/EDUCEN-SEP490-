@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Inbox, X, ArrowLeft, Clock, MailOpen, CheckCircle, MessageSquare } from 'lucide-react';
 import api from '../services/api';
 import '../css/components/TeacherInboxDrawer.css';
@@ -17,18 +17,56 @@ const TeacherInboxDrawer = () => {
     const [requests, setRequests] = useState([]);
     const [selectedMsg, setSelectedMsg] = useState(null);
 
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async (reason = 'manual') => {
         try {
             const res = await api.get('/support-requests/my');
-            setRequests(res.data || []);
+            const data = res.data || [];
+            setRequests(data);
+            console.debug('[TeacherInboxDrawer] refreshed inbox badge', {
+                reason,
+                total: data.length,
+                unread: data.filter(r => r.adminResponse && !r.isReadByUser).length
+            });
         } catch (err) {
-            console.error('Error fetching support requests:', err);
+            console.warn('[TeacherInboxDrawer] failed to refresh inbox badge', {
+                reason,
+                error: err?.response?.data || err?.message || err
+            });
         }
-    };
+    }, []);
 
     useEffect(() => {
-        fetchRequests();
-    }, []);
+        fetchRequests('mount');
+
+        const intervalId = window.setInterval(() => {
+            fetchRequests('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchRequests('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchRequests('tab-visible');
+            }
+        };
+        const handleManualRefresh = () => fetchRequests('custom-event');
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('teacher-inbox-refresh', handleManualRefresh);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('teacher-inbox-refresh', handleManualRefresh);
+        };
+    }, [fetchRequests]);
+
+    useEffect(() => {
+        if (inboxOpen) {
+            fetchRequests('drawer-open');
+        }
+    }, [inboxOpen, fetchRequests]);
 
     const unreadCount = requests.filter(r => r.adminResponse && !r.isReadByUser).length;
 

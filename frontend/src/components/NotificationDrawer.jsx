@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Bell, Clock, MailOpen, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import notificationService from '../services/notificationService';
@@ -52,7 +52,7 @@ const NotificationDrawer = ({
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async (reason = 'manual') => {
         if (!tenantId) {
             setNotifications([]);
             setError('Không tìm thấy trung tâm để tải thông báo.');
@@ -63,22 +63,55 @@ const NotificationDrawer = ({
         setError('');
         try {
             const res = await notificationService.getNotifications(tenantId);
-            setNotifications(normalizeNotifications(res));
+            const data = normalizeNotifications(res);
+            setNotifications(data);
+            console.debug('[NotificationDrawer] refreshed badge', {
+                reason,
+                total: data.length,
+                unread: data.filter(n => !n.isRead).length
+            });
         } catch (err) {
-            console.error('Error fetching notifications:', err);
+            console.warn('[NotificationDrawer] failed to refresh badge', {
+                reason,
+                error: err?.response?.data || err?.message || err
+            });
             setError('Không thể tải thông báo.');
         } finally {
             setLoading(false);
             setHasFetched(true);
         }
-    };
+    }, [tenantId]);
+
+    useEffect(() => {
+        fetchNotifications('mount');
+
+        const intervalId = window.setInterval(() => {
+            fetchNotifications('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchNotifications('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchNotifications('tab-visible');
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [fetchNotifications]);
 
     useEffect(() => {
         if (!open) return;
         if (!hasFetched || tenantId) {
-            fetchNotifications();
+            fetchNotifications('drawer-open');
         }
-    }, [open, tenantId]);
+    }, [open, tenantId, hasFetched, fetchNotifications]);
 
     const handleMarkAsRead = async (notification) => {
         if (!notification?.notificationId || notification.isRead) return;

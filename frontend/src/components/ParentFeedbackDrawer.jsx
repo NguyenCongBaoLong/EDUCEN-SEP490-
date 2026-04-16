@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Inbox, X, ArrowLeft, Send, MessageSquare, CheckCircle,
     Clock, Star, AlertCircle, MailOpen
@@ -80,21 +80,56 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
     // Send feedback is handled by ParentFeedbackModal.
 
 
-    const fetchFeedbacks = async () => {
+    const fetchFeedbacks = useCallback(async (reason = 'manual') => {
         setLoading(true);
         try {
             const res = await api.get('/support-requests/my');
-            setFeedbacks(res.data || []);
+            const data = res.data || [];
+            setFeedbacks(data);
+            console.debug('[ParentFeedbackDrawer] refreshed inbox badge', {
+                reason,
+                total: data.length,
+                unread: data.filter(f => f.adminResponse && !f.isReadByUser).length
+            });
         } catch {
             toast.error('Không thể tải danh sách phản hồi.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        if (open) fetchFeedbacks();
-    }, [open]);
+        fetchFeedbacks('mount');
+
+        const intervalId = window.setInterval(() => {
+            fetchFeedbacks('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchFeedbacks('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchFeedbacks('tab-visible');
+            }
+        };
+        const handleManualRefresh = () => fetchFeedbacks('custom-event');
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('parent-feedback-refresh', handleManualRefresh);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('parent-feedback-refresh', handleManualRefresh);
+        };
+    }, [fetchFeedbacks]);
+
+    useEffect(() => {
+        if (open) {
+            fetchFeedbacks('drawer-open');
+        }
+    }, [open, fetchFeedbacks]);
 
     useEffect(() => {
         if (autoOpenSignal > 0) {
@@ -127,7 +162,7 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
             setForm(EMPTY_FORM);
             setErrors({});
             setView('list');
-            await fetchFeedbacks();
+            await fetchFeedbacks('submit');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Gửi phản hồi thất bại.');
         } finally {

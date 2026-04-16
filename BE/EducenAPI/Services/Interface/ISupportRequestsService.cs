@@ -12,6 +12,8 @@ namespace EducenAPI.Services.Interface
         Task<List<SupportRequestResponseDto>> GetAllAsync();
         Task<SupportRequestResponseDto> GetByIdAsync(int id);
         Task<SupportRequestResponseDto> ReplyAsync(int adminId, int id, ReplySupportRequestDto dto);
+        Task<SupportRequestResponseDto> ApproveAsync(int adminId, int id, string? note);
+        Task<SupportRequestResponseDto> RejectAsync(int adminId, int id, string reason);
         Task<bool> MarkAsReadAsync(int id);
     }
 }

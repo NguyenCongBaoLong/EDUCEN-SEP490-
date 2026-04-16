@@ -118,6 +118,49 @@ namespace EducenAPI.Services
             return MapToDto(entity);
         }
 
+        public async Task<SupportRequestResponseDto> ApproveAsync(int adminId, int id, string? note)
+        {
+            var entity = await _context.SupportRequests
+                .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
+                .Include(x => x.Receiver)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (entity == null)
+                throw new Exception("Không tìm thấy request.");
+
+            entity.ReceiverId = adminId;
+            entity.Status = "Approved";
+            entity.AdminResponse = string.IsNullOrWhiteSpace(note) ? "Yêu cầu đã được duyệt." : note.Trim();
+            entity.IsRead = true;
+
+            await _context.SaveChangesAsync();
+            return MapToDto(entity);
+        }
+
+        public async Task<SupportRequestResponseDto> RejectAsync(int adminId, int id, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new Exception("Lý do từ chối là bắt buộc.");
+
+            var entity = await _context.SupportRequests
+                .Include(x => x.Sender)
+                    .ThenInclude(u => u.Role)
+                .Include(x => x.Receiver)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (entity == null)
+                throw new Exception("Không tìm thấy request.");
+
+            entity.ReceiverId = adminId;
+            entity.Status = "Rejected";
+            entity.AdminResponse = reason.Trim();
+            entity.IsRead = true;
+
+            await _context.SaveChangesAsync();
+            return MapToDto(entity);
+        }
+
         public async Task<bool> MarkAsReadAsync(int id)
         {
             var entity = await _context.SupportRequests.FirstOrDefaultAsync(x => x.Id == id);

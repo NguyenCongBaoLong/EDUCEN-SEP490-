@@ -46,6 +46,7 @@ import AttendanceModifications from './pages/center/AttendanceModifications';
 import SubjectManagement from './pages/center/SubjectManagement';
 import RoomManagement from './pages/center/RoomManagement';
 import GradeManagement from './pages/center/GradeManagement';
+import ScheduleRequests from './pages/center/ScheduleRequests';
 
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
@@ -68,7 +69,7 @@ function App() {
           <ScheduleProvider>
             <BrowserRouter>
               <Routes>
-              {/* â”€â”€ Public Routes â”€â”€ */}
+              {/* Public Routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
@@ -78,7 +79,7 @@ function App() {
               <Route path="/payment/result" element={<PaymentResult />} />
               <Route path="/center" element={<CenterHome isAdmin={true} />} />
 
-              {/* â”€â”€ Admin Routes (chá»‰ Admin) â”€â”€ */}
+              {/* Admin Routes (chỉ Admin) */}
               <Route path="/center/classes" element={<PrivateRoute allowedRoles={['Admin']}><ClassesManagement /></PrivateRoute>} />
               <Route path="/center/classes/:classId" element={<PrivateRoute allowedRoles={['Admin']}><ClassDetail /></PrivateRoute>} />
               <Route path="/center/schedules" element={<PrivateRoute allowedRoles={['Admin']}><ScheduleManagement /></PrivateRoute>} />
@@ -95,9 +96,10 @@ function App() {
               <Route path="/center/subjects" element={<PrivateRoute allowedRoles={['Admin']}><SubjectManagement /></PrivateRoute>} />
               <Route path="/center/rooms" element={<PrivateRoute allowedRoles={['Admin']}><RoomManagement /></PrivateRoute>} />
               <Route path="/center/grades" element={<PrivateRoute allowedRoles={['Admin']}><GradeManagement /></PrivateRoute>} />
+              <Route path="/center/schedule-requests" element={<PrivateRoute allowedRoles={['Admin']}><ScheduleRequests /></PrivateRoute>} />
               <Route path="/profile" element={<PrivateRoute allowedRoles={['Admin', 'Teacher', 'Assistant', 'Student', 'Parent']}><UserProfile /></PrivateRoute>} />
 
-              {/* â”€â”€ Teacher Routes (chá»‰ Teacher) â”€â”€ */}
+              {/* Teacher Routes (chỉ Teacher) */}
               <Route path="/teacher/classes" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherClasses /></PrivateRoute>} />
               <Route path="/teacher/classes/:classId" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherClassDetail /></PrivateRoute>} />
               <Route path="/teacher/schedules" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherSchedule /></PrivateRoute>} />
@@ -106,20 +108,20 @@ function App() {
               <Route path="/teacher/performance" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherPerformanceReport /></PrivateRoute>} />
               <Route path="/teacher/mailbox" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherMailbox /></PrivateRoute>} />
 
-              {/* â”€â”€ TA Routes (chá»‰ Assistant) â”€â”€ */}
+              {/* TA Routes (chỉ Assistant) */}
               <Route path="/ta/classes" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClasses isTA={true} /></PrivateRoute>} />
               <Route path="/ta/classes/:classId" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherClassDetail isTA={true} /></PrivateRoute>} />
               <Route path="/ta/schedules" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherSchedule isTA={true} /></PrivateRoute>} />
               <Route path="/ta/performance" element={<PrivateRoute allowedRoles={['Assistant']}><TeacherPerformanceReport isTA={true} /></PrivateRoute>} />
 
-              {/* â”€â”€ Student Routes (chá»‰ Student) â”€â”€ */}
+              {/* Student Routes (chỉ Student) */}
               <Route path="/student/classes" element={<PrivateRoute allowedRoles={['Student']}><StudentClasses /></PrivateRoute>} />
               <Route path="/student/classes/:classId" element={<PrivateRoute allowedRoles={['Student']}><StudentClassDetail /></PrivateRoute>} />
               <Route path="/student/schedules" element={<PrivateRoute allowedRoles={['Student']}><StudentSchedule /></PrivateRoute>} />
               <Route path="/student/invoices" element={<PrivateRoute allowedRoles={['Student']}><MyInvoices /></PrivateRoute>} />
               <Route path="/student/mailbox" element={<PrivateRoute allowedRoles={['Student']}><StudentMailbox /></PrivateRoute>} />
 
-              {/* â”€â”€ Parent Routes (Parent) â”€â”€ */}
+              {/* Parent Routes (Parent) */}
                 <Route path="/parent/*" element={
                 <Routes>
                   <Route path="classes" element={<PrivateRoute allowedRoles={['Parent']}><ParentClasses /></PrivateRoute>} />
@@ -131,7 +133,7 @@ function App() {
                 </Routes>
               } />
 
-              {/* â”€â”€ System Admin Routes â”€â”€ */}
+              {/* System Admin Routes */}
               <Route path="/sysadmin/login" element={<SystemAdminLogin />} />
               <Route path="/sysadmin" element={<PrivateRoute allowedRoles={['SystemAdmin']}><Navigate to="/sysadmin/dashboard" /></PrivateRoute>} />
               <Route path="/sysadmin/dashboard" element={<PrivateRoute allowedRoles={['SystemAdmin']}><SystemAdminDashboard /></PrivateRoute>} />

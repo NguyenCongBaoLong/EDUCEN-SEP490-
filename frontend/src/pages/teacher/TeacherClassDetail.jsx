@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -25,7 +25,7 @@ import AssignmentDetailModal from '../../components/AssignmentDetailModal';
 import '../../css/pages/center/ClassDetail.css';
 import '../../css/components/AttendanceModal.css';
 
-/* ─── Date helper ──────────────────────────────── */
+/* â”€â”€â”€ Date helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const parseDate = (str) => {
     const [d, m, y] = str.split('/');
     return new Date(Number(y), Number(m) - 1, Number(d));
@@ -44,8 +44,9 @@ const formatSize = (bytes) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-/* ─── Helpers format ngày từ API ─────────────────── */
+/* â”€â”€â”€ Helpers format ngÃ y tá»« API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const DAY_LABELS = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+const SCHEDULE_CHANGE_TAG = '[SCHEDULE_CHANGE]';
 
 function formatDateVN(isoDate) {
     const d = new Date(isoDate);
@@ -59,13 +60,13 @@ function formatDateVN(isoDate) {
 
 // Removed INITIAL_ATTENDANCE to use real data from API
 
-/* ─── Helpers ──────────────────────────────────── */
+/* â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function formatGrade(grade) {
-    if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
+    if (!grade || grade === 'â€”' || grade === 'None' || grade === '') return 'â€”';
     let g = String(grade).trim();
     if (g.endsWith('.0')) g = g.slice(0, -2);
-    if (!g.toLowerCase().includes('khối')) return `Khối ${g}`;
+    if (!g.toLowerCase().includes('khá»‘i')) return `Khá»‘i ${g}`;
     return g;
 }
 const AttendanceBar = ({ value }) => {
@@ -97,10 +98,10 @@ const ActivityIcon = ({ type }) => {
 
 // Mock Library Data (would be fetched from API)
 const LIBRARY_MATERIALS = [
-    { id: 101, name: 'Giáo trình Toán Học Đại cương Tập 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Sách giáo khoa điện tử chương trình cơ bản.' },
-    { id: 102, name: 'Video Hướng dẫn Giải Phương trình Bậc 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'Cách bấm máy tính Casio để giải nhanh.' },
-    { id: 103, name: 'Bài Tập Trắc Nghiệm Chương 1 (Bản gốc).docx', size: '1.2 MB', uploadDate: '10/09/2023', type: 'word', description: 'Dùng để soạn đề cho các lớp.' },
-    { id: 104, name: 'Tài liệu Ôn Tập Giữa Kỳ.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'Các dạng toán thường ra trong đề thi.' },
+    { id: 101, name: 'GiÃ¡o trÃ¬nh ToÃ¡n Há»c Äáº¡i cÆ°Æ¡ng Táº­p 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'SÃ¡ch giÃ¡o khoa Ä‘iá»‡n tá»­ chÆ°Æ¡ng trÃ¬nh cÆ¡ báº£n.' },
+    { id: 102, name: 'Video HÆ°á»›ng dáº«n Giáº£i PhÆ°Æ¡ng trÃ¬nh Báº­c 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'CÃ¡ch báº¥m mÃ¡y tÃ­nh Casio Ä‘á»ƒ giáº£i nhanh.' },
+    { id: 103, name: 'BÃ i Táº­p Tráº¯c Nghiá»‡m ChÆ°Æ¡ng 1 (Báº£n gá»‘c).docx', size: '1.2 MB', uploadDate: '10/09/2023', type: 'word', description: 'DÃ¹ng Ä‘á»ƒ soáº¡n Ä‘á» cho cÃ¡c lá»›p.' },
+    { id: 104, name: 'TÃ i liá»‡u Ã”n Táº­p Giá»¯a Ká»³.pdf', size: '3.4 MB', uploadDate: '12/10/2023', type: 'pdf', description: 'CÃ¡c dáº¡ng toÃ¡n thÆ°á»ng ra trong Ä‘á» thi.' },
 ];
 
 const groupUnique = (list) => {
@@ -140,7 +141,7 @@ const mapAssignment = (a) => ({
     asmId: a.asmId || a.AsmId,
     title: a.title || a.Title || '',
     description: a.description || a.Description || '',
-    dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
+    dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'ChÆ°a thiáº¿t láº­p',
     endTime: a.endTime || a.EndTime,
     startTime: a.startTime || a.StartTime,
     submissionsCount: a.submissionsCount || a.SubmissionsCount || 0,
@@ -153,7 +154,7 @@ const mapAssignment = (a) => ({
     gradeId: a.gradeId || a.GradeId
 });
 
-/* ─── Main Component ────────────────────────────── */
+/* â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
 
@@ -166,7 +167,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [libraryAssignments, setLibraryAssignments] = useState([]);
     const [grades, setGrades] = useState([]);
 
-    // classData dùng trong UI — gộp từ API + defaults
+    // classData dÃ¹ng trong UI â€” gá»™p tá»« API + defaults
     const [classData, setClassData] = useState({
         id: null, name: '', subject: '', gradeLevel: '', status: 'active',
         schedule: '', scheduleTime: '', startDate: '', duration: '',
@@ -204,7 +205,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     date: formatDateVN(s.sessionDate),
                     dayLabel: s.dayLabel || DAY_LABELS[new Date(s.sessionDate).getDay()],
                     time: s.time || '',
-                    title: s.title || `Buổi ${idx + 1}`,
+                    title: s.title || `Buá»•i ${idx + 1}`,
                     status: s.status,
                     presentCount: summary?.presentCount || 0,
                     absentCount: summary?.absentCount || 0,
@@ -221,8 +222,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     name: name,
                     avatar: name.trim().split(' ').map(w => w[0]).slice(-2).join('').toUpperCase(),
                     attendance: st.attendanceRate || 0,
-                    grade: st.grade || '—',
-                    averageScore: st.averageScore || '—',
+                    grade: st.grade || 'â€”',
+                    averageScore: st.averageScore || 'â€”',
                 };
             });
 
@@ -244,7 +245,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 scheduleTime: timeStr,
                 startDate: c.startDate ? formatDateVN(c.startDate) : '',
                 duration: c.startDate && c.endDate
-                    ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuần`
+                    ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuáº§n`
                     : '',
                 mainTeacher: {
                     name: c.teacherName || '',
@@ -262,7 +263,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 }) : mappedSessions,
                 classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
                 totalClasses: mappedSessions.length,
-                roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'Chưa gán phòng'),
+                roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'ChÆ°a gÃ¡n phÃ²ng'),
             }));
 
             setStudents(mappedStudents);
@@ -297,7 +298,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             }
         } catch (err) {
             console.error('Failed to fetch class detail:', err);
-            if (!isRefresh) toast.error('Không thể tải thông tin lớp học.');
+            if (!isRefresh) toast.error('KhÃ´ng thá»ƒ táº£i thÃ´ng tin lá»›p há»c.');
         } finally {
             if (!isRefresh) setLoading(false);
         }
@@ -354,13 +355,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setStudentPage(1);
     }, [studentSearch]);
 
-    // State cho Modal lịch sử yêu cầu sửa điểm danh
+    // State cho Modal lá»‹ch sá»­ yÃªu cáº§u sá»­a Ä‘iá»ƒm danh
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [classRequests, setClassRequests] = useState([]);
     const [loadingRequests, setLoadingRequests] = useState(false);
     const [historyStatusFilter, setHistoryStatusFilter] = useState('All');
 
-    // State cho Modal yêu cầu thay đổi (đổi lịch)
+    // State cho Modal yÃªu cáº§u thay Ä‘á»•i (Ä‘á»•i lá»‹ch)
     const [requestOpen, setRequestOpen] = useState(false);
     const [requestInitialData, setRequestInitialData] = useState(null);
 
@@ -368,12 +369,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setLoadingRequests(true);
         try {
             const res = await api.get('/attendance/modification-requests/my');
-            // Lọc theo classId hiện tại
+            // Lá»c theo classId hiá»‡n táº¡i
             const filtered = (res.data || []).filter(r => String(r.classId) === String(classId));
             setClassRequests(filtered);
         } catch (error) {
             console.error('Error fetching class attendance requests:', error);
-            toast.error('Không thể tải lịch sử yêu cầu sửa điểm danh');
+            toast.error('KhÃ´ng thá»ƒ táº£i lá»‹ch sá»­ yÃªu cáº§u sá»­a Ä‘iá»ƒm danh');
         } finally {
             setLoadingRequests(false);
         }
@@ -417,7 +418,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
 
     const handleUploadMaterial = async () => {
-        // UploadMaterialModal đã tự gọi API và upload xong → chỉ cần refresh
+        // UploadMaterialModal Ä‘Ã£ tá»± gá»i API vÃ  upload xong â†’ chá»‰ cáº§n refresh
         if (uploadTargetSession) {
             await refreshSessionMaterials(uploadTargetSession);
         }
@@ -439,10 +440,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 });
                 return { ...prev, sessions: newSessions };
             });
-            toast.success("Đã xóa tài liệu khỏi buổi học!");
+            toast.success("ÄÃ£ xÃ³a tÃ i liá»‡u khá»i buá»•i há»c!");
         } catch (err) {
             console.error('Delete material error:', err);
-            toast.error('Không thể xóa tài liệu. Vui lòng thử lại.');
+            toast.error('KhÃ´ng thá»ƒ xÃ³a tÃ i liá»‡u. Vui lÃ²ng thá»­ láº¡i.');
         } finally {
             setDeleteMaterialId(null);
             setDeleteTargetSession(null);
@@ -463,10 +464,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 });
                 return { ...prev, sessions: newSessions };
             });
-            toast.success("Đã xóa bài tập khỏi buổi học!");
+            toast.success("ÄÃ£ xÃ³a bÃ i táº­p khá»i buá»•i há»c!");
         } catch (err) {
             console.error('Delete assignment error:', err);
-            toast.error('Không thể xóa bài tập. Vui lòng thử lại.');
+            toast.error('KhÃ´ng thá»ƒ xÃ³a bÃ i táº­p. Vui lÃ²ng thá»­ láº¡i.');
         } finally {
             setDeleteAssignmentId(null);
             setDeleteTargetSession(null);
@@ -474,14 +475,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
 
     const handleUpdateMaterial = (updatedData) => {
-        // updatedData có thể là null nếu modal gọi onClose/onUpdate() không kèm tham số
-        // Chúng ta vẫn cần refresh nếu có editTargetSession
+        // updatedData cÃ³ thá»ƒ lÃ  null náº¿u modal gá»i onClose/onUpdate() khÃ´ng kÃ¨m tham sá»‘
+        // ChÃºng ta váº«n cáº§n refresh náº¿u cÃ³ editTargetSession
         const sessId = editTargetSession;
         
         setEditMaterial(null);
         setEditTargetSession(null);
         
-        // Luôn refresh để đảm bảo ID và meta chuẩn từ server
+        // LuÃ´n refresh Ä‘á»ƒ Ä‘áº£m báº£o ID vÃ  meta chuáº©n tá»« server
         if (sessId) {
             refreshSessionMaterials(sessId);
         }
@@ -499,17 +500,17 @@ const TeacherClassDetail = ({ isTA = false }) => {
         try {
             const endpoint = type === 'material' ? '/Materials/import' : '/Assignments/import';
             
-            // Tìm buổi tiếp theo để làm hạn nộp mặc định (nếu là assignment)
+            // TÃ¬m buá»•i tiáº¿p theo Ä‘á»ƒ lÃ m háº¡n ná»™p máº·c Ä‘á»‹nh (náº¿u lÃ  assignment)
             let defaultEndTime = null;
             if (type === 'assignment') {
                 const currentIdx = classData.sessions.findIndex(s => Number(s.sessionId) === Number(targetSession));
                 const nextSess = classData.sessions[currentIdx + 1];
                 if (nextSess && nextSess.date) {
-                    // Chuyển format DD/MM/YYYY sang YYYY-MM-DD để tạo Date object
+                    // Chuyá»ƒn format DD/MM/YYYY sang YYYY-MM-DD Ä‘á»ƒ táº¡o Date object
                     const [d, m, y] = nextSess.date.split('/');
                     defaultEndTime = new Date(`${y}-${m}-${d}T23:59:00`).toISOString();
                 } else {
-                    // Mặc định 7 ngày sau buổi hiện tại
+                    // Máº·c Ä‘á»‹nh 7 ngÃ y sau buá»•i hiá»‡n táº¡i
                     const currSess = classData.sessions[currentIdx];
                     if (currSess && currSess.date) {
                         const [d, m, y] = currSess.date.split('/');
@@ -528,11 +529,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 })
             ));
 
-            toast.success(`Đã import ${selectedItems.length} mục vào buổi học!`);
+            toast.success(`ÄÃ£ import ${selectedItems.length} má»¥c vÃ o buá»•i há»c!`);
             await refreshSessionMaterials(targetSession);
         } catch (err) {
             console.error('Import error:', err);
-            const msg = err.response?.data?.message || 'Lỗi khi import từ thư viện.';
+            const msg = err.response?.data?.message || 'Lá»—i khi import tá»« thÆ° viá»‡n.';
             toast.error(msg);
         }
         setImportModal({ isOpen: false, type: 'material', targetSession: null });
@@ -550,7 +551,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         } else if (downloadUrl) {
-            toast.success(`Đang tải xuống: ${item.name || item.title}`);
+            toast.success(`Äang táº£i xuá»‘ng: ${item.name || item.title}`);
             const a = document.createElement('a');
             a.href = downloadUrl;
             a.download = item.name || item.title;
@@ -559,7 +560,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             a.click();
             document.body.removeChild(a);
         } else {
-            toast.error("Không có đường dẫn tải về");
+            toast.error("KhÃ´ng cÃ³ Ä‘Æ°á»ng dáº«n táº£i vá»");
         }
     };
 
@@ -572,13 +573,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 savedAsm = res.data;
-                toast.success("Cập nhật bài tập thành công!");
+                toast.success("Cáº­p nháº­t bÃ i táº­p thÃ nh cÃ´ng!");
             } else {
                 const res = await api.post('/Assignments/Create-Assignments', assignmentFormData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 savedAsm = res.data;
-                toast.success("Tạo bài tập thành công!");
+                toast.success("Táº¡o bÃ i táº­p thÃ nh cÃ´ng!");
             }
 
             const targetSessionId = editTargetSession || createAssignmentSession || (savedAsm && (savedAsm.sessionId || savedAsm.SessionId));
@@ -588,18 +589,18 @@ const TeacherClassDetail = ({ isTA = false }) => {
             setEditTargetSession(null);
             setCreateAssignmentSession(null);
 
-            // Cập nhật state local ngay lập tức hoặc refresh
+            // Cáº­p nháº­t state local ngay láº­p tá»©c hoáº·c refresh
             if (targetSessionId) {
                 await refreshSessionMaterials(targetSessionId);
                 
-                // Nếu đang xem chi tiết bài tập này -> cập nhật luôn detail
+                // Náº¿u Ä‘ang xem chi tiáº¿t bÃ i táº­p nÃ y -> cáº­p nháº­t luÃ´n detail
                 if (savedAsm && detailAssignment && (detailAssignment.id === (savedAsm.asmId || savedAsm.AsmId || savedAsm.id || savedAsm.Id))) {
                     setDetailAssignment(mapAssignment({ ...savedAsm, sessionId: targetSessionId, classId: classData.id }));
                 }
             }
         } catch (error) {
             console.error('Error saving assignment:', error);
-            const msg = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi lưu bài tập.';
+            const msg = error.response?.data?.message || error.message || 'CÃ³ lá»—i xáº£y ra khi lÆ°u bÃ i táº­p.';
             toast.error(msg);
         }
     };
@@ -614,10 +615,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
         s.id.toLowerCase().includes(studentSearch.toLowerCase())
     );
 
-    // Filter students cho tab Overview (chỉ show max 5)
+    // Filter students cho tab Overview (chá»‰ show max 5)
     const displayedStudentsOverview = showAllStudents ? filteredStudents : filteredStudents.slice(0, 5);
 
-    // Pagination students cho tab Học Sinh
+    // Pagination students cho tab Há»c Sinh
     const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
     const currentStudentsPage = filteredStudents.slice((studentPage - 1) * studentsPerPage, studentPage * studentsPerPage);
 
@@ -625,7 +626,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
         ? Math.round(students.reduce((s, st) => s + st.attendance, 0) / students.length)
         : 0;
 
-    // Buổi tiếp theo chưa điểm danh VÀ đã đến ngày
+    // Buá»•i tiáº¿p theo chÆ°a Ä‘iá»ƒm danh VÃ€ Ä‘Ã£ Ä‘áº¿n ngÃ y
     const nextSession = classData.sessions.find(
         s => (s.presentCount === 0 && s.absentCount === 0) && isPast(s.date)
     );
@@ -660,7 +661,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
         await fetchClassData(true); // Update all numbers and lists immediately (refresh mode)
     };
 
-    /* Sessions đã qua, mới nhất trước */
+    /* Sessions Ä‘Ã£ qua, má»›i nháº¥t trÆ°á»›c */
     const pastSessions = [...classData.sessions]
         .filter(s => isPast(s.date))
         .reverse();
@@ -676,7 +677,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
             <div className="class-detail">
                 <TeacherSidebar isTA={isTA} />
                 <main className="cd-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-                    <p style={{ color: '#64748b', fontSize: '1rem' }}>Đang tải thông tin lớp học...</p>
+                    <p style={{ color: '#64748b', fontSize: '1rem' }}>Äang táº£i thÃ´ng tin lá»›p há»c...</p>
                 </main>
             </div>
         );
@@ -690,7 +691,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 {/* Breadcrumb */}
                 <div className="cd-breadcrumb">
                     <Link to={isTA ? "/ta/classes" : "/teacher/classes"} className="cd-back">
-                        <ChevronLeft size={16} /> Quay lại lớp của tôi
+                        <ChevronLeft size={16} /> Quay láº¡i lá»›p cá»§a tÃ´i
                     </Link>
                     <span className="cd-breadcrumb-sep">/</span>
                     <span className="cd-breadcrumb-current">{classData.name}</span>
@@ -707,8 +708,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     ? (classData.classesCompleted === 0 && !hasStarted ? 'notstarted' : 'active') 
                                     : 'inactive';
                                 const statusLabel = classData.status === 'active' 
-                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'Chưa học' : 'Đang hoạt động') 
-                                    : 'Tạm dừng';
+                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'ChÆ°a há»c' : 'Äang hoáº¡t Ä‘á»™ng') 
+                                    : 'Táº¡m dá»«ng';
                                 return (
                                     <span className={`cd-status-badge ${statusKey}`}>
                                         {statusLabel}
@@ -717,30 +718,38 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             })()}
                         </div>
                         <p className="cd-title-meta">
-                            Môn: {classData.subject} &nbsp;•&nbsp; Mã lớp: {classData.code} &nbsp;•&nbsp; {classData.gradeLevel}
+                            MÃ´n: {classData.subject} &nbsp;â€¢&nbsp; MÃ£ lá»›p: {classData.code} &nbsp;â€¢&nbsp; {classData.gradeLevel}
                         </p>
                     </div>
                     <button className="ts-btn-request" onClick={() => {
+                        const rawSlots = classInfo?.scheduleSlots || classInfo?.ScheduleSlots || [];
                         setRequestInitialData({
                             type: 'reschedule',
                             classInfo: {
+                                classId: classData.id,
                                 name: classData.name,
                                 code: classData.code,
                                 time: classData.scheduleTime,
-                                date: classData.schedule
+                                date: classData.schedule,
+                                scheduleSlots: rawSlots.map(slot => ({
+                                    dayOfWeek: slot.dayOfWeek ?? slot.DayOfWeek,
+                                    startTime: slot.startTime ?? slot.StartTime,
+                                    endTime: slot.endTime ?? slot.EndTime,
+                                    roomName: slot.roomName || classData.roomName || ''
+                                }))
                             }
                         });
                         setRequestOpen(true);
                     }}>
                         <MessageSquare size={18} />
-                        Yêu cầu đổi lịch
+                        YÃªu cáº§u Ä‘á»•i lá»‹ch
                     </button>
                 </div>
 
                 {/* Info Cards */}
                 <div className="cd-info-cards">
                     <div className="cd-info-card">
-                        <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
+                        <div className="cd-info-card-label"><Calendar size={16} /> Lá»ŠCH Há»ŒC</div>
                         <div className="cd-info-card-value">{classData.schedule}</div>
                         <div className="cd-info-card-sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <span>{classData.scheduleTime}</span>
@@ -748,9 +757,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                     </div>
                     <div className="cd-info-card">
-                        <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
+                        <div className="cd-info-card-label"><Clock size={16} /> THá»œI GIAN</div>
                         <div className="cd-info-card-value">{classData.duration}</div>
-                        <div className="cd-info-card-sub">Bắt đầu {classData.startDate}</div>
+                        <div className="cd-info-card-sub">Báº¯t Ä‘áº§u {classData.startDate}</div>
                     </div>
                 </div>
 
@@ -760,19 +769,19 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         className={`cd-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
                         onClick={() => setActiveTab('overview')}
                     >
-                        Tổng quan
+                        Tá»•ng quan
                     </button>
                     <button
                         className={`cd-tab-btn ${activeTab === 'students' ? 'active' : ''}`}
                         onClick={() => setActiveTab('students')}
                     >
-                        Học sinh ({students.length})
+                        Há»c sinh ({students.length})
                     </button>
                     <button
                         className={`cd-tab-btn ${activeTab === 'roadmap' ? 'active' : ''}`}
                         onClick={() => setActiveTab('roadmap')}
                     >
-                        Lộ trình học ({classData.sessions.length} buổi)
+                        Lá»™ trÃ¬nh há»c ({classData.sessions.length} buá»•i)
                     </button>
                 </div>
 
@@ -783,13 +792,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             <div className="cd-left">
 
 
-                                {/* ── Lịch sử điểm danh ── */}
+                                {/* â”€â”€ Lá»‹ch sá»­ Ä‘iá»ƒm danh â”€â”€ */}
                                 <div className="cd-card">
                                     <div className="cd-card-header">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <h3>Lịch sử điểm danh</h3>
+                                            <h3>Lá»‹ch sá»­ Ä‘iá»ƒm danh</h3>
                                             <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 500 }}>
-                                                {pastSessions.length} buổi đã qua
+                                                {pastSessions.length} buá»•i Ä‘Ã£ qua
                                             </span>
                                         </div>
                                         <button 
@@ -798,23 +807,23 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                             onClick={() => setHistoryModalOpen(true)}
                                         >
                                             <History size={14} />
-                                            Lịch sử sửa
+                                            Lá»‹ch sá»­ sá»­a
                                         </button>
                                     </div>
 
                                     {pastSessions.length === 0 ? (
                                         <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
-                                            Chưa có buổi học nào.
+                                            ChÆ°a cÃ³ buá»•i há»c nÃ o.
                                         </p>
                                     ) : (
                                         <div className="att-history-scroll">
                                             <table className="att-history-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>NGÀY</th>
-                                                        <th style={{ textAlign: 'center' }}>CÓ MẶT</th>
-                                                        <th style={{ textAlign: 'center' }}>VẮNG</th>
-                                                        <th style={{ textAlign: 'right' }}>THAO TÁC</th>
+                                                        <th>NGÃ€Y</th>
+                                                        <th style={{ textAlign: 'center' }}>CÃ“ Máº¶T</th>
+                                                        <th style={{ textAlign: 'center' }}>Váº®NG</th>
+                                                        <th style={{ textAlign: 'right' }}>THAO TÃC</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -825,7 +834,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             <tr key={session.sessionId}>
                                                                 <td>
                                                                     <div className="att-date-cell">
-                                                                        <span className="att-session-num">Buổi {session.sessionNum} - {session.title}</span>
+                                                                        <span className="att-session-num">Buá»•i {session.sessionNum} - {session.title}</span>
                                                                         <span className="att-session-date">
                                                                             {session.dayLabel}, {session.date}
                                                                         </span>
@@ -834,13 +843,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                 <td style={{ textAlign: 'center' }}>
                                                                     {hasAttendance
                                                                         ? <span className="att-badge present">{present}</span>
-                                                                        : <span className="att-badge pending">—</span>
+                                                                        : <span className="att-badge pending">â€”</span>
                                                                     }
                                                                 </td>
                                                                 <td style={{ textAlign: 'center' }}>
                                                                     {hasAttendance
                                                                         ? <span className={`att-badge ${absent > 0 ? 'absent' : 'present'}`}>{absent}</span>
-                                                                        : <span className="att-badge pending">—</span>
+                                                                        : <span className="att-badge pending">â€”</span>
                                                                     }
                                                                 </td>
                                                                 <td style={{ textAlign: 'right' }}>
@@ -848,16 +857,16 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         <button
                                                                             className="att-btn-edit"
                                                                             onClick={() => handleOpen(session)}
-                                                                            title="Sửa điểm danh"
+                                                                            title="Sá»­a Ä‘iá»ƒm danh"
                                                                         >
-                                                                            <Pencil size={13} /> Sửa
+                                                                            <Pencil size={13} /> Sá»­a
                                                                         </button>
                                                                     ) : (
                                                                         <button
                                                                             className="att-btn-take"
                                                                             onClick={() => handleOpen(session)}
                                                                         >
-                                                                            <CheckCircle size={13} /> Điểm danh
+                                                                            <CheckCircle size={13} /> Äiá»ƒm danh
                                                                         </button>
                                                                     )}
                                                                 </td>
@@ -869,21 +878,21 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         </div>
                                     )}
 
-                                    {/* Buổi tương lai */}
+                                    {/* Buá»•i tÆ°Æ¡ng lai */}
                                     {futureSessions.length > 0 && (
                                         <div className="att-future-notice">
                                             <Lock size={13} />
                                             <span>
-                                                {futureSessions.length} buổi sắp tới chưa mở điểm danh
-                                                &nbsp;(buổi gần nhất: Buổi {futureSessions[0].sessionNum})
+                                                {futureSessions.length} buá»•i sáº¯p tá»›i chÆ°a má»Ÿ Ä‘iá»ƒm danh
+                                                &nbsp;(buá»•i gáº§n nháº¥t: Buá»•i {futureSessions[0].sessionNum})
                                             </span>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Nhật ký hoạt động */}
+                                {/* Nháº­t kÃ½ hoáº¡t Ä‘á»™ng */}
                                 <div className="cd-card">
-                                    <div className="cd-card-header"><h3>Nhật ký hoạt động</h3></div>
+                                    <div className="cd-card-header"><h3>Nháº­t kÃ½ hoáº¡t Ä‘á»™ng</h3></div>
                                     <div className="cd-activity-list">
                                         {classData.activities.map(act => (
                                             <div key={act.id} className="cd-activity-item">
@@ -891,7 +900,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                 <div className="cd-activity-content">
                                                     <div className="cd-activity-title">{act.title}</div>
                                                     <div className="cd-activity-desc">{act.desc}</div>
-                                                    <div className="cd-activity-meta">{act.time} • Bởi {act.by}</div>
+                                                    <div className="cd-activity-meta">{act.time} â€¢ Bá»Ÿi {act.by}</div>
                                                 </div>
                                             </div>
                                         ))}
@@ -901,14 +910,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
                             {/* RIGHT */}
                             <div className="cd-right">
-                                {/* Giáo viên phụ trách */}
+                                {/* GiÃ¡o viÃªn phá»¥ trÃ¡ch */}
                                 <div className="cd-card">
-                                    <div className="cd-card-header"><h3>Giáo viên phụ trách</h3></div>
+                                    <div className="cd-card-header"><h3>GiÃ¡o viÃªn phá»¥ trÃ¡ch</h3></div>
                                     <div className="cd-staff-list">
                                         <div className="cd-staff-item">
                                             <div className="cd-staff-avatar">{classData.mainTeacher.initials}</div>
                                             <div className="cd-staff-info">
-                                                <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
+                                                <div className="cd-staff-role">GIÃO VIÃŠN CHÃNH</div>
                                                 <div className="cd-staff-name">{classData.mainTeacher.name}</div>
                                                 <div className="cd-staff-sub">{classData.mainTeacher.subject}</div>
                                             </div>
@@ -917,7 +926,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                             <div className="cd-staff-item">
                                                 <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
                                                 <div className="cd-staff-info">
-                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trợ giảng (TA)</div>
+                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trá»£ giáº£ng (TA)</div>
                                                     <div className="cd-staff-name">{classData.assistant.name}</div>
                                                     <div className="cd-staff-sub">{classData.assistant.subject}</div>
                                                 </div>
@@ -926,35 +935,35 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     </div>
                                 </div>
 
-                                {/* Tổng quan */}
+                                {/* Tá»•ng quan */}
                                 <div className="cd-card cd-overview-card">
-                                    <div className="cd-card-header"><h3>Tổng quan lớp học</h3></div>
+                                    <div className="cd-card-header"><h3>Tá»•ng quan lá»›p há»c</h3></div>
                                     <div className="cd-overview-stats">
                                         <div className="cd-overview-row">
-                                            <span>Tổng học sinh</span>
+                                            <span>Tá»•ng há»c sinh</span>
                                             <span className="cd-overview-val">
                                                 {students.length}{classData.maxStudents ? ` / ${classData.maxStudents}` : ''}
                                             </span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>Chuyên cần TB</span>
+                                            <span>ChuyÃªn cáº§n TB</span>
                                             <span className="cd-overview-val green">{avgAttendance}%</span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>Buổi đã học</span>
+                                            <span>Buá»•i Ä‘Ã£ há»c</span>
                                             <span className="cd-overview-val">{classData.classesCompleted} / {classData.totalClasses}</span>
                                         </div>
                                         <div className="cd-overview-row">
-                                            <span>Đã điểm danh</span>
+                                            <span>ÄÃ£ Ä‘iá»ƒm danh</span>
                                             <span className="cd-overview-val">
-                                                {pastSessions.filter(s => s.presentCount > 0 || s.absentCount > 0).length} / {pastSessions.length} buổi
+                                                {pastSessions.filter(s => s.presentCount > 0 || s.absentCount > 0).length} / {pastSessions.length} buá»•i
                                             </span>
                                         </div>
                                     </div>
 
                                     <div className="cd-progress-wrap">
                                         <div className="cd-progress-label">
-                                            <span>Tiến độ khóa học</span>
+                                            <span>Tiáº¿n Ä‘á»™ khÃ³a há»c</span>
                                             <span>{Math.round(classData.classesCompleted / classData.totalClasses * 100)}%</span>
                                         </div>
                                         <div className="cd-progress-track">
@@ -965,36 +974,36 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* Nút điểm danh buổi tiếp theo */}
+                                    {/* NÃºt Ä‘iá»ƒm danh buá»•i tiáº¿p theo */}
                                     {nextSession ? (
                                         <>
                                             <div className="cd-next-session">
                                                 <CalendarClock size={14} />
-                                                <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
+                                                <span>Buá»•i cáº§n Ä‘iá»ƒm danh: {nextSession.dayLabel}, {nextSession.date}</span>
                                             </div>
                                             <button
                                                 className="cd-btn-attendance"
                                                 onClick={() => handleOpen(nextSession)}
                                             >
                                                 <CheckCircle size={16} />
-                                                Điểm danh buổi {nextSession.date}
+                                                Äiá»ƒm danh buá»•i {nextSession.date}
                                             </button>
                                         </>
                                     ) : futureSessions.length > 0 ? (
                                         <>
                                             <div className="cd-next-session">
                                                 <CalendarClock size={14} />
-                                                <span>Buổi tiếp theo: Buổi {futureSessions[0].sessionNum} - {futureSessions[0].date}</span>
+                                                <span>Buá»•i tiáº¿p theo: Buá»•i {futureSessions[0].sessionNum} - {futureSessions[0].date}</span>
                                             </div>
-                                            {/* Disabled — chưa đến ngày */}
+                                            {/* Disabled â€” chÆ°a Ä‘áº¿n ngÃ y */}
                                             <button className="cd-btn-attendance" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
                                                 <Lock size={16} />
-                                                Chưa đến ngày học
+                                                ChÆ°a Ä‘áº¿n ngÃ y há»c
                                             </button>
                                         </>
                                     ) : (
                                         <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#16a34a', padding: '0.75rem', background: '#f0fdf4', borderRadius: '8px' }}>
-                                            ✓ Đã điểm danh tất cả các buổi
+                                            âœ“ ÄÃ£ Ä‘iá»ƒm danh táº¥t cáº£ cÃ¡c buá»•i
                                         </div>
                                     )}
                                 </div>
@@ -1005,12 +1014,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     {activeTab === 'students' && (
                         <div className="cd-students-tab">
                             <div className="cd-section-header">
-                                <h2>Danh sách học sinh của lớp</h2>
+                                <h2>Danh sÃ¡ch há»c sinh cá»§a lá»›p</h2>
                                 <div className="student-search-box">
                                     <Search size={16} />
                                     <input
                                         type="text"
-                                        placeholder="Tìm học sinh theo tên/mã..."
+                                        placeholder="TÃ¬m há»c sinh theo tÃªn/mÃ£..."
                                         value={studentSearch}
                                         onChange={(e) => setStudentSearch(e.target.value)}
                                     />
@@ -1020,10 +1029,10 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             <table className="cd-roster-table">
                                 <thead>
                                     <tr>
-                                        <th>HỌ VÀ TÊN</th>
-                                        <th>KHỐI</th>
-                                        <th>ĐIỂM TRUNG BÌNH</th>
-                                        <th>CHUYÊN CẦN</th>
+                                        <th>Há»Œ VÃ€ TÃŠN</th>
+                                        <th>KHá»I</th>
+                                        <th>ÄIá»‚M TRUNG BÃŒNH</th>
+                                        <th>CHUYÃŠN Cáº¦N</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1041,8 +1050,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                         fontSize: '0.75rem',
                                                         padding: '2px 10px',
                                                         borderRadius: 12,
-                                                        background: student.grade && student.grade !== '—' ? '#eff6ff' : '#f1f5f9',
-                                                        color: student.grade && student.grade !== '—' ? '#2563eb' : '#94a3b8',
+                                                        background: student.grade && student.grade !== 'â€”' ? '#eff6ff' : '#f1f5f9',
+                                                        color: student.grade && student.grade !== 'â€”' ? '#2563eb' : '#94a3b8',
                                                         fontWeight: 600
                                                     }}>
                                                         {formatGrade(student.grade)}
@@ -1055,7 +1064,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     ) : (
                                         <tr>
                                             <td colSpan="4" className="text-center py-4 text-gray-500">
-                                                Không tìm thấy học sinh nào phù hợp.
+                                                KhÃ´ng tÃ¬m tháº¥y há»c sinh nÃ o phÃ¹ há»£p.
                                             </td>
                                         </tr>
                                     )}
@@ -1066,7 +1075,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             {totalStudentPages > 1 && (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
                                     <div style={{ fontSize: '13px', color: '#64748b' }}>
-                                        Hiển thị <strong>{(studentPage - 1) * studentsPerPage + 1}</strong> - <strong>{Math.min(studentPage * studentsPerPage, filteredStudents.length)}</strong> trong <strong>{filteredStudents.length}</strong> học sinh
+                                        Hiá»ƒn thá»‹ <strong>{(studentPage - 1) * studentsPerPage + 1}</strong> - <strong>{Math.min(studentPage * studentsPerPage, filteredStudents.length)}</strong> trong <strong>{filteredStudents.length}</strong> há»c sinh
                                     </div>
                                     <div style={{ display: 'flex', gap: '4px' }}>
                                         <button
@@ -1103,8 +1112,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     {activeTab === 'roadmap' && (
                         <div className="cd-roadmap-tab" style={{ '--accent': '#3b82f6' }}>
                             <div style={{ marginBottom: 16 }}>
-                                <h2>Lộ trình học & Tài liệu</h2>
-                                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: 4 }}>Quản lý bài giảng và bài tập theo từng buổi học. Gồm {materialsCount} tài liệu và {assignmentsCount} bài tập.</p>
+                                <h2>Lá»™ trÃ¬nh há»c & TÃ i liá»‡u</h2>
+                                <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: 4 }}>Quáº£n lÃ½ bÃ i giáº£ng vÃ  bÃ i táº­p theo tá»«ng buá»•i há»c. Gá»“m {materialsCount} tÃ i liá»‡u vÃ  {assignmentsCount} bÃ i táº­p.</p>
                             </div>
 
                             {classData.sessions.map((session) => {
@@ -1117,12 +1126,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     <div key={session.sessionId} className="cd-session-card">
                                         <div className="cd-session-header" onClick={() => handleToggleSession(session.sessionId)}>
                                             <div className="cd-session-info">
-                                                <div className="cd-session-num">Buổi {session.sessionNum}</div>
+                                                <div className="cd-session-num">Buá»•i {session.sessionNum}</div>
                                                 <div className="cd-session-title">
-                                                    <h4>{session.title || `Buổi học ${session.date}`}</h4>
+                                                    <h4>{session.title || `Buá»•i há»c ${session.date}`}</h4>
                                                     <div className="cd-session-meta">
                                                         <Calendar size={13} /> {session.dayLabel}, {session.date}
-                                                        <span className="dot">•</span>
+                                                        <span className="dot">â€¢</span>
                                                         <Clock size={13} /> {session.time}
                                                     </div>
                                                 </div>
@@ -1144,7 +1153,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                 {/* Materials Section */}
                                                 <div className="cd-session-section">
                                                     <div className="cd-session-section-header">
-                                                        <h5><BookOpen size={16} /> Tài liệu bài giảng</h5>
+                                                        <h5><BookOpen size={16} /> TÃ i liá»‡u bÃ i giáº£ng</h5>
                                                         {!isTA && (
                                                             <div style={{ display: 'flex' }}>
                                                                 <button
@@ -1154,13 +1163,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         setImportModal({ isOpen: true, type: 'material', targetSession: session.sessionId });
                                                                     }}
                                                                 >
-                                                                    <Library size={14} /> Thêm từ Thư viện
+                                                                    <Library size={14} /> ThÃªm tá»« ThÆ° viá»‡n
                                                                 </button>
                                                                 <button className="cd-btn-add-item" style={{ marginLeft: 12 }} onClick={() => {
                                                                     setUploadTargetSession(session.sessionId);
                                                                     setUploadModalOpen(true);
                                                                 }}>
-                                                                    <Plus size={14} /> Tải lên mới
+                                                                    <Plus size={14} /> Táº£i lÃªn má»›i
                                                                 </button>
                                                             </div>
                                                         )}
@@ -1173,14 +1182,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     <div className="material-icon">{getFileIcon(item.type)}</div>
                                                                     <div className="material-info">
                                                                         <h4 className="material-name">{item.name}</h4>
-                                                                        <div className="material-meta"><span>{item.size}</span><span className="dot">•</span><span>{item.uploadDate}</span></div>
+                                                                        <div className="material-meta"><span>{item.size}</span><span className="dot">â€¢</span><span>{item.uploadDate}</span></div>
                                                                     </div>
                                                                     <div className="material-actions" onClick={(e) => e.stopPropagation()}>
-                                                                        <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(item)}><Download size={16} /></button>
+                                                                        <button className="btn-icon" title="Táº£i xuá»‘ng" onClick={() => handleDownloadMaterial(item)}><Download size={16} /></button>
                                                                         {!isTA && (
                                                                             <>
-                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => { setEditTargetSession(session.sessionId); setEditMaterial({ ...item, sessionId: session.sessionId, classId: classData.id }); }}><Edit2 size={16} /></button>
-                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
+                                                                                <button className="btn-icon text-blue-600" title="Chá»‰nh sá»­a" onClick={() => { setEditTargetSession(session.sessionId); setEditMaterial({ ...item, sessionId: session.sessionId, classId: classData.id }); }}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="XÃ³a" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteMaterialId(item.id); }}><Trash2 size={16} /></button>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -1188,14 +1197,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có tài liệu đính kèm.</p>
+                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>ChÆ°a cÃ³ tÃ i liá»‡u Ä‘Ã­nh kÃ¨m.</p>
                                                     )}
                                                 </div>
 
                                                 {/* Assignments Section */}
                                                 <div className="cd-session-section" style={{ marginTop: 32 }}>
                                                     <div className="cd-session-section-header">
-                                                        <h5><CheckSquare size={16} /> Bài tập về nhà</h5>
+                                                        <h5><CheckSquare size={16} /> BÃ i táº­p vá» nhÃ </h5>
                                                         {!isTA && (
                                                             <div style={{ display: 'flex' }}>
                                                                 <button
@@ -1205,7 +1214,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         setImportModal({ isOpen: true, type: 'assignment', targetSession: session.sessionId });
                                                                     }}
                                                                 >
-                                                                    <Library size={14} /> Thêm từ Bộ đề
+                                                                    <Library size={14} /> ThÃªm tá»« Bá»™ Ä‘á»
                                                                 </button>
                                                                 <button
                                                                     className="cd-btn-add-item"
@@ -1216,7 +1225,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                         setIsCreateAssignmentOpen(true);
                                                                     }}
                                                                 >
-                                                                    <Plus size={14} /> Tạo bài tập
+                                                                    <Plus size={14} /> Táº¡o bÃ i táº­p
                                                                 </button>
                                                             </div>
                                                         )}
@@ -1229,18 +1238,18 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                                     <div className="material-icon" style={{ color: '#f59e0b' }}><CheckSquare size={24} /></div>
                                                                     <div className="material-info">
                                                                         <h4 className="material-name">{asm.title}</h4>
-                                                                        <div className="material-meta"><Clock size={12} /> Hạn: {asm.dueDate} &nbsp;•&nbsp; {asm.submissionsCount} bài nộp</div>
+                                                                        <div className="material-meta"><Clock size={12} /> Háº¡n: {asm.dueDate} &nbsp;â€¢&nbsp; {asm.submissionsCount} bÃ i ná»™p</div>
                                                                     </div>
                                                                     <div className="material-actions" onClick={(e) => e.stopPropagation()}>
                                                                         {!isTA && (
-                                                                            <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Chấm bài" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
-                                                                                Chấm bài
+                                                                            <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Cháº¥m bÃ i" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
+                                                                                Cháº¥m bÃ i
                                                                             </Link>
                                                                         )}
                                                                         {!isTA && (
                                                                             <>
-                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId, classId: classData.id }, session.sessionId)}><Edit2 size={16} /></button>
-                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
+                                                                                <button className="btn-icon text-blue-600" title="Chá»‰nh sá»­a" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId, classId: classData.id }, session.sessionId)}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-red-600" title="XÃ³a" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -1248,7 +1257,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có bài tập đính kèm.</p>
+                                                        <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>ChÆ°a cÃ³ bÃ i táº­p Ä‘Ã­nh kÃ¨m.</p>
                                                     )}
                                                 </div>
 
@@ -1286,9 +1295,45 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     <ScheduleRequestModal
                         isOpen={requestOpen}
                         onClose={() => setRequestOpen(false)}
-                        onSend={(payload) => {
-                            console.log("Schedule Request Sent from Detail:", payload);
-                            setRequestOpen(false);
+                        onSend={async (payload) => {
+                            try {
+                                const targetSlot = payload?.requestedSlot;
+                                const classInfoPayload = payload?.classInfo || {};
+                                const classIdForValidation = classInfoPayload?.classId || classData.id || classId;
+
+                                const validateRes = await api.post('/support-requests/validate-schedule-change', {
+                                    classId: classIdForValidation,
+                                    dayOfWeek: targetSlot?.dayOfWeek,
+                                    startTime: targetSlot?.startTime,
+                                    endTime: targetSlot?.endTime
+                                });
+                                if (!validateRes?.data?.isValid) {
+                                    toast.error(validateRes?.data?.errors?.[0] || 'Slot Ä‘á» xuáº¥t khÃ´ng há»£p lá»‡.');
+                                    return;
+                                }
+
+                                const title = `${SCHEDULE_CHANGE_TAG} [Đổi lịch dạy] ${classInfoPayload?.name || classData.name || 'Lớp học'}`;
+                                const content = [
+                                    'Type: schedule_change',
+                                    `Lớp: ${classInfoPayload?.name || classData.name || ''} (${classInfoPayload?.code || classData.code || ''})`,
+                                    `ClassId: ${classIdForValidation}`,
+                                    `CurrentSlot: ${payload?.currentSlot?.label || 'Chưa xác định'}`,
+                                    `Slot hiện tại: ${payload?.currentSlot?.label || 'Chưa xác định'}`,
+                                    `RequestedSlot: ${targetSlot?.dayLabel || ''} (${targetSlot?.startTime || ''} - ${targetSlot?.endTime || ''})`,
+                                    `Slot đề xuất: ${targetSlot?.dayLabel || ''} (${targetSlot?.startTime || ''} - ${targetSlot?.endTime || ''})`,
+                                    `RequestedRoomId: ${payload?.requestedRoomId || ''}`,
+                                    `Lý do: ${payload?.reason || ''}`
+                                ].join('\n');
+
+                                await api.post('/support-requests', { title, content });
+                                toast.success('ÄÃ£ gá»­i yÃªu cáº§u Ä‘á»•i lá»‹ch dáº¡y');
+                                window.dispatchEvent(new Event('teacher-inbox-refresh'));
+                            } catch (error) {
+                                console.error('Submit schedule change request failed:', error);
+                                toast.error('KhÃ´ng thá»ƒ gá»­i yÃªu cáº§u Ä‘á»•i lá»‹ch');
+                            } finally {
+                                setRequestOpen(false);
+                            }
                         }}
                         initialData={requestInitialData}
                     />
@@ -1328,7 +1373,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         isOpen={!!deleteMaterialId}
                         onClose={() => { setDeleteMaterialId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteMaterial}
-                        itemName="tài liệu"
+                        itemName="tÃ i liá»‡u"
                     />
                 )
             }
@@ -1340,7 +1385,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         isOpen={!!deleteAssignmentId}
                         onClose={() => { setDeleteAssignmentId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteAssignment}
-                        itemName="bài tập"
+                        itemName="bÃ i táº­p"
                     />
                 )
             }
@@ -1395,16 +1440,16 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 />
             )}
 
-            {/* Modal Lịch sử sửa điểm danh (Table Refactored) */}
+            {/* Modal Lá»‹ch sá»­ sá»­a Ä‘iá»ƒm danh (Table Refactored) */}
             {historyModalOpen && (
                 <div className="atm-overlay">
                     <div className="atm-modal" style={{ width: '900px', maxWidth: '95vw' }}>
                         <div className="atm-header">
                             <div>
-                                <h3>Lịch sử sửa điểm danh</h3>
+                                <h3>Lá»‹ch sá»­ sá»­a Ä‘iá»ƒm danh</h3>
                                 <div className="atm-session-meta">
                                     <History size={14} /> 
-                                    <span>Lớp: {classData.name}</span>
+                                    <span>Lá»›p: {classData.name}</span>
                                 </div>
                             </div>
                             <button className="atm-close" onClick={() => setHistoryModalOpen(false)}>
@@ -1414,7 +1459,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
                         {/* Filter Bar */}
                         <div style={{ padding: '12px 24px', background: '#fcfdfe', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bộ lọc:</span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bá»™ lá»c:</span>
                             {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
                                 <button
                                     key={status}
@@ -1432,7 +1477,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    {status === 'All' ? 'Tất cả' : status === 'Pending' ? 'Đang chờ' : status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                                    {status === 'All' ? 'Táº¥t cáº£' : status === 'Pending' ? 'Äang chá»' : status === 'Approved' ? 'ÄÃ£ duyá»‡t' : 'Tá»« chá»‘i'}
                                 </button>
                             ))}
                         </div>
@@ -1441,24 +1486,24 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             {loadingRequests ? (
                                 <div style={{ textAlign: 'center', padding: '60px' }}>
                                     <div className="attendance-spinner" style={{ margin: '0 auto 16px' }}></div>
-                                    <p style={{ color: '#64748b' }}>Đang tải dữ liệu...</p>
+                                    <p style={{ color: '#64748b' }}>Äang táº£i dá»¯ liá»‡u...</p>
                                 </div>
                             ) : classRequests.length === 0 ? (
                                 <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
                                     <ClipboardCheck size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '1rem' }}>Không có lịch sử yêu cầu sửa cho lớp này.</p>
+                                    <p style={{ fontSize: '1rem' }}>KhÃ´ng cÃ³ lá»‹ch sá»­ yÃªu cáº§u sá»­a cho lá»›p nÃ y.</p>
                                 </div>
                             ) : (
                                 <div className="atm-history-container" style={{ maxHeight: '60vh' }}>
                                     <table className="atm-table">
                                         <thead>
                                             <tr>
-                                                <th>Ngày gửi</th>
-                                                <th>Học sinh</th>
-                                                <th>Buổi học</th>
-                                                <th>Nội dung sửa</th>
-                                                <th>Trạng thái</th>
-                                                <th>Ghi chú / Phản hồi</th>
+                                                <th>NgÃ y gá»­i</th>
+                                                <th>Há»c sinh</th>
+                                                <th>Buá»•i há»c</th>
+                                                <th>Ná»™i dung sá»­a</th>
+                                                <th>Tráº¡ng thÃ¡i</th>
+                                                <th>Ghi chÃº / Pháº£n há»“i</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1481,25 +1526,25 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                         <td>
                                                             <div className="atm-change-preview">
                                                                 <span style={{ color: req.currentStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                                    {req.currentStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                    {req.currentStatus?.toLowerCase() === 'present' ? 'CÃ³ máº·t' : 'Váº¯ng máº·t'}
                                                                 </span>
                                                                 <ChevronRight size={12} className="atm-change-arrow" />
                                                                 <span style={{ color: req.requestedStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                                    {req.requestedStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                    {req.requestedStatus?.toLowerCase() === 'present' ? 'CÃ³ máº·t' : 'Váº¯ng máº·t'}
                                                                 </span>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <span className={`atm-status-badge atm-status-${statusKey}`}>
-                                                                {statusKey === 'pending' ? 'Chờ duyệt' : statusKey === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                                                                {statusKey === 'pending' ? 'Chá» duyá»‡t' : statusKey === 'approved' ? 'ÄÃ£ duyá»‡t' : 'Tá»« chá»‘i'}
                                                             </span>
                                                         </td>
                                                         <td>
                                                             <div className="atm-note-text" title={req.reviewNote || req.reason}>
                                                                 {req.status === 'Rejected' ? (
-                                                                    <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bị từ chối'}</span>
+                                                                    <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bá»‹ tá»« chá»‘i'}</span>
                                                                 ) : (
-                                                                    req.reason || '—'
+                                                                    req.reason || 'â€”'
                                                                 )}
                                                             </div>
                                                         </td>
@@ -1513,7 +1558,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                         
                         <div className="atm-footer">
-                            <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>Đóng</button>
+                            <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>ÄÃ³ng</button>
                         </div>
                     </div>
                 </div>
@@ -1523,3 +1568,5 @@ const TeacherClassDetail = ({ isTA = false }) => {
 };
 
 export default TeacherClassDetail;
+
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ClipboardCheck, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -18,7 +18,7 @@ const AttendanceModifications = () => {
         return { label: 'Chưa điểm danh', className: 'pending' };
     };
 
-    const loadAttendanceRequests = async () => {
+    const loadAttendanceRequests = useCallback(async (reason = 'manual') => {
         setAttendanceRequestsLoading(true);
         setSelectedRequest(null);
         try {
@@ -28,24 +28,46 @@ const AttendanceModifications = () => {
                 data = data?.data || [];
             }
             setAttendanceRequests(data);
+            console.debug('[AttendanceModifications] refreshed pending requests', { reason, total: data.length });
         } catch (error) {
             console.error('Error loading attendance requests:', error);
             toast.error('Không thể tải yêu cầu sửa điểm danh');
         } finally {
             setAttendanceRequestsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        loadAttendanceRequests();
-    }, []);
+        loadAttendanceRequests('mount');
+
+        const intervalId = window.setInterval(() => {
+            loadAttendanceRequests('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => loadAttendanceRequests('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                loadAttendanceRequests('tab-visible');
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [loadAttendanceRequests]);
 
     const handleApproveAttendanceRequest = async (requestId, newStatus) => {
         setProcessingRequest(true);
         try {
             await api.put(`/attendance/modification-requests/${requestId}/approve`, { newStatus });
             toast.success('Đã duyệt yêu cầu và cập nhật điểm danh');
-            loadAttendanceRequests();
+            loadAttendanceRequests('approve');
+            window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             console.error('Error approving request:', error);
             toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
@@ -59,7 +81,8 @@ const AttendanceModifications = () => {
         try {
             await api.put(`/attendance/modification-requests/${requestId}/reject`, { reviewNote: note });
             toast.success('Đã từ chối yêu cầu');
-            loadAttendanceRequests();
+            loadAttendanceRequests('reject');
+            window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             console.error('Error rejecting request:', error);
             toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
