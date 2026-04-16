@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
-    CheckCircle, XCircle, AlertCircle, TrendingUp, MessageSquare, 
+    CheckCircle, XCircle, AlertCircle, TrendingUp, MessageSquare,
     BookOpen, HardDrive, Inbox, ClipboardCheck
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
@@ -327,8 +327,8 @@ const AdminDashboard = () => {
                                 <span className="storage-number">
                                     {loading ? '...' : (
                                         <>
-                                            {overview.currentStorageMB < 1024 
-                                                ? `${(overview.currentStorageMB || 0).toFixed(1)} MB` 
+                                            {overview.currentStorageMB < 1024
+                                                ? `${(overview.currentStorageMB || 0).toFixed(1)} MB`
                                                 : `${((overview.currentStorageMB || 0) / 1024).toFixed(1)} GB`
                                             }
                                             <span style={{ margin: '0 8px', color: '#9ca3af' }}>/</span>
@@ -339,7 +339,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="storage-label">Dung Lượng</div>
                             <div className="storage-progress-container">
-                                <div className="storage-progress-bar" style={{ 
+                                <div className="storage-progress-bar" style={{
                                     width: `${loading ? 0 : Math.min(((overview.currentStorageMB || 0) / (overview.maxStorageMB || 1)) * 100, 100)}%`,
                                     background: '#8b5cf6'
                                 }} />
@@ -456,12 +456,43 @@ const AdminDashboard = () => {
                 selectedMessage={selectedMessage}
                 onSelectedMessageChange={setSelectedMessage}
                 onMarkAsRead={handleMarkAsRead}
-                renderDetailExtra={(msg) => msg?.type === 'feedback' && !msg.adminResponse && (
-                    <div style={{ marginTop: '1rem' }}>
-                        <textarea className="zalo-textarea" rows={3} placeholder="Phản hồi..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
-                        <button className="zalo-send-btn" style={{ marginTop: '0.5rem' }} disabled={replying} onClick={() => handleReply(msg)}>Gửi trả lời</button>
-                    </div>
-                )}
+                renderDetailExtra={(msg) => {
+                    const isSupportOrFeedback = msg?.type === 'feedback' || msg?.type === 'support';
+                    if (!isSupportOrFeedback) return null;
+
+                    return (
+                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6' }}>
+                            {msg.adminResponse ? (
+                                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.75rem', color: '#3b82f6', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <CheckCircle size={12} /> Phản hồi
+                                    </div>
+                                    <div style={{ fontSize: '0.875rem', color: '#1f2937', whiteSpace: 'pre-wrap' }}>
+                                        {msg.adminResponse}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <textarea
+                                        className="zalo-textarea"
+                                        rows={3}
+                                        placeholder="Nhập nội dung phản hồi..."
+                                        value={replyText}
+                                        onChange={(e) => setReplyText(e.target.value)}
+                                    />
+                                    <button
+                                        className="zalo-send-btn"
+                                        style={{ marginTop: '0.5rem' }}
+                                        disabled={replying}
+                                        onClick={() => handleReply(msg)}
+                                    >
+                                        {replying ? 'Đang gửi...' : 'Gửi trả lời'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    );
+                }}
             />
         </div>
     );

@@ -82,7 +82,7 @@ namespace EducenAPI.Services
                 currentPlanId = requestedPlanId;
             }
 
-            // Kiá»ƒm tra yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá» 
+            // Kiểm tra yêu cầu đổi gói đang chờ
             var pendingRequest = await _context.PackageChangeRequests
                 .AnyAsync(r => r.TenantId == tenantId && r.Status == "Pending");
 
