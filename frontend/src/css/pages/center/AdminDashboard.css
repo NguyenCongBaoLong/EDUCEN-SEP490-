@@ -847,6 +847,62 @@
     gap: 0.75rem;
 }
 
+.subscription-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1090;
+}
+
+.subscription-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    z-index: 1100;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.subscription-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.subscription-modal-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.subscription-modal-close {
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subscription-modal-body {
+    background: #fff;
+}
+
+.subscription-state {
+    color: #64748b;
+    text-align: center;
+    padding: 1.25rem;
+}
+
 @media (max-width: 1280px) {
     .dashboard-content-grid {
         grid-template-columns: 1fr 340px;

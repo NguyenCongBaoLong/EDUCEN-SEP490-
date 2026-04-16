@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Sidebar from '../../components/Sidebar';
 import EnrollmentRequestsTable from '../../components/EnrollmentRequestsTable';
 import EnrollmentDetailModal from '../../components/EnrollmentDetailModal';
@@ -16,7 +16,7 @@ const EnrollmentManagement = () => {
     const [rejectingRequest, setRejectingRequest] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchEnrollmentRequests = async () => {
+    const fetchEnrollmentRequests = useCallback(async (reason = 'manual') => {
         setLoading(true);
         try {
             const res = await api.get('/enrollment-requests');
@@ -45,17 +45,38 @@ const EnrollmentManagement = () => {
                 notes: r.message || r.notes || ''
             }));
             setRequestsList(data);
+            console.debug('[EnrollmentManagement] refreshed requests', { reason, total: data.length });
         } catch (error) {
             console.error('Error fetching enrollment requests:', error);
             toast.error('Không thể tải danh sách yêu cầu đăng ký');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        fetchEnrollmentRequests();
-    }, []);
+        fetchEnrollmentRequests('mount');
+
+        const intervalId = window.setInterval(() => {
+            fetchEnrollmentRequests('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchEnrollmentRequests('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchEnrollmentRequests('tab-visible');
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [fetchEnrollmentRequests]);
 
     const pendingCount = useMemo(() => {
         return requestsList.filter(r => r.status === 'pending').length;
@@ -71,6 +92,7 @@ const EnrollmentManagement = () => {
             setRejectingRequest(null);
             // Opt-optimistic update to avoid full reload flicker
             setRequestsList(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
+            window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Từ chối thất bại');
         }
@@ -82,6 +104,7 @@ const EnrollmentManagement = () => {
             toast.success('Đã duyệt yêu cầu đăng ký thành công');
             // Opt-optimistic update to avoid full reload flicker
             setRequestsList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
+            window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Duyệt thất bại');
         }

@@ -25,7 +25,6 @@ import AssignmentDetailModal from '../../components/AssignmentDetailModal';
 import '../../css/pages/center/ClassDetail.css';
 import '../../css/components/AttendanceModal.css';
 
-/* ─── Date helper ──────────────────────────────── */
 const parseDate = (str) => {
     const [d, m, y] = str.split('/');
     return new Date(Number(y), Number(m) - 1, Number(d));
@@ -44,8 +43,8 @@ const formatSize = (bytes) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-/* ─── Helpers format ngày từ API ─────────────────── */
 const DAY_LABELS = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+const SCHEDULE_CHANGE_TAG = '[SCHEDULE_CHANGE]';
 
 function formatDateVN(isoDate) {
     const d = new Date(isoDate);
@@ -54,12 +53,6 @@ function formatDateVN(isoDate) {
     const yyyy = d.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
 }
-
-
-
-// Removed INITIAL_ATTENDANCE to use real data from API
-
-/* ─── Helpers ──────────────────────────────────── */
 
 function formatGrade(grade) {
     if (!grade || grade === '—' || grade === 'None' || grade === '') return '—';
@@ -95,7 +88,6 @@ const ActivityIcon = ({ type }) => {
     return <div className="cd-activity-icon" style={{ background: s.bg, color: s.color }}>{s.icon}</div>;
 };
 
-// Mock Library Data (would be fetched from API)
 const LIBRARY_MATERIALS = [
     { id: 101, name: 'Giáo trình Toán Học Đại cương Tập 1.pdf', size: '5.2 MB', uploadDate: '01/09/2023', type: 'pdf', description: 'Sách giáo khoa điện tử chương trình cơ bản.' },
     { id: 102, name: 'Video Hướng dẫn Giải Phương trình Bậc 2.mp4', size: '125 MB', uploadDate: '05/09/2023', type: 'video', description: 'Cách bấm máy tính Casio để giải nhanh.' },
@@ -114,16 +106,15 @@ const groupUnique = (list) => {
     }, []);
 };
 
-// Centralized mapping functions to ensure consistency
 const mapMaterial = (m) => ({
     id: m.materialId || m.MaterialId,
     materialId: m.materialId || m.MaterialId,
     name: m.title || m.Title || '',
-    title: m.title || m.Title || '', // Added title for EditMaterialModal consumption
+    title: m.title || m.Title || '',
     size: formatSize(m.fileSize || m.FileSize),
     fileSize: m.fileSize || m.FileSize,
     originalFileName: m.originalFileName || m.OriginalFileName || '',
-    fileName: m.originalFileName || m.OriginalFileName || '', // For modal consistency
+    fileName: m.originalFileName || m.OriginalFileName || '',
     uploadDate: '',
     type: (m.contentType || m.ContentType)?.toLowerCase().includes('pdf') ? 'pdf'
         : (m.contentType || m.ContentType)?.toLowerCase().includes('word') ? 'word'
@@ -147,17 +138,15 @@ const mapAssignment = (a) => ({
     fileUrl: a.fileUrl || a.FileUrl,
     fileSize: a.fileSize || a.FileSize,
     originalFileName: a.originalFileName || a.OriginalFileName || '',
-    fileName: a.originalFileName || a.OriginalFileName || '', // For modal consistency
+    fileName: a.originalFileName || a.OriginalFileName || '',
     sessionId: a.sessionId || a.SessionId,
     classId: a.classId || a.ClassId,
     gradeId: a.gradeId || a.GradeId
 });
 
-/* ─── Main Component ────────────────────────────── */
 const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
 
-    // API data state
     const [classInfo, setClassInfo] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [students, setStudents] = useState([]);
@@ -166,7 +155,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [libraryAssignments, setLibraryAssignments] = useState([]);
     const [grades, setGrades] = useState([]);
 
-    // classData dùng trong UI — gộp từ API + defaults
     const [classData, setClassData] = useState({
         id: null, name: '', subject: '', gradeLevel: '', status: 'active',
         schedule: '', scheduleTime: '', startDate: '', duration: '',
@@ -178,7 +166,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
         totalClasses: 0,
     });
 
-    // Fetch all data
     const fetchClassData = async (isRefresh = false) => {
         if (!classId) return;
         if (!isRefresh) setLoading(true);
@@ -195,7 +182,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
             const rawStudents = studentsRes.data || [];
             const attendanceSummary = attendanceSummaryRes.data || [];
 
-            // Map sessions
             const mappedSessions = rawSessions.map((s, idx) => {
                 const summary = attendanceSummary.find(sum => sum.sessionId === s.sessionId);
                 return {
@@ -213,7 +199,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 };
             });
 
-            // Map students
             const mappedStudents = rawStudents.map(st => {
                 const name = st.fullName || st.username || '';
                 return {
@@ -226,7 +211,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 };
             });
 
-            // Schedule info
             const scheduleSlots = c.scheduleSlots || [];
             const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
             const scheduleStr = scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(' & ');
@@ -272,7 +256,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
             }) : mappedSessions);
 
             if (!isRefresh) {
-                // Initial load: Fetch materials/assignments and libraries
                 const sessionsWithItems = await Promise.all(
                     mappedSessions.map(async (s) => {
                         try {
@@ -287,7 +270,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 setClassData(prev => ({ ...prev, sessions: sessionsWithItems }));
                 setSessions(sessionsWithItems);
 
-                // Fetch libraries
                 const [libMatRes, libAsmRes, gradesRes] = await Promise.all([
                     api.get('/Materials'), api.get('/Assignments'), api.get('/Grades')
                 ]);
@@ -307,21 +289,16 @@ const TeacherClassDetail = ({ isTA = false }) => {
         fetchClassData();
     }, [classId]);
 
-
-    // Modals state
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
-    const [uploadTargetSession, setUploadTargetSession] = useState(null); // know which session getting the upload
+    const [uploadTargetSession, setUploadTargetSession] = useState(null);
 
     const [showAllStudents, setShowAllStudents] = useState(false);
     const [studentSearch, setStudentSearch] = useState('');
 
-    // Tab State
     const [activeTab, setActiveTab] = useState('overview');
 
-    // Expand/Collapse sessions
     const [expandedSessionId, setExpandedSessionId] = useState(null);
 
-    // Pagination for students tab
     const [studentPage, setStudentPage] = useState(1);
     const studentsPerPage = 10;
 
@@ -340,27 +317,22 @@ const TeacherClassDetail = ({ isTA = false }) => {
     const [canAttend, setCanAttend] = useState(true);
     const [lockMessage, setLockMessage] = useState('');
 
-    // Import Modal
     const [importModal, setImportModal] = useState({ isOpen: false, type: 'material', targetSession: null });
 
-    // Assignment Modals
     const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
     const [createAssignmentSession, setCreateAssignmentSession] = useState(null);
     const [editAssignment, setEditAssignment] = useState(null);
     const [detailAssignment, setDetailAssignment] = useState(null);
 
-    // Reset page when searching
     useEffect(() => {
         setStudentPage(1);
     }, [studentSearch]);
 
-    // State cho Modal lịch sử yêu cầu sửa điểm danh
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [classRequests, setClassRequests] = useState([]);
     const [loadingRequests, setLoadingRequests] = useState(false);
     const [historyStatusFilter, setHistoryStatusFilter] = useState('All');
 
-    // State cho Modal yêu cầu thay đổi (đổi lịch)
     const [requestOpen, setRequestOpen] = useState(false);
     const [requestInitialData, setRequestInitialData] = useState(null);
 
@@ -368,7 +340,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setLoadingRequests(true);
         try {
             const res = await api.get('/attendance/modification-requests/my');
-            // Lọc theo classId hiện tại
             const filtered = (res.data || []).filter(r => String(r.classId) === String(classId));
             setClassRequests(filtered);
         } catch (error) {
@@ -394,7 +365,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
         }
     };
 
-    // Fetch materials/assignments for a single session (re-fetch sau khi upload/import)
     const refreshSessionMaterials = async (sessionId) => {
         try {
             const [matRes, asmRes] = await Promise.all([
@@ -417,7 +387,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
 
     const handleUploadMaterial = async () => {
-        // UploadMaterialModal đã tự gọi API và upload xong → chỉ cần refresh
         if (uploadTargetSession) {
             await refreshSessionMaterials(uploadTargetSession);
         }
@@ -474,14 +443,11 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
 
     const handleUpdateMaterial = (updatedData) => {
-        // updatedData có thể là null nếu modal gọi onClose/onUpdate() không kèm tham số
-        // Chúng ta vẫn cần refresh nếu có editTargetSession
         const sessId = editTargetSession;
         
         setEditMaterial(null);
         setEditTargetSession(null);
         
-        // Luôn refresh để đảm bảo ID và meta chuẩn từ server
         if (sessId) {
             refreshSessionMaterials(sessId);
         }
@@ -499,17 +465,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
         try {
             const endpoint = type === 'material' ? '/Materials/import' : '/Assignments/import';
             
-            // Tìm buổi tiếp theo để làm hạn nộp mặc định (nếu là assignment)
             let defaultEndTime = null;
             if (type === 'assignment') {
                 const currentIdx = classData.sessions.findIndex(s => Number(s.sessionId) === Number(targetSession));
                 const nextSess = classData.sessions[currentIdx + 1];
                 if (nextSess && nextSess.date) {
-                    // Chuyển format DD/MM/YYYY sang YYYY-MM-DD để tạo Date object
                     const [d, m, y] = nextSess.date.split('/');
                     defaultEndTime = new Date(`${y}-${m}-${d}T23:59:00`).toISOString();
                 } else {
-                    // Mặc định 7 ngày sau buổi hiện tại
                     const currSess = classData.sessions[currentIdx];
                     if (currSess && currSess.date) {
                         const [d, m, y] = currSess.date.split('/');
@@ -563,7 +526,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
         }
     };
 
-
     const handleSaveAssignment = async (assignmentFormData) => {
         try {
             let savedAsm = null;
@@ -588,11 +550,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
             setEditTargetSession(null);
             setCreateAssignmentSession(null);
 
-            // Cập nhật state local ngay lập tức hoặc refresh
             if (targetSessionId) {
                 await refreshSessionMaterials(targetSessionId);
                 
-                // Nếu đang xem chi tiết bài tập này -> cập nhật luôn detail
                 if (savedAsm && detailAssignment && (detailAssignment.id === (savedAsm.asmId || savedAsm.AsmId || savedAsm.id || savedAsm.Id))) {
                     setDetailAssignment(mapAssignment({ ...savedAsm, sessionId: targetSessionId, classId: classData.id }));
                 }
@@ -608,16 +568,13 @@ const TeacherClassDetail = ({ isTA = false }) => {
         setExpandedSessionId(prev => prev === id ? null : id);
     };
 
-    /* --- derived --- */
     const filteredStudents = students.filter(s =>
         s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
         s.id.toLowerCase().includes(studentSearch.toLowerCase())
     );
 
-    // Filter students cho tab Overview (chỉ show max 5)
     const displayedStudentsOverview = showAllStudents ? filteredStudents : filteredStudents.slice(0, 5);
 
-    // Pagination students cho tab Học Sinh
     const totalStudentPages = Math.ceil(filteredStudents.length / studentsPerPage);
     const currentStudentsPage = filteredStudents.slice((studentPage - 1) * studentsPerPage, studentPage * studentsPerPage);
 
@@ -625,12 +582,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
         ? Math.round(students.reduce((s, st) => s + st.attendance, 0) / students.length)
         : 0;
 
-    // Buổi tiếp theo chưa điểm danh VÀ đã đến ngày
     const nextSession = classData.sessions.find(
         s => (s.presentCount === 0 && s.absentCount === 0) && isPast(s.date)
     );
-
-    // Removed getSessionSummary as counts are now in session object
 
     const handleOpen = async (session) => {
         setSelectedSession(session);
@@ -642,7 +596,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 setLockMessage(res.data.message || '');
             } catch (err) {
                 console.error('Error checking canAttend:', err);
-                setCanAttend(true); // Default to allow
+                setCanAttend(true);
                 setLockMessage('');
             }
         } else {
@@ -654,20 +608,17 @@ const TeacherClassDetail = ({ isTA = false }) => {
     };
     const handleClose = () => { setAttendanceOpen(false); setSelectedSession(null); };
     
-    // Refresh all data after attendance is saved
     const handleSave = async () => {
         handleClose();
-        await fetchClassData(true); // Update all numbers and lists immediately (refresh mode)
+        await fetchClassData(true);
     };
 
-    /* Sessions đã qua, mới nhất trước */
     const pastSessions = [...classData.sessions]
         .filter(s => isPast(s.date))
         .reverse();
 
     const futureSessions = classData.sessions.filter(s => isFuture(s.date));
 
-    // Stats
     const materialsCount = classData.sessions.reduce((acc, s) => acc + (s.materials?.length || 0), 0);
     const assignmentsCount = classData.sessions.reduce((acc, s) => acc + (s.assignments?.length || 0), 0);
 
@@ -687,7 +638,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
             <TeacherSidebar isTA={isTA} />
 
             <main className="cd-main">
-                {/* Breadcrumb */}
                 <div className="cd-breadcrumb">
                     <Link to={isTA ? "/ta/classes" : "/teacher/classes"} className="cd-back">
                         <ChevronLeft size={16} /> Quay lại lớp của tôi
@@ -696,7 +646,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     <span className="cd-breadcrumb-current">{classData.name}</span>
                 </div>
 
-                {/* Header */}
                 <div className="cd-page-header">
                     <div className="cd-title-block">
                         <div className="cd-title-row">
@@ -721,13 +670,21 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </p>
                     </div>
                     <button className="ts-btn-request" onClick={() => {
+                        const rawSlots = classInfo?.scheduleSlots || classInfo?.ScheduleSlots || [];
                         setRequestInitialData({
                             type: 'reschedule',
                             classInfo: {
+                                classId: classData.id,
                                 name: classData.name,
                                 code: classData.code,
                                 time: classData.scheduleTime,
-                                date: classData.schedule
+                                date: classData.schedule,
+                                scheduleSlots: rawSlots.map(slot => ({
+                                    dayOfWeek: slot.dayOfWeek ?? slot.DayOfWeek,
+                                    startTime: slot.startTime ?? slot.StartTime,
+                                    endTime: slot.endTime ?? slot.EndTime,
+                                    roomName: slot.roomName || classData.roomName || ''
+                                }))
                             }
                         });
                         setRequestOpen(true);
@@ -737,7 +694,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     </button>
                 </div>
 
-                {/* Info Cards */}
                 <div className="cd-info-cards">
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
@@ -754,7 +710,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                     </div>
                 </div>
 
-                {/* Tabs Nav */}
                 <div className="cd-tabs-nav">
                     <button
                         className={`cd-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
@@ -779,11 +734,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 <div className="cd-tab-content">
                     {activeTab === 'overview' && (
                         <div className="cd-content-grid">
-                            {/* LEFT */}
                             <div className="cd-left">
-
-
-                                {/* ── Lịch sử điểm danh ── */}
                                 <div className="cd-card">
                                     <div className="cd-card-header">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -869,7 +820,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         </div>
                                     )}
 
-                                    {/* Buổi tương lai */}
                                     {futureSessions.length > 0 && (
                                         <div className="att-future-notice">
                                             <Lock size={13} />
@@ -881,7 +831,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     )}
                                 </div>
 
-                                {/* Nhật ký hoạt động */}
                                 <div className="cd-card">
                                     <div className="cd-card-header"><h3>Nhật ký hoạt động</h3></div>
                                     <div className="cd-activity-list">
@@ -899,9 +848,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 </div>
                             </div>
 
-                            {/* RIGHT */}
                             <div className="cd-right">
-                                {/* Giáo viên phụ trách */}
                                 <div className="cd-card">
                                     <div className="cd-card-header"><h3>Giáo viên phụ trách</h3></div>
                                     <div className="cd-staff-list">
@@ -926,7 +873,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     </div>
                                 </div>
 
-                                {/* Tổng quan */}
                                 <div className="cd-card cd-overview-card">
                                     <div className="cd-card-header"><h3>Tổng quan lớp học</h3></div>
                                     <div className="cd-overview-stats">
@@ -965,36 +911,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* Nút điểm danh buổi tiếp theo */}
-                                    {nextSession ? (
-                                        <>
-                                            <div className="cd-next-session">
-                                                <CalendarClock size={14} />
-                                                <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
-                                            </div>
-                                            <button
-                                                className="cd-btn-attendance"
-                                                onClick={() => handleOpen(nextSession)}
-                                            >
-                                                <CheckCircle size={16} />
-                                                Điểm danh buổi {nextSession.date}
+                                    {nextSession && (
+                                        <div className="cd-next-session">
+                                            <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
+                                            <button className="cd-btn-take" onClick={() => handleOpen(nextSession)}>
+                                                <CheckCircle size={16} /> Điểm danh buổi {nextSession.date}
                                             </button>
-                                        </>
-                                    ) : futureSessions.length > 0 ? (
-                                        <>
-                                            <div className="cd-next-session">
-                                                <CalendarClock size={14} />
-                                                <span>Buổi tiếp theo: Buổi {futureSessions[0].sessionNum} - {futureSessions[0].date}</span>
-                                            </div>
-                                            {/* Disabled — chưa đến ngày */}
-                                            <button className="cd-btn-attendance" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                                                <Lock size={16} />
-                                                Chưa đến ngày học
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <div style={{ textAlign: 'center', fontSize: '0.875rem', color: '#16a34a', padding: '0.75rem', background: '#f0fdf4', borderRadius: '8px' }}>
-                                            ✓ Đã điểm danh tất cả các buổi
                                         </div>
                                     )}
                                 </div>
@@ -1062,7 +984,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                 </tbody>
                             </table>
 
-                            {/* Pagination Controls */}
                             {totalStudentPages > 1 && (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: 'white', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
                                     <div style={{ fontSize: '13px', color: '#64748b' }}>
@@ -1141,7 +1062,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
                                         {isExpanded && (
                                             <div className="cd-session-content">
-                                                {/* Materials Section */}
                                                 <div className="cd-session-section">
                                                     <div className="cd-session-section-header">
                                                         <h5><BookOpen size={16} /> Tài liệu bài giảng</h5>
@@ -1192,54 +1112,34 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                     )}
                                                 </div>
 
-                                                {/* Assignments Section */}
-                                                <div className="cd-session-section" style={{ marginTop: 32 }}>
+                                                <div className="cd-session-section">
                                                     <div className="cd-session-section-header">
-                                                        <h5><CheckSquare size={16} /> Bài tập về nhà</h5>
+                                                        <h5><FileText size={16} /> Bài tập</h5>
                                                         {!isTA && (
-                                                            <div style={{ display: 'flex' }}>
-                                                                <button
-                                                                    className="cd-btn-import-lib"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setImportModal({ isOpen: true, type: 'assignment', targetSession: session.sessionId });
-                                                                    }}
-                                                                >
-                                                                    <Library size={14} /> Thêm từ Bộ đề
-                                                                </button>
-                                                                <button
-                                                                    className="cd-btn-add-item"
-                                                                    style={{ marginLeft: 12 }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setCreateAssignmentSession(session.sessionId);
-                                                                        setIsCreateAssignmentOpen(true);
-                                                                    }}
-                                                                >
-                                                                    <Plus size={14} /> Tạo bài tập
-                                                                </button>
-                                                            </div>
+                                                            <button className="cd-btn-add-item" onClick={() => { setCreateAssignmentSession(session.sessionId); setIsCreateAssignmentOpen(true); }}>
+                                                                <Plus size={14} /> Thêm bài tập
+                                                            </button>
                                                         )}
                                                     </div>
 
                                                     {asms.length > 0 ? (
-                                                        <div className="material-items-grid">
+                                                        <div className="assignment-items-grid">
                                                             {asms.map(asm => (
-                                                                <div key={asm.id} className="material-card" style={{ borderLeft: '3px solid #f59e0b', cursor: 'pointer' }} onClick={() => setDetailAssignment(asm)}>
-                                                                    <div className="material-icon" style={{ color: '#f59e0b' }}><CheckSquare size={24} /></div>
-                                                                    <div className="material-info">
-                                                                        <h4 className="material-name">{asm.title}</h4>
-                                                                        <div className="material-meta"><Clock size={12} /> Hạn: {asm.dueDate} &nbsp;•&nbsp; {asm.submissionsCount} bài nộp</div>
+                                                                <div key={asm.id} className="assignment-card" onClick={() => setDetailAssignment(asm)} style={{ cursor: 'pointer' }}>
+                                                                    <div className="assignment-icon"><FileText size={20} color="#8b5cf6" /></div>
+                                                                    <div className="assignment-info">
+                                                                        <h4 className="assignment-name">{asm.title}</h4>
+                                                                        <div className="assignment-meta">
+                                                                            <span>Hạn: {asm.dueDate}</span>
+                                                                            <span className="dot">•</span>
+                                                                            <span>{asm.submissionsCount} nộp</span>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="material-actions" onClick={(e) => e.stopPropagation()}>
-                                                                        {!isTA && (
-                                                                            <Link to={isTA ? `/ta/assignments/${asm.id}/grade` : `/teacher/assignments/${asm.id}/grade`} className="btn-icon text-blue-600" title="Chấm bài" style={{ width: 'auto', padding: '0 10px', fontSize: '0.8125rem', fontWeight: 600 }}>
-                                                                                Chấm bài
-                                                                            </Link>
-                                                                        )}
+                                                                    <div className="assignment-actions" onClick={(e) => e.stopPropagation()}>
+                                                                        <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(asm)}><Download size={16} /></button>
                                                                         {!isTA && (
                                                                             <>
-                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId, classId: classData.id }, session.sessionId)}><Edit2 size={16} /></button>
+                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId }, session.sessionId)}><Edit2 size={16} /></button>
                                                                                 <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
                                                                             </>
                                                                         )}
@@ -1251,7 +1151,6 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                         <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: '4px 0 0' }}>Chưa có bài tập đính kèm.</p>
                                                     )}
                                                 </div>
-
                                             </div>
                                         )}
                                     </div>
@@ -1260,44 +1159,69 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         </div>
                     )}
                 </div>
-            </main>
 
-            {/* Attendance Modal */}
-            {
-                attendanceOpen && selectedSession && (
+                {attendanceOpen && selectedSession && (
                     <AttendanceModal
                         isOpen={attendanceOpen}
                         onClose={handleClose}
                         onSave={handleSave}
                         session={selectedSession}
-                        students={students}
-                        existingRecords={attendanceData[selectedSession.sessionId]}
-                        sessionId={selectedSession.sessionId}
+                        classId={classData.id}
                         canAttend={canAttend}
                         lockMessage={lockMessage}
-                        onRequestModification={() => fetchClassData(true)}
+                        isTA={isTA}
                     />
-                )
-            }
+                )}
 
-            {/* Request Change Modal */}
-            {
-                requestOpen && (
+                {requestOpen && (
                     <ScheduleRequestModal
                         isOpen={requestOpen}
                         onClose={() => setRequestOpen(false)}
-                        onSend={(payload) => {
-                            console.log("Schedule Request Sent from Detail:", payload);
-                            setRequestOpen(false);
+                        onSubmit={async (payload) => {
+                            try {
+                                const targetSlot = payload?.requestedSlot;
+                                const classInfoPayload = payload?.classInfo || {};
+                                const classIdForValidation = classInfoPayload?.classId || classData.id || classId;
+
+                                const validateRes = await api.post('/support-requests/validate-schedule-change', {
+                                    classId: classIdForValidation,
+                                    dayOfWeek: targetSlot?.dayOfWeek,
+                                    startTime: targetSlot?.startTime,
+                                    endTime: targetSlot?.endTime
+                                });
+                                if (!validateRes?.data?.isValid) {
+                                    toast.error(validateRes?.data?.errors?.[0] || 'Slot đề xuất không hợp lệ.');
+                                    return;
+                                }
+
+                                const title = `${SCHEDULE_CHANGE_TAG} [Đổi lịch dạy] ${classInfoPayload?.name || classData.name || 'Lớp học'}`;
+                                const content = [
+                                    'Type: schedule_change',
+                                    `Lớp: ${classInfoPayload?.name || classData.name || ''} (${classInfoPayload?.code || classData.code || ''})`,
+                                    `ClassId: ${classIdForValidation}`,
+                                    `CurrentSlot: ${payload?.currentSlot?.label || 'Chưa xác định'}`,
+                                    `Slot hiện tại: ${payload?.currentSlot?.label || 'Chưa xác định'}`,
+                                    `RequestedSlot: ${targetSlot?.dayLabel || ''} (${targetSlot?.startTime || ''} - ${targetSlot?.endTime || ''})`,
+                                    `Slot đề xuất: ${targetSlot?.dayLabel || ''} (${targetSlot?.startTime || ''} - ${targetSlot?.endTime || ''})`,
+                                    `RequestedRoomId: ${payload?.requestedRoomId || ''}`,
+                                    `Lý do: ${payload?.reason || ''}`
+                                ].join('\n');
+
+                                await api.post('/support-requests', { title, content });
+                                toast.success('Đã gửi yêu cầu đổi lịch dạy');
+                                window.dispatchEvent(new Event('teacher-inbox-refresh'));
+                            } catch (error) {
+                                console.error('Submit schedule change request failed:', error);
+                                toast.error('Không thể gửi yêu cầu đổi lịch');
+                            } finally {
+                                setRequestOpen(false);
+                            }
                         }}
                         initialData={requestInitialData}
                     />
-                )
-            }
+                )}
 
-            {/* Upload Material Modal */}
-            {
-                uploadModalOpen && (
+                {uploadModalOpen && (
                     <UploadMaterialModal
                         isOpen={uploadModalOpen}
                         onClose={() => setUploadModalOpen(false)}
@@ -1305,12 +1229,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         sessionId={uploadTargetSession}
                         grades={grades}
                     />
-                )
-            }
+                )}
 
-            {/* Edit Material Modal */}
-            {
-                editMaterial && (
+                {editMaterial && (
                     <EditMaterialModal
                         isOpen={!!editMaterial}
                         onClose={() => { setEditMaterial(null); setEditTargetSession(null); }}
@@ -1318,206 +1239,192 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         materialData={editMaterial}
                         grades={grades}
                     />
-                )
-            }
+                )}
 
-            {/* Delete Material Modal */}
-            {
-                deleteMaterialId && (
+                {deleteMaterialId && (
                     <DeleteMaterialModal
                         isOpen={!!deleteMaterialId}
                         onClose={() => { setDeleteMaterialId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteMaterial}
                         itemName="tài liệu"
                     />
-                )
-            }
+                )}
 
-            {/* Delete Assignment Modal */}
-            {
-                deleteAssignmentId && (
+                {deleteAssignmentId && (
                     <DeleteMaterialModal
                         isOpen={!!deleteAssignmentId}
                         onClose={() => { setDeleteAssignmentId(null); setDeleteTargetSession(null); }}
                         onDelete={handleDeleteAssignment}
                         itemName="bài tập"
                     />
-                )
-            }
+                )}
 
-            {/* Material Detail Modal */}
-            {
-                detailMaterial && (
+                {detailMaterial && (
                     <MaterialDetailModal
                         isOpen={!!detailMaterial}
                         onClose={() => setDetailMaterial(null)}
                         material={detailMaterial}
                         onDownload={handleDownloadMaterial}
                     />
-                )
-            }
+                )}
 
-            {/* Import Library Modal */}
-            {importModal.isOpen && (
-                <ImportLibraryModal
-                    isOpen={importModal.isOpen}
-                    onClose={() => setImportModal({ isOpen: false, type: 'material', targetSession: null })}
-                    onImport={handleImportFromLibrary}
-                    type={importModal.type}
-                    libraryItems={importModal.type === 'material' ? libraryMaterials : libraryAssignments}
-                    existingItems={
-                        classData.sessions.find(s => Number(s.sessionId) === Number(importModal.targetSession))?.[importModal.type === 'material' ? 'materials' : 'assignments'] || []
-                    }
-                />
-            )}
+                {importModal.isOpen && (
+                    <ImportLibraryModal
+                        isOpen={importModal.isOpen}
+                        onClose={() => setImportModal({ isOpen: false, type: 'material', targetSession: null })}
+                        onImport={handleImportFromLibrary}
+                        type={importModal.type}
+                        libraryItems={importModal.type === 'material' ? libraryMaterials : libraryAssignments}
+                        existingItems={
+                            classData.sessions.find(s => Number(s.sessionId) === Number(importModal.targetSession))?.[importModal.type === 'material' ? 'materials' : 'assignments'] || []
+                        }
+                    />
+                )}
 
-            {/* Create Assignment Modal */}
-            {isCreateAssignmentOpen && (
-                <CreateAssignmentModal
-                    isOpen={isCreateAssignmentOpen}
-                    onClose={() => { setIsCreateAssignmentOpen(false); setEditAssignment(null); setCreateAssignmentSession(null); }}
-                    onSave={handleSaveAssignment}
-                    sessionId={createAssignmentSession || editTargetSession}
-                    initialData={editAssignment}
-                    classes={[{ classId: classData.id, className: classData.name }]}
-                    currentClassId={classData.id}
-                    grades={grades}
-                />
-            )}
+                {isCreateAssignmentOpen && (
+                    <CreateAssignmentModal
+                        isOpen={isCreateAssignmentOpen}
+                        onClose={() => { setIsCreateAssignmentOpen(false); setEditAssignment(null); setCreateAssignmentSession(null); }}
+                        onSave={handleSaveAssignment}
+                        sessionId={createAssignmentSession || editTargetSession}
+                        initialData={editAssignment}
+                        classes={[{ classId: classData.id, className: classData.name }]}
+                        currentClassId={classData.id}
+                        grades={grades}
+                    />
+                )}
 
-            {/* Assignment Detail Modal */}
-            {detailAssignment && (
-                <AssignmentDetailModal
-                    isOpen={!!detailAssignment}
-                    onClose={() => setDetailAssignment(null)}
-                    assignment={{ ...detailAssignment, className: classData.name }}
-                    onDownload={handleDownloadMaterial}
-                />
-            )}
+                {detailAssignment && (
+                    <AssignmentDetailModal
+                        isOpen={!!detailAssignment}
+                        onClose={() => setDetailAssignment(null)}
+                        assignment={{ ...detailAssignment, className: classData.name }}
+                        onDownload={handleDownloadMaterial}
+                    />
+                )}
 
-            {/* Modal Lịch sử sửa điểm danh (Table Refactored) */}
-            {historyModalOpen && (
-                <div className="atm-overlay">
-                    <div className="atm-modal" style={{ width: '900px', maxWidth: '95vw' }}>
-                        <div className="atm-header">
-                            <div>
-                                <h3>Lịch sử sửa điểm danh</h3>
-                                <div className="atm-session-meta">
-                                    <History size={14} /> 
-                                    <span>Lớp: {classData.name}</span>
+                {historyModalOpen && (
+                    <div className="atm-overlay">
+                        <div className="atm-modal" style={{ width: '900px', maxWidth: '95vw' }}>
+                            <div className="atm-header">
+                                <div>
+                                    <h3>Lịch sử sửa điểm danh</h3>
+                                    <div className="atm-session-meta">
+                                        <History size={14} /> 
+                                        <span>Lớp: {classData.name}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <button className="atm-close" onClick={() => setHistoryModalOpen(false)}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Filter Bar */}
-                        <div style={{ padding: '12px 24px', background: '#fcfdfe', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bộ lọc:</span>
-                            {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
-                                <button
-                                    key={status}
-                                    onClick={() => setHistoryStatusFilter(status)}
-                                    style={{
-                                        padding: '4px 14px',
-                                        borderRadius: '20px',
-                                        fontSize: '12px',
-                                        fontWeight: 600,
-                                        border: '1px solid',
-                                        transition: 'all 0.15s',
-                                        background: historyStatusFilter === status ? '#3b82f6' : 'white',
-                                        color: historyStatusFilter === status ? 'white' : '#64748b',
-                                        borderColor: historyStatusFilter === status ? '#3b82f6' : '#e2e8f0',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {status === 'All' ? 'Tất cả' : status === 'Pending' ? 'Đang chờ' : status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                                <button className="atm-close" onClick={() => setHistoryModalOpen(false)}>
+                                    <X size={20} />
                                 </button>
-                            ))}
-                        </div>
-                        
-                        <div className="atm-body" style={{ padding: 0, overflow: 'hidden' }}>
-                            {loadingRequests ? (
-                                <div style={{ textAlign: 'center', padding: '60px' }}>
-                                    <div className="attendance-spinner" style={{ margin: '0 auto 16px' }}></div>
-                                    <p style={{ color: '#64748b' }}>Đang tải dữ liệu...</p>
-                                </div>
-                            ) : classRequests.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
-                                    <ClipboardCheck size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '1rem' }}>Không có lịch sử yêu cầu sửa cho lớp này.</p>
-                                </div>
-                            ) : (
-                                <div className="atm-history-container" style={{ maxHeight: '60vh' }}>
-                                    <table className="atm-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Ngày gửi</th>
-                                                <th>Học sinh</th>
-                                                <th>Buổi học</th>
-                                                <th>Nội dung sửa</th>
-                                                <th>Trạng thái</th>
-                                                <th>Ghi chú / Phản hồi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {classRequests
-                                                .filter(req => historyStatusFilter === 'All' || req.status === historyStatusFilter)
-                                                .map((req) => {
-                                                const statusKey = req.status?.toLowerCase() || 'pending';
-                                                return (
-                                                    <tr key={req.requestId}>
-                                                        <td style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                                                            {req.requestedAt?.split(' ')[0]}<br/>
-                                                            <small>{req.requestedAt?.split(' ')[1]}</small>
-                                                        </td>
-                                                        <td>
-                                                            <div className="atm-student-name-bold">{req.studentName}</div>
-                                                        </td>
-                                                        <td style={{ whiteSpace: 'nowrap' }}>
-                                                            <div style={{ fontWeight: 500, fontSize: '0.8125rem' }}>{req.sessionDate}</div>
-                                                        </td>
-                                                        <td>
-                                                            <div className="atm-change-preview">
-                                                                <span style={{ color: req.currentStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                                    {req.currentStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                            </div>
+
+                            <div style={{ padding: '12px 24px', background: '#fcfdfe', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', marginRight: '8px', textTransform: 'uppercase' }}>Bộ lọc:</span>
+                                {['All', 'Pending', 'Approved', 'Rejected'].map(status => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setHistoryStatusFilter(status)}
+                                        style={{
+                                            padding: '4px 14px',
+                                            borderRadius: '20px',
+                                            fontSize: '12px',
+                                            fontWeight: 600,
+                                            border: '1px solid',
+                                            transition: 'all 0.15s',
+                                            background: historyStatusFilter === status ? '#3b82f6' : 'white',
+                                            color: historyStatusFilter === status ? 'white' : '#64748b',
+                                            borderColor: historyStatusFilter === status ? '#3b82f6' : '#e2e8f0',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {status === 'All' ? 'Tất cả' : status === 'Pending' ? 'Đang chờ' : status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
+                                    </button>
+                                ))}
+                            </div>
+                            
+                            <div className="atm-body" style={{ padding: 0, overflow: 'hidden' }}>
+                                {loadingRequests ? (
+                                    <div style={{ textAlign: 'center', padding: '60px' }}>
+                                        <div className="attendance-spinner" style={{ margin: '0 auto 16px' }}></div>
+                                        <p style={{ color: '#64748b' }}>Đang tải dữ liệu...</p>
+                                    </div>
+                                ) : classRequests.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '60px', color: '#9ca3af' }}>
+                                        <ClipboardCheck size={64} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
+                                        <p style={{ fontSize: '1rem' }}>Không có lịch sử yêu cầu sửa cho lớp này.</p>
+                                    </div>
+                                ) : (
+                                    <div className="atm-history-container" style={{ maxHeight: '60vh' }}>
+                                        <table className="atm-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Ngày gửi</th>
+                                                    <th>Học sinh</th>
+                                                    <th>Buổi học</th>
+                                                    <th>Nội dung sửa</th>
+                                                    <th>Trạng thái</th>
+                                                    <th>Ghi chú / Phản hồi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {classRequests
+                                                    .filter(req => historyStatusFilter === 'All' || req.status === historyStatusFilter)
+                                                    .map((req) => {
+                                                    const statusKey = req.status?.toLowerCase() || 'pending';
+                                                    return (
+                                                        <tr key={req.requestId}>
+                                                            <td style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                                                {req.requestedAt?.split(' ')[0]}<br/>
+                                                                <small>{req.requestedAt?.split(' ')[1]}</small>
+                                                            </td>
+                                                            <td>
+                                                                <div className="atm-student-name-bold">{req.studentName}</div>
+                                                            </td>
+                                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                                <div style={{ fontWeight: 500, fontSize: '0.8125rem' }}>{req.sessionDate}</div>
+                                                            </td>
+                                                            <td>
+                                                                <div className="atm-change-preview">
+                                                                    <span style={{ color: req.currentStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                                        {req.currentStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                    </span>
+                                                                    <ChevronRight size={12} className="atm-change-arrow" />
+                                                                    <span style={{ color: req.requestedStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                                                                        {req.requestedStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <span className={`atm-status-badge atm-status-${statusKey}`}>
+                                                                    {statusKey === 'pending' ? 'Chờ duyệt' : statusKey === 'approved' ? 'Đã duyệt' : 'Từ chối'}
                                                                 </span>
-                                                                <ChevronRight size={12} className="atm-change-arrow" />
-                                                                <span style={{ color: req.requestedStatus?.toLowerCase() === 'present' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
-                                                                    {req.requestedStatus?.toLowerCase() === 'present' ? 'Có mặt' : 'Vắng mặt'}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <span className={`atm-status-badge atm-status-${statusKey}`}>
-                                                                {statusKey === 'pending' ? 'Chờ duyệt' : statusKey === 'approved' ? 'Đã duyệt' : 'Từ chối'}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <div className="atm-note-text" title={req.reviewNote || req.reason}>
-                                                                {req.status === 'Rejected' ? (
-                                                                    <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bị từ chối'}</span>
-                                                                ) : (
-                                                                    req.reason || '—'
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="atm-footer">
-                            <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>Đóng</button>
+                                                            </td>
+                                                            <td>
+                                                                <div className="atm-note-text" title={req.reviewNote || req.reason}>
+                                                                    {req.status === 'Rejected' ? (
+                                                                        <span style={{ color: '#dc2626' }}>{req.reviewNote || 'Bị từ chối'}</span>
+                                                                    ) : (
+                                                                        req.reason || '—'
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="atm-footer">
+                                <button className="atm-btn-cancel" onClick={() => setHistoryModalOpen(false)}>Đóng</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </main>
         </div>
     );
 };

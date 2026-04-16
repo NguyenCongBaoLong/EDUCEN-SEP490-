@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, CheckCircle, MessageSquare, MapPin } from 'lucide-react';
@@ -10,6 +10,8 @@ import ScheduleRequestModal from '../../components/ScheduleRequestModal';
 import '../../css/pages/teacher/TeacherSchedule.css';
 import { useSchedule } from '../../context/ScheduleContext';
 
+const SCHEDULE_CHANGE_TAG = '[SCHEDULE_CHANGE]';
+
 
 const TeacherSchedule = ({ isTA = false }) => {
     const navigate = useNavigate();
@@ -20,6 +22,7 @@ const TeacherSchedule = ({ isTA = false }) => {
     // State cho Modal yêu cầu thay đổi
     const [requestOpen, setRequestOpen] = useState(false);
     const [requestInitialData, setRequestInitialData] = useState(null);
+    const [rooms, setRooms] = useState([]);
 
     // Sử dụng shared schedule context
     const { scheduledClasses } = useSchedule();
@@ -30,6 +33,58 @@ const TeacherSchedule = ({ isTA = false }) => {
 
     // Nếu fetch từ /Schedules/teacher/me thì đã được lọc từ BE rồi
     const filteredClasses = scheduledClasses;
+
+    // Filter out inactive classes
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const activeClasses = (scheduledClasses || []).filter(c => {
+        if (c.status && c.status !== "Active") return false;
+        if (c.endDate) {
+            const endDate = new Date(c.endDate);
+            endDate.setHours(0, 0, 0, 0);
+            if (endDate < today) return false;
+        }
+        return true;
+    });
+
+    const classOptions = useMemo(() => {
+        const grouped = new Map();
+        (activeClasses || []).forEach((c) => {
+            const key = c.classId || c.id;
+            if (!key) return;
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    classId: key,
+                    name: c.name || c.className || "Lớp học",
+                    code: c.code || `CLASS-${key}`,
+                    time: "",
+                    date: "",
+                    scheduleSlots: []
+                });
+            }
+            grouped.get(key).scheduleSlots.push({
+                dayOfWeek: c.day,
+                startTime: c.startTime,
+                endTime: c.endTime,
+                roomName: c.roomName || ""
+            });
+        });
+        return Array.from(grouped.values());
+    }, [activeClasses]);
+
+    // Fetch danh sách phòng
+    useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const res = await api.get('/Rooms');
+                setRooms(res.data || []);
+            } catch (error) {
+                console.error('Error fetching rooms:', error);
+                setRooms([]);
+            }
+        };
+        fetchRooms();
+    }, []);
 
     // Get week dates (Monday to Sunday)
     const getWeekDates = () => {
@@ -428,15 +483,39 @@ const TeacherSchedule = ({ isTA = false }) => {
                     onSend={async (payload) => {
                         try {
                             const typeLabels = {
+                                schedule_change: 'Đổi lịch dạy',
                                 reschedule: 'Đổi lịch dạy',
                                 teacher_swap: 'Đổi giáo viên',
                                 absence: 'Xin nghỉ / Hủy buổi',
                                 other: 'Thay đổi khác',
                             };
                             const classInfo = payload.classInfo ? ` [${payload.classInfo.code} - ${payload.classInfo.name}]` : '';
-                            const Title = `[${typeLabels[payload.type] || 'Yêu cầu'}]${classInfo}`;
-                            const Content = `Loại yêu cầu: ${typeLabels[payload.type] || payload.type}\nLý do: ${payload.reason || 'Không có'}`;
+                            const Title = `${SCHEDULE_CHANGE_TAG} [${typeLabels[payload.type] || 'Yêu cầu'}]${classInfo}`;
 
+                            // Thêm thông tin slot chi tiết vào Content
+                            let Content = `Type: schedule_change\nLoại yêu cầu: ${typeLabels[payload.type] || payload.type}\nLý do: ${payload.reason || 'Không có'}`;
+
+                            // Thêm classId để admin có thể cập nhật lịch
+                            if (payload.classInfo?.classId) {
+                                Content += `\nClassId: ${payload.classInfo.classId}`;
+                            }
+
+                            // Nếu có thông tin slot hiện tại và slot mới, thêm vào Content
+                            if (payload.currentSlot) {
+                                Content += `\nCurrentSlot: ${payload.currentSlot.dayLabel} (${payload.currentSlot.startTime} - ${payload.currentSlot.endTime})`;
+                                Content += `\nSlot hiện tại: ${payload.currentSlot.dayLabel} (${payload.currentSlot.startTime} - ${payload.currentSlot.endTime})`;
+                            }
+                            if (payload.requestedSlot) {
+                                Content += `\nRequestedSlot: ${payload.requestedSlot.dayLabel} (${payload.requestedSlot.startTime} - ${payload.requestedSlot.endTime})`;
+                                Content += `\nSlot mới: ${payload.requestedSlot.dayLabel} (${payload.requestedSlot.startTime} - ${payload.requestedSlot.endTime})`;
+                            }
+                            if (payload.requestedRoomId) {
+                                const room = rooms.find(r => r.roomId === payload.requestedRoomId);
+                                Content += `\nRequestedRoomId: ${payload.requestedRoomId}`;
+                                Content += `\nPhòng mới: ${room?.roomName || `Phòng ${payload.requestedRoomId}`}`;
+                            }
+
+                            console.log('[TeacherSchedule] Sending request:', { Title, Content, payload });
                             await api.post('/support-requests', { Title, Content });
                             toast.success('Yêu cầu đã được gửi đến admin!');
                             setRequestOpen(false);
@@ -446,6 +525,8 @@ const TeacherSchedule = ({ isTA = false }) => {
                         }
                     }}
                     initialData={requestInitialData}
+                    classOptions={classOptions}
+                    rooms={rooms}
                 />
             )}
         </div>

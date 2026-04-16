@@ -82,7 +82,7 @@ public interface ISubscriptionChangeService
                 currentPlanId = requestedPlanId;
             }
 
-            // Kiá»ƒm tra yÃªu cáº§u Ä‘á»•i gÃ³i Ä‘ang chá» 
+            // Kiểm tra yêu cầu đổi gói đang chờ
             var pendingRequest = await _context.PackageChangeRequests
                 .AnyAsync(r => r.TenantId == tenantId && r.Status == "Pending");
 
@@ -156,7 +156,7 @@ if (request == null)
 
             if (approved)
             {
-                // Auto gá»­i hÃ³a Ä‘Æ¡n ngay sau khi duyá»‡t, dÃ¹ng cáº¥u hÃ¬nh háº¡n Ä‘Ã³ng tiá»n máº·c Ä‘á»‹nh.
+                // Auto gửi hóa đơn ngay sau khi duyệt, dùng cấu hình hạn đóng tiền mặc định.
                 await CreateInvoiceAsync(requestId, 0, reviewedBy);
             }
 
@@ -403,7 +403,7 @@ if (invoice == null)
 
             invoice.PaymentMethod = normalizedMethod!;
             invoice.PaymentNote = string.IsNullOrWhiteSpace(paymentNote)
-                ? $"Center gá»­i yÃªu cáº§u xÃ¡c nháº­n thanh toÃ¡n {normalizedMethod}. NgÆ°á»i gá»­i: {requestedBy}"
+                ? $"Center gửi yêu cầu xác nhận thanh toán {normalizedMethod}. Người gửi: {requestedBy}"
                 : paymentNote.Trim();
             invoice.Status = "AwaitingConfirmation";
 

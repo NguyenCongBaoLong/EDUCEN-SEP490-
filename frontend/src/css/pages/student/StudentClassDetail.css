@@ -1,4 +1,4 @@
-﻿/* â”€â”€â”€ StudentClassDetail Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* StudentClassDetail Page */
 .scd-page {
     display: flex;
     min-height: 100vh;
@@ -198,7 +198,7 @@
     display: block;
 }
 
-/* â”€â”€â”€ Overview Grid â”€â”€â”€ */
+/* Overview Grid */
 .scd-content-grid {
     display: grid;
     grid-template-columns: 1fr 360px;
@@ -463,7 +463,7 @@
     transition: width .4s ease;
 }
 
-/* â”€â”€â”€ Materials Tab â”€â”€â”€ */
+/* Materials Tab */
 .scd-materials-tab {
     display: block;
 }
@@ -563,7 +563,7 @@
     color: #3b82f6;
 }
 
-/* â”€â”€â”€ Assignments Tab â”€â”€â”€ */
+/* Assignments Tab */
 .scd-assignments-tab {
     display: block;
 }
@@ -944,7 +944,7 @@
     margin: 0;
 }
 
-/* â”€â”€â”€ Submit Modal â”€â”€â”€ */
+/* Submit Modal */
 .scd-modal-overlay {
     position: fixed;
     inset: 0;
@@ -1192,7 +1192,7 @@
     }
 }
 
-/* â”€â”€â”€ Card Grid (Materials & Assignments) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Card Grid (Materials & Assignments) */
 .scd-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1297,7 +1297,7 @@
     border-left: 3px solid #f59e0b;
 }
 
-/* â”€â”€â”€ Detail Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Detail Modal */
 .scd-detail-modal {
     max-width: 520px;
 }
@@ -1357,7 +1357,7 @@
 .scd-session-item-badge { display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: #f1f5f9; color: #475569; margin-left: auto; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* â”€â”€â”€ Loading & Error â”€â”€â”€ */
+/* Loading & Error */
 .scd-loading-container, .scd-error-container {
     display: flex;
     flex-direction: column;
@@ -1377,7 +1377,7 @@
     cursor: pointer;
 }
 
-/* â”€â”€â”€ Status: Graded â”€â”€â”€ */
+/* Status: Graded */
 .scd-status-chip.graded {
     background: #fef3c7;
     color: #d97706;
@@ -1419,7 +1419,7 @@
     color: #94a3b8;
 }
 
-/* â”€â”€â”€ Stats Card Enhancements â”€â”€â”€ */
+/* Stats Card Enhancements */
 .scd-stats-summary {
     display: grid;
     grid-template-columns: 1fr 1fr;

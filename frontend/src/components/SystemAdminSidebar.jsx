@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Building2, Package, LogOut, Globe, MessageSquare, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Building2, Package, LogOut, Globe, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { useState, useEffect, useCallback } from 'react';
+import adminApi from '../services/adminApi';
 import '../css/components/SystemAdminSidebar.css';
 
 const SystemAdminSidebar = () => {
@@ -15,34 +15,73 @@ const SystemAdminSidebar = () => {
         packageRequests: 0
     });
 
-    useEffect(() => {
-        fetchCounts();
-    }, []);
-
-    const fetchCounts = async () => {
+    const fetchCounts = useCallback(async (reason = 'manual') => {
         try {
-            // Fetch pending registrations count for tenants
-            const regRes = await api.get('/registrations');
-            const pendingRegistrations = regRes.data.filter(r => r.status === 'Pending').length;
+            // Use adminApi so SystemAdmin requests always include X-API-KEY
+            const [regRes, packageRes] = await Promise.all([
+                adminApi.get('/registrations'),
+                adminApi.get('/admin/tenants/subscription-change-requests', {
+                    params: { status: 'Pending' }
+                })
+            ]);
 
-            // Fetch pending package change requests count
-            const packageRes = await api.get('/admin/subscription-change-requests');
-            const pendingPackages = packageRes.data.filter(p => p.status === 'Pending').length;
+            const pendingRegistrations = (regRes.data || []).filter(r => r.status === 'Pending').length;
+            const pendingPackages = (packageRes.data || []).filter(p => p.status === 'Pending').length;
 
             // Fetch pending Zalo OA requests count
             // const zaloRes = await api.get('/admin/zalo-requests');
             // const pendingZalo = zaloRes.data.filter(z => z.status === 'Pending').length;
 
-            setCounts({
+            const nextCounts = {
                 tenants: pendingRegistrations,
                 plans: 0,
                 zaloOA: 0,
                 packageRequests: pendingPackages
+            };
+
+            setCounts(nextCounts);
+            console.debug('[SystemAdminSidebar] badge counts updated', {
+                reason,
+                ...nextCounts
             });
         } catch (error) {
-            console.error('Error fetching counts:', error);
+            console.warn('[SystemAdminSidebar] failed to refresh badge counts', {
+                reason,
+                error: error?.response?.data || error?.message || error
+            });
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchCounts('mount');
+
+        const intervalId = window.setInterval(() => {
+            fetchCounts('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchCounts('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchCounts('tab-visible');
+            }
+        };
+        const handleManualRefresh = () => fetchCounts('custom-event');
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('sysadmin-badge-refresh', handleManualRefresh);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('sysadmin-badge-refresh', handleManualRefresh);
+        };
+    }, [fetchCounts]);
+
+    useEffect(() => {
+        fetchCounts('route-change');
+    }, [location.pathname, fetchCounts]);
 
     const menuItems = [
         { path: '/sysadmin/dashboard', icon: LayoutDashboard, label: 'Tổng Quan', count: 0 },
