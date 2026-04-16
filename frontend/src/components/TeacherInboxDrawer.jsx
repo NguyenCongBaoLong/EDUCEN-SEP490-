@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Inbox, X, ArrowLeft, Clock, MailOpen, CheckCircle, MessageSquare } from 'lucide-react';
 import api from '../services/api';
 import '../css/components/TeacherInboxDrawer.css';
@@ -22,6 +22,10 @@ const TeacherInboxDrawer = () => {
             const res = await api.get('/support-requests/my');
             const data = res.data || [];
             setRequests(data);
+            setSelectedMsg((prev) => {
+                if (!prev?.id) return null;
+                return data.find((r) => r?.id === prev.id) || null;
+            });
             console.debug('[TeacherInboxDrawer] refreshed inbox badge', {
                 reason,
                 total: data.length,
@@ -121,7 +125,7 @@ const TeacherInboxDrawer = () => {
                 {/* Body */}
                 <div className="tid-drawer-body">
                     {selectedMsg ? (
-                        /* ── Message Detail ── */
+                        /* â”€â”€ Message Detail â”€â”€ */
                         <div className="tid-detail">
                             <div className="tid-detail-sender-row">
                                 <div className="tid-detail-avatar">T</div>
@@ -167,7 +171,7 @@ const TeacherInboxDrawer = () => {
                             )}
                         </div>
                     ) : (
-                        /* ── Message List ── */
+                        /* â”€â”€ Message List â”€â”€ */
                         <div>
                             {messages.length === 0 ? (
                                 <div className="tid-empty">
@@ -215,3 +219,5 @@ const TeacherInboxDrawer = () => {
 };
 
 export default TeacherInboxDrawer;
+
+

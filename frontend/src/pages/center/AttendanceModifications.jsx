@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { ClipboardCheck, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -13,9 +13,9 @@ const AttendanceModifications = () => {
 
     const getAttendanceStatusMeta = (status) => {
         const normalized = (status || '').toLowerCase();
-        if (normalized === 'present') return { label: 'Có mặt', className: 'present' };
-        if (normalized === 'absent') return { label: 'Vắng mặt', className: 'absent' };
-        return { label: 'Chưa điểm danh', className: 'pending' };
+        if (normalized === 'present') return { label: 'CÃ³ máº·t', className: 'present' };
+        if (normalized === 'absent') return { label: 'Váº¯ng máº·t', className: 'absent' };
+        return { label: 'ChÆ°a Ä‘iá»ƒm danh', className: 'pending' };
     };
 
     const loadAttendanceRequests = useCallback(async (reason = 'manual') => {
@@ -28,10 +28,14 @@ const AttendanceModifications = () => {
                 data = data?.data || [];
             }
             setAttendanceRequests(data);
+            setSelectedRequest((prev) => {
+                if (!prev?.requestId) return null;
+                return data.find((r) => r?.requestId === prev.requestId) || null;
+            });
             console.debug('[AttendanceModifications] refreshed pending requests', { reason, total: data.length });
         } catch (error) {
             console.error('Error loading attendance requests:', error);
-            toast.error('Không thể tải yêu cầu sửa điểm danh');
+            toast.error('KhÃ´ng thá»ƒ táº£i yÃªu cáº§u sá»­a Ä‘iá»ƒm danh');
         } finally {
             setAttendanceRequestsLoading(false);
         }
@@ -65,12 +69,12 @@ const AttendanceModifications = () => {
         setProcessingRequest(true);
         try {
             await api.put(`/attendance/modification-requests/${requestId}/approve`, { newStatus });
-            toast.success('Đã duyệt yêu cầu và cập nhật điểm danh');
+            toast.success('ÄÃ£ duyá»‡t yÃªu cáº§u vÃ  cáº­p nháº­t Ä‘iá»ƒm danh');
             loadAttendanceRequests('approve');
             window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             console.error('Error approving request:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi duyệt yêu cầu');
+            toast.error(error.response?.data?.message || 'Lá»—i khi duyá»‡t yÃªu cáº§u');
         } finally {
             setProcessingRequest(false);
         }
@@ -80,12 +84,12 @@ const AttendanceModifications = () => {
         setProcessingRequest(true);
         try {
             await api.put(`/attendance/modification-requests/${requestId}/reject`, { reviewNote: note });
-            toast.success('Đã từ chối yêu cầu');
+            toast.success('ÄÃ£ tá»« chá»‘i yÃªu cáº§u');
             loadAttendanceRequests('reject');
             window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             console.error('Error rejecting request:', error);
-            toast.error(error.response?.data?.message || 'Lỗi khi từ chối yêu cầu');
+            toast.error(error.response?.data?.message || 'Lá»—i khi tá»« chá»‘i yÃªu cáº§u');
         } finally {
             setProcessingRequest(false);
         }
@@ -101,16 +105,16 @@ const AttendanceModifications = () => {
                     <header className="mgmt-header" style={{ marginBottom: '1rem' }}>
                         <div className="mgmt-title-area">
                             <div className="mgmt-title-row">
-                                <h1 className="mgmt-page-title">Sửa điểm danh</h1>
+                                <h1 className="mgmt-page-title">Sá»­a Ä‘iá»ƒm danh</h1>
                                 {pendingCount > 0 && (
                                     <span className="mgmt-badge">
                                         <AlertCircle size={14} />
-                                        {pendingCount} chờ duyệt
+                                        {pendingCount} chá» duyá»‡t
                                     </span>
                                 )}
                             </div>
                             <p className="mgmt-subtitle">
-                                Phê duyệt các yêu cầu thay đổi điểm danh từ giáo viên.
+                                PhÃª duyá»‡t cÃ¡c yÃªu cáº§u thay Ä‘á»•i Ä‘iá»ƒm danh tá»« giÃ¡o viÃªn.
                             </p>
                         </div>
                     </header>
@@ -119,21 +123,21 @@ const AttendanceModifications = () => {
                         {attendanceRequestsLoading ? (
                             <div className="adm-attendance-loading" style={{ textAlign: 'center', padding: '4rem', color: '#6b7280' }}>
                                 <div className="loading-spinner"></div>
-                                <p style={{ marginTop: '1rem' }}>Đang tải yêu cầu...</p>
+                                <p style={{ marginTop: '1rem' }}>Äang táº£i yÃªu cáº§u...</p>
                             </div>
                         ) : attendanceRequests.length === 0 ? (
                             <div className="adm-attendance-empty" style={{ textAlign: 'center', padding: '5rem', background: 'white', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                                 <div style={{ background: '#f9fafb', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                                     <ClipboardCheck size={40} color="#3b82f6" />
                                 </div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>Hoàn tất công việc!</h3>
-                                <p style={{ color: '#6b7280' }}>Hiện tại không có yêu cầu sửa điểm danh nào cần xử lý.</p>
+                                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>HoÃ n táº¥t cÃ´ng viá»‡c!</h3>
+                                <p style={{ color: '#6b7280' }}>Hiá»‡n táº¡i khÃ´ng cÃ³ yÃªu cáº§u sá»­a Ä‘iá»ƒm danh nÃ o cáº§n xá»­ lÃ½.</p>
                             </div>
                         ) : (
                             <div className="adm-attendance-grid">
                                 <section className="adm-attendance-list-panel">
                                     <div className="adm-attendance-list-head">
-                                        <span>DANH SÁCH CHỜ DUYỆT ({attendanceRequests.length})</span>
+                                        <span>DANH SÃCH CHá»œ DUYá»†T ({attendanceRequests.length})</span>
                                     </div>
                                     <div className="adm-attendance-list">
                                         {attendanceRequests.map((req) => (
@@ -144,16 +148,16 @@ const AttendanceModifications = () => {
                                             >
                                                 <div className="adm-attendance-item-top">
                                                     <div>
-                                                        <div className="adm-attendance-student">{req?.studentName || 'Không xác định'}</div>
-                                                        <div className="adm-attendance-class">{req?.className || 'Lớp: ' + (req?.classId || 'N/A')}</div>
+                                                        <div className="adm-attendance-student">{req?.studentName || 'KhÃ´ng xÃ¡c Ä‘á»‹nh'}</div>
+                                                        <div className="adm-attendance-class">{req?.className || 'Lá»›p: ' + (req?.classId || 'N/A')}</div>
                                                     </div>
-                                                    <span className="adm-attendance-pending">Mới</span>
+                                                    <span className="adm-attendance-pending">Má»›i</span>
                                                 </div>
                                                 <div className="adm-attendance-meta">
-                                                    <strong>Buổi:</strong> {req?.sessionDate || 'N/A'}
+                                                    <strong>Buá»•i:</strong> {req?.sessionDate || 'N/A'}
                                                 </div>
                                                 <div className="adm-attendance-meta" style={{ marginTop: '4px' }}>
-                                                    <strong>Yêu cầu:</strong> <span style={{ color: req?.requestedStatus === 'present' ? '#059669' : '#dc2626' }}>{req?.requestedStatus === 'present' ? 'CÓ MẶT' : 'VẮNG'}</span>
+                                                    <strong>YÃªu cáº§u:</strong> <span style={{ color: req?.requestedStatus === 'present' ? '#059669' : '#dc2626' }}>{req?.requestedStatus === 'present' ? 'CÃ“ Máº¶T' : 'Váº®NG'}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -166,40 +170,40 @@ const AttendanceModifications = () => {
                                             <div style={{ marginBottom: '1.5rem' }}>
                                                 <h3 className="adm-attendance-detail-title">
                                                     <AlertCircle size={20} color="#3b82f6" />
-                                                    Chi Tiết Yêu Cầu
+                                                    Chi Tiáº¿t YÃªu Cáº§u
                                                 </h3>
                                             </div>
 
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '1rem', marginBottom: '1.5rem' }}>
                                                 <div className="adm-attendance-field compact">
-                                                    <div className="adm-attendance-field-label">Học sinh</div>
+                                                    <div className="adm-attendance-field-label">Há»c sinh</div>
                                                     <div className="adm-attendance-field-value" style={{ fontSize: '0.85rem' }}>{selectedRequest?.studentName}</div>
                                                 </div>
                                                 <div className="adm-attendance-field compact">
-                                                    <div className="adm-attendance-field-label">Lớp & Buổi</div>
+                                                    <div className="adm-attendance-field-label">Lá»›p & Buá»•i</div>
                                                     <div className="adm-attendance-field-value" style={{ fontSize: '0.85rem' }}>
                                                         {selectedRequest?.className && selectedRequest.className.length > 20 ? selectedRequest.className.substring(0, 17) + '...' : selectedRequest?.className} &bull; {selectedRequest?.sessionDate}
                                                     </div>
                                                 </div>
                                                 <div className="adm-attendance-field compact">
-                                                    <div className="adm-attendance-field-label">Người gửi & Lúc gửi</div>
+                                                    <div className="adm-attendance-field-label">NgÆ°á»i gá»­i & LÃºc gá»­i</div>
                                                     <div className="adm-attendance-field-value" style={{ fontSize: '0.75rem', color: '#6b7280' }}>
                                                         {selectedRequest?.requestedByUserName} &bull; {selectedRequest?.requestedAt}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="adm-attendance-field-label">Thay đổi trạng thái</div>
+                                            <div className="adm-attendance-field-label">Thay Ä‘á»•i tráº¡ng thÃ¡i</div>
                                             <div className="adm-attendance-flow compact">
                                                 <div style={{ textAlign: 'center' }}>
-                                                    <div className="adm-attendance-flow-label" style={{ marginBottom: '0.25rem' }}>Hiện tại</div>
+                                                    <div className="adm-attendance-flow-label" style={{ marginBottom: '0.25rem' }}>Hiá»‡n táº¡i</div>
                                                     <span className={`adm-attendance-status-badge ${getAttendanceStatusMeta(selectedRequest?.currentStatus || selectedRequest?.originalStatus).className}`}>
                                                         {getAttendanceStatusMeta(selectedRequest?.currentStatus || selectedRequest?.originalStatus).label}
                                                     </span>
                                                 </div>
-                                                <span className="adm-attendance-flow-arrow" style={{ fontSize: '1.25rem' }}>➜</span>
+                                                <span className="adm-attendance-flow-arrow" style={{ fontSize: '1.25rem' }}>âžœ</span>
                                                 <div style={{ textAlign: 'center' }}>
-                                                    <div className="adm-attendance-flow-label" style={{ marginBottom: '0.25rem' }}>Yêu cầu mới</div>
+                                                    <div className="adm-attendance-flow-label" style={{ marginBottom: '0.25rem' }}>YÃªu cáº§u má»›i</div>
                                                     <span className={`adm-attendance-status-badge ${getAttendanceStatusMeta(selectedRequest?.requestedStatus).className}`} style={{ boxShadow: '0 0 10px rgba(59, 130, 246, 0.2)', border: '1px solid #3b82f6' }}>
                                                         {getAttendanceStatusMeta(selectedRequest?.requestedStatus).label}
                                                     </span>
@@ -207,8 +211,8 @@ const AttendanceModifications = () => {
                                             </div>
 
                                             <div className="adm-attendance-field compact">
-                                                <div className="adm-attendance-field-label">Lý do</div>
-                                                <div className="adm-attendance-reason compact">{selectedRequest?.reason || 'Không có lý do.'}</div>
+                                                <div className="adm-attendance-field-label">LÃ½ do</div>
+                                                <div className="adm-attendance-reason compact">{selectedRequest?.reason || 'KhÃ´ng cÃ³ lÃ½ do.'}</div>
                                             </div>
 
                                             <div className="adm-attendance-actions compact">
@@ -218,7 +222,7 @@ const AttendanceModifications = () => {
                                                     className="adm-attendance-btn approve"
                                                 >
                                                     <CheckCircle size={18} />
-                                                    Duyệt (CÓ MẶT)
+                                                    Duyá»‡t (CÃ“ Máº¶T)
                                                 </button>
                                                 <button
                                                     onClick={() => handleApproveAttendanceRequest(selectedRequest.requestId, 'absent')}
@@ -226,14 +230,14 @@ const AttendanceModifications = () => {
                                                     className="adm-attendance-btn reject-approve"
                                                 >
                                                     <XCircle size={18} />
-                                                    Duyệt (VẮNG)
+                                                    Duyá»‡t (Váº®NG)
                                                 </button>
                                                 <button
-                                                    onClick={() => handleRejectAttendanceRequest(selectedRequest.requestId, 'Yêu cầu không được chấp nhận')}
+                                                    onClick={() => handleRejectAttendanceRequest(selectedRequest.requestId, 'YÃªu cáº§u khÃ´ng Ä‘Æ°á»£c cháº¥p nháº­n')}
                                                     disabled={processingRequest}
                                                     className="adm-attendance-btn deny"
                                                 >
-                                                    Từ chối
+                                                    Tá»« chá»‘i
                                                 </button>
                                             </div>
                                         </div>
@@ -242,8 +246,8 @@ const AttendanceModifications = () => {
                                             <div style={{ background: '#f3f4f6', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
                                                 <ClipboardCheck size={32} color="#9ca3af" />
                                             </div>
-                                            <div style={{ fontWeight: 600, color: '#4b5563' }}>Chọn một yêu cầu từ danh sách bên trái</div>
-                                            <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Nội dung chi tiết sẽ hiện ra tại đây</div>
+                                            <div style={{ fontWeight: 600, color: '#4b5563' }}>Chá»n má»™t yÃªu cáº§u tá»« danh sÃ¡ch bÃªn trÃ¡i</div>
+                                            <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Ná»™i dung chi tiáº¿t sáº½ hiá»‡n ra táº¡i Ä‘Ã¢y</div>
                                         </div>
                                     )}
                                 </section>
@@ -257,3 +261,5 @@ const AttendanceModifications = () => {
 };
 
 export default AttendanceModifications;
+
+

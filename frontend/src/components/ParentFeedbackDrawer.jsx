@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
     Inbox, X, ArrowLeft, Send, MessageSquare, CheckCircle,
     Clock, Star, AlertCircle, MailOpen
@@ -9,13 +9,13 @@ import '../css/pages/parent/ParentFeedback.css';
 import '../css/components/TeacherInboxDrawer.css'; // reuse drawer shell styles
 
 const CATEGORIES = [
-    'Chất lượng giảng dạy',
-    'Cơ sở vật chất',
-    'Lịch học & Thời khóa biểu',
-    'Học phí & Thanh toán',
-    'Thái độ nhân viên',
-    'Kết quả học tập của con',
-    'Khác',
+    'Cháº¥t lÆ°á»£ng giáº£ng dáº¡y',
+    'CÆ¡ sá»Ÿ váº­t cháº¥t',
+    'Lá»‹ch há»c & Thá»i khÃ³a biá»ƒu',
+    'Há»c phÃ­ & Thanh toÃ¡n',
+    'ThÃ¡i Ä‘á»™ nhÃ¢n viÃªn',
+    'Káº¿t quáº£ há»c táº­p cá»§a con',
+    'KhÃ¡c',
 ];
 
 const StarRating = ({ value, onChange }) => (
@@ -31,17 +31,17 @@ const StarRating = ({ value, onChange }) => (
             </button>
         ))}
         <span className="pf-star-label">
-            {value === 0 ? 'Chưa đánh giá' : value === 1 ? 'Rất không hài lòng' : value === 2 ? 'Không hài lòng' : value === 3 ? 'Bình thường' : value === 4 ? 'Hài lòng' : 'Rất hài lòng'}
+            {value === 0 ? 'ChÆ°a Ä‘Ã¡nh giÃ¡' : value === 1 ? 'Ráº¥t khÃ´ng hÃ i lÃ²ng' : value === 2 ? 'KhÃ´ng hÃ i lÃ²ng' : value === 3 ? 'BÃ¬nh thÆ°á»ng' : value === 4 ? 'HÃ i lÃ²ng' : 'Ráº¥t hÃ i lÃ²ng'}
         </span>
     </div>
 );
 
 const StatusBadge = ({ status }) => {
     if (status === 'Answered')
-        return <span className="pf-status-badge replied"><MessageSquare size={13} /> Đã trả lời</span>;
+        return <span className="pf-status-badge replied"><MessageSquare size={13} /> ÄÃ£ tráº£ lá»i</span>;
     if (status === 'Read' || status === 'Pending')
-        return <span className="pf-status-badge read"><CheckCircle size={13} /> Đã xem</span>;
-    return <span className="pf-status-badge pending"><Clock size={13} /> Chờ xử lý</span>;
+        return <span className="pf-status-badge read"><CheckCircle size={13} /> ÄÃ£ xem</span>;
+    return <span className="pf-status-badge pending"><Clock size={13} /> Chá» xá»­ lÃ½</span>;
 };
 
 const formatDate = (iso) => {
@@ -53,11 +53,11 @@ const formatDate = (iso) => {
 const parseTitle = (title) => {
     const match = title?.match(/^\[(.+?)\]\s*(.*)$/);
     if (match) return { category: match[1], subject: match[2] };
-    return { category: 'Khác', subject: title };
+    return { category: 'KhÃ¡c', subject: title };
 };
 
 const parseContent = (content) => {
-    const match = content?.match(/^Đánh giá:\s*(\d+)\/5\s*\n---\n([\s\S]*)$/);
+    const match = content?.match(/^ÄÃ¡nh giÃ¡:\s*(\d+)\/5\s*\n---\n([\s\S]*)$/);
     if (match) return { rating: parseInt(match[1]), body: match[2] };
     return { rating: 0, body: content };
 };
@@ -86,13 +86,17 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
             const res = await api.get('/support-requests/my');
             const data = res.data || [];
             setFeedbacks(data);
+            setSelectedFb((prev) => {
+                if (!prev?.id) return null;
+                return data.find((f) => f?.id === prev.id) || null;
+            });
             console.debug('[ParentFeedbackDrawer] refreshed inbox badge', {
                 reason,
                 total: data.length,
                 unread: data.filter(f => f.adminResponse && !f.isReadByUser).length
             });
         } catch {
-            toast.error('Không thể tải danh sách phản hồi.');
+            toast.error('KhÃ´ng thá»ƒ táº£i danh sÃ¡ch pháº£n há»“i.');
         } finally {
             setLoading(false);
         }
@@ -141,10 +145,10 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
 
     const validate = () => {
         const e = {};
-        if (!form.category) e.category = 'Vui lòng chọn danh mục.';
-        if (!form.subject.trim()) e.subject = 'Vui lòng nhập tiêu đề.';
-        if (!form.content.trim() || form.content.trim().length < 20) e.content = 'Nội dung phải có ít nhất 20 ký tự.';
-        if (form.rating === 0) e.rating = 'Vui lòng chọn mức đánh giá.';
+        if (!form.category) e.category = 'Vui lÃ²ng chá»n danh má»¥c.';
+        if (!form.subject.trim()) e.subject = 'Vui lÃ²ng nháº­p tiÃªu Ä‘á».';
+        if (!form.content.trim() || form.content.trim().length < 20) e.content = 'Ná»™i dung pháº£i cÃ³ Ã­t nháº¥t 20 kÃ½ tá»±.';
+        if (form.rating === 0) e.rating = 'Vui lÃ²ng chá»n má»©c Ä‘Ã¡nh giÃ¡.';
         return e;
     };
 
@@ -156,15 +160,15 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
         setSubmitting(true);
         try {
             const title = `[${form.category}] ${form.subject}`;
-            const content = `Đánh giá: ${form.rating}/5\n---\n${form.content}`;
+            const content = `ÄÃ¡nh giÃ¡: ${form.rating}/5\n---\n${form.content}`;
             await api.post('/support-requests', { Title: title, Content: content });
-            toast.success('Phản hồi đã được gửi thành công!');
+            toast.success('Pháº£n há»“i Ä‘Ã£ Ä‘Æ°á»£c gá»­i thÃ nh cÃ´ng!');
             setForm(EMPTY_FORM);
             setErrors({});
             setView('list');
             await fetchFeedbacks('submit');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Gửi phản hồi thất bại.');
+            toast.error(err.response?.data?.message || 'Gá»­i pháº£n há»“i tháº¥t báº¡i.');
         } finally {
             setSubmitting(false);
         }
@@ -184,7 +188,7 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
             {!hideTrigger && (
                 <button className="tid-trigger-btn" onClick={() => setOpen(true)}>
                     <Inbox size={16} />
-                    Hộp thư
+                    Há»™p thÆ°
                     {unreadCount > 0 && (
                         <span className="tid-trigger-badge">{unreadCount}</span>
                     )}
@@ -201,12 +205,12 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                 <div className="tid-drawer-header">
                     {view !== 'list' ? (
                         <button className="tid-back-btn" onClick={() => { setView('list'); setSelectedFb(null); }}>
-                            <ArrowLeft size={16} /> Quay lại
+                            <ArrowLeft size={16} /> Quay láº¡i
                         </button>
                     ) : (
                         <div className="tid-drawer-title">
                             <Inbox size={18} />
-                            <span>Hộp thư</span>
+                            <span>Há»™p thÆ°</span>
                             {unreadCount > 0 && (
                                 <span className="tid-drawer-title-badge">{unreadCount}</span>
                             )}
@@ -220,7 +224,7 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                 {/* Body */}
                 <div className="tid-drawer-body">
 
-                    {/* ── LIST VIEW ── */}
+                    {/* â”€â”€ LIST VIEW â”€â”€ */}
                     {view === 'list' && (
                         <div>
                             {/* Send new feedback button */}
@@ -231,11 +235,11 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
 
                             {/* Feedback history */}
                             {loading ? (
-                                <div className="tid-empty"><p>Đang tải...</p></div>
+                                <div className="tid-empty"><p>Äang táº£i...</p></div>
                             ) : feedbacks.length === 0 ? (
                                 <div className="tid-empty">
                                     <MailOpen size={40} strokeWidth={1} />
-                                    <p>Chưa có phản hồi nào được gửi.</p>
+                                    <p>ChÆ°a cÃ³ pháº£n há»“i nÃ o Ä‘Æ°á»£c gá»­i.</p>
                                 </div>
                             ) : feedbacks.map(fb => {
                                 const { category, subject } = parseTitle(fb.title);
@@ -276,7 +280,7 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                     {/* FORM VIEW REMOVED - Handled by ParentFeedbackModal */}
 
 
-                    {/* ── DETAIL VIEW ── */}
+                    {/* â”€â”€ DETAIL VIEW â”€â”€ */}
                     {view === 'detail' && selectedFb && (() => {
                         const { category, subject } = parseTitle(selectedFb.title);
                         const { rating, body } = parseContent(selectedFb.content);
@@ -306,15 +310,15 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                                 {selectedFb.adminResponse ? (
                                     <div className="tid-response-box">
                                         <div className="tid-response-header">
-                                            <CheckCircle size={14} /> Phản hồi từ trung tâm
+                                            <CheckCircle size={14} /> Pháº£n há»“i tá»« trung tÃ¢m
                                         </div>
                                         <p className="tid-response-text">{selectedFb.adminResponse}</p>
-                                        {selectedFb.receiverName && <p className="tid-response-by">Bởi: {selectedFb.receiverName}</p>}
+                                        {selectedFb.receiverName && <p className="tid-response-by">Bá»Ÿi: {selectedFb.receiverName}</p>}
                                     </div>
                                 ) : (
                                     <div className="tid-pending-box">
                                         <MessageSquare size={16} />
-                                        Trung tâm chưa phản hồi. Vui lòng chờ trong ít phút.
+                                        Trung tÃ¢m chÆ°a pháº£n há»“i. Vui lÃ²ng chá» trong Ã­t phÃºt.
                                     </div>
                                 )}
                             </div>
@@ -327,3 +331,5 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
 };
 
 export default ParentFeedbackDrawer;
+
+

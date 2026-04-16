@@ -54,7 +54,10 @@ const ScheduleRequests = () => {
             
             console.log('[ScheduleRequests] Filtered requests:', scheduleChangeRequests.length);
             setRequests(scheduleChangeRequests);
-            setSelectedRequest(null);
+            setSelectedRequest((prev) => {
+                if (!prev?.id) return null;
+                return scheduleChangeRequests.find((r) => r.id === prev.id) || null;
+            });
             console.debug('[ScheduleRequests] refreshed requests', { reason, total: scheduleChangeRequests.length, rawData: data });
         } catch (error) {
             toast.error('Không thể tải danh sách yêu cầu.');
@@ -224,13 +227,8 @@ const ScheduleRequests = () => {
                 return;
             }
             
-            // TẠM THỜI: Chỉ duyệt yêu cầu, không cập nhật schedule do backend lỗi ClassSession/Attendance
-            // Backend cần sửa lỗi 409 Conflict về ClassSession và Attendance relationship
-            console.log('[ScheduleRequests] TEMPORARY: Approving without updating schedule due to backend issue');
-            
-            // Phê duyệt yêu cầu
-            await notificationService.approveSupportRequest(requestId, 'Đã duyệt yêu cầu đổi lịch. (Lịch sẽ được cập nhật tay do backend lỗi)');
-            toast.success('Đã duyệt yêu cầu đổi lịch. (Lịch chưa được cập nhật do backend lỗi)');
+            await notificationService.approveSupportRequest(requestId, 'Đã duyệt yêu cầu đổi lịch.');
+            toast.success('Đã duyệt và cập nhật lịch dạy thành công.');
             window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
             fetchRequests('approve');
         } catch (error) {
@@ -282,6 +280,28 @@ const ScheduleRequests = () => {
             newRoom: newRoomMatch ? newRoomMatch[1].trim() : null,
             requestedRoomId: requestedRoomIdMatch ? Number(requestedRoomIdMatch[1]) : null
         };
+    };
+
+    const extractDisplayReason = (content) => {
+        if (!content) return 'Không có nội dung.';
+
+        const reasonMatch = content.match(/Lý do\s*:\s*([^\n]+)/i);
+        if (reasonMatch?.[1]?.trim()) return reasonMatch[1].trim();
+
+        const cleanContent = content
+            .replace(/Type:\s*schedule_change\s*\n?/gi, '')
+            .replace(/ClassId:\s*\d+\n?/gi, '')
+            .replace(/CurrentSlot:\s*[^\n]+\n?/gi, '')
+            .replace(/RequestedSlot:\s*[^\n]+\n?/gi, '')
+            .replace(/RequestedRoomId:\s*\d+\n?/gi, '')
+            .replace(/Slot hiện tại:\s*[^\n]+\n?/gi, '')
+            .replace(/Slot mới:\s*[^\n]+\n?/gi, '')
+            .replace(/Slot đề xuất:\s*[^\n]+\n?/gi, '')
+            .replace(/Phòng mới:\s*[^\n]+\n?/gi, '')
+            .replace(/Loại yêu cầu:\s*[^\n]+\n?/gi, '')
+            .trim();
+
+        return cleanContent || 'Không có nội dung.';
     };
 
     const getDayOfWeekFromLabel = (dayLabel) => {
@@ -452,12 +472,7 @@ const ScheduleRequests = () => {
                                                             <div>
                                                                 <span style={{ color: '#64748b', fontWeight: 600 }}>Môn học:</span>
                                                                 <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.subjectName || selectedClassData.SubjectName || 'N/A'}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span style={{ color: '#64748b', fontWeight: 600 }}>Số học sinh:</span>
-                                                                <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.studentCount || selectedClassData.StudentCount || 0}</span>
-                                                            </div>
-                                                            {/* <div>
+                                                            </div>{/* <div>
                                                                 <span style={{ color: '#64748b', fontWeight: 600 }}>Trạng thái:</span>
                                                                 <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.status || selectedClassData.Status || 'N/A'}</span>
                                                             </div> */}
@@ -482,8 +497,8 @@ const ScheduleRequests = () => {
                                                 )}
 
                                                 {(() => {
-                                                    const slotInfo = parseSlotInfo(selectedRequest?.content);
-                                                    console.log('[ScheduleRequests] Content:', selectedRequest?.content);
+                                                    const slotInfo = parseSlotInfo(selectedRequest?.content || selectedRequest?.Content || '');
+                                                    console.log('[ScheduleRequests] Content:', selectedRequest?.content || selectedRequest?.Content);
                                                     console.log('[ScheduleRequests] Parsed slotInfo:', slotInfo);
                                                     console.log('[ScheduleRequests] Selected class data:', selectedClassData);
                                                     
@@ -554,17 +569,9 @@ const ScheduleRequests = () => {
 
                                                 <div style={{ marginBottom: '1rem' }}>
                                                     <div className="adm-schedule-field-label">Lý do</div>
-                                                    <div className="adm-schedule-reason compact">{(() => {
-                                                        const content = selectedRequest?.content || '';
-                                                        // Loáº¡i bá»\u001f cÃ¡c thÃ´ng tin slot khá»\u001fi ná»\u0019i dung Ä'Ã¡\u001f hiá»\u0017n thá»\u0019 lÃ½ do sáº¡ch hÆ¡n
-                                                        const cleanContent = content
-                                                            .replace(/ClassId:\s*\d+\n?/g, '')
-                                                            .replace(/Slot hiá»\u0011n táº¡i: [^\n]+\n?/g, '')
-                                                            .replace(/Slot má»\u001bi: [^\n]+\n?/g, '')
-                                                            .replace(/Loáº¡i yÃªu cáº§u: [^\n]+\n?/g, '')
-                                                            .trim();
-                                                        return cleanContent || 'KhÃ´ng cÃ³ ná»\u0019i dung.';
-                                                    })()}</div>
+                                                    <div className="adm-schedule-reason compact">
+                                                        {extractDisplayReason(selectedRequest?.content || selectedRequest?.Content || '')}
+                                                    </div>
                                                 </div>
 
                                                 <div style={{ marginBottom: '1rem' }}>
@@ -621,3 +628,4 @@ const ScheduleRequests = () => {
 };
 
 export default ScheduleRequests;
+
