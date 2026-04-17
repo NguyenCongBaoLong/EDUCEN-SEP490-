@@ -46,6 +46,7 @@ const AttendanceModal = ({
     });
     const [requestedStatuses, setRequestedStatuses] = useState({});
     const [submittingRequest, setSubmittingRequest] = useState(false);
+    const [selectedStudentsForRequest, setSelectedStudentsForRequest] = useState([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -174,9 +175,6 @@ const AttendanceModal = ({
             setSubmittingRequest(false);
         }
     };
-
-    // State for selected students in request form
-    const [selectedStudentsForRequest, setSelectedStudentsForRequest] = useState([]);
 
     const handleSelectAllForRequest = () => {
         if (selectedStudentsForRequest.length === students.length) {

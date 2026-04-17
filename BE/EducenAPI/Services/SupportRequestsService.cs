@@ -67,7 +67,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.Id == id && x.SenderId == userId);
 
             if (entity == null)
-                throw new Exception("Khong tim thay request.");
+                throw new Exception("Không tìm thấy request.");
 
             return MapToDto(entity);
         }
@@ -93,7 +93,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (entity == null)
-                throw new Exception("Khong tim thay request.");
+                throw new Exception("Không tìm thấy request.");
 
             return MapToDto(entity);
         }
@@ -107,7 +107,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (entity == null)
-                throw new Exception("Khong tim thay request.");
+                throw new Exception("Không tìm thấy request.");
 
             entity.ReceiverId = adminId;
             entity.AdminResponse = dto.AdminResponse;
@@ -128,7 +128,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (entity == null)
-                throw new Exception("Khong tim thay request.");
+                throw new Exception("Không tìm thấy request.");
 
             if (IsScheduleChangeRequest(entity))
             {
@@ -137,7 +137,7 @@ namespace EducenAPI.Services
 
             entity.ReceiverId = adminId;
             entity.Status = "Approved";
-            entity.AdminResponse = string.IsNullOrWhiteSpace(note) ? "Yeu cau da duoc duyet." : note.Trim();
+            entity.AdminResponse = string.IsNullOrWhiteSpace(note) ? "Yêu cầu đã được duyệt." : note.Trim();
             entity.IsRead = true;
 
             await _context.SaveChangesAsync();
@@ -147,7 +147,7 @@ namespace EducenAPI.Services
         public async Task<SupportRequestResponseDto> RejectAsync(int adminId, int id, string reason)
         {
             if (string.IsNullOrWhiteSpace(reason))
-                throw new Exception("Ly do tu choi la bat buoc.");
+                throw new Exception("Lý do từ chối là bắt buộc.");
 
             var entity = await _context.SupportRequests
                 .Include(x => x.Sender)
@@ -156,7 +156,7 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (entity == null)
-                throw new Exception("Khong tim thay request.");
+                throw new Exception("Không tìm thấy request.");
 
             entity.ReceiverId = adminId;
             entity.Status = "Rejected";
@@ -182,26 +182,26 @@ namespace EducenAPI.Services
         {
             var parsed = ParseScheduleChangeRequest(request.Content);
             if (parsed.ClassId == null)
-                throw new Exception("Khong the duyet: thieu ClassId trong yeu cau doi lich.");
+                throw new Exception("Không thể duyệt: thiếu ClassId trong yêu cầu đổi lịch.");
             if (parsed.NewDayOfWeek == null || parsed.NewStartTime == null || parsed.NewEndTime == null)
-                throw new Exception("Khong the duyet: thieu thong tin slot moi trong yeu cau.");
+                throw new Exception("Không thể duyệt: thiếu thông tin slot mới trong yêu cầu.");
             if (parsed.NewStartTime >= parsed.NewEndTime)
-                throw new Exception("Khong the duyet: gio bat dau phai nho hon gio ket thuc.");
+                throw new Exception("Không thể duyệt: giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
 
             var classEntity = await _context.Classes
                 .Include(c => c.Schedules)
                 .FirstOrDefaultAsync(c => c.ClassId == parsed.ClassId.Value);
             if (classEntity == null)
-                throw new Exception("Khong the duyet: khong tim thay lop hoc.");
+                throw new Exception("Không thể duyệt: không tìm thấy lớp học.");
 
             var senderId = request.SenderId;
             var isOwner = classEntity.TeacherId == senderId || classEntity.AssistantId == senderId;
             if (!isOwner)
-                throw new Exception("Khong the duyet: nguoi gui khong thuoc lop hoc nay.");
+                throw new Exception("Không thể duyệt: người gửi không thuộc lớp học này.");
 
             var targetSchedule = ResolveTargetSchedule(classEntity.Schedules, parsed);
             if (targetSchedule == null)
-                throw new Exception("Khong the duyet: khong tim thay slot hien tai de cap nhat.");
+                throw new Exception("Không thể duyệt: không tìm thấy slot hiện tại để cập nhật.");
 
             var teacherIds = new[] { classEntity.TeacherId, classEntity.AssistantId }
                 .Where(x => x.HasValue)
@@ -221,7 +221,7 @@ namespace EducenAPI.Services
                 .AnyAsync();
 
             if (hasTeacherConflict)
-                throw new Exception("Khong the duyet: giao vien/ta bi trung lich.");
+                throw new Exception("Không thể duyệt: giáo viên bị trùng lịch.");
 
             var targetRoomId = parsed.RequestedRoomId ?? targetSchedule.RoomId ?? classEntity.RoomId;
             if (targetRoomId.HasValue)
@@ -237,7 +237,7 @@ namespace EducenAPI.Services
                     .AnyAsync();
 
                 if (hasRoomConflict)
-                    throw new Exception("Khong the duyet: phong hoc bi trung lich.");
+                    throw new Exception("Không thể duyệt: phòng học bị trùng lịch.");
             }
 
             targetSchedule.DayOfWeek = parsed.NewDayOfWeek.Value;

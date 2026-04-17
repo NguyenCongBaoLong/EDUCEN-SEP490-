@@ -1166,6 +1166,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         onClose={handleClose}
                         onSave={handleSave}
                         session={selectedSession}
+                        students={students}
+                        sessionId={selectedSession.sessionId}
                         classId={classData.id}
                         canAttend={canAttend}
                         lockMessage={lockMessage}
