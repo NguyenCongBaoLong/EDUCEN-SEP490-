@@ -120,6 +120,7 @@ namespace EducenAPI.Controllers
             var ledger = await _adminDbContext.TenantCreditLedgers
                 .Where(l => l.TenantId == tenantId)
                 .OrderByDescending(l => l.CreatedAt)
+                .ThenByDescending(l => l.LedgerId)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

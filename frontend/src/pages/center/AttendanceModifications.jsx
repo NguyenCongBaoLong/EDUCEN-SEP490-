@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ClipboardCheck, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+﻿import { useState, useEffect, useCallback } from 'react';
+import { ClipboardCheck, CheckCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -93,6 +93,13 @@ const AttendanceModifications = () => {
         } finally {
             setProcessingRequest(false);
         }
+    };
+
+    const getRequestedStatusDisplay = (status) => {
+        const normalized = (status || '').toLowerCase();
+        if (normalized === 'present') return 'CÓ MẶT';
+        if (normalized === 'absent') return 'VẮNG MẶT';
+        return 'CHƯA ĐIỂM DANH';
     };
 
     const pendingCount = attendanceRequests.length;
@@ -217,20 +224,12 @@ const AttendanceModifications = () => {
 
                                             <div className="adm-attendance-actions compact">
                                                 <button
-                                                    onClick={() => handleApproveAttendanceRequest(selectedRequest.requestId, 'present')}
+                                                    onClick={() => handleApproveAttendanceRequest(selectedRequest.requestId, selectedRequest?.requestedStatus)}
                                                     disabled={processingRequest}
                                                     className="adm-attendance-btn approve"
                                                 >
                                                     <CheckCircle size={18} />
-                                                    Duyệt (CÓ MẶT)
-                                                </button>
-                                                <button
-                                                    onClick={() => handleApproveAttendanceRequest(selectedRequest.requestId, 'absent')}
-                                                    disabled={processingRequest}
-                                                    className="adm-attendance-btn reject-approve"
-                                                >
-                                                    <XCircle size={18} />
-                                                    Duyệt (VẮNG)
+                                                    Duyệt ({getRequestedStatusDisplay(selectedRequest?.requestedStatus)})
                                                 </button>
                                                 <button
                                                     onClick={() => handleRejectAttendanceRequest(selectedRequest.requestId, 'Yêu cầu không được chấp nhận')}

@@ -9,6 +9,6 @@ namespace EducenAPI.Services.Interface
 
         Task<List<TenantRegistration>> GetAllAsync();
 
-        Task<bool> UpdateStatusAsync(string id, string status);
+        Task<bool> UpdateStatusAsync(string id, string status, string? reason = null);
     }
 }

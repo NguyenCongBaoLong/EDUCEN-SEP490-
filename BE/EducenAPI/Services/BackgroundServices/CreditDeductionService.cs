@@ -11,6 +11,7 @@ namespace EducenAPI.Services.BackgroundServices
         private readonly ILogger<CreditDeductionService> _logger;
         private readonly IServiceProvider _serviceProvider;
         private static readonly int[] ScheduledHours = new[] { 0, 12 };
+        private static readonly TimeZoneInfo BusinessTimeZone = ResolveBusinessTimeZone();
 
         public CreditDeductionService(
             ILogger<CreditDeductionService> logger,
@@ -30,14 +31,14 @@ namespace EducenAPI.Services.BackgroundServices
             {
                 try
                 {
-                    var localNow = DateTime.Now;
-                    var delay = GetDelayUntilNextScheduledRun(localNow);
-                    var nextRun = localNow.Add(delay);
+                    var utcNow = DateTime.UtcNow;
+                    var delay = GetDelayUntilNextScheduledRun(utcNow);
+                    var nextRunLocal = TimeZoneInfo.ConvertTimeFromUtc(utcNow.Add(delay), BusinessTimeZone);
 
-                    _logger.LogInformation("Next credit deduction scheduled at {NextRun}", nextRun);
+                    _logger.LogInformation("Next credit deduction scheduled at {NextRun} ({TimeZone})", nextRunLocal, BusinessTimeZone.Id);
                     await Task.Delay(delay, stoppingToken);
 
-                    _logger.LogInformation("Running scheduled credit deduction at {Time}", DateTime.Now);
+                    _logger.LogInformation("Running scheduled credit deduction at {Time} ({TimeZone})", TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BusinessTimeZone), BusinessTimeZone.Id);
                     await CheckAndDeductCreditsAsync();
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -60,14 +61,18 @@ namespace EducenAPI.Services.BackgroundServices
                 using var scope = _serviceProvider.CreateScope();
                 var adminDbContext = scope.ServiceProvider.GetRequiredService<AdminDbContext>();
 
-                var now = DateTime.UtcNow.Date;
-                var todayStart = now;
-                var todayEnd = now.AddDays(1);
+                var utcNow = DateTime.UtcNow;
+                var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, BusinessTimeZone);
+                var deductionDate = localNow.Date;
+                var todayStartLocal = deductionDate;
+                var todayEndLocal = deductionDate.AddDays(1);
+                var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayStartLocal, BusinessTimeZone);
+                var todayEndUtc = TimeZoneInfo.ConvertTimeToUtc(todayEndLocal, BusinessTimeZone);
 
                 var activeSubscriptions = await adminDbContext.Subscriptions
                     .Include(s => s.Tenant)
                     .Include(s => s.Plan)
-                    .Where(s => s.Status == "Active" && s.EndDate > now)
+                    .Where(s => s.Status == "Active" && s.EndDate > utcNow)
                     .ToListAsync();
 
                 _logger.LogInformation("Processing {Count} active subscriptions for credit deduction", activeSubscriptions.Count);
@@ -76,7 +81,7 @@ namespace EducenAPI.Services.BackgroundServices
                 {
                     try
                     {
-                        await ProcessSubscriptionDeductionAsync(adminDbContext, subscription, now, todayStart, todayEnd);
+                        await ProcessSubscriptionDeductionAsync(adminDbContext, subscription, deductionDate, todayStartUtc, todayEndUtc);
                     }
                     catch (Exception ex)
                     {
@@ -98,17 +103,17 @@ namespace EducenAPI.Services.BackgroundServices
         private async Task ProcessSubscriptionDeductionAsync(
             AdminDbContext context,
             Subscription subscription,
-            DateTime now,
-            DateTime todayStart,
-            DateTime todayEnd)
+            DateTime deductionDate,
+            DateTime todayStartUtc,
+            DateTime todayEndUtc)
         {
             var todayDeduction = await context.TenantCreditLedgers
                 .AnyAsync(l =>
                     l.TenantId == subscription.TenantId &&
                     l.ReferenceId == subscription.Id &&
                     l.EntryType == "DailyDeduction" &&
-                    l.CreatedAt >= todayStart &&
-                    l.CreatedAt < todayEnd);
+                    l.CreatedAt >= todayStartUtc &&
+                    l.CreatedAt < todayEndUtc);
 
             if (todayDeduction)
             {
@@ -142,7 +147,7 @@ namespace EducenAPI.Services.BackgroundServices
                 ReferenceType = "SubscriptionDeduction",
                 ReferenceId = subscription.Id,
                 BalanceAfter = tenant.CreditBalance,
-                Note = $"Trừ credit hàng ngày cho gói {subscription.Plan.PlanName} (ngày {now:dd/MM/yyyy})"
+                Note = $"Trừ credit hàng ngày cho gói {subscription.Plan.PlanName} (ngày {deductionDate:dd/MM/yyyy})"
             };
             context.TenantCreditLedgers.Add(creditLedger);
 
@@ -191,21 +196,42 @@ namespace EducenAPI.Services.BackgroundServices
             context.PaymentNotifications.Add(notification);
         }
 
-        private static TimeSpan GetDelayUntilNextScheduledRun(DateTime localNow)
+        private static TimeSpan GetDelayUntilNextScheduledRun(DateTime utcNow)
         {
+            var localNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, BusinessTimeZone);
             var nextRun = ScheduledHours
-                .Select(hour => new DateTime(localNow.Year, localNow.Month, localNow.Day, hour, 0, 0, DateTimeKind.Local))
+                .Select(hour => new DateTime(localNow.Year, localNow.Month, localNow.Day, hour, 0, 0, DateTimeKind.Unspecified))
                 .FirstOrDefault(candidate => candidate > localNow);
 
             if (nextRun == default)
             {
                 var firstScheduledHourTomorrow = ScheduledHours.Min();
-                nextRun = new DateTime(localNow.Year, localNow.Month, localNow.Day, firstScheduledHourTomorrow, 0, 0, DateTimeKind.Local)
+                nextRun = new DateTime(localNow.Year, localNow.Month, localNow.Day, firstScheduledHourTomorrow, 0, 0, DateTimeKind.Unspecified)
                     .AddDays(1);
             }
 
-            var delay = nextRun - localNow;
+            var nextRunUtc = TimeZoneInfo.ConvertTimeToUtc(nextRun, BusinessTimeZone);
+            var delay = nextRunUtc - utcNow;
             return delay > TimeSpan.Zero ? delay : TimeSpan.FromSeconds(1);
+        }
+
+        private static TimeZoneInfo ResolveBusinessTimeZone()
+        {
+            foreach (var tzId in new[] { "SE Asia Standard Time", "Asia/Ho_Chi_Minh" })
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById(tzId);
+                }
+                catch (TimeZoneNotFoundException)
+                {
+                }
+                catch (InvalidTimeZoneException)
+                {
+                }
+            }
+
+            return TimeZoneInfo.Local;
         }
     }
 }

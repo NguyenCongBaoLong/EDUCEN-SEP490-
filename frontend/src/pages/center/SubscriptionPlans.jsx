@@ -384,6 +384,21 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
     const formatDate = (value) => new Date(value).toLocaleDateString('vi-VN');
+    const formatDateTime = (value) => new Date(value).toLocaleString('vi-VN', {
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(value || 0);
 
     const formatLedgerNote = (entry) => {
         const raw = (entry?.note || entry?.entryType || '').toString();
@@ -392,6 +407,26 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         const [firstPart] = cleaned.split(' - ');
         return firstPart || cleaned;
     };
+
+    const getLedgerSource = (entry) => {
+        const refType = (entry?.referenceType || '').toString().toLowerCase();
+        if (refType.includes('invoice')) return 'Hóa đơn';
+        if (refType.includes('payment')) return 'Thanh toán';
+        if (refType.includes('subscription')) return 'Gói dịch vụ';
+        if (refType.includes('refund')) return 'Hoàn tiền';
+        if (entry?.amount > 0) return 'Nạp credit';
+        if (entry?.amount < 0) return 'Trừ credit';
+        return 'Điều chỉnh';
+    };
+
+    const sortedCreditLedger = [...creditLedger].sort((a, b) => {
+        const timeA = new Date(a?.createdAt || 0).getTime();
+        const timeB = new Date(b?.createdAt || 0).getTime();
+        if (timeB !== timeA) return timeB - timeA;
+        const idA = (a?.ledgerId || '').toString();
+        const idB = (b?.ledgerId || '').toString();
+        return idB.localeCompare(idA);
+    });
 
     return (
         <div className={hideSidebar ? "subscription-embedded" : "subscription-page"}>
@@ -797,37 +832,42 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>Ngày</th>
+                                                <th>Ngày giờ</th>
+                                                <th>Nguồn</th>
                                                 <th>Loại</th>
-                                                <th style={{ textAlign: 'right' }}>Số tiền</th>
-                                                <th style={{ textAlign: 'right' }}>Sau</th>
+                                                <th style={{ textAlign: 'right' }}>Biến động</th>
+                                                <th style={{ textAlign: 'right' }}>Số dư trước</th>
+                                                <th style={{ textAlign: 'right' }}>Số dư sau giao dịch</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {creditLedger.map((entry) => (
-                                                <tr key={entry.ledgerId || entry.createdAt}>
-                                                    <td>{formatDate(entry.createdAt)}</td>
-                                                    <td>{formatLedgerNote(entry)}</td>
-                                                    <td
-                                                        style={{
-                                                            textAlign: 'right',
-                                                            color: entry.amount > 0 ? '#16a34a' : '#dc2626',
-                                                        }}
-                                                    >
-                                                        {entry.amount > 0 ? '+' : ''}
-                                                        {new Intl.NumberFormat('vi-VN', {
-                                                            style: 'currency',
-                                                            currency: 'VND',
-                                                        }).format(entry.amount)}
-                                                    </td>
-                                                    <td style={{ textAlign: 'right' }}>
-                                                        {new Intl.NumberFormat('vi-VN', {
-                                                            style: 'currency',
-                                                            currency: 'VND',
-                                                        }).format(entry.balanceAfter)}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {sortedCreditLedger.map((entry) => {
+                                                const amount = Number(entry?.amount || 0);
+                                                const balanceAfter = Number(entry?.balanceAfter || 0);
+                                                const balanceBefore = balanceAfter - amount;
+                                                return (
+                                                    <tr key={entry.ledgerId || entry.createdAt}>
+                                                        <td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(entry.createdAt)}</td>
+                                                        <td>{getLedgerSource(entry)}</td>
+                                                        <td>{formatLedgerNote(entry)}</td>
+                                                        <td
+                                                            style={{
+                                                                textAlign: 'right',
+                                                                color: amount > 0 ? '#16a34a' : amount < 0 ? '#dc2626' : '#334155',
+                                                            }}
+                                                        >
+                                                            {amount > 0 ? '+' : ''}
+                                                            {formatCurrency(amount)}
+                                                        </td>
+                                                        <td style={{ textAlign: 'right' }}>
+                                                            {formatCurrency(balanceBefore)}
+                                                        </td>
+                                                        <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                                                            {formatCurrency(balanceAfter)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\services\\backgroundservices\\creditdeductionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:services\\backgroundservices\\creditdeductionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|c:\\default\\fpt\\sep-g58\\code\\educen-sep490-\\be\\educenapi\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{D13D22F5-FCC7-4A5E-AB77-BDDCA3F14D19}|EducenAPI.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
@@ -34,7 +38,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 208,
+          "SelectedChildIndex": 203,
           "Children": [
             {
               "$type": "Bookmark",
@@ -850,7 +854,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "CreditDeductionService.cs",
+              "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\BackgroundServices\\CreditDeductionService.cs",
+              "RelativeDocumentMoniker": "Services\\BackgroundServices\\CreditDeductionService.cs",
+              "ToolTip": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\BackgroundServices\\CreditDeductionService.cs",
+              "RelativeToolTip": "Services\\BackgroundServices\\CreditDeductionService.cs",
+              "ViewState": "AgIAALQAAAAAAAAAAAAAAJAAAAAqAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-18T14:22:24.152Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "StudentImportService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\StudentImportService.cs",
               "RelativeDocumentMoniker": "Services\\StudentImportService.cs",
@@ -862,7 +879,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "StudentsController.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Controllers\\StudentsController.cs",
               "RelativeDocumentMoniker": "Controllers\\StudentsController.cs",
@@ -874,7 +891,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "AttendanceService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\AttendanceService.cs",
               "RelativeDocumentMoniker": "Services\\AttendanceService.cs",
@@ -886,7 +903,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -898,7 +915,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "TenantRegistrationService.cs",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\Services\\TenantRegistrationService.cs",
               "RelativeDocumentMoniker": "Services\\TenantRegistrationService.cs",
@@ -910,7 +927,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\DEFAULT\\FPT\\SEP-G58\\Code\\EDUCEN-SEP490-\\BE\\EducenAPI\\appsettings.json",
               "RelativeDocumentMoniker": "appsettings.json",
@@ -918,8 +935,7 @@
               "RelativeToolTip": "appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-03-26T07:57:09.171Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-26T07:57:09.171Z"
             }
           ]
         },

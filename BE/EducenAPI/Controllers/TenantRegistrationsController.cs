@@ -39,12 +39,12 @@ namespace EducenAPI.Controllers
         // SystemAdmin duyệt hoặc từ chối
         [HttpPut("{id}/status")]
         
-        public async Task<IActionResult> UpdateStatus(string id, string status)
+        public async Task<IActionResult> UpdateStatus(string id, string status, [FromQuery] string? reason = null)
         {
             if (status != "Approved" && status != "Rejected")
                 return BadRequest(new { message = "Trạng thái không hợp lệ. Chỉ chấp nhận 'Approved' hoặc 'Rejected'." });
 
-            var result = await _service.UpdateStatusAsync(id, status);
+            var result = await _service.UpdateStatusAsync(id, status, reason);
 
             if (!result)
                 return NotFound();

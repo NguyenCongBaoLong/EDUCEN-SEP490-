@@ -212,8 +212,8 @@
 .adm-attendance-btn.reject-approve { background: #f59e0b; color: white; }
 .adm-attendance-btn.reject-approve:hover { background: #d97706; transform: translateY(-2px); }
 
-.adm-attendance-btn.deny { background: white; color: #64748b; border: 1px solid #e5e7eb; }
-.adm-attendance-btn.deny:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+.adm-attendance-btn.deny { background: #ef4444; color: #fff; border: 1px solid #ef4444; }
+.adm-attendance-btn.deny:hover { background: #dc2626; color: #fff; border-color: #dc2626; transform: translateY(-2px); }
 
 .adm-attendance-empty-selection {
     height: 100%;
