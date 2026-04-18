@@ -161,6 +161,8 @@ const NotificationMailbox = ({
                             <div className={`inbox-avatar ${selectedMessage.type} ${selectedMessage.priority === 'high' ? 'warning' : ''}`}>
                                 {selectedMessage.type === 'system'
                                     ? (selectedMessage.priority === 'high' ? '⚠️' : '📢')
+                                    : selectedMessage.type === 'subscription' ? '⭐'
+                                    : selectedMessage.type === 'schedule_change' ? <Clock size={18} />
                                     : selectedMessage.type === 'support' ? <ShieldAlert size={18} /> 
                                     : getSenderInitial(selectedMessage.senderName)}
                             </div>
@@ -203,6 +205,8 @@ const NotificationMailbox = ({
                             >
                                 <div className={`inbox-avatar ${msg.type} ${msg.priority === 'high' ? 'warning' : ''}`}>
                                     {msg.type === 'system' ? (msg.priority === 'high' ? '⚠️' : '📢') 
+                                        : msg.type === 'subscription' ? '⭐'
+                                        : msg.type === 'schedule_change' ? <Clock size={16} />
                                         : msg.type === 'support' ? <ShieldAlert size={16} /> 
                                         : getSenderInitial(msg.senderName)}
                                 </div>

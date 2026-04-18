@@ -23,6 +23,7 @@ namespace EducenAPI.Services
             var parents = await _context.Parents
                 .Include(p => p.ParentNavigation)
                 .Include(p => p.Students)
+                    .ThenInclude(s => s.StudentNavigation)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -65,6 +66,8 @@ namespace EducenAPI.Services
         {
             var parent = await _context.Parents
                 .Include(p => p.ParentNavigation)
+                .Include(p => p.Students)
+                    .ThenInclude(s => s.StudentNavigation)
                 .Include(p => p.Students)
                     .ThenInclude(s => s.Classes)
                 .Where(p => p.UserId == id)
@@ -149,6 +152,7 @@ namespace EducenAPI.Services
             if (dto.StudentIds != null && dto.StudentIds.Any())
             {
                 var students = await _context.Students
+                    .Include(s => s.StudentNavigation)
                     .Where(s => dto.StudentIds.Contains(s.UserId))
                     .ToListAsync();
                 foreach (var student in students)

@@ -1195,6 +1195,44 @@
     color: #94a3b8;
 }
 
+/* ─── Admin Reply Box ─── */
+.admin-reply-box {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    animation: dashboardSlideUp 0.3s ease;
+}
+
+.reply-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.reply-header svg {
+    color: #10b981;
+}
+
+.reply-body {
+    font-size: 0.9375rem;
+    color: #334155;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@keyframes dashboardSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 1100px) {
     .adm-attendance-grid {
         grid-template-columns: 1fr;

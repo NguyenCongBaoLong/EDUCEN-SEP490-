@@ -18,7 +18,7 @@ namespace EducenAPI.Models
 
         public string? Features { get; set; }
 
-        public int StorageLimit { get; set; } // GB
+        public int StorageLimit { get; set; } // MB
         public bool IsActive { get; set; } = true;
 
         public bool IsTrial { get; set; } = false;

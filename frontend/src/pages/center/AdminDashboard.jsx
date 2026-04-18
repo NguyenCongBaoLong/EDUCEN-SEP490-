@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
     CheckCircle, XCircle, AlertCircle, TrendingUp, MessageSquare,
@@ -233,9 +233,9 @@ const AdminDashboard = () => {
 
     const handleMarkAsRead = async (message) => {
         try {
-            if (message.type === 'feedback' || message.type === 'support') {
+            if (message.srId) {
                 await notificationService.markSupportRequestAsRead(message.srId);
-            } else {
+            } else if (message.notificationId) {
                 await notificationService.markAsRead(message.notificationId);
             }
             fetchInbox();
@@ -389,7 +389,10 @@ const AdminDashboard = () => {
                                                 : `${((overview.currentStorageMB || 0) / 1024).toFixed(1)} GB`
                                             }
                                             <span style={{ margin: '0 8px', color: '#9ca3af' }}>/</span>
-                                            {`${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`}
+                                            {overview.maxStorageMB < 1024
+                                                ? `${(overview.maxStorageMB || 0).toFixed(0)} MB`
+                                                : `${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`
+                                            }
                                         </>
                                     )}
                                 </span>
@@ -576,6 +579,19 @@ const AdminDashboard = () => {
                 onSelectedMessageChange={setSelectedMessage}
                 onMarkAsRead={handleMarkAsRead}
                 renderDetailExtra={(msg) => {
+                    if (msg?.adminResponse) {
+                        return (
+                            <div className="admin-reply-box">
+                                <div className="reply-header">
+                                    <CheckCircle size={14} /> Phản hồi từ Admin
+                                </div>
+                                <div className="reply-body">
+                                    {msg.adminResponse}
+                                </div>
+                            </div>
+                        );
+                    }
+
                     if (msg?.type === 'feedback' && !msg.adminResponse) {
                         return (
                             <div style={{ marginTop: '1rem' }}>

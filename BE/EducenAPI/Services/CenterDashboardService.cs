@@ -103,11 +103,11 @@ namespace EducenAPI.Services
                         .OrderByDescending(s => s.EndDate)
                         .FirstOrDefaultAsync();
 
-                    if (subscription?.Plan != null)
-                    {
-                        maxUsers = subscription.Plan.LimitUsers;
-                        maxStorageMB = subscription.Plan.StorageLimit * 1024.0; // GB → MB
-                    }
+                        if (subscription?.Plan != null)
+                        {
+                            maxUsers = subscription.Plan.LimitUsers;
+                            maxStorageMB = subscription.Plan.StorageLimit;
+                        }
                 }
             }
             catch
