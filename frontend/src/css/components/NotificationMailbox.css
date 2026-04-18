@@ -395,6 +395,14 @@
 .inbox-avatar.support {
     background: linear-gradient(135deg, #f59e0b, #ef4444);
 }
+
+.inbox-avatar.schedule_change {
+    background: linear-gradient(135deg, #6366f1, #3b82f6);
+}
+
+.inbox-avatar.subscription {
+    background: linear-gradient(135deg, #10b981, #34d399);
+}
  
 .inbox-avatar svg {
     color: white !important;

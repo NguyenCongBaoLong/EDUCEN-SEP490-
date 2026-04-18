@@ -110,9 +110,9 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                                     </div>
                                 </td>
                                 <td>
-                                    {p.linkedStudentNames?.length > 0 ? (
+                                    {p.linkedStudentNames?.filter(n => n && n.trim() !== "").length > 0 ? (
                                         <div className="linked-students">
-                                            {p.linkedStudentNames.map((n, i) => (
+                                            {p.linkedStudentNames.filter(n => n && n.trim() !== "").map((n, i) => (
                                                 <span key={i} className="linked-student-badge">{n}</span>
                                             ))}
                                         </div>
