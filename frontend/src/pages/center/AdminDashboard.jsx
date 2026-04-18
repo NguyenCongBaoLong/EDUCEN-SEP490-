@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import {
     Users, GraduationCap, UserCheck, Bell, Send, Clock,
     CheckCircle, XCircle, AlertCircle, TrendingUp, MessageSquare,
-    BookOpen, HardDrive, Inbox, ClipboardCheck
+    BookOpen, HardDrive, Inbox, ClipboardCheck, FileText, X
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
+import ContractViewer from '../../components/ContractViewer';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, PieChart, Pie, Cell
@@ -17,7 +18,7 @@ import NotificationMailbox from '../../components/NotificationMailbox';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/AdminDashboard.css';
 
-/* ─── Helpers ────────────────────────────────────────── */
+/* ─── Helpers ────────────────────────────────────────────────────────────────────────── */
 function formatDateTime(iso) {
     if (!iso) return '';
     const d = new Date(iso);
@@ -46,7 +47,17 @@ const normalizeNotifications = (payload) => {
     return [];
 };
 
-/* ─── Main Component ─────────────────────────────────── */
+const isScheduleChange = (request) => {
+    const title = (request?.title || request?.Title || '').toLowerCase();
+    const content = (request?.content || request?.Content || '').toLowerCase();
+    return title.includes('[schedule_change]')
+        || content.includes('type: schedule_change')
+        || title.includes('đổi lịch dạy')
+        || content.includes('slot đề xuất')
+        || content.includes('requestedslot:');
+};
+
+/* ─── Main Component ─────────────────────────────────────────────────────────────────────────── */
 const AdminDashboard = () => {
     const { user, centerBranding } = useAuth();
     const [dashboardData, setDashboardData] = useState({
@@ -82,6 +93,10 @@ const AdminDashboard = () => {
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replying, setReplying] = useState(false);
+    const [showContracts, setShowContracts] = useState(false);
+    const [contracts, setContracts] = useState([]);
+    const [loadingContracts, setLoadingContracts] = useState(false);
+    const [viewContractTarget, setViewContractTarget] = useState(null);
 
     const tenantId = useMemo(() => {
         const isValidTenantId = (value) => (
@@ -108,7 +123,9 @@ const AdminDashboard = () => {
         ...supportRequests.map(sr => ({
             id: `sr-${sr.id}`,
             srId: sr.id,
-            type: sr.senderRoleName?.toLowerCase().includes('parent') ? 'feedback' : 'support',
+            type: isScheduleChange(sr)
+                ? 'schedule_change'
+                : (sr.senderRoleName?.toLowerCase().includes('parent') ? 'feedback' : 'support'),
             senderName: sr.senderName || 'Người dùng',
             senderRole: sr.senderRoleName || 'Yêu cầu',
             subject: sr.title || 'Hỗ trợ',
@@ -123,29 +140,20 @@ const AdminDashboard = () => {
     const unreadCount = inboxMessages.filter(m => !m.isRead).length;
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchAllData = async () => {
             setLoading(true);
             try {
-                const res = await api.get('/CenterDashboard');
-                if (res.data) setDashboardData(res.data);
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const fetchZaloData = async () => {
-            try {
-                const [statusRes, historyRes, classesRes] = await Promise.allSettled([
-                    zaloOAService.getStatus(),
-                    zaloOAService.getMessageHistory(),
-                    api.get('/Classes'),
+                const [dashboardRes, zaloStatusRes, zaloHistoryRes, classesRes] = await Promise.all([
+                    api.get('/CenterDashboard'),
+                    zaloOAService.getStatus().catch(() => ({ data: null })),
+                    zaloOAService.getMessageHistory().catch(() => ({ data: [] })),
+                    api.get('/Classes').catch(() => ({ data: [] })),
                 ]);
 
-                if (statusRes.status === 'fulfilled') setOaStatus(statusRes.value.data);
-                if (historyRes.status === 'fulfilled') {
-                    setNotifications((historyRes.value.data || []).map(h => ({
+                if (dashboardRes.data) setDashboardData(dashboardRes.data);
+                if (zaloStatusRes.data) setOaStatus(zaloStatusRes.data);
+                if (zaloHistoryRes.data) {
+                    setNotifications((zaloHistoryRes.data || []).map(h => ({
                         id: h.notificationId,
                         title: h.title,
                         content: h.message,
@@ -153,14 +161,15 @@ const AdminDashboard = () => {
                         recipients: 0,
                     })));
                 }
-                if (classesRes.status === 'fulfilled') setClasses(classesRes.value.data || []);
+                if (classesRes.data) setClasses(classesRes.data || []);
             } catch (error) {
-                console.error('Error fetching Zalo OA data:', error);
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
             }
         };
 
-        fetchData();
-        fetchZaloData();
+        fetchAllData();
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
@@ -179,6 +188,24 @@ const AdminDashboard = () => {
     };
 
     useEffect(() => { if (inboxOpen) fetchInbox(); }, [inboxOpen]);
+
+    const loadContracts = async () => {
+        setLoadingContracts(true);
+        try {
+            const res = await api.get('/admin/subscription/contracts');
+            setContracts(res.data || []);
+            setShowContracts(true);
+        } catch (error) {
+            console.error('Load contracts error:', error?.response?.data || error);
+            toast.error('Không thể tải danh sách hợp đồng');
+        } finally {
+            setLoadingContracts(false);
+        }
+    };
+
+    const handleViewContract = (contract) => {
+        setViewContractTarget(contract);
+    };
 
     const handleSend = async () => {
         if (!form.title.trim() || !form.content.trim()) return;
@@ -233,6 +260,32 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleScheduleReview = async (message, action) => {
+        if (!message?.srId) return;
+        if (action === 'reject' && !replyText.trim()) {
+            toast.error('Vui lòng nhập lý do từ chối');
+            return;
+        }
+
+        setReplying(true);
+        try {
+            if (action === 'approve') {
+                await notificationService.approveSupportRequest(message.srId, replyText.trim());
+                toast.success('Đã duyệt yêu cầu đổi lịch');
+            } else {
+                await notificationService.rejectSupportRequest(message.srId, replyText.trim());
+                toast.success('Đã từ chối yêu cầu đổi lịch');
+            }
+            setReplyText('');
+            setSelectedMessage(null);
+            fetchInbox();
+        } catch (error) {
+            toast.error('Xử lý yêu cầu đổi lịch thất bại');
+        } finally {
+            setReplying(false);
+        }
+    };
+
     const formattedDate = currentTime.toLocaleDateString('vi-VN', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
@@ -281,6 +334,10 @@ const AdminDashboard = () => {
                             <Inbox size={18} />
                             Hộp Thư
                             {unreadCount > 0 && <span className="inbox-trigger-badge">{unreadCount}</span>}
+                        </button>
+                        <button className="inbox-trigger-btn" onClick={loadContracts}>
+                            <FileText size={18} />
+                            Hợp Đồng
                         </button>
                         <div className="dashboard-center-badge">
                             <GraduationCap size={18} />
@@ -446,6 +503,68 @@ const AdminDashboard = () => {
                 </div>
             </main>
 
+            {showContracts && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => setShowContracts(false)} />
+                    <div className="subscription-modal" style={{ maxWidth: '860px', width: '92vw', maxHeight: '90vh' }}>
+                        <div className="subscription-modal-header">
+                            <h2>Hợp Đồng</h2>
+                            <button className="subscription-modal-close" onClick={() => setShowContracts(false)}><X size={18} /></button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ padding: '1rem', maxHeight: 'calc(90vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+                            {loadingContracts ? (
+                                <div className="subscription-state">Đang tải...</div>
+                            ) : contracts.length === 0 ? (
+                                <div className="subscription-state">
+                                    <FileText size={40} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                                    <p>Chưa có hợp đồng nào.</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '1rem' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', flexShrink: 0 }}>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem', background: '#f8fafc' }}>Tiêu đề</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem', background: '#f8fafc' }}>Loại</th>
+                                                <th style={{ textAlign: 'left', padding: '0.75rem', background: '#f8fafc' }}>Ngày tải</th>
+                                                <th style={{ textAlign: 'center', padding: '0.75rem', background: '#f8fafc' }}>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {contracts.map(c => (
+                                                <tr key={c.contractId}>
+                                                    <td style={{ padding: '0.75rem' }}>{c.contractTitle}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{c.fileType}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                                        <button style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }} onClick={() => handleViewContract(c)}>Xem</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {viewContractTarget && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={() => setViewContractTarget(null)} />
+                    <div className="subscription-modal" style={{ maxWidth: '1200px', width: '90vw', maxHeight: '90vh', height: 'auto' }}>
+                        <div className="subscription-modal-header">
+                            <h2>{viewContractTarget.contractTitle}</h2>
+                            <button className="subscription-modal-close" onClick={() => setViewContractTarget(null)}><X size={18} /></button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f1f1' }}>
+                            <ContractViewer contract={viewContractTarget} isCenter={true} />
+                        </div>
+                    </div>
+                </>
+            )}
+
             <NotificationMailbox
                 variant="drawer"
                 open={inboxOpen}
@@ -457,45 +576,47 @@ const AdminDashboard = () => {
                 onSelectedMessageChange={setSelectedMessage}
                 onMarkAsRead={handleMarkAsRead}
                 renderDetailExtra={(msg) => {
-                    const isSupportOrFeedback = msg?.type === 'feedback' || msg?.type === 'support';
-                    if (!isSupportOrFeedback) return null;
+                    if (msg?.type === 'feedback' && !msg.adminResponse) {
+                        return (
+                            <div style={{ marginTop: '1rem' }}>
+                                <textarea className="zalo-textarea" rows={3} placeholder="Phản hồi..." value={replyText} onChange={(e) => setReplyText(e.target.value)} />
+                                <button className="zalo-send-btn" style={{ marginTop: '0.5rem' }} disabled={replying} onClick={() => handleReply(msg)}>Gửi trả lời</button>
+                            </div>
+                        );
+                    }
 
-                    return (
-                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f3f4f6' }}>
-                            {msg.adminResponse ? (
-                                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                                    <div style={{ fontWeight: 600, fontSize: '0.75rem', color: '#3b82f6', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <CheckCircle size={12} /> Phản hồi
-                                    </div>
-                                    <div style={{ fontSize: '0.875rem', color: '#1f2937', whiteSpace: 'pre-wrap' }}>
-                                        {msg.adminResponse}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <textarea
-                                        className="zalo-textarea"
-                                        rows={3}
-                                        placeholder="Nhập nội dung phản hồi..."
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                    />
+                    if (msg?.type === 'schedule_change' && !msg.adminResponse) {
+                        return (
+                            <div style={{ marginTop: '1rem' }}>
+                                <textarea
+                                    className="zalo-textarea"
+                                    rows={3}
+                                    placeholder="Ghi chú duyệt hoặc lý do từ chối..."
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                />
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                    <button className="zalo-send-btn" disabled={replying} onClick={() => handleScheduleReview(msg, 'approve')}>
+                                        Duyệt
+                                    </button>
                                     <button
                                         className="zalo-send-btn"
-                                        style={{ marginTop: '0.5rem' }}
+                                        style={{ background: '#dc2626' }}
                                         disabled={replying}
-                                        onClick={() => handleReply(msg)}
+                                        onClick={() => handleScheduleReview(msg, 'reject')}
                                     >
-                                        {replying ? 'Đang gửi...' : 'Gửi trả lời'}
+                                        Từ chối
                                     </button>
                                 </div>
-                            )}
-                        </div>
-                    );
-                }}
-            />
+                            </div>
+                        );
+                    }
+
+                    return null;
+                }} />
         </div>
     );
 };
 
 export default AdminDashboard;
+

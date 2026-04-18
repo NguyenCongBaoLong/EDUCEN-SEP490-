@@ -5,15 +5,15 @@ import toast from 'react-hot-toast';
 import api from '../services/api';
 import '../css/components/AttendanceModal.css';
 
-/**
- * AttendanceModal
- * Cho phép giáo viên điểm danh từng học sinh theo buổi học (sessionId).
- * status: 'present' | 'absent' | 'notYet' — theo bảng Attendance trong DB
- * 
- * Props:
- * - canAttend: boolean - có thể điểm danh không (true = trong ngày, false = đã quá ngày)
- * - onRequestModification: callback khi Teacher cần gửi yêu cầu sửa điểm danh
- */
+ /**
+  * AttendanceModal
+  * Cho phép giáo viên điểm danh từng học sinh theo buổi học (sessionId).
+  * status: 'present' | 'absent' | 'notYet' - theo bảng Attendance trong DB
+  * 
+  * Props:
+  * - canAttend: boolean - có thể điểm danh không (true = trong ngày, false = đã quá ngày)
+  * - onRequestModification: callback khi Teacher cần gửi yêu cầu sửa điểm danh
+  */
 const AttendanceModal = ({ 
     isOpen, 
     onClose, 
@@ -42,10 +42,11 @@ const AttendanceModal = ({
     const [loading, setLoading] = useState(false);
     const [showRequestForm, setShowRequestForm] = useState(false);
     const [requestData, setRequestData] = useState({
-        requestedStatus: 'present',
         reason: ''
     });
+    const [requestedStatuses, setRequestedStatuses] = useState({});
     const [submittingRequest, setSubmittingRequest] = useState(false);
+    const [selectedStudentsForRequest, setSelectedStudentsForRequest] = useState([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -150,19 +151,21 @@ const AttendanceModal = ({
 
         setSubmittingRequest(true);
         try {
-            // Create request for each selected student
-            for (const student of selectedStudents) {
-                await api.post('/attendance/modification-request', {
-                    sessionId: parseInt(session.sessionId),
+            const payload = {
+                sessionId: parseInt(session?.sessionId ?? sessionId),
+                requests: selectedStudents.map(student => ({
                     studentId: parseInt(student.id),
-                    requestedStatus: requestData.requestedStatus,
+                    requestedStatus: requestedStatuses[student.id] || 'present',
                     reason: requestData.reason
-                });
-            }
+                }))
+            };
+
+            await api.post('/attendance/modification-requests/batch', payload);
 
             toast.success(`Gửi yêu cầu sửa điểm danh cho ${selectedStudents.length} học sinh thành công. Vui lòng chờ Admin duyệt.`);
             setShowRequestForm(false);
             setSelectedStudentsForRequest([]);
+            setRequestedStatuses({});
             onRequestModification && onRequestModification();
             onClose();
         } catch (error) {
@@ -173,28 +176,49 @@ const AttendanceModal = ({
         }
     };
 
-    // State for selected students in request form
-    const [selectedStudentsForRequest, setSelectedStudentsForRequest] = useState([]);
-
     const handleSelectAllForRequest = () => {
         if (selectedStudentsForRequest.length === students.length) {
             setSelectedStudentsForRequest([]);
+            setRequestedStatuses({});
         } else {
             setSelectedStudentsForRequest(students.map(s => s.id));
+            const nextStatuses = {};
+            students.forEach(s => {
+                nextStatuses[s.id] = requestedStatuses[s.id] || records[s.id] || 'present';
+            });
+            setRequestedStatuses(nextStatuses);
         }
+    };
+
+    const handleToggleStudentForRequest = (studentId, checked) => {
+        if (checked) {
+            setSelectedStudentsForRequest(prev => [...prev, studentId]);
+            setRequestedStatuses(prev => ({
+                ...prev,
+                [studentId]: prev[studentId] || records[studentId] || 'present'
+            }));
+            return;
+        }
+
+        setSelectedStudentsForRequest(prev => prev.filter(id => id !== studentId));
+        setRequestedStatuses(prev => {
+            const next = { ...prev };
+            delete next[studentId];
+            return next;
+        });
     };
 
     // Show request modification form for past days
     if (showRequestForm) {
         return (
             <div className="atm-overlay" onClick={() => !submittingRequest && setShowRequestForm(false)}>
-                <div className="atm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+                <div className="atm-modal atm-request-modal" onClick={e => e.stopPropagation()}>
                     <div className="atm-header">
                         <div className="atm-header-info">
                             <h3>Yêu cầu sửa điểm danh</h3>
                             <div className="atm-session-meta">
-                                <Clock size={14} />
-                                <span>{session.dayLabel} — {session.date}</span>
+                                 <Clock size={14} />
+                                <span>{session.dayLabel} - {session.date}</span>
                             </div>
                         </div>
                         <button className="atm-close" onClick={() => setShowRequestForm(false)} disabled={submittingRequest}>
@@ -202,137 +226,101 @@ const AttendanceModal = ({
                         </button>
                     </div>
 
-                    <div className="atm-body" style={{ padding: '20px' }}>
-                        <div style={{ 
-                            background: '#fef3c7', 
-                            border: '1px solid #f59e0b', 
-                            borderRadius: '8px', 
-                            padding: '12px',
-                            marginBottom: '20px',
-                            display: 'flex',
-                            gap: '12px',
-                            alignItems: 'flex-start'
-                        }}>
-                            <AlertCircle size={20} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
-                            <div style={{ fontSize: '14px', color: '#92400e' }}>
+                    <div className="atm-body atm-request-body">
+                        <div className="atm-request-alert">
+                            <AlertCircle size={20} color="#f59e0b" className="atm-request-alert-icon" />
+                            <div className="atm-request-alert-text">
                                 <strong>Lưu ý:</strong> Đã quá ngày điểm danh. Bạn cần gửi yêu cầu cho Admin để sửa điểm danh.
                             </div>
                         </div>
 
                         {/* Student Selection */}
-                        <div style={{ marginBottom: '16px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <label style={{ fontWeight: '500' }}>
+                        <div className="atm-request-students-block">
+                            <div className="atm-request-students-header">
+                                <label className="atm-request-students-label">
                                     Chọn học sinh <span style={{ color: '#ef4444' }}>*</span>:
                                 </label>
-                                <button 
+                                <button
                                     type="button"
                                     onClick={handleSelectAllForRequest}
-                                    style={{ 
-                                        fontSize: '13px', 
-                                        color: '#3b82f6', 
-                                        background: 'none', 
-                                        border: 'none', 
-                                        cursor: 'pointer',
-                                        textDecoration: 'underline'
-                                    }}
+                                    className="atm-select-all-btn"
                                 >
                                     {selectedStudentsForRequest.length === students.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
                                 </button>
                             </div>
-                            <div style={{ 
-                                maxHeight: '150px', 
-                                overflow: 'auto', 
-                                border: '1px solid #e5e7eb', 
-                                borderRadius: '6px',
-                                padding: '8px'
-                            }}>
+                            <div className="atm-request-students-list">
                                 {students.map(st => (
-                                    <label 
+                                    <label
                                         key={st.id}
-                                        style={{ 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: '8px',
-                                            padding: '8px',
-                                            cursor: 'pointer',
-                                            borderBottom: '1px solid #f3f4f6'
-                                        }}
+                                        className="atm-request-student-item"
                                     >
                                         <input 
                                             type="checkbox"
                                             checked={selectedStudentsForRequest.includes(st.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedStudentsForRequest([...selectedStudentsForRequest, st.id]);
-                                                } else {
-                                                    setSelectedStudentsForRequest(selectedStudentsForRequest.filter(id => id !== st.id));
-                                                }
-                                            }}
+                                            onChange={(e) => handleToggleStudentForRequest(st.id, e.target.checked)}
                                         />
-                                        <span style={{ fontSize: '14px', flex: 1 }}>{st.name}</span>
+                                        <span className="atm-request-student-name">{st.name}</span>
                                         <span className={`atm-req-status-badge ${getAttendanceStatusMeta(records[st.id]).className}`}>
                                             {getAttendanceStatusMeta(records[st.id]).label}
                                         </span>
                                     </label>
                                 ))}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                            <div className="atm-request-selected-count">
                                 Đã chọn: {selectedStudentsForRequest.length} / {students.length} học sinh
                             </div>
                         </div>
-
-                        {selectedStudentsForRequest.length > 0 && (
-                            <div className="atm-original-status-panel">
-                                <div className="atm-original-status-title">
-                                    Trạng thái điểm danh ban đầu của học sinh đã chọn
-                                </div>
-                                <div className="atm-original-status-grid">
-                                    {students
-                                        .filter(st => selectedStudentsForRequest.includes(st.id))
-                                        .map(st => {
-                                            const currentStatusMeta = getAttendanceStatusMeta(records[st.id]);
-                                            return (
-                                                <div key={`origin-${st.id}`} className="atm-original-status-item">
-                                                    <span className="atm-original-student-name">{st.name}</span>
-                                                    <span className={`atm-req-status-badge ${currentStatusMeta.className}`}>
-                                                        {currentStatusMeta.label}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                </div>
-                            </div>
-                        )}
 
                         <div className="atm-request-field">
                             <label className="atm-request-field-label">
                                 Trạng thái điểm danh muốn sửa:
                             </label>
-                            <div className="atm-request-status-options">
-                                <label className={`atm-request-status-option ${requestData.requestedStatus === 'present' ? 'active-present' : ''}`}>
-                                    <input 
-                                        type="radio" 
-                                        name="requestedStatus" 
-                                        value="present"
-                                        checked={requestData.requestedStatus === 'present'}
-                                        onChange={e => setRequestData({ ...requestData, requestedStatus: e.target.value })}
-                                    />
-                                    <CheckCircle size={16} />
-                                    <span>Có mặt</span>
-                                </label>
-                                <label className={`atm-request-status-option ${requestData.requestedStatus === 'absent' ? 'active-absent' : ''}`}>
-                                    <input 
-                                        type="radio" 
-                                        name="requestedStatus" 
-                                        value="absent"
-                                        checked={requestData.requestedStatus === 'absent'}
-                                        onChange={e => setRequestData({ ...requestData, requestedStatus: e.target.value })}
-                                    />
-                                    <XCircle size={16} />
-                                    <span>Vắng mặt</span>
-                                </label>
-                            </div>
+                            {selectedStudentsForRequest.length > 0 ? (
+                                <div className="atm-target-status-panel">
+                                    <div className="atm-target-status-grid">
+                                        {students
+                                            .filter(st => selectedStudentsForRequest.includes(st.id))
+                                            .map(st => {
+                                                const targetStatus = requestedStatuses[st.id] || 'present';
+                                                return (
+                                                    <div key={`req-status-${st.id}`} className="atm-target-status-item">
+                                                        <span className="atm-target-status-name">{st.name}</span>
+                                                        <div className="atm-target-status-toggle">
+                                                            <button
+                                                                type="button"
+                                                                className={`atm-target-status-btn ${targetStatus === 'present' ? 'active-present' : ''}`}
+                                                                onClick={() =>
+                                                                    setRequestedStatuses(prev => ({
+                                                                        ...prev,
+                                                                        [st.id]: 'present'
+                                                                    }))
+                                                                }
+                                                                disabled={submittingRequest}
+                                                            >
+                                                                Có mặt
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className={`atm-target-status-btn ${targetStatus === 'absent' ? 'active-absent' : ''}`}
+                                                                onClick={() =>
+                                                                    setRequestedStatuses(prev => ({
+                                                                        ...prev,
+                                                                        [st.id]: 'absent'
+                                                                    }))
+                                                                }
+                                                                disabled={submittingRequest}
+                                                            >
+                                                                Vắng mặt
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="atm-request-selected-count">Chọn học sinh để đặt trạng thái muốn sửa.</div>
+                            )}
                         </div>
 
                         <div className="atm-request-field">
@@ -382,7 +370,7 @@ const AttendanceModal = ({
                             <h3>Điểm danh buổi học</h3>
                             <div className="atm-session-meta">
                                 <Calendar size={14} />
-                                <span>{session.dayLabel} — {session.date}</span>
+                                <span>{session.dayLabel} - {session.date}</span>
                                 <span className="atm-dot">•</span>
                                 <span>{session.time}</span>
                             </div>
@@ -443,7 +431,7 @@ const AttendanceModal = ({
                         <h3>Điểm danh buổi học</h3>
                         <div className="atm-session-meta">
                             <Calendar size={14} />
-                            <span>{session.dayLabel} — {session.date}</span>
+                            <span>{session.dayLabel} - {session.date}</span>
                             <span className="atm-dot">•</span>
                             <span>{session.time}</span>
                         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, CreditCard, PackageOpen, X, ArrowUpDown, Wallet, Clock, Calendar, FileText, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import ContractViewer from '../../components/ContractViewer';
 import api from '../../services/api';
@@ -9,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import '../../css/pages/center/SubscriptionPlans.css';
 
 const SubscriptionPlans = ({ hideSidebar = false }) => {
+    const location = useLocation();
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [payingPlanId, setPayingPlanId] = useState(null);
@@ -78,6 +80,14 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
         fetchPlans();
     }, []);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('contracts') === '1') {
+            loadContracts();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.search]);
 
     const loadCreditHistory = async () => {
         if (creditHistoryLoading || creditLedger.length > 0) {
@@ -305,7 +315,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         try {
             await api.post(`/admin/subscription/invoices/${invoiceId}/request-offline-payment`, {
                 paymentMethod,
-                paymentNote: 'Center xác nhận sẽ thanh toán tiền mặt.'
+                paymentNote: `Center yêu cầu xác nhận thanh toán ${paymentMethod}.`
             });
             toast.success('Đã gửi yêu cầu xác nhận thanh toán tới SystemAdmin.');
             loadMyInvoices();
@@ -393,13 +403,6 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                         <p>Đăng ký, đổi gói, gia hạn đều theo luồng yêu cầu duyệt và thanh toán hóa đơn.</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button
-                            type="button"
-                            className="subscription-credit-history-btn subscription-action-btn--contract"
-                            onClick={loadContracts}
-                        >
-                            <FileText size={15} /> Hợp đồng
-                        </button>
                         <button
                             type="button"
                             className="subscription-credit-history-btn subscription-action-btn--invoice"
@@ -908,22 +911,26 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                     <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Số tiền</th>
                                                     <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Loại</th>
                                                     <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Trạng thái / TT</th>
+                                                    <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>Ngày</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {myInvoices.map(i => {
-                                                    const isPending = i.status === 'Pending' || i.status === 'AwaitingConfirmation';
-                                                    const hasSelectedMethod = i.paymentMethod && i.paymentMethod !== 'None' && i.paymentMethod !== '-';
-                                                    
+                                                    const status = (i.status || '').trim();
+                                                    const paymentMethod = (i.paymentMethod || '').trim();
+                                                    const isAwaitingConfirmation = status === 'AwaitingConfirmation';
+                                                    const canChoosePayment = status === 'Pending';
+                                                    const hasMethod = paymentMethod && paymentMethod !== 'None' && paymentMethod !== '-';
+
                                                     return (
                                                         <tr key={i.invoiceId}>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{i.invoiceNumber}</td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap', fontWeight: 600 }}>{formatPrice(i.amount)} VNĐ</td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                {i.paymentMethod === 'Cash' ? 'Tiền mặt' : i.paymentMethod === 'VNPay' ? 'VNPay' : 'Chưa chọn'}
+                                                                {status === 'Pending' ? 'Chưa chọn' : paymentMethod === 'Cash' ? 'Tiền mặt' : paymentMethod === 'VNPay' ? 'VNPay' : hasMethod ? paymentMethod : 'Chưa chọn'}
                                                             </td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
-                                                                {isPending && !hasSelectedMethod ? (
+                                                                {canChoosePayment ? (
                                                                     <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                                                                         <button 
                                                                             type="button" 
@@ -944,14 +951,27 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                                     </div>
                                                                 ) : (
                                                                     <span style={{ 
-                                                                        color: i.status === 'Paid' ? '#16a34a' : (i.paymentMethod === 'Cash' ? '#f59e0b' : '#6b7280'), 
+                                                                        color: status === 'Paid' ? '#16a34a' : (isAwaitingConfirmation ? '#f59e0b' : '#6b7280'),
                                                                         fontWeight: 600 
                                                                     }}>
-                                                                        {i.status === 'Paid' ? 'Đã thanh toán' : 
-                                                                         i.paymentMethod === 'Cash' ? 'Chờ xác nhận' : 
-                                                                         i.status === 'Pending' ? 'Chờ thanh toán' : i.status}
+                                                                        {status === 'Paid'
+                                                                            ? 'Đã thanh toán'
+                                                                            : isAwaitingConfirmation
+                                                                                ? 'Chờ xác nhận'
+                                                                                : status === 'Expired'
+                                                                                    ? 'Đã hết hạn'
+                                                                                    : status === 'Cancelled'
+                                                                                        ? 'Đã hủy'
+                                                                                        : status}
                                                                     </span>
                                                                 )}
+                                                            </td>
+                                                            <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                                                {i.createdAt
+                                                                    ? new Date(i.createdAt).toLocaleString('vi-VN')
+                                                                    : i.dueDate
+                                                                        ? new Date(i.dueDate).toLocaleString('vi-VN')
+                                                                        : '—'}
                                                             </td>
                                                         </tr>
                                                     );
@@ -1020,6 +1040,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                             <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói ban đầu</th>
                                             <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Gói yêu cầu</th>
                                             <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                                            <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>Ghi chú / Lý do</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1032,6 +1053,9 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                     <span style={{ color: r.status === 'Approved' ? '#16a34a' : r.status === 'Rejected' ? '#dc2626' : '#f59e0b', fontWeight: 600 }}>
                                                         {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Rejected' ? 'Từ chối' : r.status}
                                                     </span>
+                                                </td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
+                                                    {r.reviewNote || r.reason || '—'}
                                                 </td>
                                             </tr>
                                         ))}

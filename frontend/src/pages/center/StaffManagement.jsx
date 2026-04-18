@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Plus, Mail, CheckSquare, Square } from 'lucide-react';
 
@@ -23,7 +23,7 @@ import '../../css/pages/center/StaffManagement.css';
 
 const StaffManagement = () => {
 
-    // Function Ä‘á»ƒ generate password ngáº«u nhiÃªn an toÃ n
+    // Function để generate password ngẫu nhiên an toàn
     const generatePassword = () => {
         const length = 12;
         const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -46,7 +46,7 @@ const StaffManagement = () => {
 
     const [statusFilter, setStatusFilter] = useState('');
 
-    // State cho email gá»­i tÃ i khoáº£n
+    // State cho email gửi tài khoản
     const [selectedStaff, setSelectedStaff] = useState([]);
     const [sendAccountModal, setSendAccountModal] = useState({ show: false, staff: null });
     const [confirmModal, setConfirmModal] = useState({
@@ -84,18 +84,19 @@ const StaffManagement = () => {
         }
     };
 
-    const fetchStaff = async () => {
+const fetchStaff = async () => {
 
         try {
 
-            const [teachersRes, assistantsRes] = await Promise.all([
+            const [teachersRes, assistantsRes, usersRes] = await Promise.all([
 
                 api.get('/Teachers'),
 
-                api.get('/Assistants')
+                api.get('/Assistants'),
+
+                api.get('/admin/users').catch(() => ({ data: [] }))
 
             ]);
-
 
 
             const teachers = teachersRes.data.map(t => ({
@@ -129,7 +130,6 @@ const StaffManagement = () => {
             }));
 
 
-
             const assistants = assistantsRes.data.map(a => ({
 
                 id: a.assistantId.toString(),
@@ -155,6 +155,7 @@ const StaffManagement = () => {
                 notes: '',
 
                 status: a.accountStatus?.toLowerCase() === 'active' ? 'active' : 'inactive',
+
                 accountSent: a.isAccountSent ?? false
 
             }));
@@ -163,8 +164,7 @@ const StaffManagement = () => {
 
             setStaffList([...teachers, ...assistants]);
 
-            // Also fetch all users for email validation
-            await fetchAllUsers();
+            setAllUsers(usersRes.data || []);
 
         } catch (error) {
 
@@ -250,12 +250,12 @@ const StaffManagement = () => {
 
 
 
-    // Xá»­ lÃ½ gá»­i email tÃ i khoáº£n cho má»™t nhÃ¢n viÃªn
+    // Xử lý gửi email tài khoản cho một nhân viên
     const executeSendAccount = async (staffId) => {
         const staff = staffList.find(s => s.id === staffId);
         if (!staff) return;
 
-        // Kiá»ƒm tra xem userId cÃ³ tá»“n táº¡i khÃ´ng
+        // Kiểm tra xem userId có tồn tại không
         if (!staff.userId) {
             toast.error(`Không thể gửi email tài khoản cho ${staff.name}: Không tìm thấy thông tin user. Vui lòng xóa và tạo lại nhân viên.`);
             return;
@@ -268,7 +268,7 @@ const StaffManagement = () => {
                 ? accountService.sendTeacherAccount
                 : accountService.sendAssistantAccount;
 
-            // Generate username vÃ  password tá»« frontend
+            // Generate username và password từ frontend
             const username = staff.email;
             const password = generatePassword();
 
@@ -284,7 +284,7 @@ const StaffManagement = () => {
 
             await sendFn(numericId, username, password);
 
-            // Refresh láº¡i danh sÃ¡ch Ä‘á»ƒ láº¥y tráº¡ng thÃ¡i má»›i tá»« backend
+            // Refresh lại danh sách để lấy trạng thái mới từ backend
             await fetchStaff();
 
             toast.dismiss(loadingToast);
@@ -315,7 +315,7 @@ const StaffManagement = () => {
         });
     };
 
-    // Xá»­ lÃ½ gá»­i email cho nhiá»u nhÃ¢n viÃªn Ä‘Æ°á»£c chá»n
+    // Xử lý gửi email cho nhiều nhân viên được chọn
     const executeBulkSendAccounts = async () => {
         if (selectedStaff.length === 0) {
             toast.error('Vui lòng chọn ít nhất một nhân viên');
@@ -336,7 +336,7 @@ const StaffManagement = () => {
                     ? accountService.sendTeacherAccount
                     : accountService.sendAssistantAccount;
 
-                // Generate username vÃ  password cho má»—i nhÃ¢n viÃªn
+                // Generate username và password cho mỗi nhân viên
                 const username = staff.email;
                 const password = generatePassword();
 
@@ -348,7 +348,7 @@ const StaffManagement = () => {
             }
         }
 
-        // Refresh láº¡i danh sÃ¡ch Ä‘á»ƒ láº¥y tráº¡ng thÃ¡i má»›i tá»« backend
+        // Refresh lại danh sách để lấy trạng thái mới từ backend
         await fetchStaff();
         toast.dismiss(loadingToast);
 
@@ -382,7 +382,7 @@ const StaffManagement = () => {
 
 
 
-    // Toggle chá»n má»™t nhÃ¢n viÃªn
+    // Toggle chọn một nhân viên
     const handleToggleSelect = (staffId) => {
         setSelectedStaff(prev =>
             prev.includes(staffId)
@@ -393,7 +393,7 @@ const StaffManagement = () => {
 
 
 
-    // Chá»n táº¥t cáº£ - chá»‰ chá»n nhá»¯ng ngÆ°á»i chÆ°a gá»­i tÃ i khoáº£n (giá»‘ng StudentTable)
+    // Chọn tất cả - chỉ chọn những người chưa gửi tài khoản (giống StudentTable)
     const handleSelectAll = () => {
         const unsentStaff = filteredStaff.filter(s => !s.accountSent).map(s => s.id);
         if (selectedStaff.length === unsentStaff.length && selectedStaff.length > 0) {

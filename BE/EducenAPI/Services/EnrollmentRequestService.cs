@@ -48,10 +48,10 @@ namespace EducenAPI.Services
                               ClassId = r.ClassId,
                               ClassName = c.ClassName,
                               RequestType = r.RequestType
-                          }).ToListAsync();
+                          }).AsNoTracking().ToListAsync();
         }
 
-        public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
+public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
         {
             return await (from r in _context.EnrollmentRequests
                           join g in _context.Grades on r.GradeId equals g.GradeId into gj
@@ -80,7 +80,7 @@ namespace EducenAPI.Services
                               ClassId = r.ClassId,
                               ClassName = c.ClassName,
                               RequestType = r.RequestType
-                          }).ToListAsync();
+                          }).AsNoTracking().ToListAsync();
         }
 
         public async Task<IEnumerable<EnrollmentRequestDto>> GetMyRequestsAsync(int userId)

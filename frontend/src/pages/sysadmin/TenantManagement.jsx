@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
     Building2, Plus, Search, Edit2, Eye, Lock, Unlock, Package,
     X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter, TrendingUp,
@@ -23,7 +23,7 @@ const TenantManagement = () => {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'registrations'
+    const [activeTab, setActiveTab] = useState('tenants'); // 'tenants' | 'registrations' | 'package-requests'
     const [registrations, setRegistrations] = useState([]);
     const [loadingReg, setLoadingReg] = useState(false);
     const [filterStatus, setFilterStatus] = useState('Pending'); // 'All', 'Pending', 'Approved', 'Rejected'
@@ -63,9 +63,12 @@ const TenantManagement = () => {
     const [changeRequests, setChangeRequests] = useState([]);
     const [loadingChangeRequests, setLoadingChangeRequests] = useState(false);
     const [reviewRequestTarget, setReviewRequestTarget] = useState(null);
+    const [reviewRequestMode, setReviewRequestMode] = useState('approve');
+    const [reviewRequestNote, setReviewRequestNote] = useState('');
     const [createInvoiceTarget, setCreateInvoiceTarget] = useState(null);
     const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
     const [invoiceHistory, setInvoiceHistory] = useState([]);
+    const [invoiceHistoryCount, setInvoiceHistoryCount] = useState(0);
     const [loadingInvoiceHistory, setLoadingInvoiceHistory] = useState(false);
     const [viewCreditLedger, setViewCreditLedger] = useState([]);
     const [loadingCreditLedger, setLoadingCreditLedger] = useState(false);
@@ -104,15 +107,23 @@ const TenantManagement = () => {
     };
 
     const handleReviewRequest = async (requestId, approved, reviewNote = '') => {
+        if (!approved && !hasText(reviewNote)) {
+            showToast('Vui lòng nhập lý do từ chối.', 'error');
+            return;
+        }
+
         setSaving(true);
         try {
             await adminApi.put(`/admin/tenants/subscription-change-requests/${requestId}/review`, {
                 approved,
-                reviewNote
+                reviewNote: normalizeText(reviewNote)
             });
             showToast(approved ? 'Đã duyệt yêu cầu và tự động gửi hóa đơn.' : 'Đã từ chối yêu cầu.');
             setReviewRequestTarget(null);
+            setReviewRequestMode('approve');
+            setReviewRequestNote('');
             fetchChangeRequests();
+            notifySidebarBadgeRefresh();
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể xử lý yêu cầu.', 'error');
         } finally {
@@ -120,18 +131,41 @@ const TenantManagement = () => {
         }
     };
 
-    
-    const openInvoiceHistory = async () => {
-        setShowInvoiceHistory(true);
-        setLoadingInvoiceHistory(true);
+    const fetchInvoiceHistory = useCallback(async ({ openModal = false, silent = false, reason = 'manual' } = {}) => {
+        if (openModal) {
+            setShowInvoiceHistory(true);
+        }
+        if (!silent) {
+            setLoadingInvoiceHistory(true);
+        }
         try {
             const res = await adminApi.get('/admin/tenants/invoices-history');
-            setInvoiceHistory(res.data || []);
-        } catch {
-            showToast('Không thể tải lịch sử hóa đơn.', 'error');
+            const data = Array.isArray(res.data) ? res.data : [];
+            setInvoiceHistory(data);
+            const awaitingCount = data.filter(inv => (inv?.status || '').trim() === 'AwaitingConfirmation').length;
+            setInvoiceHistoryCount(awaitingCount);
+            console.debug('[TenantManagement] refreshed invoice history', {
+                reason,
+                total: data.length,
+                awaitingConfirmation: awaitingCount,
+            });
+        } catch (err) {
+            if (!silent || openModal) {
+                showToast('Không thể tải lịch sử hóa đơn.', 'error');
+            }
+            console.warn('[TenantManagement] failed to refresh invoice history', {
+                reason,
+                error: err?.response?.data || err?.message || err,
+            });
         } finally {
-            setLoadingInvoiceHistory(false);
+            if (!silent) {
+                setLoadingInvoiceHistory(false);
+            }
         }
+    }, []);
+
+    const openInvoiceHistory = async () => {
+        await fetchInvoiceHistory({ openModal: true, reason: 'open-modal' });
     };
     const handleCreateInvoice = async (requestId, dueDays = 7) => {
         setSaving(true);
@@ -140,6 +174,7 @@ const TenantManagement = () => {
             showToast('Đã tạo hoá đơn.');
             setCreateInvoiceTarget(null);
             fetchChangeRequests();
+            await fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'create-invoice' });
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể tạo hoá đơn.', 'error');
         } finally {
@@ -151,13 +186,73 @@ const TenantManagement = () => {
         fetchTenants();
         fetchPlans();
         fetchRegistrations();
+        fetchChangeRequests('Pending');
+        fetchInvoiceHistory({ silent: true, reason: 'mount' });
     }, []);
+
+    useEffect(() => {
+        const refreshBadgeSources = () => {
+            fetchRegistrations();
+            fetchChangeRequests('Pending');
+            fetchInvoiceHistory({ silent: true, reason: 'sysadmin-badge-refresh' });
+        };
+
+        const intervalId = window.setInterval(() => {
+            refreshBadgeSources();
+        }, 30000);
+
+        const handleFocus = () => refreshBadgeSources();
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                refreshBadgeSources();
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, []);
+
+    useEffect(() => {
+        const shouldRefreshInvoiceHistory = activeTab === 'package-requests' || showInvoiceHistory;
+        if (!shouldRefreshInvoiceHistory) return;
+
+        fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'package-tab-visible' });
+
+        const intervalId = window.setInterval(() => {
+            fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'invoice-interval-30s' });
+        }, 30000);
+
+        const handleFocus = () => {
+            fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'invoice-window-focus' });
+        };
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'invoice-tab-visible' });
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [activeTab, showInvoiceHistory, fetchInvoiceHistory]);
 
     const handleUpdateRegistrationStatus = async (id, status) => {
         try {
             await adminApi.put(`/registrations/${id}/status?status=${status}`);
             showToast(status === 'Approved' ? 'Đã duyệt yêu cầu đăng ký!' : 'Đã từ chối yêu cầu.');
             fetchRegistrations();
+            notifySidebarBadgeRefresh();
         } catch {
             showToast('Có lỗi xảy ra khi cập nhật.', 'error');
         }
@@ -167,6 +262,10 @@ const TenantManagement = () => {
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3500);
+    };
+
+    const notifySidebarBadgeRefresh = () => {
+        window.dispatchEvent(new Event('sysadmin-badge-refresh'));
     };
 
     const openCreate = () => {
@@ -320,7 +419,7 @@ const TenantManagement = () => {
             });
 
             showToast('Đã xác nhận thanh toán tiền mặt và áp dụng đổi gói.');
-            await openInvoiceHistory();
+            await fetchInvoiceHistory({ openModal: showInvoiceHistory, silent: !showInvoiceHistory, reason: 'confirm-cash' });
             fetchChangeRequests();
             fetchTenants();
         } catch (err) {
@@ -563,8 +662,8 @@ const TenantManagement = () => {
                                         {activeTab === 'package-requests' && (
                         <button className="sa-btn-primary" onClick={openInvoiceHistory}>
                             <FileText size={16} /> Lịch Sử Gửi Hóa Đơn
-                            {invoiceHistory.length > 0 && (
-                                <span className="sa-tab-badge">{invoiceHistory.length}</span>
+                            {invoiceHistoryCount > 0 && (
+                                <span className="sa-tab-badge">{invoiceHistoryCount}</span>
                             )}
                         </button>
                     )}
@@ -1516,7 +1615,11 @@ const TenantManagement = () => {
                                                             <button
                                                                 className="sa-action-btn"
                                                                 title="Duyệt"
-                                                                onClick={() => setReviewRequestTarget(r)}
+                                                                onClick={() => {
+                                                                    setReviewRequestTarget(r);
+                                                                    setReviewRequestMode('approve');
+                                                                    setReviewRequestNote('');
+                                                                }}
                                                                 style={{ background: '#ecfdf5', border: '1px solid #10b981', color: '#10b981' }}
                                                             >
                                                                 <Check size={18} />
@@ -1524,7 +1627,11 @@ const TenantManagement = () => {
                                                             <button
                                                                 className="sa-action-btn"
                                                                 title="Từ chối"
-                                                                onClick={() => handleReviewRequest(r.requestId, false, '')}
+                                                                onClick={() => {
+                                                                    setReviewRequestTarget(r);
+                                                                    setReviewRequestMode('reject');
+                                                                    setReviewRequestNote('');
+                                                                }}
                                                                 style={{ background: '#fef2f2', border: '1px solid #ef4444', color: '#ef4444' }}
                                                             >
                                                                 <X size={18} />
@@ -1548,8 +1655,17 @@ const TenantManagement = () => {
                         <div className="sa-modal-overlay" onClick={() => setReviewRequestTarget(null)} />
                         <div className="sa-modal">
                             <div className="sa-modal-header">
-                                <h2>Duyệt Yêu Cầu Đổi Gói</h2>
-                                <button className="sa-modal-close" onClick={() => setReviewRequestTarget(null)}><X size={20} /></button>
+                                <h2>{reviewRequestMode === 'reject' ? 'Từ Chối Yêu Cầu Đổi Gói' : 'Duyệt Yêu Cầu Đổi Gói'}</h2>
+                                <button
+                                    className="sa-modal-close"
+                                    onClick={() => {
+                                        setReviewRequestTarget(null);
+                                        setReviewRequestMode('approve');
+                                        setReviewRequestNote('');
+                                    }}
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
                             <div className="sa-modal-form">
                                 <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
@@ -1559,20 +1675,32 @@ const TenantManagement = () => {
                                     <p><strong>Lý do:</strong> {reviewRequestTarget.reason || 'Không có'}</p>
                                 </div>
                                 <div className="sa-form-group">
-                                    <label>Ghi chú (tùy chọn)</label>
-                                    <input type="text" id="review-note" placeholder="Nhập ghi chú..." />
+                                    <label>{reviewRequestMode === 'reject' ? 'Lý do từ chối' : 'Ghi chú (tùy chọn)'}</label>
+                                    <input
+                                        type="text"
+                                        value={reviewRequestNote}
+                                        onChange={(e) => setReviewRequestNote(e.target.value)}
+                                        placeholder={reviewRequestMode === 'reject' ? 'Nhập lý do từ chối...' : 'Nhập ghi chú...'}
+                                    />
                                 </div>
                                 <div className="sa-modal-footer">
-                                    <button className="sa-btn-cancel" onClick={() => setReviewRequestTarget(null)}>Hủy</button>
-                                    <button 
-                                        className="sa-btn-primary" 
-                                        style={{ background: '#10b981' }}
+                                    <button
+                                        className="sa-btn-cancel"
                                         onClick={() => {
-                                            const note = document.getElementById('review-note')?.value || '';
-                                            handleReviewRequest(reviewRequestTarget.requestId, true, note);
+                                            setReviewRequestTarget(null);
+                                            setReviewRequestMode('approve');
+                                            setReviewRequestNote('');
                                         }}
                                     >
-                                        <Check size={16} /> Duyệt & Gửi Hóa Đơn
+                                        Hủy
+                                    </button>
+                                    <button 
+                                        className="sa-btn-primary" 
+                                        style={{ background: reviewRequestMode === 'reject' ? '#ef4444' : '#10b981' }}
+                                        onClick={() => handleReviewRequest(reviewRequestTarget.requestId, reviewRequestMode !== 'reject', reviewRequestNote)}
+                                    >
+                                        {reviewRequestMode === 'reject' ? <X size={16} /> : <Check size={16} />}
+                                        {reviewRequestMode === 'reject' ? ' Từ chối yêu cầu' : ' Duyệt & Gửi Hóa Đơn'}
                                     </button>
                                 </div>
                             </div>

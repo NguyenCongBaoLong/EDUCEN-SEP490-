@@ -23,26 +23,42 @@ namespace EducenAPI.Services
             var parents = await _context.Parents
                 .Include(p => p.ParentNavigation)
                 .Include(p => p.Students)
-                    .ThenInclude(s => s.Classes)
-                .Select(p => new ParentDto
+                .AsNoTracking()
+                .ToListAsync();
+
+            var parentDtos = new List<ParentDto>();
+            
+            foreach (var p in parents)
+            {
+                var studentNames = new List<string>();
+                var studentClassNames = new List<string>();
+                var studentIds = new List<int>();
+                
+                foreach (var student in p.Students)
+                {
+                    studentIds.Add(student.UserId);
+                    studentNames.Add(student.StudentNavigation?.FullName ?? student.StudentNavigation?.Username ?? "");
+                }
+                
+                parentDtos.Add(new ParentDto
                 {
                     ParentId = p.UserId,
                     UserId = p.UserId,
-                    Username = p.ParentNavigation.Username ?? "",
-                    FullName = p.ParentNavigation.FullName ?? "",
-                    Email = p.ParentNavigation.Email ?? "",
-                    PhoneNumber = p.ParentNavigation.PhoneNumber,
-                    Address = p.ParentNavigation.Address,
-                    AccountStatus = p.ParentNavigation.AccountStatus,
+                    Username = p.ParentNavigation?.Username ?? "",
+                    FullName = p.ParentNavigation?.FullName ?? "",
+                    Email = p.ParentNavigation?.Email ?? "",
+                    PhoneNumber = p.ParentNavigation?.PhoneNumber,
+                    Address = p.ParentNavigation?.Address,
+                    AccountStatus = p.ParentNavigation?.AccountStatus,
                     ChildrenCount = p.Students.Count,
-                    StudentNames = p.Students.Select(s => s.StudentNavigation != null ? (s.StudentNavigation.FullName ?? s.StudentNavigation.Username ?? "") : "").ToList(),
-                    StudentClassNames = p.Students.Select(s => s.Classes.FirstOrDefault() != null ? (s.Classes.FirstOrDefault()!.ClassName ?? "Chưa xếp lớp") : "Chưa xếp lớp").ToList(),
-                    StudentIds = p.Students.Select(s => s.UserId).ToList(),
+                    StudentNames = studentNames,
+                    StudentClassNames = studentClassNames,
+                    StudentIds = studentIds,
                     CreatedAt = DateTime.Now
-                })
-                .ToListAsync();
+                });
+            }
 
-            return parents;
+            return parentDtos;
         }
 
         public async Task<ParentDto?> GetParentByIdAsync(int id)

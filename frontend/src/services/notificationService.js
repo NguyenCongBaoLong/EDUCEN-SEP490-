@@ -51,7 +51,17 @@ const notificationService = {
 
     // Trả lời yêu cầu hỗ trợ
     replyToSupportRequest: async (requestId, replyText) => {
-        const response = await api.put(`/admin/support-requests/${requestId}/reply`, { AdminResponse: replyText });
+        const response = await api.put(`/admin/support-requests/${requestId}/reply`, { adminResponse: replyText });
+        return response;
+    },
+
+    approveSupportRequest: async (requestId, note = '') => {
+        const response = await api.put(`/admin/support-requests/${requestId}/approve`, { adminResponse: note });
+        return response;
+    },
+
+    rejectSupportRequest: async (requestId, reason) => {
+        const response = await api.put(`/admin/support-requests/${requestId}/reject`, { adminResponse: reason });
         return response;
     },
 

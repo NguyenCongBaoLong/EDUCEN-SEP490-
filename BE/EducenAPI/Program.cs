@@ -5,6 +5,7 @@ using EducenAPI.Services.Interface;
 using EducenAPI.Services.TenantService;
 using EducenAPI.Services.Payment;
 using EducenAPI.Services.BackgroundServices;
+using EducenAPI.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,10 @@ using Microsoft.AspNetCore.Http.Features;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ────────────────────────────────────────────────────────────────
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<QuotaCheckAttribute>();
+})
     .AddJsonOptions(options =>
     {
         // Xử lý circular reference (Student ↔ User navigation)
@@ -195,6 +199,7 @@ builder.Services.AddScoped<IInvoiceLockService, InvoiceLockService>();
 builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
 builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
+builder.Services.AddScoped<IQuotaService, QuotaService>();
 
 // ── Background Services ───────────────────────────────────────────────────────
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.OverdueInvoiceService>();

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
 {
-    public interface ISubscriptionChangeService
+public interface ISubscriptionChangeService
     {
         // Center: Yêu cầu đổi gói
         Task<PackageChangeRequest> CreatePackageChangeRequestAsync(string tenantId, string requestedPlanId, int months, string? reason, string requestedBy);
@@ -35,7 +35,7 @@ namespace EducenAPI.Services
             string updatedBy,
             string? existingPaymentRecordId = null);
 
-        // Center: Gá»­i yÃªu cáº§u xÃ¡c nháº­n thanh toÃ¡n offline (tiá»n máº·t/chuyá»ƒn khoáº£n)
+        // Center: Gửi yêu cầu xác nhận thanh toán offline (tiền mặt/chuyển khoản)
         Task<Invoice> RequestOfflineInvoicePaymentAsync(string tenantId, string invoiceId, string paymentMethod, string? paymentNote, string requestedBy);
     }
 
@@ -140,26 +140,58 @@ namespace EducenAPI.Services
                 .Include(r => r.RequestedPlan)
                 .FirstOrDefaultAsync(r => r.RequestId == requestId);
 
-            if (request == null)
-                throw new Exception("KhÃ´ng tÃ¬m tháº¥y yÃªu cáº§u.");
+if (request == null)
+                throw new Exception("Không tìm thấy yêu cầu.");
 
             if (request.Status != "Pending")
-                throw new Exception("YÃªu cáº§u Ä‘Ã£ Ä‘Æ°á»£c xá»­ lÃ½.");
+                throw new Exception("Yêu cầu đã được xử lý.");
 
             request.Status = approved ? "Approved" : "Rejected";
             request.ReviewedAt = DateTime.UtcNow;
             request.ReviewedBy = reviewedBy;
             request.ReviewNote = reviewNote?.Trim();
+            CreateCenterReviewNotification(request, approved, reviewedBy);
 
             await _context.SaveChangesAsync();
 
             if (approved)
             {
-                // Auto gá»­i hÃ³a Ä‘Æ¡n ngay sau khi duyá»‡t, dÃ¹ng cáº¥u hÃ¬nh háº¡n Ä‘Ã³ng tiá»n máº·c Ä‘á»‹nh.
+                // Auto gửi hóa đơn ngay sau khi duyệt, dùng cấu hình hạn đóng tiền mặc định.
                 await CreateInvoiceAsync(requestId, 0, reviewedBy);
             }
 
             return request;
+        }
+
+        private void CreateCenterReviewNotification(PackageChangeRequest request, bool approved, string reviewedBy)
+        {
+            var reason = string.IsNullOrWhiteSpace(request.ReviewNote) ? "Khong co ly do." : request.ReviewNote.Trim();
+            if (reason.Length > 700)
+            {
+                reason = reason[..700];
+            }
+
+            var title = approved
+                ? "Yeu cau doi goi da duoc duyet"
+                : "Yeu cau doi goi da bi tu choi";
+
+            var message = approved
+                ? $"Yeu cau doi sang goi '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' da duoc duyet boi {reviewedBy}. He thong se tao hoa don."
+                : $"Yeu cau doi sang goi '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' da bi tu choi boi {reviewedBy}. Ly do: {reason}";
+
+            var now = DateTime.UtcNow;
+            _context.PaymentNotifications.Add(new PaymentNotification
+            {
+                TenantId = request.TenantId,
+                NotificationType = "PackageChangeReview",
+                Title = title,
+                Message = message.Length > 1000 ? message[..1000] : message,
+                Channel = "InApp",
+                Status = "Sent",
+                ScheduledFor = now,
+                SentAt = now,
+                CreatedAt = now
+            });
         }
 
         public async Task<Invoice> CreateInvoiceAsync(string requestId, int dueDays, string createdBy)
@@ -171,8 +203,8 @@ namespace EducenAPI.Services
                 .Include(r => r.RequestedPlan)
                 .FirstOrDefaultAsync(r => r.RequestId == requestId);
 
-            if (request == null)
-                throw new Exception("KhÃ´ng tÃ¬m tháº¥y yÃªu cáº§u.");
+if (request == null)
+                throw new Exception("Không tìm thấy yêu cầu.");
 
             if (request.Status != "Approved")
                 throw new Exception("Yêu cầu phải được duyệt trước khi tạo hoá đơn.");
@@ -185,7 +217,7 @@ namespace EducenAPI.Services
 
             var paidInvoice = existingInvoices.FirstOrDefault(i => i.Status == "Paid");
             if (paidInvoice != null)
-                throw new Exception("Yeu cau nay da co hoa don da thanh toan.");
+                throw new Exception("Yêu cầu này đã có hóa đơn đã thanh toán.");
 
             foreach (var invoiceItem in existingInvoices.Where(i => i.Status == "Pending" || i.Status == "AwaitingConfirmation"))
             {
@@ -204,7 +236,7 @@ namespace EducenAPI.Services
             var blockingInvoice = existingInvoices.FirstOrDefault(i =>
                 i.Status == "Pending" || i.Status == "AwaitingConfirmation");
             if (blockingInvoice != null)
-                throw new Exception("Yeu cau nay da co hoa don chua het han. Chi duoc tao lai khi hoa don cu da het han.");
+                throw new Exception("Yêu cầu này đã có hóa đơn chưa hết hạn. Chỉ được tạo lại khi hóa đơn cũ đã hết hạn.");
 
             var activeSubscription = await GetActiveSubscriptionAsync(request.TenantId);
             ValidateChangeRules(activeSubscription, request.RequestedPlan);
@@ -287,20 +319,20 @@ namespace EducenAPI.Services
                 .ThenInclude(pcr => pcr.RequestedPlan)
                 .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
 
-            if (invoice == null)
-                throw new Exception("KhÃ´ng tÃ¬m tháº¥y hoÃ¡ Ä‘Æ¡n.");
+if (invoice == null)
+                throw new Exception("Không tìm thấy hóa đơn.");
 
             if (invoice.Status == "Paid")
-                throw new Exception("Hoa don da thanh toan.");
+                throw new Exception("Hóa đơn đã thanh toán.");
 
             if (invoice.Status == "Cancelled")
-                throw new Exception("Hoa don da bi huy.");
+                throw new Exception("Hóa đơn đã bị hủy.");
 
             if (invoice.DueDate < DateTime.UtcNow)
             {
                 invoice.Status = "Expired";
                 await _context.SaveChangesAsync();
-                throw new Exception("Hoa don da het han thanh toan.");
+                throw new Exception("Hóa đơn đã hết hạn thanh toán.");
             }
 
             ValidatePaymentMethod(paymentMethod);
@@ -353,8 +385,8 @@ namespace EducenAPI.Services
             var invoice = await _context.Invoices
                 .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId && i.TenantId == tenantId);
 
-            if (invoice == null)
-                throw new Exception("KhÃ´ng tÃ¬m tháº¥y hoÃ¡ Ä‘Æ¡n.");
+if (invoice == null)
+                throw new Exception("Không tìm thấy hóa đơn.");
 
             if (invoice.Status == "Paid")
                 throw new Exception("Hoá đơn đã thanh toán.");
@@ -366,12 +398,12 @@ namespace EducenAPI.Services
             {
                 invoice.Status = "Expired";
                 await _context.SaveChangesAsync();
-                throw new Exception("Hoa don da het han thanh toan.");
+                throw new Exception("Hóa đơn đã hết hạn thanh toán.");
             }
 
             invoice.PaymentMethod = normalizedMethod!;
             invoice.PaymentNote = string.IsNullOrWhiteSpace(paymentNote)
-                ? $"Center gá»­i yÃªu cáº§u xÃ¡c nháº­n thanh toÃ¡n {normalizedMethod}. NgÆ°á»i gá»­i: {requestedBy}"
+                ? $"Center gửi yêu cầu xác nhận thanh toán {normalizedMethod}. Người gửi: {requestedBy}"
                 : paymentNote.Trim();
             invoice.Status = "AwaitingConfirmation";
 
@@ -468,14 +500,14 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(r => r.RequestId == invoice.PackageChangeRequestId);
 
             if (request == null)
-                throw new Exception("Khong tim thay yeu cau doi goi.");
+                throw new Exception("Không tìm thấy yêu cầu đổi gói.");
 
             if (request.Status == "Completed")
                 return;
 
             var tenant = await _context.Tenants.FindAsync(request.TenantId);
             if (tenant == null)
-                throw new Exception("Khong tim thay trung tam.");
+                throw new Exception("Không tìm thấy trung tâm.");
 
             var currentSub = await GetActiveSubscriptionAsync(request.TenantId);
             ValidateChangeRules(currentSub, request.RequestedPlan);
@@ -487,7 +519,7 @@ namespace EducenAPI.Services
                 currentSub);
 
             if (!AmountEquals(pricing.AmountToCharge, invoice.Amount))
-                throw new Exception("Hoa don khong con khop voi cong thuc bu tru credit hien tai.");
+                throw new Exception("Hóa đơn không còn khớp với công thức bù trừ credit hiện tại.");
 
             if (invoice.Amount > 0 &&
                 (string.Equals(paymentMethod, "Cash", StringComparison.OrdinalIgnoreCase) ||

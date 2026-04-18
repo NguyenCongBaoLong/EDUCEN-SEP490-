@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Inbox, X, ArrowLeft, Send, MessageSquare, CheckCircle,
     Clock, Star, AlertCircle, MailOpen
@@ -6,7 +6,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import '../css/pages/parent/ParentFeedback.css';
-import '../css/components/TeacherInboxDrawer.css'; // reuse drawer shell styles
+import '../css/components/TeacherInboxDrawer.css';
 
 const CATEGORIES = [
     'Chất lượng giảng dạy',
@@ -66,7 +66,6 @@ const EMPTY_FORM = { category: '', subject: '', content: '', rating: 0 };
 
 const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
     const [open, setOpen] = useState(false);
-    // 'list' | 'form' | 'detail'
     const [view, setView] = useState('list');
     const [feedbacks, setFeedbacks] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -76,25 +75,60 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
 
-    // This component now acts as 'Mailbox' only.
-    // Send feedback is handled by ParentFeedbackModal.
-
-
-    const fetchFeedbacks = async () => {
+    const fetchFeedbacks = useCallback(async (reason = 'manual') => {
         setLoading(true);
         try {
             const res = await api.get('/support-requests/my');
-            setFeedbacks(res.data || []);
+            const data = res.data || [];
+            setFeedbacks(data);
+            setSelectedFb((prev) => {
+                if (!prev?.id) return null;
+                return data.find((f) => f?.id === prev.id) || null;
+            });
+            console.debug('[ParentFeedbackDrawer] refreshed inbox badge', {
+                reason,
+                total: data.length,
+                unread: data.filter(f => f.adminResponse && !f.isReadByUser).length
+            });
         } catch {
             toast.error('Không thể tải danh sách phản hồi.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
-        if (open) fetchFeedbacks();
-    }, [open]);
+        fetchFeedbacks('mount');
+
+        const intervalId = window.setInterval(() => {
+            fetchFeedbacks('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchFeedbacks('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchFeedbacks('tab-visible');
+            }
+        };
+        const handleManualRefresh = () => fetchFeedbacks('custom-event');
+
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('parent-feedback-refresh', handleManualRefresh);
+
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('parent-feedback-refresh', handleManualRefresh);
+        };
+    }, [fetchFeedbacks]);
+
+    useEffect(() => {
+        if (open) {
+            fetchFeedbacks('drawer-open');
+        }
+    }, [open, fetchFeedbacks]);
 
     useEffect(() => {
         if (autoOpenSignal > 0) {
@@ -127,7 +161,7 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
             setForm(EMPTY_FORM);
             setErrors({});
             setView('list');
-            await fetchFeedbacks();
+            await fetchFeedbacks('submit');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Gửi phản hồi thất bại.');
         } finally {
@@ -145,7 +179,6 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
 
     return (
         <>
-            {/* Trigger */}
             {!hideTrigger && (
                 <button className="tid-trigger-btn" onClick={() => setOpen(true)}>
                     <Inbox size={16} />
@@ -156,13 +189,9 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                 </button>
             )}
 
-            {/* Overlay */}
             {open && <div className="tid-overlay" onClick={closeDrawer} />}
 
-            {/* Drawer */}
             <div className={`tid-drawer ${open ? 'open' : ''}`}>
-
-                {/* Header */}
                 <div className="tid-drawer-header">
                     {view !== 'list' ? (
                         <button className="tid-back-btn" onClick={() => { setView('list'); setSelectedFb(null); }}>
@@ -182,19 +211,11 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                     </button>
                 </div>
 
-                {/* Body */}
                 <div className="tid-drawer-body">
-
-                    {/* ── LIST VIEW ── */}
                     {view === 'list' && (
                         <div>
-                            {/* Send new feedback button */}
-                            {/* Inbox list container */}
-                            <div style={{ padding: '0 0', borderBottom: '1px solid #f1f5f9' }}>
-                                {/* Feedback button removed as it is now in Sidebar */}
-                            </div>
+                            <div style={{ padding: '0 0', borderBottom: '1px solid #f1f5f9' }}></div>
 
-                            {/* Feedback history */}
                             {loading ? (
                                 <div className="tid-empty"><p>Đang tải...</p></div>
                             ) : feedbacks.length === 0 ? (
@@ -238,10 +259,6 @@ const ParentFeedbackDrawer = ({ autoOpenSignal = 0, hideTrigger = false }) => {
                         </div>
                     )}
 
-                    {/* FORM VIEW REMOVED - Handled by ParentFeedbackModal */}
-
-
-                    {/* ── DETAIL VIEW ── */}
                     {view === 'detail' && selectedFb && (() => {
                         const { category, subject } = parseTitle(selectedFb.title);
                         const { rating, body } = parseContent(selectedFb.content);

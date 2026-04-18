@@ -79,6 +79,7 @@ namespace EducenAPI.Services
                     PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
+                        Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
                         EndTime = s.EndTime.ToString("HH:mm"),
@@ -134,6 +135,7 @@ namespace EducenAPI.Services
                     PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
+                        Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
                         EndTime = s.EndTime.ToString("HH:mm"),
@@ -654,6 +656,7 @@ namespace EducenAPI.Services
                     {
                         var scheduleSlots = dto.ScheduleSlots ?? existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                         {
+                            Slot = s.ScheduleId,
                             DayOfWeek = s.DayOfWeek,
                             StartTime = s.StartTime.ToString("HH:mm"),
                             EndTime = s.EndTime.ToString("HH:mm")
@@ -704,6 +707,7 @@ namespace EducenAPI.Services
                     {
                         var scheduleSlots = dto.ScheduleSlots ?? existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                         {
+                            Slot = s.ScheduleId,
                             DayOfWeek = s.DayOfWeek,
                             StartTime = s.StartTime.ToString("HH:mm"),
                             EndTime = s.EndTime.ToString("HH:mm")
@@ -747,6 +751,7 @@ namespace EducenAPI.Services
                     var roomIdToValidate = dto.RoomId ?? existingClass.RoomId;
                     var slotsToValidate = dto.ScheduleSlots ?? existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                     {
+                        Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
                         EndTime = s.EndTime.ToString("HH:mm"),
@@ -837,6 +842,7 @@ namespace EducenAPI.Services
                 {
                     var existingSlots = existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                     {
+                        Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
                         EndTime = s.EndTime.ToString("HH:mm"),
@@ -886,6 +892,7 @@ namespace EducenAPI.Services
                         if (pastSessionsWithData.Any())
                         {
                             var newSchedules = new List<Schedule>();
+                            var slotMap = new Dictionary<int, Schedule>();
                             foreach (var slot in dto.ScheduleSlots)
                             {
                                 var newSched = new Schedule
@@ -898,6 +905,10 @@ namespace EducenAPI.Services
                                 };
                                 _context.Schedules.Add(newSched);
                                 newSchedules.Add(newSched);
+                                if (slot.Slot.HasValue)
+                                {
+                                    slotMap[slot.Slot.Value] = newSched;
+                                }
                             }
                             await _context.SaveChangesAsync();
 
@@ -907,8 +918,10 @@ namespace EducenAPI.Services
 
                             foreach (var ks in keptSessions)
                             {
-                                var matchingSched = newSchedules.FirstOrDefault(ns => ns.DayOfWeek == (int)ks.SessionDate.DayOfWeek)
-                                                ?? newSchedules.First();
+                                var matchingSched = slotMap.TryGetValue(ks.ScheduleId, out var mapped)
+                                    ? mapped
+                                    : (newSchedules.FirstOrDefault(ns => ns.DayOfWeek == (int)ks.SessionDate.DayOfWeek)
+                                        ?? newSchedules.First());
                                 ks.ScheduleId = matchingSched.ScheduleId;
                             }
                             await _context.SaveChangesAsync();
@@ -1313,13 +1326,18 @@ namespace EducenAPI.Services
             if (newSlots.Count != existingSlots.Count) return false;
 
             // Sort both lists to ensure consistent comparison
-            var sortedNew = newSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
-            var sortedExisting = existingSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+            var sortedNew = newSlots.OrderBy(s => s.Slot ?? int.MaxValue).ThenBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+            var sortedExisting = existingSlots.OrderBy(s => s.Slot ?? int.MaxValue).ThenBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
 
             for (int i = 0; i < sortedNew.Count; i++)
             {
                 var n = sortedNew[i];
                 var e = sortedExisting[i];
+
+                if ((n.Slot.HasValue || e.Slot.HasValue) && n.Slot != e.Slot)
+                {
+                    return false;
+                }
 
                 if (n.DayOfWeek != e.DayOfWeek ||
                     NormalizeTime(n.StartTime) != NormalizeTime(e.StartTime) ||
@@ -1666,6 +1684,7 @@ namespace EducenAPI.Services
                     PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
                     {
+                        Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
                         StartTime = s.StartTime.ToString("HH:mm"),
                         EndTime = s.EndTime.ToString("HH:mm"),

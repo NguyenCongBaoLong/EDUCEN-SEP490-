@@ -47,13 +47,25 @@ const StudentManagement = () => {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const parents = await fetchParents();
-            await fetchGrades();
-            await fetchClasses();
-            await fetchStudents(parents);
+            const [parentsRes, gradesRes, classesRes, usersRes] = await Promise.all([
+                api.get('/Parents'),
+                api.get('/Grades'),
+                api.get('/Classes'),
+                api.get('/admin/users')
+            ]);
             
-            // Also fetch all users for email validation
-            await fetchAllUsers();
+            const parents = parentsRes.data.map(p => ({
+                id: p.userId.toString(),
+                name: p.fullName || p.username,
+                email: p.email,
+                phone: p.phoneNumber || ''
+            }));
+            setParentList(parents);
+            setGradeList(gradesRes.data);
+            setClassList(classesRes.data);
+            setAllUsers(usersRes.data || []);
+            
+            await fetchStudents(parents);
         } finally {
             setIsLoading(false);
         }
@@ -250,20 +262,15 @@ const StudentManagement = () => {
     };
 
     const handleSendAccount = async (studentId) => {
-        setStudentList(prev => prev.map(s =>
-            s.id === studentId
-                ? { ...s, accountSent: true, status: 'active' }
-                : s
-        ));
-        toast.success('Đã gửi tài khoản cho học sinh!');
         try {
             await api.post(`/Students/send-account/${studentId}`);
-        } catch (error) {
             setStudentList(prev => prev.map(s =>
                 s.id === studentId
-                    ? { ...s, accountSent: false, status: 'inactive' }
+                    ? { ...s, accountSent: true, status: 'active' }
                     : s
             ));
+            toast.success('Đã gửi tài khoản cho học sinh!');
+        } catch (error) {
             toast.error(error.response?.data?.message || error.response?.data || 'Gửi tài khoản thất bại');
         }
     };

@@ -42,6 +42,26 @@ namespace EducenAPI.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{id}/approve")]
+        public async Task<IActionResult> Approve(int id, [FromBody] ReplySupportRequestDto? dto)
+        {
+            var adminId = _userContext.GetUserId();
+            var note = dto?.AdminResponse;
+            var result = await _service.ApproveAsync(adminId, id, note);
+            return Ok(result);
+        }
+
+        [HttpPut("{id}/reject")]
+        public async Task<IActionResult> Reject(int id, [FromBody] ReplySupportRequestDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto?.AdminResponse))
+                return BadRequest("Lý do từ chối là bắt buộc.");
+
+            var adminId = _userContext.GetUserId();
+            var result = await _service.RejectAsync(adminId, id, dto.AdminResponse);
+            return Ok(result);
+        }
+
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {

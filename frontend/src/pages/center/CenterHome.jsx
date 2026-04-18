@@ -278,16 +278,14 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     const isAdmin = isAdminProp && user?.role === 'Admin';
     const set = (field, value) => setDraft(p => ({ ...p, [field]: value }));
 
-    /* --- Effects & Actions --- */
-
-    useEffect(() => {
-        fetchCenterData();
-        if (refreshSchedules) refreshSchedules();
-    }, [refreshSchedules]);
-
+    // 6. Data Fetch Functions
     const fetchCenterData = async () => {
         try {
-            const response = await api.get('/CenterHome');
+            const [response, classesRes] = await Promise.all([
+                api.get('/CenterHome'),
+                api.get('/CenterHome/classes').catch(() => ({ data: [] }))
+            ]);
+            
             if (response.data) {
                 const data = response.data;
                 data.highlights = data.highlights || [];
@@ -310,21 +308,8 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
                 setSaved(data);
                 setDraft(data);
             }
-        } catch (error) {
-            console.error('Error fetching center data:', error);
-            if (error.response?.status === 404) {
-                setSaved({ ...INIT });
-                setDraft({ ...INIT });
-            }
-        }
-    };
 
-    const fetchUpcomingClasses = async () => {
-        try {
-            const resp = await api.get('/CenterHome/classes');
-            let classes = resp.data || [];
-            
-            // Sắp xếp: Ưu tiên lớp sắp khai giảng (ngày bắt đầu học lớn hơn ngày hiện tại)
+            let classes = classesRes.data || [];
             const now = new Date();
             classes.sort((a, b) => {
                 const dateA = new Date(a.startDate || 0);
@@ -341,7 +326,6 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
             setUpcomingClasses(classes);
             
-            // Extract unique grades and subjects
             const extGrades = [];
             const gradeIds = new Set();
             const extSubjects = new Set();
@@ -358,14 +342,21 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
             
             setGrades(extGrades.sort((a,b) => a.gradeId - b.gradeId));
             setAvailableSubjects(Array.from(extSubjects).sort());
-        } catch (err) {
-            console.error("Failed to fetch upcoming classes:", err);
+        } catch (error) {
+            console.error('Error fetching center data:', error);
+            if (error.response?.status === 404) {
+                setSaved({ ...INIT });
+                setDraft({ ...INIT });
+            }
         }
     };
 
-    useEffect(() => {
-        fetchUpcomingClasses();
-    }, []);
+    /* --- Effects & Actions --- */
+
+useEffect(() => {
+        fetchCenterData();
+        if (refreshSchedules) refreshSchedules();
+    }, [refreshSchedules]);
 
     /* --- Scroll & Sticky Header Animations --- */
     useEffect(() => {

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, GraduationCap, Users, BookOpen, Calendar,
     LogOut, ChevronLeft, Heart, DollarSign, ChevronDown, ChevronRight,
-    MapPin, Layers, ClipboardCheck, TrendingUp, CreditCard, UserPlus
+    MapPin, Layers, ClipboardCheck, TrendingUp, CreditCard, UserPlus, Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -28,32 +28,85 @@ const Sidebar = () => {
     // Badge states
     const [pendingEnrollmentCount, setPendingEnrollmentCount] = useState(0);
     const [pendingAttendanceModCount, setPendingAttendanceModCount] = useState(0);
+    const [pendingScheduleRequestsCount, setPendingScheduleRequestsCount] = useState(0);
+    const isScheduleChangeRequest = (req) => {
+        const title = (req?.title || req?.Title || '').toLowerCase();
+        const content = (req?.content || req?.Content || '').toLowerCase();
+        return title.includes('[schedule_change]')
+            || content.includes('type: schedule_change')
+            || title.includes('đổi lịch dạy')
+            || content.includes('requestedslot:')
+            || content.includes('slot đề xuất');
+    };
+
+    const fetchCounts = useCallback(async (reason = 'manual') => {
+        try {
+            const [enrollmentRes, attendanceRes, scheduleRes] = await Promise.all([
+                api.get('/enrollment-requests/pending'),
+                api.get('/attendance/modification-requests/pending'),
+                api.get('/admin/support-requests')
+            ]);
+
+            const enrollmentCount = Array.isArray(enrollmentRes.data) ? enrollmentRes.data.length : 0;
+            const attendanceCount = Array.isArray(attendanceRes.data) ? attendanceRes.data.length : 0;
+            
+            // Filter schedule change requests that are pending
+            let scheduleData = scheduleRes.data;
+            if (!Array.isArray(scheduleData)) {
+                scheduleData = scheduleData?.data || scheduleData?.notifications || scheduleData?.items || [];
+            }
+            const scheduleChangeRequests = scheduleData.filter(req =>
+                !req.adminResponse && isScheduleChangeRequest(req)
+            );
+            const scheduleCount = scheduleChangeRequests.length;
+
+            setPendingEnrollmentCount(enrollmentCount);
+            setPendingAttendanceModCount(attendanceCount);
+            setPendingScheduleRequestsCount(scheduleCount);
+            console.debug('[Sidebar] badge counts updated', {
+                reason,
+                enrollmentCount,
+                attendanceCount,
+                scheduleCount
+            });
+        } catch (error) {
+            console.warn('[Sidebar] failed to refresh badge counts', {
+                error: error.message,
+                reason
+            });
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchCounts = async () => {
-            try {
-                // Fetch pending enrollment requests
-                const enrollmentRes = await api.get('/enrollment-requests/pending');
-                if (enrollmentRes.data) {
-                    setPendingEnrollmentCount(enrollmentRes.data.length);
-                }
+        fetchCounts('mount');
 
-                // Fetch pending attendance modification requests
-                const attendanceRes = await api.get('/attendance/modification-requests/pending');
-                if (attendanceRes.data) {
-                    setPendingAttendanceModCount(attendanceRes.data.length);
-                }
-            } catch (error) {
-                console.error('Error fetching sidebar notification counts:', error);
+        const intervalId = window.setInterval(() => {
+            fetchCounts('interval-30s');
+        }, 30000);
+
+        const handleFocus = () => fetchCounts('window-focus');
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchCounts('tab-visible');
             }
         };
+        const handleManualRefresh = () => fetchCounts('custom-event');
 
-        fetchCounts();
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('center-sidebar-badge-refresh', handleManualRefresh);
 
-        // Refresh every 2 minutes
-        const interval = setInterval(fetchCounts, 120000);
-        return () => clearInterval(interval);
-    }, []);
+        return () => {
+            window.clearInterval(intervalId);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('center-sidebar-badge-refresh', handleManualRefresh);
+        };
+    }, [fetchCounts]);
+
+    useEffect(() => {
+        fetchCounts('route-change');
+    }, [location.pathname, fetchCounts]);
 
     const toggleGroup = (groupName) => {
         setExpandedGroups(prev => {
@@ -103,6 +156,12 @@ const Sidebar = () => {
                     icon: ClipboardCheck,
                     label: 'Sửa điểm danh',
                     badge: pendingAttendanceModCount
+                },
+                {
+                    path: '/center/schedule-requests',
+                    icon: Clock,
+                    label: 'Yêu cầu đổi lịch',
+                    badge: pendingScheduleRequestsCount
                 },
                 { path: '/center/subjects', icon: BookOpen, label: 'Môn học' },
                 { path: '/center/rooms', icon: MapPin, label: 'Phòng học' },
@@ -231,3 +290,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+

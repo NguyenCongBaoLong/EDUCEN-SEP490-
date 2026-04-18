@@ -1,4 +1,4 @@
-/* â”€â”€â”€ StudentClasses Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* StudentClasses Page */
 .sc-page {
     display: flex;
     min-height: 100vh;
@@ -455,7 +455,7 @@
     }
 }
 
-/* â”€â”€â”€ Performance Report Button â”€â”€â”€ */
+/* Performance Report Button */
 .sc-report-btn {
     display: flex;
     align-items: center;
@@ -482,7 +482,7 @@
     transform: translateY(0);
 }
 
-/* â”€â”€â”€ Shared Report Modal Styles (Prefix pc- for consistency) â”€â”€â”€ */
+/* Shared Report Modal Styles (Prefix pc- for consistency) */
 .pc-modal-overlay {
     position: fixed;
     inset: 0;

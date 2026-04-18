@@ -1,6 +1,7 @@
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
+using EducenAPI.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -67,13 +68,27 @@ namespace EducenAPI.Middleware
                     // Truy vấn AdminDbContext để tìm TenantId dựa trên SubDomain hoặc TenantId (GUID)
                     var tenant = await adminDbContext.Tenants
                         .AsNoTracking()
-                        .Where(t => (t.SubDomain == subDomain || t.TenantId == subDomain) && t.IsActive)
-                        .Select(t => t.TenantId)
+                        .Where(t => t.SubDomain == subDomain || t.TenantId == subDomain)
+                        .Select(t => new { t.TenantId, t.IsActive, t.TenantName })
                         .FirstOrDefaultAsync();
 
                     if (tenant != null)
                     {
-                        actualTenantId = tenant;
+                        if (!tenant.IsActive)
+                        {
+                            context.Response.StatusCode = 403;
+                            context.Response.ContentType = "application/json";
+                            var errorResponse = new
+                            {
+                                statusCode = 403,
+                                message = "Tài khoản trung tâm đã bị khóa. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.",
+                                tenantName = tenant.TenantName
+                            };
+                            await context.Response.WriteAsJsonAsync(errorResponse);
+                            return;
+                        }
+
+                        actualTenantId = tenant.TenantId;
                         // Lưu vào cache trong 30 phút
                         _cache.Set(cacheKey, actualTenantId, TimeSpan.FromMinutes(30));
                     }
