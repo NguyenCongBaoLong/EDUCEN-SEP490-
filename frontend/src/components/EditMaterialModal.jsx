@@ -10,6 +10,7 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [
     });
     const [newFile, setNewFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (materialData) {
@@ -36,6 +37,10 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const newErrors = {};
+        if (!formData.gradeId) newErrors.gradeId = 'Vui lòng chọn khối lớp';
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) return;
         try {
             setIsSubmitting(true);
             
@@ -91,9 +96,9 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [
                         </div>
 
                         <div className="cam-field">
-                            <label className="cam-label">Khối lớp (Tùy chọn)</label>
+                            <label className="cam-label">Khối lớp <span className="cam-required">*</span></label>
                             <select
-                                className="cam-input"
+                                className={`cam-input${errors.gradeId ? ' error' : ''}`}
                                 name="gradeId"
                                 value={formData.gradeId}
                                 onChange={handleChange}
@@ -103,6 +108,7 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [
                                     <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
                                 ))}
                             </select>
+                            {errors.gradeId && <span style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: '4px', display: 'block' }}>{errors.gradeId}</span>}
                         </div>
 
                         <div className="cam-field">

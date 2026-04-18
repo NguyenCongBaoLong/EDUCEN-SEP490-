@@ -13,6 +13,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
     const [isDragging, setIsDragging] = useState(false);
     const [saveToLibrary, setSaveToLibrary] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errors, setErrors] = useState({});
     const fileInputRef = useRef(null);
 
     if (!isOpen) return null;
@@ -64,10 +65,14 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const newErrors = {};
         if (files.length === 0) {
             toast.error("Vui lòng chọn ít nhất 1 file tài liệu để tải lên.");
             return;
         }
+        if (!formData.gradeId) newErrors.gradeId = 'Vui lòng chọn khối lớp';
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length > 0) return;
 
         try {
             setIsSubmitting(true);
@@ -189,9 +194,9 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
                         </div>
 
                         <div className="cam-field">
-                            <label className="cam-label">Khối lớp (Tùy chọn)</label>
+                            <label className="cam-label">Khối lớp <span className="cam-required">*</span></label>
                             <select
-                                className="cam-input"
+                                className={`cam-input${errors.gradeId ? ' error' : ''}`}
                                 name="gradeId"
                                 value={formData.gradeId}
                                 onChange={handleChange}
@@ -201,6 +206,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
                                     <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
                                 ))}
                             </select>
+                            {errors.gradeId && <span className="error-text" style={{ color: '#ef4444', fontSize: '0.8125rem', marginTop: '4px', display: 'block' }}>{errors.gradeId}</span>}
                         </div>
 
 

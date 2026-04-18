@@ -28,8 +28,8 @@ const TeacherAssignments = ({ isTA = false }) => {
     const [classes, setClasses] = useState([]);
     const [grades, setGrades] = useState([]);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
+    const loadData = useCallback(async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
             const [matsRes, asmsRes, classesRes, gradesRes] = await Promise.all([
                 api.get('/Materials'),
@@ -47,7 +47,6 @@ const TeacherAssignments = ({ isTA = false }) => {
                 if (!url) return 'Tệp không tên';
                 const parts = url.split('/');
                 const fileName = parts[parts.length - 1];
-                // Remove the GUID prefix if it exists (e.g. guid_filename.ext)
                 return fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName;
             };
 
@@ -59,8 +58,8 @@ const TeacherAssignments = ({ isTA = false }) => {
             const groupUnique = (list) => {
                 return list.reduce((acc, curr) => {
                     const isDup = acc.some(item => 
-                        item.title === curr.title && 
-                        curr.fileUrl && // Chỉ gộp nếu bài tập đó thật sự có file trùng nhau
+                        item.title === curr.title &&
+                        curr.fileUrl &&
                         item.fileUrl === curr.fileUrl
                     );
                     if (!isDup) acc.push(curr);
@@ -116,9 +115,14 @@ const TeacherAssignments = ({ isTA = false }) => {
             console.error("Error fetching library data:", error);
             toast.error("Không thể tải dữ liệu thư viện");
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     }, []);
+
+    // Tải lần đầu (có spinner)
+    const fetchData = useCallback(() => loadData(true), [loadData]);
+    // Refresh ngầm sau khi tạo/sửa — không hiện spinner, không reset trang
+    const silentRefresh = useCallback(() => loadData(false), [loadData]);
 
     useEffect(() => {
         fetchData();
@@ -201,26 +205,22 @@ const TeacherAssignments = ({ isTA = false }) => {
     const handleSaveAssignment = async (assignmentData) => {
         try {
             if (editingAssignment) {
-                // Update existing assignment
                 const targetId = editingAssignment.asmId;
                 await api.put(`/Assignments/${targetId}`, assignmentData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 toast.success("Cập nhật bài tập thành công");
             } else {
-                // Create new assignment
                 await api.post('/Assignments/Create-Assignments', assignmentData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 toast.success("Tạo bài tập thành công");
             }
-            fetchData();
+            silentRefresh(); // refresh ngầm, không reset trang
         } catch (error) {
             console.error("Error saving assignment detail:", error.response?.data);
             const validationErrors = error.response?.data?.errors;
-            if (validationErrors) {
-                console.table(validationErrors);
-            }
+            if (validationErrors) console.table(validationErrors);
             toast.error(error.response?.data?.message || "Không thể lưu bài tập");
         }
         setIsAssignmentModalOpen(false);
@@ -228,11 +228,13 @@ const TeacherAssignments = ({ isTA = false }) => {
 
     const confirmDeleteAssignment = async () => {
         if (deleteAssignmentModal.assignment) {
+            const { asmId } = deleteAssignmentModal.assignment;
             try {
-                const id = deleteAssignmentModal.assignment.asmId;
-                await api.delete(`/Assignments/${id}`);
+                await api.delete(`/Assignments/${asmId}`);
                 toast.success("Xóa bài tập thành công");
-                fetchData();
+                // Cập nhật state cục bộ — không gọi fetchData() để tránh reset trang
+                setTemplates(prev => prev.filter(t => t.asmId !== asmId));
+                setAssignments(prev => prev.filter(a => a.asmId !== asmId));
             } catch (error) {
                 console.error("Error deleting assignment:", error);
                 toast.error("Không thể xóa bài tập");
@@ -242,12 +244,9 @@ const TeacherAssignments = ({ isTA = false }) => {
     };
 
     /* --- MATERIAL HANDLERS --- */
-    const handleUploadMaterial = async (newFiles) => {
-        // newFiles is expected to be an array of files or material data
-        // For simplicity, we refresh everything after upload
-        fetchData();
+    const handleUploadMaterial = async () => {
         setIsUploadMaterialOpen(false);
-        setCurrentPage(1);
+        silentRefresh(); // refresh ngầm, không reset trang
     };
 
     const confirmDeleteMaterial = async () => {
@@ -255,7 +254,8 @@ const TeacherAssignments = ({ isTA = false }) => {
             try {
                 await api.delete(`/Materials/${deleteMaterialId}`);
                 toast.success("Xóa tài liệu thành công");
-                fetchData();
+                // Cập nhật state cục bộ — không gọi fetchData() để tránh reset trang
+                setMaterials(prev => prev.filter(m => m.materialId !== deleteMaterialId));
             } catch (error) {
                 console.error("Error deleting material:", error);
                 toast.error("Không thể xóa tài liệu");
@@ -264,19 +264,42 @@ const TeacherAssignments = ({ isTA = false }) => {
         }
     };
 
-    const handleDownload = (item) => {
+    const handleDownload = async (item) => {
         const downloadUrl = item.fileUrl || item.FileUrl || item.url;
-        if (downloadUrl) {
-            toast.success(`Đang tải xuống: ${item.fileName || item.title}`);
+        if (!downloadUrl) {
+            toast.error("Không có đường dẫn tải về");
+            return;
+        }
+        const fileName = item.originalFileName || item.fileName || item.title || 'download';
+        const ext = fileName.split('.').pop()?.toLowerCase() || '';
+
+        // Các loại file trình duyệt có thể xem trực tiếp → mở tab mới
+        const viewableExts = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'mp4', 'webm', 'ogg'];
+        if (viewableExts.includes(ext)) {
+            window.open(downloadUrl, '_blank');
+            return;
+        }
+
+        // Các loại file phải tải xuống (Excel, Word, PPT, ZIP...) → fetch + blob
+        const toastId = toast.loading(`Đang tải xuống: ${fileName}...`);
+        try {
+            const response = await fetch(downloadUrl);
+            if (!response.ok) throw new Error('Network error');
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = item.fileName || item.title;
-            a.target = "_blank";
+            a.href = blobUrl;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-        } else {
-            toast.error("Không có đường dẫn tải về");
+            window.URL.revokeObjectURL(blobUrl);
+            toast.success(`Đã tải xuống: ${fileName}`, { id: toastId });
+        } catch (err) {
+            console.error('Download error:', err);
+            // Fallback: mở tab mới
+            window.open(downloadUrl, '_blank');
+            toast.success(`Đã mở liên kết tải: ${fileName}`, { id: toastId });
         }
     };
 
@@ -702,7 +725,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                 <EditMaterialModal
                     isOpen={!!editMaterialData}
                     onClose={() => setEditMaterialData(null)}
-                    onUpdate={fetchData}
+                    onUpdate={silentRefresh}
                     materialData={editMaterialData}
                     grades={grades}
                 />

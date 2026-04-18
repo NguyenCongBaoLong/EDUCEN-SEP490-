@@ -116,9 +116,16 @@ const mapMaterial = (m) => ({
     originalFileName: m.originalFileName || m.OriginalFileName || '',
     fileName: m.originalFileName || m.OriginalFileName || '',
     uploadDate: '',
-    type: (m.contentType || m.ContentType)?.toLowerCase().includes('pdf') ? 'pdf'
-        : (m.contentType || m.ContentType)?.toLowerCase().includes('word') ? 'word'
-        : (m.contentType || m.ContentType)?.toLowerCase().includes('video') ? 'video' : 'other',
+    type: (() => {
+        const ct = (m.contentType || m.ContentType || '').toLowerCase();
+        const fn = (m.originalFileName || m.OriginalFileName || '').toLowerCase();
+        if (ct.includes('pdf') || fn.endsWith('.pdf')) return 'pdf';
+        if (ct.includes('word') || fn.endsWith('.doc') || fn.endsWith('.docx')) return 'word';
+        if (ct.includes('excel') || ct.includes('spreadsheet') || fn.endsWith('.xls') || fn.endsWith('.xlsx')) return 'excel';
+        if (ct.includes('powerpoint') || ct.includes('presentation') || fn.endsWith('.ppt') || fn.endsWith('.pptx')) return 'ppt';
+        if (ct.includes('video') || fn.endsWith('.mp4') || fn.endsWith('.mov') || fn.endsWith('.avi')) return 'video';
+        return 'other';
+    })(),
     fileUrl: m.fileUrl || m.FileUrl,
     description: m.description || m.Description || '',
     sessionId: m.sessionId || m.SessionId,
@@ -126,23 +133,35 @@ const mapMaterial = (m) => ({
     gradeId: m.gradeId || m.GradeId
 });
 
-const mapAssignment = (a) => ({
-    id: a.asmId || a.AsmId,
-    asmId: a.asmId || a.AsmId,
-    title: a.title || a.Title || '',
-    description: a.description || a.Description || '',
-    dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
-    endTime: a.endTime || a.EndTime,
-    startTime: a.startTime || a.StartTime,
-    submissionsCount: a.submissionsCount || a.SubmissionsCount || 0,
-    fileUrl: a.fileUrl || a.FileUrl,
-    fileSize: a.fileSize || a.FileSize,
-    originalFileName: a.originalFileName || a.OriginalFileName || '',
-    fileName: a.originalFileName || a.OriginalFileName || '',
-    sessionId: a.sessionId || a.SessionId,
-    classId: a.classId || a.ClassId,
-    gradeId: a.gradeId || a.GradeId
-});
+const mapAssignment = (a) => {
+    const fileName = (a.originalFileName || a.OriginalFileName || a.fileName || a.FileName || "").toLowerCase();
+    const contentType = (a.contentType || a.ContentType || "").toLowerCase();
+    const type = fileName.includes('.pdf') || contentType.includes('pdf') ? 'pdf'
+               : (fileName.includes('.doc') || fileName.includes('.docx') || contentType.includes('word')) ? 'word'
+               : (fileName.includes('.xls') || fileName.includes('.xlsx') || contentType.includes('excel') || contentType.includes('spreadsheet')) ? 'excel'
+               : (fileName.includes('.ppt') || fileName.includes('.pptx') || contentType.includes('powerpoint') || contentType.includes('presentation')) ? 'ppt'
+               : (fileName.includes('.mp4') || fileName.includes('.mov') || fileName.includes('.avi') || contentType.includes('video')) ? 'video'
+               : 'other';
+
+    return {
+        id: a.asmId || a.AsmId,
+        asmId: a.asmId || a.AsmId,
+        title: a.title || a.Title || '',
+        description: a.description || a.Description || '',
+        type: type,
+        dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
+        endTime: a.endTime || a.EndTime,
+        startTime: a.startTime || a.StartTime,
+        submissionsCount: a.submissionsCount || a.SubmissionsCount || 0,
+        fileUrl: a.fileUrl || a.FileUrl,
+        fileSize: a.fileSize || a.FileSize,
+        originalFileName: a.originalFileName || a.OriginalFileName || '',
+        fileName: a.originalFileName || a.OriginalFileName || '',
+        sessionId: a.sessionId || a.SessionId,
+        classId: a.classId || a.ClassId,
+        gradeId: a.gradeId || a.GradeId
+    };
+};
 
 const TeacherClassDetail = ({ isTA = false }) => {
     const { classId } = useParams();
@@ -224,6 +243,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 id: c.classId,
                 name: c.className || '',
                 subject: c.subjectName || '',
+                gradeLevel: c.gradeName || '',
                 schedule: scheduleStr,
                 scheduleTime: timeStr,
                 startDate: c.startDate ? formatDateVN(c.startDate) : '',
@@ -358,10 +378,12 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
     const getFileIcon = (type) => {
         switch (type) {
-            case 'pdf': return <FileText size={24} color="#ef4444" />;
-            case 'word': return <FileText size={24} color="#2563eb" />;
-            case 'video': return <PlayCircle size={24} color="#8b5cf6" />;
-            default: return <FileText size={24} color="#64748b" />;
+            case 'pdf':   return <FileText size={20} color="#ef4444" />;
+            case 'word':  return <FileText size={20} color="#2563eb" />;
+            case 'excel': return <FileText size={20} color="#16a34a" />;
+            case 'ppt':   return <FileText size={20} color="#ea580c" />;
+            case 'video': return <PlayCircle size={20} color="#8b5cf6" />;
+            default:      return <FileText size={20} color="#64748b" />;
         }
     };
 
@@ -666,7 +688,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             })()}
                         </div>
                         <p className="cd-title-meta">
-                            Môn: {classData.subject} &nbsp;•&nbsp; Mã lớp: {classData.code} &nbsp;•&nbsp; {classData.gradeLevel}
+                            Môn: {classData.subject} &nbsp;•&nbsp; Khối lớp: {classData.gradeLevel}
                         </p>
                     </div>
                     <button className="ts-btn-request" onClick={() => {
@@ -912,10 +934,14 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     </div>
 
                                     {nextSession && (
-                                        <div className="cd-next-session">
-                                            <span>Buổi cần điểm danh: {nextSession.dayLabel}, {nextSession.date}</span>
+                                        <div className="cd-next-session-card">
+                                            <div className="cd-next-info">
+                                                <span className="cd-next-label">Buổi cần điểm danh:</span>
+                                                <span className="cd-next-value">{nextSession.date}</span>
+                                            </div>
                                             <button className="cd-btn-take" onClick={() => handleOpen(nextSession)}>
-                                                <CheckCircle size={16} /> Điểm danh buổi {nextSession.date}
+                                                <CheckCircle size={18} />
+                                                <span>Điểm danh</span>
                                             </button>
                                         </div>
                                     )}
@@ -1089,7 +1115,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                     {mats.length > 0 ? (
                                                         <div className="material-items-grid">
                                                             {mats.map(item => (
-                                                                <div key={item.id} className="material-card" onClick={() => setDetailMaterial(item)} style={{ cursor: 'pointer' }}>
+                                                                <div key={item.id} className={`material-card ${item.type}`} onClick={() => setDetailMaterial(item)} style={{ cursor: 'pointer' }}>
                                                                     <div className="material-icon">{getFileIcon(item.type)}</div>
                                                                     <div className="material-info">
                                                                         <h4 className="material-name">{item.name}</h4>
@@ -1116,33 +1142,58 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                                     <div className="cd-session-section-header">
                                                         <h5><FileText size={16} /> Bài tập</h5>
                                                         {!isTA && (
-                                                            <button className="cd-btn-add-item" onClick={() => { setCreateAssignmentSession(session.sessionId); setIsCreateAssignmentOpen(true); }}>
-                                                                <Plus size={14} /> Thêm bài tập
-                                                            </button>
+                                                            <div style={{ display: 'flex' }}>
+                                                                <button
+                                                                    className="cd-btn-import-lib"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setImportModal({ isOpen: true, type: 'assignment', targetSession: session.sessionId });
+                                                                    }}
+                                                                >
+                                                                    <Library size={14} /> Thêm từ Thư viện
+                                                                </button>
+                                                                <button className="cd-btn-add-item" style={{ marginLeft: 12 }} onClick={() => { setCreateAssignmentSession(session.sessionId); setIsCreateAssignmentOpen(true); }}>
+                                                                    <Plus size={14} /> Thêm bài tập
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
 
                                                     {asms.length > 0 ? (
                                                         <div className="assignment-items-grid">
                                                             {asms.map(asm => (
-                                                                <div key={asm.id} className="assignment-card" onClick={() => setDetailAssignment(asm)} style={{ cursor: 'pointer' }}>
-                                                                    <div className="assignment-icon"><FileText size={20} color="#8b5cf6" /></div>
+                                                                <div key={asm.id} className={`assignment-card ${asm.type}`} onClick={() => setDetailAssignment(asm)}>
+                                                                    <div className={`assignment-icon ${asm.type}`}>
+                                                                        {getFileIcon(asm.type)}
+                                                                    </div>
                                                                     <div className="assignment-info">
                                                                         <h4 className="assignment-name">{asm.title}</h4>
                                                                         <div className="assignment-meta">
                                                                             <span>Hạn: {asm.dueDate}</span>
                                                                             <span className="dot">•</span>
-                                                                            <span>{asm.submissionsCount} nộp</span>
+                                                                            <span>{asm.submissionsCount} bài nộp</span>
                                                                         </div>
                                                                     </div>
                                                                     <div className="assignment-actions" onClick={(e) => e.stopPropagation()}>
-                                                                        <button className="btn-icon" title="Tải xuống" onClick={() => handleDownloadMaterial(asm)}><Download size={16} /></button>
                                                                         {!isTA && (
-                                                                            <>
-                                                                                <button className="btn-icon text-blue-600" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId }, session.sessionId)}><Edit2 size={16} /></button>
-                                                                                <button className="btn-icon text-red-600" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={16} /></button>
-                                                                            </>
+                                                                            <Link
+                                                                                to={`/teacher/assignments/${asm.id}/grade`}
+                                                                                className="btn-grade-primary"
+                                                                                title="Chấm bài"
+                                                                            >
+                                                                                <CheckSquare size={14} />
+                                                                                <span>Chấm bài</span>
+                                                                            </Link>
                                                                         )}
+                                                                        <div className="utility-actions">
+                                                                            <button className="btn-icon-subtle" title="Tải xuống" onClick={() => handleDownloadMaterial(asm)}><Download size={14} /></button>
+                                                                            {!isTA && (
+                                                                                <>
+                                                                                    <button className="btn-icon-subtle edit" title="Chỉnh sửa" onClick={() => handleEditAssignment({ ...asm, sessionId: session.sessionId }, session.sessionId)}><Edit2 size={14} /></button>
+                                                                                    <button className="btn-icon-subtle delete" title="Xóa" onClick={() => { setDeleteTargetSession(session.sessionId); setDeleteAssignmentId(asm.id); }}><Trash2 size={14} /></button>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             ))}

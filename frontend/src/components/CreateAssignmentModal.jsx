@@ -58,6 +58,7 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
     const validate = () => {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = 'Tên bài tập không được để trống';
+        if (!formData.gradeId) newErrors.gradeId = 'Vui lòng chọn khối lớp';
 
         // validate dueDate có thể trống nếu là draft, nhưng active thì nên có
         if (!isTemplate) {
@@ -169,12 +170,14 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
                             <select
                                 value={formData.gradeId}
                                 onChange={(e) => setFormData({ ...formData, gradeId: e.target.value })}
+                                className={errors.gradeId ? 'error' : ''}
                             >
                                 <option value="">-- Chọn khối lớp --</option>
                                 {grades.map(g => (
                                     <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
                                 ))}
                             </select>
+                            {errors.gradeId && <span className="error-text">{errors.gradeId}</span>}
                         </div>
 
                         {(!isTemplate && !currentClassId) && (
