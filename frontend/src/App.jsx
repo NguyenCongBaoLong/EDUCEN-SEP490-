@@ -19,6 +19,7 @@ import TeacherClasses from './pages/teacher/TeacherClasses';
 import TeacherClassDetail from './pages/teacher/TeacherClassDetail';
 import TeacherSchedule from './pages/teacher/TeacherSchedule';
 import TeacherAssignments from './pages/teacher/TeacherAssignments';
+import AssignmentStatus from './pages/teacher/AssignmentStatus';
 import AssignmentGrading from './pages/teacher/AssignmentGrading';
 import TeacherPerformanceReport from './pages/teacher/TeacherPerformanceReport';
 import TeacherMailbox from './pages/teacher/TeacherMailbox';
@@ -47,6 +48,7 @@ import SubjectManagement from './pages/center/SubjectManagement';
 import RoomManagement from './pages/center/RoomManagement';
 import GradeManagement from './pages/center/GradeManagement';
 import ScheduleRequests from './pages/center/ScheduleRequests';
+import TeacherStatisticsOverview from './pages/center/TeacherStatisticsOverview';
 
 import { ScheduleProvider } from './context/ScheduleContext';
 import { AuthProvider } from './context/AuthContext';
@@ -93,6 +95,7 @@ function App() {
               <Route path="/center/subscription" element={<PrivateRoute allowedRoles={['Admin']}><SubscriptionPlans /></PrivateRoute>} />
               <Route path="/center/enrollment-requests" element={<PrivateRoute allowedRoles={['Admin']}><EnrollmentManagement /></PrivateRoute>} />
               <Route path="/center/attendance-modifications" element={<PrivateRoute allowedRoles={['Admin']}><AttendanceModifications /></PrivateRoute>} />
+              <Route path="/center/teacher-statistics" element={<PrivateRoute allowedRoles={['Admin']}><TeacherStatisticsOverview /></PrivateRoute>} />
               <Route path="/center/subjects" element={<PrivateRoute allowedRoles={['Admin']}><SubjectManagement /></PrivateRoute>} />
               <Route path="/center/rooms" element={<PrivateRoute allowedRoles={['Admin']}><RoomManagement /></PrivateRoute>} />
               <Route path="/center/grades" element={<PrivateRoute allowedRoles={['Admin']}><GradeManagement /></PrivateRoute>} />
@@ -104,6 +107,7 @@ function App() {
               <Route path="/teacher/classes/:classId" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherClassDetail /></PrivateRoute>} />
               <Route path="/teacher/schedules" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherSchedule /></PrivateRoute>} />
               <Route path="/teacher/assignments" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherAssignments /></PrivateRoute>} />
+              <Route path="/teacher/assignment-status" element={<PrivateRoute allowedRoles={['Teacher']}><AssignmentStatus /></PrivateRoute>} />
               <Route path="/teacher/assignments/:assignmentId/grade" element={<PrivateRoute allowedRoles={['Teacher']}><AssignmentGrading /></PrivateRoute>} />
               <Route path="/teacher/performance" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherPerformanceReport /></PrivateRoute>} />
               <Route path="/teacher/mailbox" element={<PrivateRoute allowedRoles={['Teacher']}><TeacherMailbox /></PrivateRoute>} />

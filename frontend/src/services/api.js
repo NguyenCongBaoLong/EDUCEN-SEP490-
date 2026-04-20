@@ -89,7 +89,7 @@ api.interceptors.response.use(
         if (error.response?.status === 403) {
             const errorData = error.response?.data;
             const message = errorData?.message || 'Tài khoản trung tâm đã bị khóa. Vui lòng liên hệ quản trị viên.';
-            
+
             toast.error(message, {
                 duration: 7000,
                 style: {
@@ -97,12 +97,19 @@ api.interceptors.response.use(
                     whiteSpace: 'pre-line',
                 },
             });
-            
+
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             localStorage.removeItem('tenantId');
-            
+
             window.location.href = '/?locked=true';
+        }
+
+        if (error.response?.status === 413) {
+            if (!error.response.data) {
+                error.response.data = {};
+            }
+            error.response.data.message = 'Kích thước file tải lên quá lớn. Vui lòng chọn file có dung lượng nhỏ hơn (Tối đa ~20MB).';
         }
 
         return Promise.reject(error);

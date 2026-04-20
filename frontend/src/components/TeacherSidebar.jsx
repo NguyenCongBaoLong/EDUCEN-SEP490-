@@ -40,9 +40,10 @@ const TeacherSidebar = ({ isTA = false, onCollapseChange }) => {
     const menuItems = [
         { path: isTA ? '/ta/classes' : '/teacher/classes', icon: GraduationCap, label: 'Lớp của tôi' },
         { path: isTA ? '/ta/schedules' : '/teacher/schedules', icon: Calendar, label: 'Lịch dạy' },
-        { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Thư viện' },
+        { path: isTA ? '/ta/assignment-status' : '/teacher/assignment-status', icon: ClipboardCheck, label: 'Tình trạng Giao Bài' },
+        { path: isTA ? '/ta/assignments' : '/teacher/assignments', icon: ClipboardList, label: 'Thư viện học liệu' },
         { path: isTA ? '/ta/performance' : '/teacher/performance', icon: BarChart2, label: 'Thống kê' },
-    ].filter(item => !(isTA && (item.label === 'Thư viện' || item.hideForTA)));
+    ].filter(item => !(isTA && (item.label === 'Thư viện học liệu' || item.label === 'Tình trạng Giao Bài' || item.hideForTA)));
 
     return (
         <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>

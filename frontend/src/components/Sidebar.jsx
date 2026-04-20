@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, GraduationCap, Users, BookOpen, Calendar,
@@ -186,6 +186,7 @@ const Sidebar = () => {
             group: 'Tài chính',
             items: [
                 { path: '/center/tuition', icon: DollarSign, label: 'Quản lý học phí' },
+                { path: '/center/teacher-statistics', icon: TrendingUp, label: 'Thống kê dạy học' },
                 { path: '/center/revenue', icon: TrendingUp, label: 'Doanh thu' },
                 { path: '/center/subscription', icon: CreditCard, label: 'Gói dịch vụ' },
             ]

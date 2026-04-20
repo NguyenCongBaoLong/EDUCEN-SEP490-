@@ -29,7 +29,7 @@ function decodeToken(token) {
 function getRedirectPath(role) {
     switch (role) {
         case 'Admin':
-            return '/center';
+            return '/center/dashboard';
         case 'Teacher':
             return '/teacher/classes';
         case 'Assistant':
@@ -93,7 +93,7 @@ export function AuthProvider({ children }) {
                 localStorage.removeItem('tenantId');
             }
         }
-        
+
         // Luôn tải thông tin trung tâm
         fetchCenterBranding();
         setLoading(false);
@@ -105,7 +105,7 @@ export function AuthProvider({ children }) {
         const urlParams = new URLSearchParams(window.location.search);
         const tenantFromUrl = urlParams.get('tenant');
         const storedTenantId = localStorage.getItem('tenantId');
-        
+
         // Luôn ưu tiên tham số từ URL nếu có
         const effectiveTenantId = isValidTenantId(tenantFromUrl)
             ? tenantFromUrl
@@ -143,7 +143,7 @@ export function AuthProvider({ children }) {
             // Xóa tenantId sai (undefined, null)
             localStorage.removeItem('tenantId');
         }
-        
+
         setUser(decoded);
 
         return decoded;
@@ -173,12 +173,12 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            login, 
-            logout, 
-            sysadminLogin, 
-            loading, 
+        <AuthContext.Provider value={{
+            user,
+            login,
+            logout,
+            sysadminLogin,
+            loading,
             getRedirectPath,
             centerBranding,
             refreshBranding: fetchCenterBranding

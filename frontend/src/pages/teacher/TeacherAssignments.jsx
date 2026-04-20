@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, BookOpen, Clock, FileText, CheckCircle, AlertCircle, Edit, Trash2, X, AlertTriangle, Library, FileUp, Download, PlayCircle, Loader2, Presentation, FileArchive, Image as ImageIcon } from 'lucide-react';
+import { Search, Plus, BookOpen, FileText, Edit, Trash2, X, AlertTriangle, Library, Download, PlayCircle, Loader2, Presentation, FileArchive, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import TeacherSidebar from '../../components/TeacherSidebar';
@@ -15,34 +14,26 @@ import '../../css/components/DeleteModal.css';
 
 
 const TeacherAssignments = ({ isTA = false }) => {
-    const navigate = useNavigate();
 
 
     // Core state
-    const [activeTab, setActiveTab] = useState('materials'); // 'materials' | 'templates' | 'assignments'
+    // Core state
+    const [activeTab, setActiveTab] = useState('materials'); // 'materials' | 'templates'
     const [loading, setLoading] = useState(true);
 
     const [templates, setTemplates] = useState([]);
-    const [assignments, setAssignments] = useState([]);
     const [materials, setMaterials] = useState([]);
-    const [classes, setClasses] = useState([]);
     const [grades, setGrades] = useState([]);
 
     const loadData = useCallback(async (showLoading = true) => {
         if (showLoading) setLoading(true);
         try {
-            const [matsRes, asmsRes, classesRes, gradesRes] = await Promise.all([
+            const [matsRes, asmsRes, gradesRes] = await Promise.all([
                 api.get('/Materials'),
                 api.get('/Assignments'),
-                api.get('/Classes/teacher/my-classes'),
                 api.get('/Grades')
             ]);
             
-            const classesMap = (classesRes.data || []).reduce((acc, cls) => {
-                acc[cls.classId] = cls.className;
-                return acc;
-            }, {});
-
             const getOriginalFileName = (url) => {
                 if (!url) return 'Tệp không tên';
                 const parts = url.split('/');
@@ -80,23 +71,6 @@ const TeacherAssignments = ({ isTA = false }) => {
 
             const allAsms = asmsRes.data || [];
             
-            setAssignments(allAsms.filter(a => a.classId || a.ClassId).map(a => ({
-                ...a,
-                id: a.asmId || a.AsmId,
-                asmId: a.asmId || a.AsmId,
-                title: a.title || a.Title,
-                startTime: a.startTime || a.StartTime,
-                endTime: a.endTime || a.EndTime,
-                fileUrl: a.fileUrl || a.FileUrl,
-                className: classesMap[a.classId || a.ClassId] || 'Chưa gán',
-                status: ((a.endTime || a.EndTime) && new Date(a.endTime || a.EndTime) < new Date()) ? 'closed' : 'active',
-                fileName: getOriginalFileName(a.fileUrl || a.FileUrl),
-                type: getFileType(a.fileUrl || a.FileUrl),
-                fileSize: a.fileSize,
-                originalFileName: a.originalFileName
-            })));
-
-            setClasses(classesRes.data || []);
             setGrades(gradesRes.data || []);
             setTemplates(groupUnique(allAsms.filter(a => !a.classId && !a.ClassId).map(a => ({
                 ...a,
@@ -134,8 +108,6 @@ const TeacherAssignments = ({ isTA = false }) => {
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [classFilter, setClassFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
     const [levelFilter, setLevelFilter] = useState('');
 
     // Mods - Assignments
@@ -169,14 +141,6 @@ const TeacherAssignments = ({ isTA = false }) => {
         return matchesSearch && matchesLevel;
     });
 
-    const filteredAssignments = assignments.filter(assignment => {
-        const matchesSearch = assignment.title?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesClass = !classFilter || assignment.classId?.toString() === classFilter;
-        const matchesStatus = !statusFilter || (assignment.endTime && new Date(assignment.endTime) < new Date() ? 'closed' : 'active') === statusFilter;
-        const matchesLevel = !levelFilter || assignment.gradeId?.toString() === levelFilter || assignment.GradeId?.toString() === levelFilter;
-        return matchesSearch && matchesClass && matchesStatus && matchesLevel;
-    });
-
     const filteredMaterials = materials
         .filter(m => {
             const matchesSearch = m.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -192,13 +156,10 @@ const TeacherAssignments = ({ isTA = false }) => {
     const totalTemplatesPages = Math.ceil(filteredTemplates.length / materialsPerPage);
     const currentTemplates = filteredTemplates.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
 
-    const totalAssignmentsPages = Math.ceil(filteredAssignments.length / materialsPerPage);
-    const currentAssignments = filteredAssignments.slice((currentPage - 1) * materialsPerPage, currentPage * materialsPerPage);
-
     // Reset page when switching tabs or filtering
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeTab, searchQuery, classFilter, statusFilter, levelFilter]);
+    }, [activeTab, searchQuery, levelFilter]);
 
     /* --- TEMPLATE HANDLERS --- */
     // Note: Reusing Assignment UI for templating for simplicity currently
@@ -234,7 +195,6 @@ const TeacherAssignments = ({ isTA = false }) => {
                 toast.success("Xóa bài tập thành công");
                 // Cập nhật state cục bộ — không gọi fetchData() để tránh reset trang
                 setTemplates(prev => prev.filter(t => t.asmId !== asmId));
-                setAssignments(prev => prev.filter(a => a.asmId !== asmId));
             } catch (error) {
                 console.error("Error deleting assignment:", error);
                 toast.error("Không thể xóa bài tập");
@@ -340,17 +300,6 @@ const TeacherAssignments = ({ isTA = false }) => {
                     >
                         <BookOpen size={18} /> Kho Bộ Đề gốc ({templates.length})
                     </button>
-                    <button
-                        onClick={() => setActiveTab('assignments')}
-                        style={{
-                            padding: '12px 0', background: 'none', border: 'none', fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
-                            color: activeTab === 'assignments' ? '#3b82f6' : '#64748b',
-                            borderBottom: activeTab === 'assignments' ? '2px solid #3b82f6' : '2px solid transparent',
-                            marginBottom: '-2px', display: 'flex', alignItems: 'center', gap: '8px'
-                        }}
-                    >
-                        <CheckCircle size={18} /> Tình trạng Giao Bài ({assignments.length})
-                    </button>
                 </div>
 
                 {/* Filters Row */}
@@ -373,27 +322,13 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 <option key={g.gradeId} value={g.gradeId}>{g.gradeName}</option>
                             ))}
                         </select>
-
-                        {activeTab === 'assignments' && (
-                            <>
-                                <select className="filter-select" value={classFilter} onChange={e => setClassFilter(e.target.value)}>
-                                    <option value="">Tất cả các lớp</option>
-                                    {classes.map(cls => <option key={cls.classId} value={cls.classId}>{cls.className}</option>)}
-                                </select>
-                                <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                                    <option value="">Tất cả trạng thái</option>
-                                    <option value="active">Đang mở</option>
-                                    <option value="closed">Đã đóng</option>
-                                </select>
-                            </>
-                        )}
                     </div>
 
                     {!isTA && (
-                        <div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             {activeTab === 'materials' && (
                                 <button className="btn-create-assignment" onClick={() => setIsUploadMaterialOpen(true)}>
-                                    <FileUp size={18} /> Tải tài liệu lên
+                                    <Plus size={18} /> Tải tài liệu lên
                                 </button>
                             )}
                             {activeTab === 'templates' && (
@@ -486,7 +421,7 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 </>
                             )}
                         </div>
-                    ) : activeTab === 'templates' ? (
+                    ) : (
                         /* TEMPLATES VIEW */
                         <div className="ta-list-container">
                             {filteredTemplates.length === 0 ? (
@@ -559,109 +494,6 @@ const TeacherAssignments = ({ isTA = false }) => {
                                 </div>
                             )}
                         </div>
-                    ) : (
-                        /* ASSIGNMENTS VIEW */
-                        <div className="ta-list-container">
-                            {filteredAssignments.length === 0 ? (
-                                <div className="ta-empty-state">
-                                    <CheckCircle size={48} />
-                                    <h3>Chưa có bài tập nào được giao</h3>
-                                </div>
-                            ) : (
-                                <div className="ta-vertical-list">
-                                    {currentAssignments.map(assignment => {
-                                        const { icon, className } = getFileStyles(assignment.type);
-                                        return (
-                                            <div 
-                                                key={assignment.asmId} 
-                                                className="ta-assignment-row" 
-                                                onClick={() => setDetailAssignment(assignment)}
-                                                style={{ '--accent-color': getFileStyles(assignment.type).color }}
-                                            >
-                                                <div className={`file-icon-container ${className}`}>
-                                                    {icon}
-                                                </div>
-                                                <div className="ta-material-info" style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <h4 style={{ margin: 0 }}>{assignment.title}</h4>
-                                                        <span className="ta-card-class-sm">{assignment.className}</span>
-                                                        <span className={`ta-row-status ${assignment.status}`}>
-                                                            {assignment.status === 'active' ? 'Đang mở' : 'Đã kết thúc'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="ta-material-meta" style={{ display: 'flex', gap: '15px' }}>
-                                                        <span className="ta-row-deadline">
-                                                            <Clock size={12} /> Hạn: {assignment.endTime ? new Date(assignment.endTime).toLocaleDateString('vi-VN') : 'Không giới hạn'}
-                                                        </span>
-                                                        <span>{assignment.fileName}</span>
-                                                        <span>• {assignment.submissionsCount || 0} bài nộp</span>
-                                                    </div>
-                                                </div>
-                                                <div className="ta-actions-inline" onClick={e => e.stopPropagation()}>
-                                                    <button className="btn-icon-action download" onClick={() => handleDownload(assignment)} title="Tải xuống">
-                                                        <Download size={14} />
-                                                    </button>
-                                                    {!isTA && (
-                                                        <>
-                                                            <button
-                                                                className="btn-icon-action edit"
-                                                                onClick={() => { setEditingAssignment(assignment); setIsAssignmentModalOpen(true); }}
-                                                                title="Chỉnh sửa"
-                                                            >
-                                                                <Edit size={14} />
-                                                            </button>
-                                                            <button
-                                                                className="btn-icon-action delete"
-                                                                onClick={() => setDeleteAssignmentModal({ show: true, assignment })}
-                                                                title="Xóa"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {!isTA && (
-                                                        <button
-                                                            className="btn-grade"
-                                                            onClick={() => navigate(`${isTA ? '/ta' : '/teacher'}/assignments/${assignment.asmId}/grade`)}
-                                                        >
-                                                            Chấm bài
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {/* Pagination UI for Assignments */}
-                                    {filteredAssignments.length > materialsPerPage && (
-                                        <div className="pagination" style={{ marginTop: '24px' }}>
-                                            <span className="pagination-info">
-                                                Hiển thị {Math.min((currentPage - 1) * materialsPerPage + 1, filteredAssignments.length)}-{Math.min(currentPage * materialsPerPage, filteredAssignments.length)} trên tổng số {filteredAssignments.length} bài tập đã giao
-                                            </span>
-                                            <div className="pagination-controls">
-                                                <button
-                                                    className="pagination-btn"
-                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                                    disabled={currentPage === 1}
-                                                >
-                                                    ‹
-                                                </button>
-                                                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#4b5563' }}>
-                                                    Trang {currentPage} / {totalAssignmentsPages}
-                                                </span>
-                                                <button
-                                                    className="pagination-btn"
-                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalAssignmentsPages))}
-                                                    disabled={currentPage === totalAssignmentsPages}
-                                                >
-                                                    ›
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
                     )}
                 </div>
             </main>
@@ -670,7 +502,7 @@ const TeacherAssignments = ({ isTA = false }) => {
             {isAssignmentModalOpen && (
                 <CreateAssignmentModal
                     isOpen={isAssignmentModalOpen} onClose={() => setIsAssignmentModalOpen(false)}
-                    onSave={handleSaveAssignment} initialData={editingAssignment} classes={classes}
+                    onSave={handleSaveAssignment} initialData={editingAssignment} classes={[]}
                     isTemplate={activeTab === 'templates'} grades={grades}
                 />
             )}

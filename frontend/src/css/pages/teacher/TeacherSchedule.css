@@ -16,19 +16,15 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     gap: 2rem;
 }
 
 .ts-header-left h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #111827;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
 }
 
 .ts-btn-request {
@@ -60,8 +56,8 @@
 }
 
 .ts-subtitle {
-    font-size: 0.9375rem;
-    color: #6b7280;
+    font-size: 0.875rem;
+    color: #64748b;
     line-height: 1.6;
 }
 

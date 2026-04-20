@@ -1,4 +1,4 @@
-﻿/* StudentManagement.css */
+/* StudentManagement.css */
 .student-management {
     display: flex;
     min-height: 100vh;
@@ -17,19 +17,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem; /* Reduced from 2rem */
 }
 
 .header-left h1 {
-    font-size: 1.875rem;
+    font-size: 1.5rem; /* Reduced from 1.875rem */
     font-weight: 800;
     color: #111827;
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.25rem 0; /* Tightened */
 }
 
 .header-left p {
     color: #6b7280;
-    font-size: 0.9375rem;
+    font-size: 0.875rem; /* Reduced from 0.9375rem */
     margin: 0;
 }
 

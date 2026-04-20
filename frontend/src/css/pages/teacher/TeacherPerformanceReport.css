@@ -1,4 +1,4 @@
-﻿/* Layout */
+/* Layout */
 .teacher-report-layout {
     display: flex;
     min-height: 100vh;
@@ -16,16 +16,20 @@
 
 /* Header */
 .report-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 1.5rem;
 }
 
 .report-title {
-    font-size: 20px;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #111827;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.report-subtitle {
+    color: #64748b;
+    font-size: 0.875rem;
     margin: 0;
 }
 
@@ -228,6 +232,10 @@
     border: 1px solid #E5E7EB;
     padding: 20px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.chart-box.full-width {
+    grid-column: 1 / -1;
 }
 
 .chart-header {

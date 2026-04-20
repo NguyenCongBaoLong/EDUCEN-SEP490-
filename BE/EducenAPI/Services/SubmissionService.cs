@@ -349,24 +349,32 @@ namespace EducenAPI.Services
             var submission = await _context.Submissions
                 .Include(x => x.Asm)
                 .FirstOrDefaultAsync(x => x.SubId == subId);
-
+            
             if (submission == null)
                 throw new Exception("Không tìm thấy bài nộp");
 
+            // Nếu không có file nộp (là bài chấm tay/placeholder cho điểm)
+            if (string.IsNullOrEmpty(submission.FileUrl))
+            {
+                _context.Submissions.Remove(submission);
+                await _context.SaveChangesAsync();
+                
+                // Trả về DTO rỗng với trạng thái Chưa nộp
+                return new SubmissionResponseDto 
+                { 
+                    SubId = subId,
+                    Status = SubmissionStatus.NotSubmitted 
+                };
+            }
+
+            // Nếu có file nộp, chỉ xóa điểm và nhận xét, giữ nguyên file
             submission.Score = null;
             submission.TeacherComment = null;
             submission.GradedAt = null;
             submission.IsPublished = false;
 
-            if (string.IsNullOrEmpty(submission.FileUrl))
-            {
-                submission.Status = SubmissionStatus.NotSubmitted;
-            }
-            else
-            {
-                bool isLate = submission.Asm.EndTime.HasValue && submission.SubmittedAt > submission.Asm.EndTime.Value;
-                submission.Status = isLate ? SubmissionStatus.LateSubmitted : SubmissionStatus.Submitted;
-            }
+            bool isLate = submission.Asm.EndTime.HasValue && submission.SubmittedAt > submission.Asm.EndTime.Value;
+            submission.Status = isLate ? SubmissionStatus.LateSubmitted : SubmissionStatus.Submitted;
 
             await _context.SaveChangesAsync();
             return MapToResponseDto(submission, baseUrl);

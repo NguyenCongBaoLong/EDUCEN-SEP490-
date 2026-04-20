@@ -1,4 +1,4 @@
-﻿/* ParentManagement.css */
+/* ParentManagement.css */
 .parent-management {
     display: flex;
     min-height: 100vh;
@@ -11,24 +11,23 @@
     margin-left: 260px;
 }
 
-/* Header */
 .parent-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.5rem; /* Standardized to 1.5rem */
 }
 
 .parent-header .header-left h1 {
-    font-size: 1.875rem;
+    font-size: 1.5rem; /* Reduced from 1.875rem */
     font-weight: 800;
     color: #111827;
-    margin: 0 0 0.4rem;
+    margin: 0 0 0.25rem; /* Tightened */
 }
 
 .parent-header .header-left p {
     color: #6b7280;
-    font-size: 0.9375rem;
+    font-size: 0.875rem; /* Reduced from 0.9375rem */
     margin: 0;
 }
 

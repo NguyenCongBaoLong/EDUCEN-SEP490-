@@ -59,7 +59,8 @@ body.sidebar-collapsed .classes-main,
 body.sidebar-collapsed .ts-main,
 body.sidebar-collapsed .cd-main,
 body.sidebar-collapsed .classes-management,
-body.sidebar-collapsed .admin-dashboard {
+body.sidebar-collapsed .admin-dashboard,
+body.sidebar-collapsed .stats-main {
     margin-left: 80px !important;
     max-width: calc(100vw - 80px) !important;
 }
@@ -71,7 +72,8 @@ main,
 .ts-main,
 .cd-main,
 .classes-management,
-.admin-dashboard {
+.admin-dashboard,
+.stats-main {
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
