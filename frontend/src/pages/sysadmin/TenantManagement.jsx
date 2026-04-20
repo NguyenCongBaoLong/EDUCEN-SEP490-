@@ -17,6 +17,12 @@ const EMPTY_FORM = {
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : value);
 const hasText = (value) => normalizeText(value)?.length > 0;
+const buildPublicFileUrl = (path) => {
+    if (!path) return '';
+    if (/^https?:\/\//i.test(path)) return path;
+    const cleaned = String(path).replace(/^\/?wwwroot\/?/i, '').replace(/^\/+/, '');
+    return `/${cleaned}`;
+};
 
 const TenantManagement = () => {
     const [tenants, setTenants] = useState([]);
@@ -895,6 +901,7 @@ const TenantManagement = () => {
                                         { label: 'Người liên hệ', value: viewRegTarget.contactPerson },
                                         { label: 'Email', value: viewRegTarget.email },
                                         { label: 'Số điện thoại', value: viewRegTarget.phoneNumber },
+                                        { label: 'Mã số thuế', value: viewRegTarget.taxCode },
                                         { label: 'Trạng thái', value: viewRegTarget.status === 'Pending' ? 'Chưa duyệt' : viewRegTarget.status === 'Approved' ? 'Đã duyệt' : 'Từ chối' },
                                         { label: 'Ngày gửi', value: new Date(viewRegTarget.createdAt).toLocaleString('vi-VN') },
                                         { label: 'Lời nhắn / Yêu cầu', value: viewRegTarget.message || 'Không có', span: true },
@@ -908,6 +915,18 @@ const TenantManagement = () => {
                                         </div>
                                     ))}
                                 </div>
+                                {viewRegTarget.businessLicenseFilePath && (
+                                    <div style={{ marginTop: '0.5rem' }}>
+                                        <a
+                                            href={buildPublicFileUrl(viewRegTarget.businessLicenseFilePath)}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ color: '#2563eb', fontWeight: 600 }}
+                                        >
+                                            Xem giấy phép kinh doanh
+                                        </a>
+                                    </div>
+                                )}
                                 {viewRegTarget.status === 'Pending' && (
                                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
                                         <button

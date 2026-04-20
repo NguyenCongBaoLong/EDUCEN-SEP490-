@@ -22,6 +22,7 @@ namespace EducenAPI.Controllers
         private readonly AdminDbContext _adminDbContext;
         private readonly IRefundService _refundService;
         private readonly IPaymentService _paymentService;
+        private readonly IEInvoiceSandboxService _eInvoiceSandboxService;
 
         public CenterSubscriptionController(
             ISubscriptionService subscriptionService,
@@ -30,7 +31,8 @@ namespace EducenAPI.Controllers
             ICurrentTenantService currentTenantService,
             AdminDbContext adminDbContext,
             IRefundService refundService,
-            IPaymentService paymentService)
+            IPaymentService paymentService,
+            IEInvoiceSandboxService eInvoiceSandboxService)
         {
             _subscriptionService = subscriptionService;
             _subscriptionChangeService = subscriptionChangeService;
@@ -39,6 +41,7 @@ namespace EducenAPI.Controllers
             _adminDbContext = adminDbContext;
             _refundService = refundService;
             _paymentService = paymentService;
+            _eInvoiceSandboxService = eInvoiceSandboxService;
         }
 
         private string GetTenantId()
@@ -498,6 +501,108 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
+        /// Phat hanh hoa don dien tu sandbox (demo) cho hoa don doi goi da thanh toan
+        /// </summary>
+        [HttpPost("invoices/{invoiceId}/einvoice/issue")]
+        public async Task<IActionResult> IssueSandboxEInvoice(string invoiceId)
+        {
+            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
+
+            var invoice = await _adminDbContext.Invoices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId && i.TenantId == tenantId);
+
+            if (invoice == null)
+                return NotFound(new { message = "Không tìm thấy hoá đơn." });
+
+            if (!string.Equals(invoice.Status, "Paid", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Chỉ phát hành HĐĐT sandbox cho hoá đơn đã thanh toán." });
+
+            var tenant = await _adminDbContext.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId);
+
+            var tenantName = tenant?.TenantName ?? "Center";
+            var meta = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
+
+            return Ok(new
+            {
+                provider = meta.Provider,
+                invoiceNo = meta.InvoiceNo,
+                lookupCode = meta.LookupCode,
+                issuedAt = meta.IssuedAt,
+                xmlDownloadUrl = $"/api/admin/subscription/invoices/{invoiceId}/einvoice/xml",
+                representationDownloadUrl = $"/api/admin/subscription/invoices/{invoiceId}/einvoice/representation"
+            });
+        }
+
+        /// <summary>
+        /// Tai file XML hoa don dien tu sandbox
+        /// </summary>
+        [HttpGet("invoices/{invoiceId}/einvoice/xml")]
+        public async Task<IActionResult> DownloadSandboxEInvoiceXml(string invoiceId)
+        {
+            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
+
+            var invoice = await _adminDbContext.Invoices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId && i.TenantId == tenantId);
+
+            if (invoice == null)
+                return NotFound(new { message = "Không tìm thấy hoá đơn." });
+
+            if (!string.Equals(invoice.Status, "Paid", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Chỉ tải XML cho hoá đơn đã thanh toán." });
+
+            var tenant = await _adminDbContext.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId);
+            var tenantName = tenant?.TenantName ?? "Center";
+            var meta = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
+            var xml = _eInvoiceSandboxService.BuildXml(invoice, tenantName, meta);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(xml);
+
+            var fileName = $"{meta.InvoiceNo}.xml";
+            return File(bytes, "application/xml; charset=utf-8", fileName);
+        }
+
+        /// <summary>
+        /// Tai ban the hien hoa don dien tu sandbox (HTML)
+        /// </summary>
+        [HttpGet("invoices/{invoiceId}/einvoice/representation")]
+        public async Task<IActionResult> DownloadSandboxEInvoiceRepresentation(string invoiceId)
+        {
+            var tenantId = GetTenantId();
+            if (string.IsNullOrWhiteSpace(tenantId))
+                return BadRequest(new { message = "Không xác định được trung tâm." });
+
+            var invoice = await _adminDbContext.Invoices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId && i.TenantId == tenantId);
+
+            if (invoice == null)
+                return NotFound(new { message = "Không tìm thấy hoá đơn." });
+
+            if (!string.Equals(invoice.Status, "Paid", StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Chỉ tải bản thể hiện cho hoá đơn đã thanh toán." });
+
+            var tenant = await _adminDbContext.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId);
+            var tenantName = tenant?.TenantName ?? "Center";
+            var meta = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
+            var html = _eInvoiceSandboxService.BuildHtmlRepresentation(invoice, tenantName, meta);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(html);
+
+            var fileName = $"{meta.InvoiceNo}.html";
+            return File(bytes, "text/html; charset=utf-8", fileName);
+        }
+
+        /// <summary>
         /// Xem hợp đồng của center
         /// </summary>
         [HttpGet("contracts")]
@@ -644,4 +749,6 @@ namespace EducenAPI.Controllers
         public string ReturnUrl { get; set; } = string.Empty;
     }
 }
+
+
 

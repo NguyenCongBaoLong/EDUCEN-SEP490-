@@ -20,6 +20,14 @@ namespace EducenAPI.Models
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
 
+        [Required]
+        [MaxLength(50)]
+        public string TaxCode { get; set; }
+
+        [Required]
+        [MaxLength(500)]
+        public string BusinessLicenseFilePath { get; set; }
+
         public string? Message { get; set; }
 
         public string Status { get; set; } = "Pending";

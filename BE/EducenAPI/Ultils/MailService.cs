@@ -1,6 +1,8 @@
 using EducenAPI.DTOs;
+using System.IO;
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
 namespace EducenAPI.Ultils
 {
 
@@ -145,6 +147,38 @@ namespace EducenAPI.Ultils
             mail.IsBodyHtml = true;
 
             var smtp = new SmtpClient(_emailSettings.Host, _emailSettings.Port)
+            {
+                Credentials = new NetworkCredential(_emailSettings.Email, _emailSettings.Password),
+                EnableSsl = true
+            };
+
+            await smtp.SendMailAsync(mail);
+        }
+
+        public async Task SendEmailWithAttachmentsAsync(
+            string toEmail,
+            string subject,
+            string body,
+            IEnumerable<(string FileName, string ContentType, byte[] Content)> attachments)
+        {
+            using var mail = new MailMessage();
+            mail.From = new MailAddress(_emailSettings.Email);
+            mail.To.Add(toEmail);
+            mail.Subject = subject;
+            mail.Body = body;
+            mail.IsBodyHtml = true;
+
+            foreach (var attachment in attachments)
+            {
+                var stream = new MemoryStream(attachment.Content);
+                var mediaType = string.IsNullOrWhiteSpace(attachment.ContentType)
+                    ? MediaTypeNames.Application.Octet
+                    : attachment.ContentType;
+                var mailAttachment = new Attachment(stream, attachment.FileName, mediaType);
+                mail.Attachments.Add(mailAttachment);
+            }
+
+            using var smtp = new SmtpClient(_emailSettings.Host, _emailSettings.Port)
             {
                 Credentials = new NetworkCredential(_emailSettings.Email, _emailSettings.Password),
                 EnableSsl = true

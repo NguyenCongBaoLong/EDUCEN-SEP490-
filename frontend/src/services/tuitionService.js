@@ -90,6 +90,23 @@ const tuitionService = {
         return response.data;
     },
 
+    issueSandboxEInvoice: async (invoiceId) => {
+        const response = await api.post(`/tuition/invoices/${invoiceId}/einvoice/issue`);
+        return response.data;
+    },
+
+    downloadSandboxEInvoiceXml: async (invoiceId) => {
+        return api.get(`/tuition/invoices/${invoiceId}/einvoice/xml`, {
+            responseType: 'blob'
+        });
+    },
+
+    downloadSandboxEInvoiceRepresentation: async (invoiceId) => {
+        return api.get(`/tuition/invoices/${invoiceId}/einvoice/representation`, {
+            responseType: 'blob'
+        });
+    },
+
     // === Student/Parent Endpoints ===
 
     // Lấy hóa đơn của tôi

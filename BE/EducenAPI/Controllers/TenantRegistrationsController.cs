@@ -19,7 +19,8 @@ namespace EducenAPI.Controllers
         // Khách gửi form đăng ký
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> Create(CreateRegistrationRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Create([FromForm] CreateRegistrationRequest request)
         {
             var result = await _service.CreateRegistrationAsync(request);
 

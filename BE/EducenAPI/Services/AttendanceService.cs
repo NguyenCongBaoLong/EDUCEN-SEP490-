@@ -6,7 +6,9 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using EducenAPI.DTOs.Attendance;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace EducenAPI.Services
 {
@@ -15,12 +17,18 @@ namespace EducenAPI.Services
         private readonly EducenV2Context _context;
         private readonly ILogger<AttendanceService> _logger;
         private readonly IPaymentReminderService _notificationService;
+        private readonly MailService _mailService;
 
-        public AttendanceService(EducenV2Context context, ILogger<AttendanceService> logger, IPaymentReminderService notificationService)
+        public AttendanceService(
+            EducenV2Context context,
+            ILogger<AttendanceService> logger,
+            IPaymentReminderService notificationService,
+            MailService mailService)
         {
             _context = context;
             _logger = logger;
             _notificationService = notificationService;
+            _mailService = mailService;
         }
 
         public async Task<IEnumerable<Attendance>> GetAttendanceBySessionAsync(int sessionId)
@@ -536,6 +544,7 @@ namespace EducenAPI.Services
             request.RequestedStatus = newStatus; // Cập nhật theo status đã duyệt
 
             await _context.SaveChangesAsync();
+            await SendAttendanceModificationReviewEmailAsync(request, true);
             return true;
         }
 
@@ -556,7 +565,62 @@ namespace EducenAPI.Services
             request.ReviewNote = reviewNote;
 
             await _context.SaveChangesAsync();
+            await SendAttendanceModificationReviewEmailAsync(request, false);
             return true;
+        }
+
+        private async Task SendAttendanceModificationReviewEmailAsync(AttendanceModificationRequest request, bool approved)
+        {
+            var toEmail = await _context.Users
+                .Where(u => u.UserId == request.RequestedByUserId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+
+            if (string.IsNullOrWhiteSpace(toEmail))
+            {
+                _logger.LogWarning("Skip attendance modification review email because requester email is empty. RequestId={RequestId}", request.RequestId);
+                return;
+            }
+
+            var subject = approved
+                ? "[Educen] Ket qua yeu cau sua diem danh: Da duyet"
+                : "[Educen] Ket qua yeu cau sua diem danh: Tu choi";
+            var resultText = approved ? "DA DUYET" : "TU CHOI";
+            var safeReviewNote = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(request.ReviewNote)
+                ? "Khong co ghi chu bo sung."
+                : request.ReviewNote);
+            var safeCurrentStatus = WebUtility.HtmlEncode(request.CurrentStatus ?? "N/A");
+            var safeRequestedStatus = WebUtility.HtmlEncode(request.RequestedStatus ?? "N/A");
+            var safeReason = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(request.Reason)
+                ? "Khong co ly do bo sung."
+                : request.Reason);
+            var actionHint = approved
+                ? "Diem danh da duoc cap nhat theo ket qua phe duyet."
+                : "Vui long dieu chinh thong tin va gui lai yeu cau neu can.";
+            var body = $@"
+                <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+                    <p>Xin chao,</p>
+                    <p>Yeu cau sua diem danh cua ban da duoc cap nhat ket qua.</p>
+                    <p><strong>Ma yeu cau:</strong> #{request.RequestId}</p>
+                    <p><strong>Session:</strong> #{request.SessionId}</p>
+                    <p><strong>Hoc sinh:</strong> #{request.StudentId}</p>
+                    <p><strong>Trang thai hien tai:</strong> {safeCurrentStatus}</p>
+                    <p><strong>Trang thai de nghi:</strong> {safeRequestedStatus}</p>
+                    <p><strong>Ly do gui yeu cau:</strong> {safeReason}</p>
+                    <p><strong>Ket qua:</strong> {resultText}</p>
+                    <p><strong>Ghi chu tu nguoi duyet:</strong> {safeReviewNote}</p>
+                    <p>{actionHint}</p>
+                    <p>Tran trong,<br/>He thong Educen</p>
+                </div>";
+
+            try
+            {
+                await _mailService.SendEmailAsync(toEmail, subject, body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send attendance modification review email. RequestId={RequestId}, Approved={Approved}", request.RequestId, approved);
+            }
         }
 
         public async Task<List<AttendanceModificationRequestDto>> GetMyModificationRequestsAsync(int userId)
@@ -594,5 +658,6 @@ namespace EducenAPI.Services
         }
     }
 }
+
 
 

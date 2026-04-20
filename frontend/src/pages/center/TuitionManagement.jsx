@@ -66,9 +66,12 @@ const TuitionManagement = () => {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [processingPayment, setProcessingPayment] = useState(false);
+    const [showRepresentationModal, setShowRepresentationModal] = useState(false);
+    const [representationUrl, setRepresentationUrl] = useState('');
 
     // State cho gửi hóa đơn
     const [sendingInvoice, setSendingInvoice] = useState(null);
+    const [processingEInvoiceId, setProcessingEInvoiceId] = useState(null);
 
     // State cho ConfirmModal
     const [confirmModal, setConfirmModal] = useState({
@@ -434,6 +437,75 @@ const TuitionManagement = () => {
             style: 'currency',
             currency: 'VND'
         }).format(amount);
+    };
+
+    const downloadBlob = (response, fallbackFileName) => {
+        const disposition = response?.headers?.['content-disposition'] || '';
+        const fileNameFromHeader = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
+        const fileName = decodeURIComponent(fileNameFromHeader?.[1] || fileNameFromHeader?.[2] || fallbackFileName);
+        const blob = new Blob([response.data], { type: response.data?.type || 'application/octet-stream' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const openRepresentationPreview = (response) => {
+        if (representationUrl) {
+            window.URL.revokeObjectURL(representationUrl);
+        }
+        const blob = new Blob([response.data], { type: 'text/html;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        setRepresentationUrl(url);
+        setShowRepresentationModal(true);
+    };
+
+    const closeRepresentationModal = () => {
+        setShowRepresentationModal(false);
+        if (representationUrl) {
+            window.URL.revokeObjectURL(representationUrl);
+            setRepresentationUrl('');
+        }
+    };
+
+    const issueSandboxEInvoice = async (invoice) => {
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const data = await tuitionService.issueSandboxEInvoice(invoice.invoiceId);
+            toast.success(`Đã phát hành HĐĐT sandbox: ${data.invoiceNo || invoice.invoiceId}`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể phát hành HĐĐT sandbox');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
+    };
+
+    const downloadSandboxXml = async (invoice) => {
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await tuitionService.downloadSandboxEInvoiceXml(invoice.invoiceId);
+            downloadBlob(response, `${invoice.invoiceId}.xml`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tải XML HĐĐT sandbox');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
+    };
+
+    const downloadSandboxRepresentation = async (invoice) => {
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await tuitionService.downloadSandboxEInvoiceRepresentation(invoice.invoiceId);
+            openRepresentationPreview(response);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tải bản thể hiện HĐĐT sandbox');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
     };
 
     // Gửi 1 hóa đơn (Draft → Sent)
@@ -1053,6 +1125,64 @@ const TuitionManagement = () => {
                                                             Hủy
                                                         </button>
                                                     )}
+                                                    {invoice.status === 'Paid' && (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                disabled={processingEInvoiceId === invoice.invoiceId}
+                                                                onClick={() => issueSandboxEInvoice(invoice)}
+                                                                style={{
+                                                                    padding: '4px 10px',
+                                                                    background: '#e0f2fe',
+                                                                    color: '#0c4a6e',
+                                                                    border: '1px solid #0ea5e9',
+                                                                    borderRadius: 4,
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: 600,
+                                                                    marginLeft: 4
+                                                                }}
+                                                            >
+                                                                HĐĐT Sandbox
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={processingEInvoiceId === invoice.invoiceId}
+                                                                onClick={() => downloadSandboxXml(invoice)}
+                                                                style={{
+                                                                    padding: '4px 10px',
+                                                                    background: '#fff',
+                                                                    color: '#334155',
+                                                                    border: '1px solid #cbd5e1',
+                                                                    borderRadius: 4,
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: 600,
+                                                                    marginLeft: 4
+                                                                }}
+                                                            >
+                                                                XML
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={processingEInvoiceId === invoice.invoiceId}
+                                                                onClick={() => downloadSandboxRepresentation(invoice)}
+                                                                style={{
+                                                                    padding: '4px 10px',
+                                                                    background: '#fff',
+                                                                    color: '#334155',
+                                                                    border: '1px solid #cbd5e1',
+                                                                    borderRadius: 4,
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: 600,
+                                                                    marginLeft: 4
+                                                                }}
+                                                            >
+                                                                Bản thể hiện
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -1096,6 +1226,27 @@ const TuitionManagement = () => {
                                     disabled={processingPayment}
                                 >
                                     {processingPayment ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {showRepresentationModal && (
+                    <div className="modal-overlay">
+                        <div className="payment-modal" style={{ width: '92vw', maxWidth: '1100px', height: '85vh' }}>
+                            <h3>Bản thể hiện HĐĐT Sandbox</h3>
+                            <div style={{ flex: 1, minHeight: 0, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+                                {representationUrl && (
+                                    <iframe
+                                        title="sandbox-einvoice-representation"
+                                        src={representationUrl}
+                                        style={{ width: '100%', height: '100%', border: 'none', minHeight: '65vh' }}
+                                    />
+                                )}
+                            </div>
+                            <div className="modal-actions">
+                                <button className="cancel-btn" onClick={closeRepresentationModal}>
+                                    Đóng
                                 </button>
                             </div>
                         </div>

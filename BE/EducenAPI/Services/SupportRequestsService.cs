@@ -2,8 +2,10 @@
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 
 namespace EducenAPI.Services
@@ -12,11 +14,19 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private readonly IUserContextService _userContext;
+        private readonly MailService _mailService;
+        private readonly ILogger<SupportRequestsService> _logger;
 
-        public SupportRequestsService(EducenV2Context context, IUserContextService userContext)
+        public SupportRequestsService(
+            EducenV2Context context,
+            IUserContextService userContext,
+            MailService mailService,
+            ILogger<SupportRequestsService> logger)
         {
             _context = context;
             _userContext = userContext;
+            _mailService = mailService;
+            _logger = logger;
         }
 
         public async Task<SupportRequestResponseDto> CreateAsync(CreateSupportRequestDto dto)
@@ -141,6 +151,7 @@ namespace EducenAPI.Services
             entity.IsRead = true;
 
             await _context.SaveChangesAsync();
+            await SendSupportRequestReviewEmailAsync(entity, true);
             return MapToDto(entity);
         }
 
@@ -164,7 +175,48 @@ namespace EducenAPI.Services
             entity.IsRead = true;
 
             await _context.SaveChangesAsync();
+            await SendSupportRequestReviewEmailAsync(entity, false);
             return MapToDto(entity);
+        }
+
+        private async Task SendSupportRequestReviewEmailAsync(SupportRequest request, bool approved)
+        {
+            var toEmail = request.Sender?.Email;
+            if (string.IsNullOrWhiteSpace(toEmail))
+            {
+                _logger.LogWarning("Skip support request review email because sender email is empty. RequestId={RequestId}", request.Id);
+                return;
+            }
+
+            var safeTitle = WebUtility.HtmlEncode(request.Title ?? "(không có tiêu đề)");
+            var safeResponse = WebUtility.HtmlEncode(request.AdminResponse ?? string.Empty);
+            var subject = approved
+                ? "[Educen] Ket qua xu ly yeu cau ho tro: Da duyet"
+                : "[Educen] Ket qua xu ly yeu cau ho tro: Tu choi";
+            var resultText = approved ? "DA DUYET" : "TU CHOI";
+            var actionHint = approved
+                ? "Yeu cau cua ban da duoc xu ly thanh cong. Vui long kiem tra he thong de xem cap nhat chi tiet."
+                : "Yeu cau cua ban da bi tu choi. Vui long xem ly do phan hoi va tao yeu cau moi neu can.";
+            var body = $@"
+                <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+                    <p>Xin chao,</p>
+                    <p>Yeu cau ho tro cua ban da duoc cap nhat ket qua.</p>
+                    <p><strong>Ma yeu cau:</strong> #{request.Id}</p>
+                    <p><strong>Tieu de:</strong> {safeTitle}</p>
+                    <p><strong>Ket qua:</strong> {resultText}</p>
+                    <p><strong>Phan hoi tu trung tam:</strong> {safeResponse}</p>
+                    <p>{actionHint}</p>
+                    <p>Tran trong,<br/>He thong Educen</p>
+                </div>";
+
+            try
+            {
+                await _mailService.SendEmailAsync(toEmail, subject, body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send support request review email. RequestId={RequestId}, Approved={Approved}", request.Id, approved);
+            }
         }
 
         public async Task<bool> MarkAsReadAsync(int id)

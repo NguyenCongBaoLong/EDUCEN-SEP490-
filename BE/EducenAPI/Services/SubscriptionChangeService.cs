@@ -1,6 +1,7 @@
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 
 namespace EducenAPI.Services
@@ -43,14 +44,25 @@ public interface ISubscriptionChangeService
     {
         private readonly AdminDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly MailService _mailService;
+        private readonly IEInvoiceSandboxService _eInvoiceSandboxService;
+        private readonly ILogger<SubscriptionChangeService> _logger;
         private const int GracePeriodDays = 7;
         private const int MinInvoiceDueDays = 1;
         private const int MaxInvoiceDueDays = 60;
 
-        public SubscriptionChangeService(AdminDbContext context, IConfiguration configuration)
+        public SubscriptionChangeService(
+            AdminDbContext context,
+            IConfiguration configuration,
+            MailService mailService,
+            IEInvoiceSandboxService eInvoiceSandboxService,
+            ILogger<SubscriptionChangeService> logger)
         {
             _context = context;
             _configuration = configuration;
+            _mailService = mailService;
+            _eInvoiceSandboxService = eInvoiceSandboxService;
+            _logger = logger;
         }
 
         public async Task<PackageChangeRequest> CreatePackageChangeRequestAsync(string tenantId, string requestedPlanId, int months, string? reason, string requestedBy)
@@ -153,6 +165,7 @@ if (request == null)
             CreateCenterReviewNotification(request, approved, reviewedBy);
 
             await _context.SaveChangesAsync();
+            await TrySendPackageChangeReviewEmailAsync(request, approved, reviewedBy);
 
             if (approved)
             {
@@ -371,6 +384,7 @@ if (invoice == null)
 
             await ApplyPackageChangeForPaidInvoiceAsync(invoice, paymentMethod, updatedBy, paymentRecordId!);
             await _context.SaveChangesAsync();
+            await TrySendSubscriptionEInvoiceEmailAsync(invoice, updatedBy, paymentRecordId);
             return invoice;
         }
 
@@ -591,6 +605,144 @@ if (invoice == null)
             public decimal TotalAmount { get; set; }
             public decimal CurrentCredit { get; set; }
             public decimal AmountToCharge { get; set; }
+        }
+
+        private async Task TrySendSubscriptionEInvoiceEmailAsync(Invoice invoice, string updatedBy, string? paymentRecordId)
+        {
+            try
+            {
+                var tenant = await _context.Tenants
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.TenantId == invoice.TenantId);
+                if (tenant == null) return;
+
+                var recipientEmail = await ResolveSubscriptionPayerEmailAsync(invoice.TenantId, paymentRecordId)
+                    ?? (!string.IsNullOrWhiteSpace(updatedBy) && updatedBy.Contains("@") ? updatedBy.Trim() : null)
+                    ?? tenant.Email;
+                if (string.IsNullOrWhiteSpace(recipientEmail)) return;
+
+                var tenantName = tenant.TenantName ?? "Center";
+                var meta = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
+                var xml = _eInvoiceSandboxService.BuildXml(invoice, tenantName, meta);
+                var html = _eInvoiceSandboxService.BuildHtmlRepresentation(invoice, tenantName, meta);
+                var pdf = _eInvoiceSandboxService.BuildPdfRepresentation(invoice, tenantName, meta);
+
+                _logger.LogInformation(
+                    "Sending subscription e-invoice email. InvoiceId={InvoiceId}, PaymentRecordId={PaymentRecordId}, Recipient={RecipientEmail}",
+                    invoice.InvoiceId,
+                    paymentRecordId,
+                    recipientEmail);
+
+                await _mailService.SendEmailWithAttachmentsAsync(
+                    recipientEmail,
+                    "Xac nhan thanh toan hoa don doi goi - Kem hoa don dien tu (Sandbox)",
+                    $"<p>Hoa don doi goi da duoc thanh toan thanh cong.</p><p>Ma hoa don: <strong>{invoice.InvoiceNumber}</strong></p>",
+                    new[]
+                    {
+                        ($"{meta.InvoiceNo}.xml", "application/xml", System.Text.Encoding.UTF8.GetBytes(xml)),
+                        ($"{meta.InvoiceNo}.html", "text/html", System.Text.Encoding.UTF8.GetBytes(html)),
+                        ($"{meta.InvoiceNo}.pdf", "application/pdf", pdf)
+                    });
+
+                _logger.LogInformation(
+                    "Sent subscription e-invoice email successfully. InvoiceId={InvoiceId}, Recipient={RecipientEmail}",
+                    invoice.InvoiceId,
+                    recipientEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send subscription e-invoice email for {InvoiceId}", invoice.InvoiceId);
+            }
+        }
+
+        private async Task<string?> ResolveSubscriptionPayerEmailAsync(string tenantId, string? paymentRecordId)
+        {
+            if (string.IsNullOrWhiteSpace(paymentRecordId))
+            {
+                return null;
+            }
+
+            var paymentRecord = await _context.PaymentRecords
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentRecordId);
+            if (paymentRecord == null || string.IsNullOrWhiteSpace(paymentRecord.PaidBy))
+            {
+                return null;
+            }
+
+            var paidBy = paymentRecord.PaidBy.Trim();
+            if (paidBy.Contains("@"))
+            {
+                return paidBy;
+            }
+
+            var tenant = await _context.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId);
+            if (tenant != null && string.Equals(tenant.Username, paidBy, StringComparison.OrdinalIgnoreCase))
+            {
+                return tenant.Email;
+            }
+
+            return null;
+        }
+
+        private async Task TrySendPackageChangeReviewEmailAsync(
+            PackageChangeRequest request,
+            bool approved,
+            string reviewedBy)
+        {
+            try
+            {
+                var recipientEmail = request.Tenant?.Email?.Trim();
+                if (string.IsNullOrWhiteSpace(recipientEmail))
+                {
+                    return;
+                }
+
+                var tenantName = request.Tenant?.TenantName ?? "Center";
+                var planName = request.RequestedPlan?.PlanName ?? request.RequestedPlanId;
+                var reviewedAt = request.ReviewedAt ?? DateTime.UtcNow;
+                var subject = approved
+                    ? "Yeu cau doi goi da duoc duyet"
+                    : "Yeu cau doi goi da bi tu choi";
+                var safeReviewedBy = System.Net.WebUtility.HtmlEncode(reviewedBy);
+                var safeTenantName = System.Net.WebUtility.HtmlEncode(tenantName);
+                var safePlanName = System.Net.WebUtility.HtmlEncode(planName);
+                var safeReason = string.IsNullOrWhiteSpace(request.ReviewNote)
+                    ? "Khong co"
+                    : System.Net.WebUtility.HtmlEncode(request.ReviewNote.Trim());
+
+                var body = approved
+                    ? $@"
+                        <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;'>
+                            <p>Xin chao <strong>{safeTenantName}</strong>,</p>
+                            <p>Yeu cau doi goi sang <strong>{safePlanName}</strong> cua ban da duoc duyet.</p>
+                            <p>Thoi gian duyet: <strong>{reviewedAt:dd/MM/yyyy HH:mm}</strong></p>
+                            <p>Nguoi duyet: <strong>{safeReviewedBy}</strong></p>
+                            <p>Hoa don se duoc tao tu dong de trung tam thuc hien thanh toan.</p>
+                            <p>Tran trong,<br/>He thong Educen</p>
+                        </div>"
+                    : $@"
+                        <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;'>
+                            <p>Xin chao <strong>{safeTenantName}</strong>,</p>
+                            <p>Yeu cau doi goi sang <strong>{safePlanName}</strong> cua ban da bi tu choi.</p>
+                            <p>Thoi gian xu ly: <strong>{reviewedAt:dd/MM/yyyy HH:mm}</strong></p>
+                            <p>Nguoi xu ly: <strong>{safeReviewedBy}</strong></p>
+                            <p>Ly do: <strong>{safeReason}</strong></p>
+                            <p>Tran trong,<br/>He thong Educen</p>
+                        </div>";
+
+                await _mailService.SendEmailAsync(recipientEmail, subject, body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to send package change review email. RequestId={RequestId}, TenantId={TenantId}",
+                    request.RequestId,
+                    request.TenantId);
+            }
         }
     }
 }

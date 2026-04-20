@@ -13,19 +13,30 @@ namespace EducenAPI.Services
         private readonly AdminDbContext _context;
         private readonly MailService _mailService;
         private readonly ILogger<TenantRegistrationService> _logger;
+        private readonly IFileUploadService _fileUploadService;
 
         public TenantRegistrationService(
             AdminDbContext context,
             MailService mailService,
+            IFileUploadService fileUploadService,
             ILogger<TenantRegistrationService> logger)
         {
             _context = context;
             _mailService = mailService;
+            _fileUploadService = fileUploadService;
             _logger = logger;
         }
 
         public async Task<TenantRegistration> CreateRegistrationAsync(CreateRegistrationRequest request)
         {
+            var uploadedFiles = await _fileUploadService.UploadResourceFile(
+                new Microsoft.AspNetCore.Http.FormFileCollection { request.BusinessLicenseFile });
+
+            if (uploadedFiles == null || uploadedFiles.Count == 0)
+            {
+                throw new Exception("Upload giấy phép kinh doanh thất bại.");
+            }
+
             var registration = new TenantRegistration
             {
                 RegistrationId = Guid.NewGuid().ToString(),
@@ -33,6 +44,8 @@ namespace EducenAPI.Services
                 ContactPerson = request.ContactPerson?.Trim(),
                 Email = request.Email?.Trim(),
                 PhoneNumber = request.PhoneNumber?.Trim(),
+                TaxCode = request.TaxCode.Trim(),
+                BusinessLicenseFilePath = $"wwwroot/{uploadedFiles[0].FilePath}",
                 Message = request.Message?.Trim(),
                 Status = "Pending",
                 CreatedAt = DateTime.UtcNow

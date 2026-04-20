@@ -11,6 +11,8 @@ const Signup = () => {
         email: '',
         phone: '',
         centerName: '',
+        taxCode: '',
+        businessLicenseFile: null,
         message: ''
     });
 
@@ -18,10 +20,10 @@ const Signup = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, files } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: name === 'businessLicenseFile' ? (files?.[0] || null) : value
         }));
     };
 
@@ -29,13 +31,19 @@ const Signup = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const payload = {
-                CenterName: formData.centerName,
-                ContactPerson: formData.fullName,
-                Email: formData.email,
-                PhoneNumber: formData.phone,
-                Message: formData.message
-            };
+            if (!formData.businessLicenseFile) {
+                toast.error('Vui lòng tải lên giấy phép kinh doanh.');
+                return;
+            }
+
+            const payload = new FormData();
+            payload.append('CenterName', formData.centerName);
+            payload.append('ContactPerson', formData.fullName);
+            payload.append('Email', formData.email);
+            payload.append('PhoneNumber', formData.phone);
+            payload.append('TaxCode', formData.taxCode);
+            payload.append('BusinessLicenseFile', formData.businessLicenseFile);
+            payload.append('Message', formData.message || '');
             await adminApi.post('/registrations', payload);
             setIsSuccess(true);
             setFormData({
@@ -43,6 +51,8 @@ const Signup = () => {
                 email: '',
                 phone: '',
                 centerName: '',
+                taxCode: '',
+                businessLicenseFile: null,
                 message: ''
             });
         } catch (error) {
@@ -198,6 +208,35 @@ const Signup = () => {
                                         />
                                     </div>
                                 </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label htmlFor="taxCode">Ma so thue</label>
+                                        <input
+                                            type="text"
+                                            id="taxCode"
+                                            name="taxCode"
+                                            value={formData.taxCode}
+                                            onChange={handleChange}
+                                            placeholder="Nhap ma so thue"
+                                            className="form-input"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label htmlFor="businessLicenseFile">Giay phep kinh doanh</label>
+                                        <input
+                                            type="file"
+                                            id="businessLicenseFile"
+                                            name="businessLicenseFile"
+                                            onChange={handleChange}
+                                            className="form-input"
+                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
 
                                 <div className="form-group">
                                     <label htmlFor="message">Tin nhắn/Yêu cầu</label>
@@ -239,3 +278,4 @@ const Signup = () => {
 };
 
 export default Signup;
+

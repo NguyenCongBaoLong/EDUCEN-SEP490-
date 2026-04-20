@@ -5,19 +5,27 @@ using System.Threading.Tasks;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 using EducenAPI.DTOs.EnrollmentRequests;
-using System;
+using System.Net;
 
 namespace EducenAPI.Services
 {
     public class EnrollmentRequestService : IEnrollmentRequestService
     {
         private readonly EducenV2Context _context;
+        private readonly MailService _mailService;
+        private readonly ILogger<EnrollmentRequestService> _logger;
 
-        public EnrollmentRequestService(EducenV2Context context)
+        public EnrollmentRequestService(
+            EducenV2Context context,
+            MailService mailService,
+            ILogger<EnrollmentRequestService> logger)
         {
             _context = context;
+            _mailService = mailService;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<EnrollmentRequestDto>> GetAllRequestsAsync()
@@ -410,6 +418,7 @@ public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
             }
 
             await _context.SaveChangesAsync();
+            await SendEnrollmentRequestReviewEmailAsync(request, true);
 
             return request;
         }
@@ -427,8 +436,50 @@ public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
             request.Status = "Rejected";
 
             await _context.SaveChangesAsync();
+            await SendEnrollmentRequestReviewEmailAsync(request, false);
 
             return true;
+        }
+
+        private async Task SendEnrollmentRequestReviewEmailAsync(EnrollmentRequest request, bool approved)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                _logger.LogWarning("Skip enrollment request review email because request email is empty. RequestId={RequestId}", request.RequestId);
+                return;
+            }
+
+            var fullName = $"{request.FirstName} {request.LastName}".Trim();
+            var safeName = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(fullName) ? "ban" : fullName);
+            var safeRequestType = WebUtility.HtmlEncode(request.RequestType ?? "N/A");
+            var safeClassId = request.ClassId?.ToString() ?? "Chua chon lop";
+            var subject = approved
+                ? "[Educen] Ket qua yeu cau dang ky: Da duyet"
+                : "[Educen] Ket qua yeu cau dang ky: Tu choi";
+            var resultText = approved ? "DA DUYET" : "TU CHOI";
+            var actionHint = approved
+                ? "Yeu cau da duoc phe duyet. Vui long dang nhap he thong de xem thong tin hoc tap."
+                : "Yeu cau chua duoc thong qua. Vui long kiem tra thong tin va gui lai yeu cau neu can.";
+            var body = $@"
+                <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
+                    <p>Xin chao {safeName},</p>
+                    <p>Yeu cau dang ky cua ban da co ket qua xu ly.</p>
+                    <p><strong>Ma yeu cau:</strong> #{request.RequestId}</p>
+                    <p><strong>Loai yeu cau:</strong> {safeRequestType}</p>
+                    <p><strong>Lop dang ky:</strong> {safeClassId}</p>
+                    <p><strong>Ket qua:</strong> {resultText}</p>
+                    <p>{actionHint}</p>
+                    <p>Tran trong,<br/>He thong Educen</p>
+                </div>";
+
+            try
+            {
+                await _mailService.SendEmailAsync(request.Email, subject, body);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send enrollment request review email. RequestId={RequestId}, Approved={Approved}", request.RequestId, approved);
+            }
         }
 
         public async Task<bool> IsScheduleConflictingAsync(int studentId, int classId)
@@ -553,3 +604,4 @@ public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
         }
     }
 }
+

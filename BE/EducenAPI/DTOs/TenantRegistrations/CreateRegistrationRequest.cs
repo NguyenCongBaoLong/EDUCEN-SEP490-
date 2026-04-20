@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace EducenAPI.DTOs.TenantRegistrations
 {
@@ -20,6 +21,14 @@ namespace EducenAPI.DTOs.TenantRegistrations
         [Phone(ErrorMessage = "Invalid phone number format")]
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
+
+        [Required(ErrorMessage = "Tax code is required")]
+        [MaxLength(50)]
+        [RegularExpression(@"^(?!\s*$).+", ErrorMessage = "Tax code cannot be empty")]
+        public string TaxCode { get; set; }
+
+        [Required(ErrorMessage = "Business license file is required")]
+        public IFormFile BusinessLicenseFile { get; set; }
 
         [MaxLength(500)]
         public string? Message { get; set; }

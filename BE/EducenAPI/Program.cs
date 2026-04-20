@@ -174,6 +174,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<ISubscriptionChangeService, SubscriptionChangeService>();
 builder.Services.AddScoped<ITenantRegistrationService, TenantRegistrationService>();
+builder.Services.AddScoped<IEInvoiceSandboxService, EInvoiceSandboxService>();
 builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<ICenterDashboardService, CenterDashboardService>();

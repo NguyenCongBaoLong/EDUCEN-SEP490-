@@ -44,6 +44,9 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [myInvoices, setMyInvoices] = useState([]);
     const [loadingInvoices, setLoadingInvoices] = useState(false);
     const [submittingInvoicePayment, setSubmittingInvoicePayment] = useState(false);
+    const [processingEInvoiceId, setProcessingEInvoiceId] = useState(null);
+    const [showRepresentationModal, setShowRepresentationModal] = useState(false);
+    const [representationUrl, setRepresentationUrl] = useState('');
     const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
     const [loadingOnlineHistory, setLoadingOnlineHistory] = useState(false);
 
@@ -341,6 +344,78 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             toast.error(error.response?.data?.message || 'Không thể tạo thanh toán VNPay');
         } finally {
             setSubmittingInvoicePayment(false);
+        }
+    };
+
+    const downloadBlob = async (url, fallbackFileName) => {
+        const response = await api.get(url, { responseType: 'blob' });
+        const disposition = response.headers?.['content-disposition'] || '';
+        const fileNameFromHeader = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
+        const fileName = decodeURIComponent(fileNameFromHeader?.[1] || fileNameFromHeader?.[2] || fallbackFileName);
+        const blobUrl = window.URL.createObjectURL(response.data);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
+    };
+
+    const fetchBlob = async (url) => api.get(url, { responseType: 'blob' });
+
+    const openRepresentationPreview = (response) => {
+        if (representationUrl) window.URL.revokeObjectURL(representationUrl);
+        const blob = new Blob([response.data], { type: 'text/html;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        setRepresentationUrl(url);
+        setShowRepresentationModal(true);
+    };
+
+    const closeRepresentationModal = () => {
+        setShowRepresentationModal(false);
+        if (representationUrl) {
+            window.URL.revokeObjectURL(representationUrl);
+            setRepresentationUrl('');
+        }
+    };
+
+    const issueSandboxEInvoice = async (invoice) => {
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const res = await api.post(`/admin/subscription/invoices/${invoice.invoiceId}/einvoice/issue`);
+            const data = res?.data || {};
+            toast.success(`Đã phát hành HĐĐT sandbox: ${data.invoiceNo || invoice.invoiceNumber}`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể phát hành HĐĐT sandbox');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
+    };
+
+    const downloadSandboxXml = async (invoice) => {
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            await downloadBlob(
+                `/admin/subscription/invoices/${invoice.invoiceId}/einvoice/xml`,
+                `${invoice.invoiceNumber || invoice.invoiceId}.xml`
+            );
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tải XML HĐĐT sandbox');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
+    };
+
+    const downloadSandboxRepresentation = async (invoice) => {
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await fetchBlob(`/admin/subscription/invoices/${invoice.invoiceId}/einvoice/representation`);
+            openRepresentationPreview(response);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Khong the tai ban the hien HDDT sandbox');
+        } finally {
+            setProcessingEInvoiceId(null);
         }
     };
 
@@ -1005,6 +1080,34 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                                                         : status}
                                                                     </span>
                                                                 )}
+                                                                {status === 'Paid' && (
+                                                                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={processingEInvoiceId === i.invoiceId}
+                                                                            onClick={() => issueSandboxEInvoice(i)}
+                                                                            style={{ padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #0ea5e9', color: '#0c4a6e', cursor: 'pointer', fontSize: '0.72rem', background: '#e0f2fe', fontWeight: 600 }}
+                                                                        >
+                                                                            HĐĐT Sandbox
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={processingEInvoiceId === i.invoiceId}
+                                                                            onClick={() => downloadSandboxXml(i)}
+                                                                            style={{ padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#334155', cursor: 'pointer', fontSize: '0.72rem', background: '#fff', fontWeight: 600 }}
+                                                                        >
+                                                                            XML
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={processingEInvoiceId === i.invoiceId}
+                                                                            onClick={() => downloadSandboxRepresentation(i)}
+                                                                            style={{ padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#334155', cursor: 'pointer', fontSize: '0.72rem', background: '#fff', fontWeight: 600 }}
+                                                                        >
+                                                                            Bản thể hiện
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                                                                 {i.createdAt
@@ -1107,6 +1210,29 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 </>
             )}
 
+            {showRepresentationModal && (
+                <>
+                    <div className="subscription-modal-overlay" onClick={closeRepresentationModal} />
+                    <div className="subscription-modal" style={{ maxWidth: '1100px', width: '92vw', maxHeight: '90vh' }}>
+                        <div className="subscription-modal-header">
+                            <h2>Ban the hien HDDT Sandbox</h2>
+                            <button className="subscription-modal-close" onClick={closeRepresentationModal}><X size={18} /></button>
+                        </div>
+                        <div className="subscription-modal-body" style={{ padding: '1rem', maxHeight: 'calc(90vh - 120px)' }}>
+                            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', minHeight: '70vh' }}>
+                                {representationUrl && (
+                                    <iframe
+                                        title="sandbox-einvoice-representation"
+                                        src={representationUrl}
+                                        style={{ width: '100%', height: '70vh', border: 'none' }}
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
             {/* View Contract Modal */}
             {viewContractTarget && (
                 <>
@@ -1127,3 +1253,4 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 };
 
 export default SubscriptionPlans;
+

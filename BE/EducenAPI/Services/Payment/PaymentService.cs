@@ -1,6 +1,7 @@
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
+using EducenAPI.Ultils;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -34,6 +35,8 @@ namespace EducenAPI.Services.Payment
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ISubscriptionChangeService _subscriptionChangeService;
+        private readonly MailService _mailService;
+        private readonly IEInvoiceSandboxService _eInvoiceSandboxService;
 
         private async Task<CreditPaymentResult> UseCreditForPaymentAsync(string tenantId, decimal amount)
         {
@@ -123,7 +126,9 @@ namespace EducenAPI.Services.Payment
             ILogger<PaymentService> logger,
             IConfiguration configuration,
             IHttpContextAccessor httpContextAccessor,
-            ISubscriptionChangeService subscriptionChangeService)
+            ISubscriptionChangeService subscriptionChangeService,
+            MailService mailService,
+            IEInvoiceSandboxService eInvoiceSandboxService)
         {
             _adminDbContext = adminDbContext;
             _tenantDbContext = tenantDbContext;
@@ -132,6 +137,8 @@ namespace EducenAPI.Services.Payment
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
             _subscriptionChangeService = subscriptionChangeService;
+            _mailService = mailService;
+            _eInvoiceSandboxService = eInvoiceSandboxService;
         }
 
         /// <summary>
@@ -142,6 +149,8 @@ namespace EducenAPI.Services.Payment
         {
             try
             {
+                var (effectivePaidBy, effectiveCustomerEmail) = await ResolvePayerContextAsync(dto);
+
                 // Validate amount
                 if (dto.Amount <= 0)
                 {
@@ -386,7 +395,7 @@ namespace EducenAPI.Services.Payment
                         ReferenceId = dto.ReferenceId,
                         PaymentMethod = dto.GatewayType,
                         Description = dto.Description,
-                        PaidBy = dto.PaidBy
+                        PaidBy = effectivePaidBy
                     };
 
                     _tenantDbContext.PaymentRecordTenants.Add(paymentRecord);
@@ -414,7 +423,7 @@ namespace EducenAPI.Services.Payment
                         ReturnUrl = dto.ReturnUrl,
                         IpAddress = dto.IpAddress,
                         CustomerName = dto.CustomerName,
-                        CustomerEmail = dto.CustomerEmail,
+                        CustomerEmail = effectiveCustomerEmail,
                         CustomerPhone = dto.CustomerPhone
                     };
 
@@ -515,7 +524,7 @@ namespace EducenAPI.Services.Payment
                         ReferenceId = dto.ReferenceId,
                         PaymentMethod = dto.GatewayType,
                         Description = dto.Description,
-                        PaidBy = dto.PaidBy,
+                        PaidBy = effectivePaidBy,
                         SubscriptionMonths = subscriptionMonths
                     };
 
@@ -557,7 +566,7 @@ namespace EducenAPI.Services.Payment
                             ReturnUrl = dto.ReturnUrl,
                             IpAddress = dto.IpAddress,
                             CustomerName = dto.CustomerName,
-                            CustomerEmail = dto.CustomerEmail,
+                            CustomerEmail = effectiveCustomerEmail,
                             CustomerPhone = dto.CustomerPhone
                         };
 
@@ -1476,6 +1485,7 @@ namespace EducenAPI.Services.Payment
                 invoice.Notes = "Học sinh nộp tiền online";
 
                 await _tenantDbContext.SaveChangesAsync();
+                await TrySendTuitionEInvoiceEmailAsync(invoice.InvoiceId, paymentRecordId);
 
                 _logger.LogInformation("TuitionInvoice {InvoiceId} marked as Paid with PaymentRecord {PaymentRecordId}",
                     invoiceId, paymentRecordId);
@@ -1544,6 +1554,7 @@ namespace EducenAPI.Services.Payment
                 }
 
                 await _tenantDbContext.SaveChangesAsync();
+                await TrySendFamilyEInvoiceEmailAsync(familyInvoiceId, paymentRecordId);
 
                 _logger.LogInformation(
                     "FamilyInvoice {InvoiceId} ({Type}) marked as Paid with PaymentRecord {PaymentRecordId}, {Count} child invoices updated",
@@ -1570,6 +1581,182 @@ namespace EducenAPI.Services.Payment
             {
                 _logger.LogError(ex, "Failed to update subscription invoice {InvoiceId} after payment", invoiceId);
             }
+        }
+
+        private async Task TrySendTuitionEInvoiceEmailAsync(string invoiceId, string paymentRecordId)
+        {
+            try
+            {
+                var invoice = await _tenantDbContext.TuitionInvoices
+                    .Include(i => i.Student)
+                    .ThenInclude(s => s.StudentNavigation)
+                    .Include(i => i.Student)
+                    .ThenInclude(s => s.Parents)
+                    .ThenInclude(p => p.ParentNavigation)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
+                if (invoice == null) return;
+
+                var recipientEmail = await ResolvePayerEmailInTenantAsync(paymentRecordId)
+                    ?? invoice.Student?.StudentNavigation?.Email
+                    ?? invoice.Student?.Parents.FirstOrDefault()?.ParentNavigation?.Email
+                    ?? invoice.Student?.Email;
+                if (string.IsNullOrWhiteSpace(recipientEmail))
+                {
+                    _logger.LogWarning(
+                        "Cannot resolve recipient email for tuition invoice {InvoiceId}, paymentRecord {PaymentRecordId}",
+                        invoiceId,
+                        paymentRecordId);
+                    return;
+                }
+
+                var tenantName = _httpContextAccessor.HttpContext?.User?.FindFirst("TenantName")?.Value ?? "Center";
+                var meta = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
+                var xml = _eInvoiceSandboxService.BuildXml(invoice, tenantName, meta);
+                var html = _eInvoiceSandboxService.BuildHtmlRepresentation(invoice, tenantName, meta);
+                var pdf = _eInvoiceSandboxService.BuildPdfRepresentation(invoice, tenantName, meta);
+
+                _logger.LogInformation(
+                    "Sending tuition e-invoice email. InvoiceId={InvoiceId}, PaymentRecordId={PaymentRecordId}, Recipient={RecipientEmail}",
+                    invoiceId,
+                    paymentRecordId,
+                    recipientEmail);
+
+                await _mailService.SendEmailWithAttachmentsAsync(
+                    recipientEmail,
+                    "Xac nhan thanh toan hoc phi - Kem hoa don dien tu (Sandbox)",
+                    $"<p>Thanh toan hoc phi thanh cong.</p><p>Ma hoa don: <strong>{invoice.InvoiceId}</strong></p>",
+                    new[]
+                    {
+                        ($"{meta.InvoiceNo}.xml", "application/xml", System.Text.Encoding.UTF8.GetBytes(xml)),
+                        ($"{meta.InvoiceNo}.html", "text/html", System.Text.Encoding.UTF8.GetBytes(html)),
+                        ($"{meta.InvoiceNo}.pdf", "application/pdf", pdf)
+                    });
+
+                _logger.LogInformation(
+                    "Sent tuition e-invoice email successfully. InvoiceId={InvoiceId}, Recipient={RecipientEmail}",
+                    invoiceId,
+                    recipientEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send tuition e-invoice email for {InvoiceId}", invoiceId);
+            }
+        }
+
+        private async Task TrySendFamilyEInvoiceEmailAsync(string familyInvoiceId, string paymentRecordId)
+        {
+            try
+            {
+                var recipientEmail = await ResolvePayerEmailInTenantAsync(paymentRecordId);
+                if (string.IsNullOrWhiteSpace(recipientEmail))
+                {
+                    _logger.LogWarning(
+                        "Cannot resolve recipient email for family invoice {FamilyInvoiceId}, paymentRecord {PaymentRecordId}",
+                        familyInvoiceId,
+                        paymentRecordId);
+                    return;
+                }
+
+                var paidInvoices = await _tenantDbContext.FamilyInvoiceItems
+                    .Where(x => x.FamilyInvoiceId == familyInvoiceId)
+                    .Select(x => x.StudentInvoiceId)
+                    .ToListAsync();
+                if (!paidInvoices.Any()) return;
+
+                var firstInvoiceId = paidInvoices.First();
+                await TrySendTuitionEInvoiceEmailAsync(firstInvoiceId, paymentRecordId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send family tuition e-invoice email for {FamilyInvoiceId}", familyInvoiceId);
+            }
+        }
+
+        private async Task<string?> ResolvePayerEmailInTenantAsync(string paymentRecordId)
+        {
+            var paymentRecord = await _tenantDbContext.PaymentRecordTenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentRecordId);
+            if (paymentRecord == null || string.IsNullOrWhiteSpace(paymentRecord.PaidBy))
+                return null;
+
+            var paidBy = paymentRecord.PaidBy.Trim();
+            if (paidBy.Contains("@"))
+            {
+                return paidBy;
+            }
+
+            var hasUserId = int.TryParse(paidBy, out var paidByUserId);
+            return await _tenantDbContext.Users
+                .AsNoTracking()
+                .Where(u =>
+                    u.Username == paidBy ||
+                    u.Email == paidBy ||
+                    (hasUserId && u.UserId == paidByUserId))
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+        }
+
+        private async Task<(string? PaidBy, string? CustomerEmail)> ResolvePayerContextAsync(CreatePaymentDto dto)
+        {
+            var currentEmail = dto.CustomerEmail?.Trim();
+            var paidBy = dto.PaidBy?.Trim();
+
+            var user = _httpContextAccessor.HttpContext?.User;
+            var claimEmail = user?.FindFirst(ClaimTypes.Email)?.Value
+                             ?? user?.FindFirst("email")?.Value;
+            var claimName = user?.Identity?.Name
+                            ?? user?.FindFirst(ClaimTypes.Name)?.Value
+                            ?? user?.FindFirst("username")?.Value;
+            var claimUserId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                              ?? user?.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrWhiteSpace(currentEmail) && !string.IsNullOrWhiteSpace(claimEmail))
+            {
+                currentEmail = claimEmail.Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(paidBy))
+            {
+                paidBy = !string.IsNullOrWhiteSpace(claimEmail) ? claimEmail.Trim()
+                    : !string.IsNullOrWhiteSpace(claimName) ? claimName.Trim()
+                    : !string.IsNullOrWhiteSpace(claimUserId) ? claimUserId.Trim()
+                    : null;
+            }
+
+            if (string.IsNullOrWhiteSpace(currentEmail))
+            {
+                if (!string.IsNullOrWhiteSpace(claimName))
+                {
+                    var byUsernameEmail = await _tenantDbContext.Users
+                        .AsNoTracking()
+                        .Where(u => u.Username == claimName)
+                        .Select(u => u.Email)
+                        .FirstOrDefaultAsync();
+                    if (!string.IsNullOrWhiteSpace(byUsernameEmail))
+                    {
+                        currentEmail = byUsernameEmail.Trim();
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(currentEmail) &&
+                    !string.IsNullOrWhiteSpace(claimUserId) &&
+                    int.TryParse(claimUserId, out var userId))
+                {
+                    var byUserIdEmail = await _tenantDbContext.Users
+                        .AsNoTracking()
+                        .Where(u => u.UserId == userId)
+                        .Select(u => u.Email)
+                        .FirstOrDefaultAsync();
+                    if (!string.IsNullOrWhiteSpace(byUserIdEmail))
+                    {
+                        currentEmail = byUserIdEmail.Trim();
+                    }
+                }
+            }
+
+            return (paidBy, currentEmail);
         }
     }
 
