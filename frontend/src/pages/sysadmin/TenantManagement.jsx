@@ -17,11 +17,12 @@ const EMPTY_FORM = {
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : value);
 const hasText = (value) => normalizeText(value)?.length > 0;
+const API_ORIGIN = (import.meta.env.VITE_API_URL || `${window.location.origin}/api`).replace(/\/api\/?$/i, '');
 const buildPublicFileUrl = (path) => {
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
     const cleaned = String(path).replace(/^\/?wwwroot\/?/i, '').replace(/^\/+/, '');
-    return `/${cleaned}`;
+    return `${API_ORIGIN}/${cleaned}`;
 };
 
 const TenantManagement = () => {
@@ -63,6 +64,7 @@ const TenantManagement = () => {
     const [uploadingContract, setUploadingContract] = useState(false);
     const [viewContractTarget, setViewContractTarget] = useState(null);
     const [deleteContractTarget, setDeleteContractTarget] = useState(null);
+    const [viewBusinessLicenseTarget, setViewBusinessLicenseTarget] = useState(null);
 
     // Subscription Change Request State
     const [showChangeRequests, setShowChangeRequests] = useState(false);
@@ -137,15 +139,45 @@ const TenantManagement = () => {
         }
     };
 
+    const fetchInvoiceAwaitingCount = useCallback(async ({ silent = true, reason = 'count-refresh' } = {}) => {
+        try {
+            const res = await adminApi.get('/admin/tenants/invoices-history/count', {
+                params: { status: 'AwaitingConfirmation' }
+            });
+            const total = Number(res?.data?.total || 0);
+            setInvoiceHistoryCount(total);
+            console.debug('[TenantManagement] refreshed invoice awaiting count', {
+                reason,
+                awaitingConfirmation: total,
+            });
+        } catch (err) {
+            if (!silent) {
+                showToast('Không thể tải số lượng hóa đơn chờ xác nhận.', 'error');
+            }
+            console.warn('[TenantManagement] failed to refresh invoice awaiting count', {
+                reason,
+                error: err?.response?.data || err?.message || err,
+            });
+        }
+    }, []);
+
     const fetchInvoiceHistory = useCallback(async ({ openModal = false, silent = false, reason = 'manual' } = {}) => {
         if (openModal) {
             setShowInvoiceHistory(true);
         }
-        if (!silent) {
+
+        if (!openModal) {
+            await fetchInvoiceAwaitingCount({ silent, reason });
+            return;
+        }
+
+        if (!silent || openModal) {
             setLoadingInvoiceHistory(true);
         }
         try {
-            const res = await adminApi.get('/admin/tenants/invoices-history');
+            const res = await adminApi.get('/admin/tenants/invoices-history', {
+                params: { page: 1, pageSize: 100 }
+            });
             const data = Array.isArray(res.data) ? res.data : [];
             setInvoiceHistory(data);
             const awaitingCount = data.filter(inv => (inv?.status || '').trim() === 'AwaitingConfirmation').length;
@@ -164,11 +196,11 @@ const TenantManagement = () => {
                 error: err?.response?.data || err?.message || err,
             });
         } finally {
-            if (!silent) {
+            if (!silent || openModal) {
                 setLoadingInvoiceHistory(false);
             }
         }
-    }, []);
+    }, [fetchInvoiceAwaitingCount]);
 
     const openInvoiceHistory = async () => {
         await fetchInvoiceHistory({ openModal: true, reason: 'open-modal' });
@@ -193,14 +225,14 @@ const TenantManagement = () => {
         fetchPlans();
         fetchRegistrations();
         fetchChangeRequests('Pending');
-        fetchInvoiceHistory({ silent: true, reason: 'mount' });
+        fetchInvoiceAwaitingCount({ silent: true, reason: 'mount' });
     }, []);
 
     useEffect(() => {
         const refreshBadgeSources = () => {
             fetchRegistrations();
             fetchChangeRequests('Pending');
-            fetchInvoiceHistory({ silent: true, reason: 'sysadmin-badge-refresh' });
+            fetchInvoiceAwaitingCount({ silent: true, reason: 'sysadmin-badge-refresh' });
         };
 
         const intervalId = window.setInterval(() => {
@@ -228,18 +260,34 @@ const TenantManagement = () => {
         const shouldRefreshInvoiceHistory = activeTab === 'package-requests' || showInvoiceHistory;
         if (!shouldRefreshInvoiceHistory) return;
 
-        fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'package-tab-visible' });
+        if (showInvoiceHistory) {
+            fetchInvoiceHistory({ openModal: true, silent: false, reason: 'invoice-modal-visible' });
+        } else {
+            fetchInvoiceAwaitingCount({ silent: true, reason: 'package-tab-visible' });
+        }
 
         const intervalId = window.setInterval(() => {
-            fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'invoice-interval-30s' });
+            if (showInvoiceHistory) {
+                fetchInvoiceHistory({ openModal: true, silent: false, reason: 'invoice-interval-30s' });
+            } else {
+                fetchInvoiceAwaitingCount({ silent: true, reason: 'invoice-count-interval-30s' });
+            }
         }, 30000);
 
         const handleFocus = () => {
-            fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'invoice-window-focus' });
+            if (showInvoiceHistory) {
+                fetchInvoiceHistory({ openModal: true, silent: false, reason: 'invoice-window-focus' });
+            } else {
+                fetchInvoiceAwaitingCount({ silent: true, reason: 'invoice-count-window-focus' });
+            }
         };
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
-                fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'invoice-tab-visible' });
+                if (showInvoiceHistory) {
+                    fetchInvoiceHistory({ openModal: true, silent: false, reason: 'invoice-tab-visible' });
+                } else {
+                    fetchInvoiceAwaitingCount({ silent: true, reason: 'invoice-count-tab-visible' });
+                }
             }
         };
 
@@ -251,7 +299,7 @@ const TenantManagement = () => {
             window.removeEventListener('focus', handleFocus);
             document.removeEventListener('visibilitychange', handleVisibility);
         };
-    }, [activeTab, showInvoiceHistory, fetchInvoiceHistory]);
+    }, [activeTab, showInvoiceHistory, fetchInvoiceHistory, fetchInvoiceAwaitingCount]);
 
     const handleUpdateRegistrationStatus = async (id, status) => {
         try {
@@ -497,6 +545,19 @@ const TenantManagement = () => {
 
     const handleViewContract = (contract) => {
         setViewContractTarget(contract);
+    };
+
+    const openBusinessLicenseViewer = (registration) => {
+        if (!registration?.businessLicenseFilePath) return;
+        const fileUrl = buildPublicFileUrl(registration.businessLicenseFilePath);
+        const ext = String(fileUrl).split('.').pop()?.toLowerCase() || '';
+        const fileType = ext === 'pdf' ? 'pdf' : 'image';
+
+        setViewBusinessLicenseTarget({
+            title: `Giấy phép kinh doanh - ${registration.centerName || 'Trung tâm'}`,
+            fileUrl,
+            fileType,
+        });
     };
 
     const handleDeleteContract = async (contractId) => {
@@ -810,6 +871,8 @@ const TenantManagement = () => {
                                     <tr>
                                         <th>Tên Trung Tâm</th>
                                         <th>Người Liên Hệ</th>
+                                        <th>Mã Số Thuế</th>
+                                        <th style={{ minWidth: '170px' }}>Giấy Phép KD</th>
                                         <th>Ngày Gửi</th>
                                         <th>Trạng Thái</th>
                                         <th>Phê Duyệt</th>
@@ -836,6 +899,33 @@ const TenantManagement = () => {
                                                 <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                                                     {r.email} {r.phoneNumber ? `• ${r.phoneNumber}` : ''}
                                                 </div>
+                                            </td>
+                                            <td>{r.taxCode || '—'}</td>
+                                            <td>
+                                                {r.businessLicenseFilePath ? (
+                                                    <button
+                                                        type="button"
+                                                        className="sa-action-btn view"
+                                                        style={{
+                                                            color: '#2563eb',
+                                                            fontWeight: 600,
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            padding: '0.35rem 0.75rem',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid #bfdbfe',
+                                                            background: '#eff6ff',
+                                                            whiteSpace: 'nowrap',
+                                                            minWidth: '92px'
+                                                        }}
+                                                        onClick={() => openBusinessLicenseViewer(r)}
+                                                    >
+                                                        Xem file
+                                                    </button>
+                                                ) : (
+                                                    '—'
+                                                )}
                                             </td>
                                             <td>{new Date(r.createdAt).toLocaleDateString('vi-VN')}</td>
                                             <td>
@@ -916,15 +1006,39 @@ const TenantManagement = () => {
                                     ))}
                                 </div>
                                 {viewRegTarget.businessLicenseFilePath && (
-                                    <div style={{ marginTop: '0.5rem' }}>
-                                        <a
-                                            href={buildPublicFileUrl(viewRegTarget.businessLicenseFilePath)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            style={{ color: '#2563eb', fontWeight: 600 }}
+                                    <div
+                                        style={{
+                                            marginTop: '0.25rem',
+                                            background: '#f8fafc',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '10px',
+                                            padding: '0.85rem 1rem'
+                                        }}
+                                    >
+                                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.55rem', textTransform: 'uppercase' }}>
+                                            Giấy phép kinh doanh
+                                        </div>
+                                        <button
+                                            type="button"
+                                            style={{
+                                                color: '#2563eb',
+                                                fontWeight: 600,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '0.4rem 0.85rem',
+                                                borderRadius: '8px',
+                                                border: '1px solid #bfdbfe',
+                                                background: '#eff6ff',
+                                                whiteSpace: 'nowrap',
+                                                cursor: 'pointer',
+                                                fontSize: '0.95rem',
+                                                lineHeight: 1.2
+                                            }}
+                                            onClick={() => openBusinessLicenseViewer(viewRegTarget)}
                                         >
-                                            Xem giấy phép kinh doanh
-                                        </a>
+                                            Xem giấy phép
+                                        </button>
                                     </div>
                                 )}
                                 {viewRegTarget.status === 'Pending' && (
@@ -1843,6 +1957,33 @@ const TenantManagement = () => {
                                     title="hidden"
                                 />
                                 <ContractViewer contract={viewContractTarget} />
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {viewBusinessLicenseTarget && (
+                    <>
+                        <div className="sa-modal-overlay" onClick={() => setViewBusinessLicenseTarget(null)} />
+                        <div className="sa-modal" style={{ maxWidth: '900px', maxHeight: '90vh' }}>
+                            <div className="sa-modal-header">
+                                <h2>{viewBusinessLicenseTarget.title}</h2>
+                                <button className="sa-modal-close" onClick={() => setViewBusinessLicenseTarget(null)}><X size={20} /></button>
+                            </div>
+                            <div className="sa-modal-form" style={{ padding: '0', height: 'calc(90vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f1f1' }}>
+                                {viewBusinessLicenseTarget.fileType === 'pdf' ? (
+                                    <iframe
+                                        src={viewBusinessLicenseTarget.fileUrl}
+                                        style={{ width: '100%', height: '100%', border: 'none' }}
+                                        title={viewBusinessLicenseTarget.title}
+                                    />
+                                ) : (
+                                    <img
+                                        src={viewBusinessLicenseTarget.fileUrl}
+                                        alt={viewBusinessLicenseTarget.title}
+                                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                    />
+                                )}
                             </div>
                         </div>
                     </>

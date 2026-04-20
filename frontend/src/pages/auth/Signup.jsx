@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpen, Mail, Phone, MapPin, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, BookOpen, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import adminApi from '../../services/adminApi';
@@ -18,12 +18,96 @@ const Signup = () => {
 
     const [isSuccess, setIsSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [touched, setTouched] = useState({});
+
+    const normalizeTaxCode = (value) => (value || '').replace(/\D/g, '');
+    const normalizePhone = (value) => (value || '').replace(/\D/g, '');
+
+    const isValidTaxCode = (value) => {
+        const digits = normalizeTaxCode(value);
+        return digits.length === 10 || digits.length === 13;
+    };
+
+    const validateField = (name, value) => {
+        switch (name) {
+            case 'fullName': {
+                if (!value?.trim()) return 'Vui lòng nhập họ và tên.';
+                if (value.trim().length < 2) return 'Họ và tên phải có ít nhất 2 ký tự.';
+                return '';
+            }
+            case 'email': {
+                if (!value?.trim()) return 'Vui lòng nhập email.';
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value.trim())) return 'Email không đúng định dạng.';
+                return '';
+            }
+            case 'phone': {
+                if (!value?.trim()) return 'Vui lòng nhập số điện thoại.';
+                const digits = normalizePhone(value);
+                const isValid = /^(0\d{9}|84\d{9})$/.test(digits);
+                if (!isValid) return 'Số điện thoại không hợp lệ (10 số hoặc 84 + 9 số).';
+                return '';
+            }
+            case 'centerName': {
+                if (!value?.trim()) return 'Vui lòng nhập tên trung tâm.';
+                if (value.trim().length < 2) return 'Tên trung tâm phải có ít nhất 2 ký tự.';
+                return '';
+            }
+            case 'taxCode': {
+                if (!value?.trim()) return 'Vui lòng nhập mã số thuế.';
+                if (!isValidTaxCode(value)) return 'Mã số thuế phải có 10 hoặc 13 chữ số.';
+                return '';
+            }
+            case 'businessLicenseFile': {
+                if (!value) return 'Vui lòng tải lên giấy phép kinh doanh.';
+                const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+                if (!allowedTypes.includes(value.type)) return 'Chỉ chấp nhận file PDF, JPG hoặc PNG.';
+                if (value.size > 10 * 1024 * 1024) return 'Kích thước file tối đa là 10MB.';
+                return '';
+            }
+            case 'message': {
+                if (value && value.length > 500) return 'Tin nhắn tối đa 500 ký tự.';
+                return '';
+            }
+            default:
+                return '';
+        }
+    };
+
+    const validateAll = (data) => ({
+        fullName: validateField('fullName', data.fullName),
+        email: validateField('email', data.email),
+        phone: validateField('phone', data.phone),
+        centerName: validateField('centerName', data.centerName),
+        taxCode: validateField('taxCode', data.taxCode),
+        businessLicenseFile: validateField('businessLicenseFile', data.businessLicenseFile),
+        message: validateField('message', data.message),
+    });
 
     const handleChange = (e) => {
         const { name, value, files } = e.target;
-        setFormData(prev => ({
+        const nextValue = name === 'businessLicenseFile' ? (files?.[0] || null) : value;
+
+        setFormData((prev) => ({
             ...prev,
-            [name]: name === 'businessLicenseFile' ? (files?.[0] || null) : value
+            [name]: nextValue,
+        }));
+
+        if (touched[name]) {
+            setErrors((prev) => ({
+                ...prev,
+                [name]: validateField(name, nextValue),
+            }));
+        }
+    };
+
+    const handleBlur = (e) => {
+        const { name } = e.target;
+        setTouched((prev) => ({ ...prev, [name]: true }));
+        setErrors((prev) => ({
+            ...prev,
+            [name]: validateField(name, formData[name]),
         }));
     };
 
@@ -31,20 +115,34 @@ const Signup = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            if (!formData.businessLicenseFile) {
-                toast.error('Vui lòng tải lên giấy phép kinh doanh.');
+            const nextErrors = validateAll(formData);
+            setErrors(nextErrors);
+            setTouched({
+                fullName: true,
+                email: true,
+                phone: true,
+                centerName: true,
+                taxCode: true,
+                businessLicenseFile: true,
+                message: true,
+            });
+
+            if (Object.values(nextErrors).some(Boolean)) {
+                toast.error('Vui lòng kiểm tra lại thông tin đã nhập.');
                 return;
             }
 
             const payload = new FormData();
-            payload.append('CenterName', formData.centerName);
-            payload.append('ContactPerson', formData.fullName);
-            payload.append('Email', formData.email);
-            payload.append('PhoneNumber', formData.phone);
-            payload.append('TaxCode', formData.taxCode);
+            payload.append('CenterName', formData.centerName.trim());
+            payload.append('ContactPerson', formData.fullName.trim());
+            payload.append('Email', formData.email.trim());
+            payload.append('PhoneNumber', normalizePhone(formData.phone));
+            payload.append('TaxCode', normalizeTaxCode(formData.taxCode));
             payload.append('BusinessLicenseFile', formData.businessLicenseFile);
             payload.append('Message', formData.message || '');
+
             await adminApi.post('/registrations', payload);
+
             setIsSuccess(true);
             setFormData({
                 fullName: '',
@@ -53,8 +151,10 @@ const Signup = () => {
                 centerName: '',
                 taxCode: '',
                 businessLicenseFile: null,
-                message: ''
+                message: '',
             });
+            setErrors({});
+            setTouched({});
         } catch (error) {
             console.error('Lỗi khi gửi đăng ký:', error);
             toast.error('Có lỗi xảy ra khi gửi đăng ký. Vui lòng thử lại sau.');
@@ -65,7 +165,6 @@ const Signup = () => {
 
     return (
         <div className="signup-container">
-            {/* Left Side - Branding */}
             <div className="signup-left">
                 <div className="signup-branding">
                     <Link to="/" className="logo">
@@ -79,41 +178,9 @@ const Signup = () => {
                     </h1>
 
                     <p className="signup-subtitle">
-                        Nói chuyện với chuyên gia EduCen để xem hệ thống quản lý của chúng tôi có thể đơn giản hóa vận hành, tăng tỷ lệ giữ chân học viên và tăng doanh thu như thế nào.
+                        Nói chuyện với chuyên gia EduCen để xem hệ thống quản lý của chúng tôi có thể đơn giản hóa vận hành,
+                        tăng tỷ lệ giữ chân học viên và tăng doanh thu như thế nào.
                     </p>
-
-                    {/* Contact Info Cards */}
-                    {/* <div className="contact-info">
-                        <div className="contact-card">
-                            <div className="contact-icon">
-                                <Mail size={20} />
-                            </div>
-                            <div className="contact-details">
-                                <div className="contact-label">EMAIL</div>
-                                <div className="contact-value">sales@educen.com</div>
-                            </div>
-                        </div>
-
-                        <div className="contact-card">
-                            <div className="contact-icon">
-                                <Phone size={20} />
-                            </div>
-                            <div className="contact-details">
-                                <div className="contact-label">LIÊN HỆ</div>
-                                <div className="contact-value">+84 (888) 000-1234</div>
-                            </div>
-                        </div>
-
-                        <div className="contact-card">
-                            <div className="contact-icon">
-                                <MapPin size={20} />
-                            </div>
-                            <div className="contact-details">
-                                <div className="contact-label">TRỤ SỞ</div>
-                                <div className="contact-value">123 Tech Plaza, TP. HCM</div>
-                            </div>
-                        </div>
-                    </div> */}
 
                     <div className="signup-trust">
                         <div className="trust-avatars">
@@ -126,7 +193,6 @@ const Signup = () => {
                 </div>
             </div>
 
-            {/* Right Side - Signup Form */}
             <div className="signup-right">
                 <div className="signup-form-container">
                     {isSuccess ? (
@@ -134,9 +200,10 @@ const Signup = () => {
                             <CheckCircle2 size={64} color="#10B981" />
                             <h2 style={{ color: '#1f2937', fontSize: '1.75rem', margin: 0 }}>Gửi yêu cầu thành công!</h2>
                             <p style={{ color: '#6b7280', lineHeight: 1.6, marginBottom: '1rem' }}>
-                                Cảm ơn bạn đã quan tâm đến hệ thống EduCen. Chúng tôi đã nhận được yêu cầu của bạn và Bộ phận tư vấn của chúng tôi sẽ liên hệ lại với bạn trong thời gian sớm nhất để tư vấn và hỗ trợ thiết lập hệ thống.
+                                Cảm ơn bạn đã quan tâm đến hệ thống EduCen. Chúng tôi đã nhận được yêu cầu của bạn và bộ phận tư vấn
+                                sẽ liên hệ lại trong thời gian sớm nhất để hỗ trợ thiết lập hệ thống.
                             </p>
-                            <button className="submit-btn" onClick={() => window.location.href = '/'}>
+                            <button className="submit-btn" onClick={() => { window.location.href = '/'; }}>
                                 <span>Về trang chủ chính</span>
                                 <ArrowRight size={18} />
                             </button>
@@ -158,10 +225,12 @@ const Signup = () => {
                                             name="fullName"
                                             value={formData.fullName}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="Nguyễn Văn A"
                                             className="form-input"
                                             required
                                         />
+                                        {touched.fullName && errors.fullName && <small style={{ color: '#dc2626' }}>{errors.fullName}</small>}
                                     </div>
 
                                     <div className="form-group">
@@ -172,10 +241,12 @@ const Signup = () => {
                                             name="email"
                                             value={formData.email}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="email@congty.com"
                                             className="form-input"
                                             required
                                         />
+                                        {touched.email && errors.email && <small style={{ color: '#dc2626' }}>{errors.email}</small>}
                                     </div>
                                 </div>
 
@@ -188,10 +259,12 @@ const Signup = () => {
                                             name="phone"
                                             value={formData.phone}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="+84 (555) 000-0000"
                                             className="form-input"
                                             required
                                         />
+                                        {touched.phone && errors.phone && <small style={{ color: '#dc2626' }}>{errors.phone}</small>}
                                     </div>
 
                                     <div className="form-group">
@@ -202,41 +275,47 @@ const Signup = () => {
                                             name="centerName"
                                             value={formData.centerName}
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             placeholder="VD: Elite Academy"
                                             className="form-input"
                                             required
                                         />
+                                        {touched.centerName && errors.centerName && <small style={{ color: '#dc2626' }}>{errors.centerName}</small>}
                                     </div>
                                 </div>
+
                                 <div className="form-row">
                                     <div className="form-group">
-                                        <label htmlFor="taxCode">Ma so thue</label>
+                                        <label htmlFor="taxCode">Mã số thuế</label>
                                         <input
                                             type="text"
                                             id="taxCode"
                                             name="taxCode"
                                             value={formData.taxCode}
                                             onChange={handleChange}
-                                            placeholder="Nhap ma so thue"
+                                            onBlur={handleBlur}
+                                            placeholder="Nhập mã số thuế"
                                             className="form-input"
                                             required
                                         />
+                                        {touched.taxCode && errors.taxCode && <small style={{ color: '#dc2626' }}>{errors.taxCode}</small>}
                                     </div>
 
                                     <div className="form-group">
-                                        <label htmlFor="businessLicenseFile">Giay phep kinh doanh</label>
+                                        <label htmlFor="businessLicenseFile">Giấy phép kinh doanh</label>
                                         <input
                                             type="file"
                                             id="businessLicenseFile"
                                             name="businessLicenseFile"
                                             onChange={handleChange}
+                                            onBlur={handleBlur}
                                             className="form-input"
                                             accept=".pdf,.jpg,.jpeg,.png"
                                             required
                                         />
+                                        {touched.businessLicenseFile && errors.businessLicenseFile && <small style={{ color: '#dc2626' }}>{errors.businessLicenseFile}</small>}
                                     </div>
                                 </div>
-
 
                                 <div className="form-group">
                                     <label htmlFor="message">Tin nhắn/Yêu cầu</label>
@@ -245,13 +324,14 @@ const Signup = () => {
                                         name="message"
                                         value={formData.message}
                                         onChange={handleChange}
+                                        onBlur={handleBlur}
                                         placeholder="Cho chúng tôi biết về yêu cầu của bạn..."
                                         className="form-textarea"
                                         rows="4"
                                     />
+                                    {touched.message && errors.message && <small style={{ color: '#dc2626' }}>{errors.message}</small>}
                                 </div>
 
-                                {/* Submit Button */}
                                 <button type="submit" className="submit-btn" disabled={isSubmitting}>
                                     <span>{isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu'}</span>
                                     <ArrowRight size={18} />
@@ -266,7 +346,6 @@ const Signup = () => {
                         </>
                     )}
 
-                    {/* Login Link */}
                     <div className="login-link">
                         Đã có tài khoản?{' '}
                         <Link to="/login">Đăng nhập ngay</Link>
@@ -278,4 +357,3 @@ const Signup = () => {
 };
 
 export default Signup;
-

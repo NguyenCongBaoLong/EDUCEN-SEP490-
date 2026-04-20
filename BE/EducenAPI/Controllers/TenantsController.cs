@@ -382,12 +382,32 @@ namespace EducenAPI.Controllers
         /// Lịch sử gửi hoá đơn đổi gói (toàn hệ thống hoặc theo tenant/status)
         /// </summary>
         [HttpGet("invoices-history")]
-        public async Task<IActionResult> GetInvoicesHistory([FromQuery] string? tenantId = null, [FromQuery] string? status = null)
+        public async Task<IActionResult> GetInvoicesHistory(
+            [FromQuery] string? tenantId = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 100)
         {
             try
             {
-                var invoices = await _subscriptionChangeService.GetAllInvoicesAsync(tenantId, status);
+                var invoices = await _subscriptionChangeService.GetAllInvoicesAsync(tenantId, status, page, pageSize);
                 return Ok(invoices);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("invoices-history/count")]
+        public async Task<IActionResult> GetInvoicesHistoryCount(
+            [FromQuery] string? tenantId = null,
+            [FromQuery] string? status = null)
+        {
+            try
+            {
+                var total = await _subscriptionChangeService.CountAllInvoicesAsync(tenantId, status);
+                return Ok(new { total });
             }
             catch (Exception ex)
             {

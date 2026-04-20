@@ -1,4 +1,5 @@
 using EducenAPI.Models;
+using EducenAPI.DTOs.Subscription;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using EducenAPI.Ultils;
@@ -24,8 +25,9 @@ public interface ISubscriptionChangeService
         Task<Invoice> CreateInvoiceAsync(string requestId, int dueDays, string createdBy);
 
         // SystemAdmin: Lấy hoá đơn theo tenant
-        Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId);
-        Task<List<Invoice>> GetAllInvoicesAsync(string? tenantId = null, string? status = null);
+        Task<List<SubscriptionInvoiceListItemDto>> GetInvoicesByTenantAsync(string tenantId);
+        Task<List<SubscriptionInvoiceListItemDto>> GetAllInvoicesAsync(string? tenantId = null, string? status = null, int page = 1, int pageSize = 100);
+        Task<int> CountAllInvoicesAsync(string? tenantId = null, string? status = null);
 
         // SystemAdmin: Cập nhật trạng thái thanh toán
         Task<Invoice> UpdateInvoicePaymentAsync(string invoiceId, string paymentMethod, string? paymentNote, string updatedBy);
@@ -165,7 +167,7 @@ if (request == null)
             CreateCenterReviewNotification(request, approved, reviewedBy);
 
             await _context.SaveChangesAsync();
-            await TrySendPackageChangeReviewEmailAsync(request, approved, reviewedBy);
+            _ = TrySendPackageChangeReviewEmailAsync(request, approved, reviewedBy);
 
             if (approved)
             {
@@ -286,22 +288,58 @@ if (request == null)
             return invoice;
         }
 
-        public async Task<List<Invoice>> GetInvoicesByTenantAsync(string tenantId)
+        public async Task<List<SubscriptionInvoiceListItemDto>> GetInvoicesByTenantAsync(string tenantId)
         {
             return await _context.Invoices
-                .Include(i => i.PackageChangeRequest)
-                .ThenInclude(pcr => pcr.RequestedPlan)
+                .AsNoTracking()
                 .Where(i => i.TenantId == tenantId)
+                .Select(i => new SubscriptionInvoiceListItemDto
+                {
+                    InvoiceId = i.InvoiceId,
+                    TenantId = i.TenantId,
+                    PackageChangeRequestId = i.PackageChangeRequestId,
+                    InvoiceNumber = i.InvoiceNumber,
+                    Amount = i.Amount,
+                    Status = i.Status,
+                    PaymentMethod = i.PaymentMethod,
+                    PaymentNote = i.PaymentNote,
+                    DueDate = i.DueDate,
+                    CreatedAt = i.CreatedAt,
+                    CreatedBy = i.CreatedBy,
+                    PaidAt = i.PaidAt,
+                    PackageChangeRequest = i.PackageChangeRequest == null ? null : new SubscriptionInvoiceRequestDto
+                    {
+                        RequestId = i.PackageChangeRequest.RequestId,
+                        CurrentPlanId = i.PackageChangeRequest.CurrentPlanId,
+                        RequestedPlanId = i.PackageChangeRequest.RequestedPlanId,
+                        RequestedMonths = i.PackageChangeRequest.RequestedMonths,
+                        Status = i.PackageChangeRequest.Status,
+                        Reason = i.PackageChangeRequest.Reason,
+                        ReviewNote = i.PackageChangeRequest.ReviewNote,
+                        RequestedAt = i.PackageChangeRequest.RequestedAt,
+                        ReviewedAt = i.PackageChangeRequest.ReviewedAt,
+                        RequestedBy = i.PackageChangeRequest.RequestedBy,
+                        ReviewedBy = i.PackageChangeRequest.ReviewedBy,
+                        RequestedPlan = i.PackageChangeRequest.RequestedPlan == null ? null : new SubscriptionInvoicePlanDto
+                        {
+                            PlanId = i.PackageChangeRequest.RequestedPlan.PlanId,
+                            PlanName = i.PackageChangeRequest.RequestedPlan.PlanName,
+                            Price = i.PackageChangeRequest.RequestedPlan.Price,
+                            IsTrial = i.PackageChangeRequest.RequestedPlan.IsTrial
+                        }
+                    }
+                })
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
         }
 
-        public async Task<List<Invoice>> GetAllInvoicesAsync(string? tenantId = null, string? status = null)
+        public async Task<List<SubscriptionInvoiceListItemDto>> GetAllInvoicesAsync(string? tenantId = null, string? status = null, int page = 1, int pageSize = 100)
         {
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize < 1 ? 1 : (pageSize > 200 ? 200 : pageSize);
+
             var query = _context.Invoices
-                .Include(i => i.Tenant)
-                .Include(i => i.PackageChangeRequest)
-                .ThenInclude(pcr => pcr.RequestedPlan)
+                .AsNoTracking()
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(tenantId))
@@ -312,7 +350,68 @@ if (request == null)
 
             return await query
                 .OrderByDescending(i => i.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(i => new SubscriptionInvoiceListItemDto
+                {
+                    InvoiceId = i.InvoiceId,
+                    TenantId = i.TenantId,
+                    PackageChangeRequestId = i.PackageChangeRequestId,
+                    InvoiceNumber = i.InvoiceNumber,
+                    Amount = i.Amount,
+                    Status = i.Status,
+                    PaymentMethod = i.PaymentMethod,
+                    PaymentNote = i.PaymentNote,
+                    DueDate = i.DueDate,
+                    CreatedAt = i.CreatedAt,
+                    CreatedBy = i.CreatedBy,
+                    PaidAt = i.PaidAt,
+                    Tenant = i.Tenant == null ? null : new SubscriptionInvoiceTenantDto
+                    {
+                        TenantId = i.Tenant.TenantId,
+                        TenantName = i.Tenant.TenantName,
+                        Email = i.Tenant.Email,
+                        PhoneNumber = i.Tenant.PhoneNumber,
+                        ContactPerson = i.Tenant.ContactPerson
+                    },
+                    PackageChangeRequest = i.PackageChangeRequest == null ? null : new SubscriptionInvoiceRequestDto
+                    {
+                        RequestId = i.PackageChangeRequest.RequestId,
+                        CurrentPlanId = i.PackageChangeRequest.CurrentPlanId,
+                        RequestedPlanId = i.PackageChangeRequest.RequestedPlanId,
+                        RequestedMonths = i.PackageChangeRequest.RequestedMonths,
+                        Status = i.PackageChangeRequest.Status,
+                        Reason = i.PackageChangeRequest.Reason,
+                        ReviewNote = i.PackageChangeRequest.ReviewNote,
+                        RequestedAt = i.PackageChangeRequest.RequestedAt,
+                        ReviewedAt = i.PackageChangeRequest.ReviewedAt,
+                        RequestedBy = i.PackageChangeRequest.RequestedBy,
+                        ReviewedBy = i.PackageChangeRequest.ReviewedBy,
+                        RequestedPlan = i.PackageChangeRequest.RequestedPlan == null ? null : new SubscriptionInvoicePlanDto
+                        {
+                            PlanId = i.PackageChangeRequest.RequestedPlan.PlanId,
+                            PlanName = i.PackageChangeRequest.RequestedPlan.PlanName,
+                            Price = i.PackageChangeRequest.RequestedPlan.Price,
+                            IsTrial = i.PackageChangeRequest.RequestedPlan.IsTrial
+                        }
+                    }
+                })
                 .ToListAsync();
+        }
+
+        public async Task<int> CountAllInvoicesAsync(string? tenantId = null, string? status = null)
+        {
+            var query = _context.Invoices
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(tenantId))
+                query = query.Where(i => i.TenantId == tenantId);
+
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(i => i.Status == status);
+
+            return await query.CountAsync();
         }
 
         public async Task<Invoice> UpdateInvoicePaymentAsync(string invoiceId, string paymentMethod, string? paymentNote, string updatedBy)
