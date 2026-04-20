@@ -40,7 +40,8 @@ public class TeacherService_CreateTeacher_Tests
             .AddInMemoryCollection(configData)
             .Build();
             
-        return new MailService(configuration);
+        var tenantService = new FakeTenantService();
+        return new MailService(configuration, tenantService);
     }
 
     // ================================
