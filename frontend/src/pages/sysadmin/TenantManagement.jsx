@@ -554,7 +554,7 @@ const TenantManagement = () => {
         const fileType = ext === 'pdf' ? 'pdf' : 'image';
 
         setViewBusinessLicenseTarget({
-            title: `Giấy phép kinh doanh - ${registration.centerName || 'Trung tâm'}`,
+            title: `Giấy phép kinh doanh - ${registration.centerName || registration.tenantName || 'Trung tâm'}`,
             fileUrl,
             fileType,
         });
@@ -1234,6 +1234,7 @@ const TenantManagement = () => {
                                         { label: 'Người liên hệ', value: viewTarget.contactPerson },
                                         { label: 'Email', value: viewTarget.email },
                                         { label: 'Số điện thoại', value: viewTarget.phoneNumber },
+                                        { label: 'Mã số thuế', value: viewTarget.taxCode },
                                         { label: 'Credit hiện có', value: `${(viewTarget.creditBalance || 0).toLocaleString('vi-VN')} VNĐ` },
                                         { label: 'Địa chỉ', value: viewTarget.address, span: true },
                                     ].map(({ label, value, span }) => (
@@ -1246,6 +1247,43 @@ const TenantManagement = () => {
                                         </div>
                                     ))}
                                 </div>
+
+                                {viewTarget.businessLicenseFilePath && (
+                                    <div
+                                        style={{
+                                            marginTop: '0.25rem',
+                                            background: '#f8fafc',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '10px',
+                                            padding: '0.85rem 1rem'
+                                        }}
+                                    >
+                                        <div style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.55rem', textTransform: 'uppercase' }}>
+                                            Giấy phép kinh doanh
+                                        </div>
+                                        <button
+                                            type="button"
+                                            style={{
+                                                color: '#2563eb',
+                                                fontWeight: 600,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                padding: '0.4rem 0.85rem',
+                                                borderRadius: '8px',
+                                                border: '1px solid #bfdbfe',
+                                                background: '#eff6ff',
+                                                whiteSpace: 'nowrap',
+                                                cursor: 'pointer',
+                                                fontSize: '0.95rem',
+                                                lineHeight: 1.2
+                                            }}
+                                            onClick={() => openBusinessLicenseViewer(viewTarget)}
+                                        >
+                                            Xem giấy phép
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Subscription / Usage */}
                                 {viewTarget.planName ? (

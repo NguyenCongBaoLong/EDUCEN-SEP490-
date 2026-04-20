@@ -32,5 +32,9 @@ namespace EducenAPI.DTOs.Tenant
 
         // Credit info
         public decimal CreditBalance { get; set; }
+
+        // Registration info
+        public string? TaxCode { get; set; }
+        public string? BusinessLicenseFilePath { get; set; }
     }
 }

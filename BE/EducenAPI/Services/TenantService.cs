@@ -411,6 +411,16 @@ namespace EducenAPI.Services.TenantService
                 .FirstOrDefault();
 
             var usage = GetTenantUsage(tenant);
+            var approvedRegistration = _adminDbContext.TenantRegistrations
+                .AsNoTracking()
+                .Where(r =>
+                    r.Status == "Approved" &&
+                    (
+                        (!string.IsNullOrWhiteSpace(tenant.Email) && r.Email == tenant.Email) ||
+                        r.CenterName == tenant.TenantName
+                    ))
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefault();
 
             return new TenantWithSubscriptionRequest
             {
@@ -437,7 +447,10 @@ namespace EducenAPI.Services.TenantService
                 TotalStudents = usage.TotalStudents,
                 TotalClasses = usage.TotalClasses,
                 StorageMB = usage.StorageMB,
-                CreditBalance = tenant.CreditBalance
+                CreditBalance = tenant.CreditBalance,
+
+                TaxCode = approvedRegistration?.TaxCode,
+                BusinessLicenseFilePath = approvedRegistration?.BusinessLicenseFilePath
             };
         }
         private (int TotalUsers, int TotalStudents, int TotalClasses, double StorageMB) GetTenantUsage(Tenant tenant)
