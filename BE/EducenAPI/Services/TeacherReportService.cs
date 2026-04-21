@@ -44,14 +44,17 @@ namespace EducenAPI.Services
             {
                 s.UserId,
                 s.FullName,
+                HasScore = s.Scores.Any(),
                 AverageScore = s.Scores.Any() ? s.Scores.Average() : 0.0,
                 AttendanceRate = totalCompletedSessions > 0
                     ? (double)s.PresentCount / totalCompletedSessions * 100
                     : 0.0
             }).ToList();
 
+            var studentsWithScore = studentList.Where(s => s.HasScore).ToList();
+
             // 5. Tính toán Metrics tổng quan
-            double classAvgGrade = studentList.Any() ? studentList.Average(s => s.AverageScore) : 0.0;
+            double classAvgGrade = studentsWithScore.Any() ? studentsWithScore.Average(s => s.AverageScore) : 0.0;
             double classAvgAttendance = studentList.Any() ? studentList.Average(s => s.AttendanceRate) : 0.0;
             
             // Tính tỷ lệ nộp bài: (Tổng bài nộp thực tế) / (Tổng số bài tập giao * Số học sinh)
@@ -96,7 +99,7 @@ namespace EducenAPI.Services
             });
 
             // 6. Phân bố điểm số
-            response.GradeData = studentList
+            response.GradeData = studentsWithScore
                 .Select(s => GetGradeLetter(s.AverageScore))
                 .GroupBy(g => g)
                 .Select(g => new GradeDataDto { Grade = g.Key, Count = g.Count() })
@@ -104,7 +107,7 @@ namespace EducenAPI.Services
                 .ToList();
 
             // 7. Top 5 học sinh
-            response.TopStudents = studentList
+            response.TopStudents = studentsWithScore
                 .OrderByDescending(s => s.AverageScore)
                 .Take(5)
                 .Select(s => new TopStudentDto
@@ -150,6 +153,23 @@ namespace EducenAPI.Services
 
             response.AttendanceData = attendanceTrends;
 
+            // 9. Thống kê số buổi dạy hàng tháng (6 tháng gần nhất)
+            var sixMonthsAgo = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+            var monthlyTeachingInfo = await _db.ClassSessions
+                .Where(s => s.ClassId == classId && s.SessionDate >= sixMonthsAgo && (s.Status == "Completed" || s.Attendances.Any()))
+                .GroupBy(s => new { s.SessionDate.Year, s.SessionDate.Month })
+                .Select(g => new { Year = g.Key.Year, Month = g.Key.Month, Count = g.Count() })
+                .ToListAsync();
+
+            response.TeachingHistory = Enumerable.Range(0, 6)
+                .Select(i => sixMonthsAgo.AddMonths(i))
+                .Select(monthDate =>
+                {
+                    var record = monthlyTeachingInfo.FirstOrDefault(m => m.Year == monthDate.Year && m.Month == monthDate.Month);
+                    return new TeachingHistoryDto { Month = monthDate.ToString("MM/yyyy"), SessionCount = record?.Count ?? 0 };
+                })
+                .ToList();
+
             return response;
         }
 
@@ -190,6 +210,7 @@ namespace EducenAPI.Services
             {
                 s.UserId,
                 s.FullName,
+                HasScore = s.Scores.Any(),
                 AverageScore = s.Scores.Any() ? s.Scores.Average() : 0.0,
                 AttendanceRate = totalCompletedSessions > 0
                     ? (double)s.PresentCount / totalCompletedSessions * 100
@@ -197,7 +218,9 @@ namespace EducenAPI.Services
                 ClassNames = s.ClassNames
             }).ToList();
 
-            double classAvgGrade = studentList.Any() ? studentList.Average(s => s.AverageScore) : 0.0;
+            var studentsWithScore = studentList.Where(s => s.HasScore).ToList();
+
+            double classAvgGrade = studentsWithScore.Any() ? studentsWithScore.Average(s => s.AverageScore) : 0.0;
             double classAvgAttendance = studentList.Any() ? studentList.Average(s => s.AttendanceRate) : 0.0;
 
             double expectedSubmissions = totalAssignments * studentsData.Count;
@@ -211,14 +234,14 @@ namespace EducenAPI.Services
             response.Metrics.Add("assignments", new MetricDto { Value = $"{Math.Round(submissionRate, 1)}%", Trend = $"{totalActualSubmissions}/{expectedSubmissions} bài", TrendClass = submissionRate >= 70 ? "positive" : "neutral" });
             response.Metrics.Add("growth", new MetricDto { Value = $"{Math.Round(growthRate, 1)}%", Trend = classAvgGrade >= 8 ? "Tốt" : "Ổn định", TrendClass = classAvgGrade >= 8 ? "positive" : "neutral" });
 
-            response.GradeData = studentList
+            response.GradeData = studentsWithScore
                 .Select(s => GetGradeLetter(s.AverageScore))
                 .GroupBy(g => g)
                 .Select(g => new GradeDataDto { Grade = g.Key, Count = g.Count() })
                 .OrderBy(g => g.Grade)
                 .ToList();
 
-            response.TopStudents = studentList
+            response.TopStudents = studentsWithScore
                 .OrderByDescending(s => s.AverageScore)
                 .Take(5)
                 .Select(s => new TopStudentDto
@@ -264,6 +287,23 @@ namespace EducenAPI.Services
                 .ToList();
 
             response.AttendanceData = attendanceTrendsOverall;
+
+            // 9. Thống kê số buổi dạy hàng tháng (6 tháng gần nhất)
+            var sixMonthsAgoOverall = new DateTime(today.Year, today.Month, 1).AddMonths(-5);
+            var monthlyTeachingInfoOverall = await _db.ClassSessions
+                .Where(s => s.ClassId.HasValue && classIds.Contains(s.ClassId.Value) && s.SessionDate >= sixMonthsAgoOverall && (s.Status == "Completed" || s.Attendances.Any()))
+                .GroupBy(s => new { s.SessionDate.Year, s.SessionDate.Month })
+                .Select(g => new { Year = g.Key.Year, Month = g.Key.Month, Count = g.Count() })
+                .ToListAsync();
+
+            response.TeachingHistory = Enumerable.Range(0, 6)
+                .Select(i => sixMonthsAgoOverall.AddMonths(i))
+                .Select(monthDate =>
+                {
+                    var record = monthlyTeachingInfoOverall.FirstOrDefault(m => m.Year == monthDate.Year && m.Month == monthDate.Month);
+                    return new TeachingHistoryDto { Month = monthDate.ToString("MM/yyyy"), SessionCount = record?.Count ?? 0 };
+                })
+                .ToList();
 
             return response;
         }

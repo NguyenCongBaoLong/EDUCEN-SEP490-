@@ -4,6 +4,7 @@ using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
 using Microsoft.EntityFrameworkCore;
+using System.IO.Compression;
 
 namespace EducenAPI.Services
 {
@@ -244,7 +245,11 @@ namespace EducenAPI.Services
                     : null,
                 FileSize = GetFileSizeFromUrl(assignment.FileUrl),
                 OriginalFileName = GetOriginalFileNameFromUrl(assignment.FileUrl),
-                SubmissionsCount = assignment.Submissions?.Count ?? 0
+                SubmissionsCount = assignment.Submissions?.Count ?? 0,
+                GradedCount = assignment.Submissions?.Count(s => s.Score.HasValue) ?? 0,
+                TotalStudentsCount = assignment.Session?.Class?.Students?.Count ?? 0,
+                PublishedCount = assignment.Submissions?.Count(s => s.IsPublished) ?? 0,
+                IsPublished = assignment.Submissions?.Any(s => s.IsPublished) ?? false
             };
         }
 
@@ -365,6 +370,8 @@ namespace EducenAPI.Services
         {
             var rawAssignments = await _context.Assignments
                 .Include(a => a.Session)
+                    .ThenInclude(s => s.Class)
+                        .ThenInclude(c => c.Students)
                 .Include(a => a.Submissions)
                 .Where(a => a.SessionId == sessionId)
                 .ToListAsync();
@@ -385,7 +392,11 @@ namespace EducenAPI.Services
                         : null,
                     FileSize = GetFileSizeFromUrl(a.FileUrl),
                     OriginalFileName = GetOriginalFileNameFromUrl(a.FileUrl),
-                    SubmissionsCount = a.Submissions?.Count ?? 0
+                    SubmissionsCount = a.Submissions?.Count ?? 0,
+                    GradedCount = a.Submissions?.Count(s => s.Score.HasValue) ?? 0,
+                    TotalStudentsCount = a.Session?.Class?.Students?.Count ?? 0,
+                    PublishedCount = a.Submissions?.Count(s => s.IsPublished) ?? 0,
+                    IsPublished = a.Submissions?.Any(s => s.IsPublished) ?? false
                 })
                 .ToList();
 
@@ -396,6 +407,8 @@ namespace EducenAPI.Services
             var userId = _userContextService.GetUserId();
             var rawAssignments = await _context.Assignments
                 .Include(a => a.Session)
+                    .ThenInclude(s => s.Class)
+                        .ThenInclude(c => c.Students)
                 .Include(a => a.Submissions)
                 .Where(a => a.UserId == userId) 
                 .ToListAsync();
@@ -620,19 +633,88 @@ namespace EducenAPI.Services
             var userId = _userContextService.GetUserId();
             var assignments = _context.Assignments
                 .Where(e => e.SessionId != null && e.UserId != null && e.UserId == userId);
-            if(!string.IsNullOrEmpty(type))
+            if (!string.IsNullOrEmpty(type))
             {
                 var now = DateTime.Now;
-                if(type == "open")
+                if (type == "open")
                 {
                     assignments = assignments.Where(e => e.StartTime <= now && e.EndTime >= now);
                 }
-                else if(type == "expired")
+                else if (type == "expired")
                 {
                     assignments = assignments.Where(e => e.EndTime < now);
                 }
             }
             return await assignments.ToListAsync();
+        }
+
+        public async Task<(byte[] content, string fileName)> DownloadAllSubmissionsAsync(int assignmentId)
+        {
+            var assignment = await _context.Assignments
+                .Include(a => a.Submissions)
+                    .ThenInclude(s => s.Student)
+                        .ThenInclude(st => st.StudentNavigation)
+                .FirstOrDefaultAsync(a => a.AsmId == assignmentId);
+
+            if (assignment == null)
+                throw new BadRequestException("Không tìm thấy bài tập.");
+
+            var submissionsWithFiles = assignment.Submissions
+                .Where(s => !string.IsNullOrEmpty(s.FileUrl))
+                .ToList();
+
+            if (!submissionsWithFiles.Any())
+                throw new BadRequestException("Chưa có học sinh nào nộp bài có file.");
+
+            using (var memoryStream = new MemoryStream())
+            {
+                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var sub in submissionsWithFiles)
+                    {
+                        var studentName = sub.Student?.StudentNavigation?.FullName ?? sub.StudentId.ToString();
+                        // Có thể nộp nhiều file (ngăn cách bởi dấu ;)
+                        var filePaths = sub.FileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+                        int fileIndex = 1;
+                        foreach (var path in filePaths)
+                        {
+                            // Chuẩn hóa path để lấy file vật lý
+                            string physicalPath = path.Replace("/", Path.DirectorySeparatorChar.ToString())
+                                                      .Replace("\\", Path.DirectorySeparatorChar.ToString());
+                            if (!physicalPath.StartsWith("wwwroot" + Path.DirectorySeparatorChar))
+                                physicalPath = Path.Combine("wwwroot", physicalPath);
+
+                            if (File.Exists(physicalPath))
+                            {
+                                var originalFileName = Path.GetFileName(physicalPath);
+                                // Cắt bỏ phần GUID prefix nếu có (ví dụ: Guid_FileName.ext)
+                                if (originalFileName.Contains('_'))
+                                {
+                                    originalFileName = originalFileName.Substring(originalFileName.IndexOf('_') + 1);
+                                }
+
+                                // Format: [TênHọcSinh] - [TênFileGốc]
+                                // Sử dụng dấu gạch ngang và khoảng trắng cho dễ đọc
+                                string entryName = filePaths.Length > 1 
+                                    ? $"{studentName} - {fileIndex} - {originalFileName}"
+                                    : $"{studentName} - {originalFileName}";
+
+                                var entry = archive.CreateEntry(entryName);
+                                using (var entryStream = entry.Open())
+                                using (var fileStream = new FileStream(physicalPath, FileMode.Open, FileAccess.Read))
+                                {
+                                    await fileStream.CopyToAsync(entryStream);
+                                }
+                                fileIndex++;
+                            }
+                        }
+                    }
+                }
+
+                var zipFileName = $"{assignment.Title}_Submissions.zip";
+                return (memoryStream.ToArray(), zipFileName);
+            }
         }
     }
 }

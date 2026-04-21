@@ -15,14 +15,14 @@
 .schedule-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
+    align-items: center; /* Changed from flex-start */
+    margin-bottom: 1.5rem; /* Standardized to 1.5rem */
     gap: 1rem;
 }
 
 .schedule-header-left h1 {
     font-size: 1.5rem;
-    font-weight: 800;
+    font-weight: 700; /* Adjusted from 800 */
     color: #111827;
     margin-bottom: 0.25rem;
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -32,9 +32,9 @@
 }
 
 .schedule-subtitle {
-    font-size: 0.9375rem;
+    font-size: 0.875rem; /* Reduced from 0.9375rem */
     color: #6b7280;
-    line-height: 1.6;
+    line-height: 1.4; /* Reduced from 1.6 */
 }
 
 .btn-add-class {

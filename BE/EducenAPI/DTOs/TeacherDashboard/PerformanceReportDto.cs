@@ -6,6 +6,7 @@ namespace EduCen.DTOs.TeacherDashboard
         public List<GradeDataDto> GradeData { get; set; } = new();
         public List<AttendanceDataDto> AttendanceData { get; set; } = new();
         public List<TopStudentDto> TopStudents { get; set; } = new();
+        public List<TeachingHistoryDto> TeachingHistory { get; set; } = new();
     }
 
     public class MetricDto
@@ -37,5 +38,11 @@ namespace EduCen.DTOs.TeacherDashboard
         public string StatusColor { get; set; }
         public string Avatar { get; set; }
         public string ClassName { get; set; }
+    }
+
+    public class TeachingHistoryDto
+    {
+        public string Month { get; set; }
+        public int SessionCount { get; set; }
     }
 }

@@ -129,5 +129,40 @@ namespace EducenAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpGet("{id:int}/download-submissions")]
+        [Authorize(Roles = "Teacher,Admin")]
+        public async Task<IActionResult> DownloadSubmissions(int id)
+        {
+            try
+            {
+                var (content, fileName) = await _assignmentService.DownloadAllSubmissionsAsync(id);
+                
+                // Mã hóa tên file để hỗ trợ tiếng Việt có dấu trong header
+                var encodedFileName = Uri.EscapeDataString(fileName);
+                
+                // Tạo phiên bản không dấu của tên file cho tham số filename (ASCII only)
+                var asciiFileName = fileName.Normalize(System.Text.NormalizationForm.FormD);
+                var stringBuilder = new System.Text.StringBuilder();
+                foreach (var c in asciiFileName)
+                {
+                    var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                    if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    {
+                        stringBuilder.Append(c);
+                    }
+                }
+                var cleanFileName = stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC).Replace(" ", "_");
+
+                Response.Headers.Append("Content-Disposition", $"attachment; filename=\"{cleanFileName}\"; filename*=UTF-8''{encodedFileName}");
+                Response.Headers.Append("Access-Control-Expose-Headers", "Content-Disposition");
+
+                return File(content, "application/zip");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

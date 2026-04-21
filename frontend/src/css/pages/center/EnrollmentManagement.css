@@ -6,13 +6,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.25rem; /* Increased from 0.75rem for better balance */
-    padding: 0.5rem 0.5rem;
+    margin-bottom: 1.5rem; /* Standardized to 1.5rem */
+    padding: 0.5rem 0; /* Tightened from 0.5rem 0.5rem */
 }
 
 .mgmt-title-area {
     display: flex;
-    flex-direction: column; /* Back to vertical for standard look */
+    flex-direction: column;
     gap: 0.25rem;
 }
 
@@ -23,17 +23,17 @@
 }
 
 .mgmt-page-title {
-    font-size: 1.5rem; /* Increased from 1.25rem to match other pages */
-    font-weight: 800;
-    color: #111827;
+    font-size: 1.5rem; /* Standardized */
+    font-weight: 700; /* Adjusted from 800 */
+    color: #1e293b;
     margin: 0;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
 }
 
 .mgmt-badge {
     background: #ef4444;
     color: white;
-    font-size: 0.8rem; /* Increased from 0.7 */
+    font-size: 0.75rem; /* Reduced from 0.8 */
     font-weight: 700;
     padding: 3px 10px;
     border-radius: 9999px;
@@ -44,8 +44,8 @@
 }
 
 .mgmt-subtitle {
-    color: #6b7280; /* Darker than before (#9ca3af) */
-    font-size: 0.875rem; /* Increased from 0.75 */
+    color: #64748b;
+    font-size: 0.875rem; /* Standardized */
     margin: 0;
     font-weight: 500;
 }

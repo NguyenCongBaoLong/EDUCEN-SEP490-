@@ -99,7 +99,8 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
         },
         gradeData: reportData?.gradeData || [],
         attendanceData: reportData?.attendanceData || [],
-        topStudents: reportData?.topStudents || []
+        topStudents: reportData?.topStudents || [],
+        teachingHistory: reportData?.teachingHistory || []
     };
 
     return (
@@ -110,6 +111,7 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                 {/* Header */}
                 <header className="report-header">
                     <h1 className="report-title">Báo cáo thống kê</h1>
+                    <p className="report-subtitle">Xem biểu đồ đánh giá và thống kê kết quả học tập của học sinh trong các lớp bạn giảng dạy.</p>
                 </header>
 
                 {/* Filters */}
@@ -245,6 +247,30 @@ const TeacherPerformanceReport = ({ isTA = false }) => {
                                         isAnimationActive={false}
                                     />
                                 </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Monthly Teaching Progress (New Chart) */}
+                    <div className="chart-box full-width">
+                        <div className="chart-header">
+                            <div>
+                                <h3>Số buổi dạy hàng tháng</h3>
+                                <p>Thống kê số buổi đã điểm danh hoặc đã dạy xong</p>
+                            </div>
+                            <div className="chart-legend">
+                                <span className="legend-item taught"><span className="dot" style={{backgroundColor: '#10B981'}}></span> Đã dạy</span>
+                            </div>
+                        </div>
+                        <div className="chart-body">
+                            <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={currentData.teachingHistory} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 13 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 13 }} />
+                                    <Tooltip content={<CustomTooltip suffix=" buổi" />} cursor={{ fill: '#F3F4F6' }} />
+                                    <Bar dataKey="sessionCount" fill="#10B981" radius={[4, 4, 0, 0]} barSize={40} />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>

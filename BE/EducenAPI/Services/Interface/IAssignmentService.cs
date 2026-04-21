@@ -13,5 +13,6 @@ namespace EducenAPI.Services.Interface
         Task<bool> DeleteAssignmentAsync(int id);
         Task<AssignmentGradingDto> GetAssignmentGradingAsync(int assignmentId, string baseUrl);
         Task<List<Assignment>> GetAssignedAssignments(string? type);
+        Task<(byte[] content, string fileName)> DownloadAllSubmissionsAsync(int assignmentId);
     }
 }

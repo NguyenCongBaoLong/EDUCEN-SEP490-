@@ -16,5 +16,9 @@ namespace EducenAPI.DTOs.Assignments
         public long? FileSize { get; set; }
         public string? OriginalFileName { get; set; }
         public int SubmissionsCount { get; set; }
+        public int TotalStudentsCount { get; set; }
+        public int GradedCount { get; set; }
+        public bool IsPublished { get; set; }
+        public int PublishedCount { get; set; }
     }
 }

@@ -229,7 +229,7 @@ const AssignmentGrading = ({ isTA = false }) => {
 
     const getStatusInfo = (student) => {
         const sub = student.submission;
-        if (!sub) return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
+        if (!sub || sub.status === 'Chưa nộp' || sub.status === 'NotSubmitted') return { text: 'Chưa nộp', class: 'status-missing', icon: <AlertCircle size={14} /> };
         
         const status = sub.status || 'Submitted';
         
@@ -295,7 +295,7 @@ const AssignmentGrading = ({ isTA = false }) => {
                 {/* Header (Top Bar) */}
                 <header className="grading-header">
                     <div className="grading-header-left">
-                        <button className="btn-back" onClick={() => navigate(isTA ? '/ta/assignments' : '/teacher/assignments')}>
+                        <button className="btn-back" onClick={() => navigate(isTA ? '/ta/assignments' : '/teacher/assignment-status')}>
                             <ArrowLeft size={20} />
                             Trở về
                         </button>
@@ -324,6 +324,51 @@ const AssignmentGrading = ({ isTA = false }) => {
                                 <span className="stat-value highlight">{stats.graded}/{stats.submitted}</span>
                             </div>
                         </div>
+
+                        <button 
+                            className="btn-download-all"
+                            onClick={async () => {
+                                try {
+                                    toast.loading('Đang chuẩn bị file nén...', { id: 'downloading' });
+                                    const response = await api.get(`/Assignments/${assignmentId}/download-submissions`, {
+                                        responseType: 'blob'
+                                    });
+                                    
+                                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    
+                                    // Lấy tên file từ header Content-Disposition nếu có, hoặc dùng mặc định
+                                    const contentDisposition = response.headers['content-disposition'];
+                                    let fileName = `${assignmentInfo?.title || 'Submissions'}.zip`;
+                                    
+                                    if (contentDisposition) {
+                                        // Ưu tiên tìm filename* chuẩn RFC 5987 để lấy tên file có dấu chính xác
+                                        const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;\n]*)/);
+                                        if (filenameStarMatch && filenameStarMatch[1]) {
+                                            fileName = decodeURIComponent(filenameStarMatch[1]);
+                                        } else {
+                                            // Nếu không có filename*, thử lấy filename thông thường
+                                            const filenameMatch = contentDisposition.match(/filename="?([^";\n]*)"?/);
+                                            if (filenameMatch && filenameMatch[1]) {
+                                                fileName = filenameMatch[1];
+                                            }
+                                        }
+                                    }
+                                    
+                                    link.setAttribute('download', fileName);
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    link.remove();
+                                    toast.success('Đã tải xuống thành công', { id: 'downloading' });
+                                } catch (error) {
+                                    console.error('Error downloading submissions:', error);
+                                    toast.error('Có lỗi khi tải bài nộp', { id: 'downloading' });
+                                }
+                            }}
+                        >
+                            <Download size={18} /> Tải xuống tất cả
+                        </button>
 
                         <button 
                             className={`btn-publish-all ${stats.graded === 0 ? 'disabled' : ''}`}
@@ -383,17 +428,17 @@ const AssignmentGrading = ({ isTA = false }) => {
                                     >
                                         <div className="student-avatar">{initials}</div>
                                         <div className="student-info">
-                                            <div className="student-name-row">
-                                                <span className="student-name">{student.fullName}</span>
-                                                {student.submission?.score != null && (
-                                                    <span className="student-score-badge">{student.submission.score}đ</span>
-                                                )}
-                                            </div>
-                                            <div className="student-meta">
-                                                <span className={`student-status ${statusInfo.class}`}>
-                                                    {statusInfo.icon} {statusInfo.text}
+                                            <div className="student-name-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span className="student-name" title={student.fullName}>{student.fullName}</span>
+                                                <span className={`student-status ${statusInfo.class}`} style={{ fontSize: '0.7rem', whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                                    {statusInfo.text}
                                                 </span>
                                             </div>
+                                            {student.submission?.score != null && (
+                                                <div style={{ marginTop: '2px' }}>
+                                                    <span className="student-score-badge">{student.submission.score}đ</span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );

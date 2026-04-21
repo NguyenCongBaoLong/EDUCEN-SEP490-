@@ -48,10 +48,10 @@
 /* ─── Page Header ────────────────────────────────────── */
 .cd-page-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
 }
 
 .cd-title-row {
@@ -63,9 +63,9 @@
 }
 
 .cd-title-row h1 {
-    font-size: 1.875rem;
-    font-weight: 800;
-    color: #111827;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
     margin: 0;
 }
 
@@ -94,8 +94,8 @@
 }
 
 .cd-title-meta {
-    font-size: 0.9375rem;
-    color: #6b7280;
+    font-size: 0.875rem;
+    color: #64748b;
     margin: 0;
 }
 

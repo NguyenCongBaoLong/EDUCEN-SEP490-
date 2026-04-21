@@ -198,6 +198,7 @@ builder.Services.AddScoped<IInvoiceLockService, InvoiceLockService>();
 builder.Services.AddScoped<IRefundService, RefundService>();
 builder.Services.AddScoped<IPaymentReminderService, PaymentReminderService>();
 builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
+builder.Services.AddScoped<IAdminReportService, AdminReportService>();
 builder.Services.AddScoped<IQuotaService, QuotaService>();
 
 // â”€â”€ Background Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
