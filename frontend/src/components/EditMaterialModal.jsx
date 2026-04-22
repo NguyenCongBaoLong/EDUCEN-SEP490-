@@ -31,7 +31,14 @@ const EditMaterialModal = ({ isOpen, onClose, onUpdate, materialData, grades = [
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            setNewFile(e.target.files[0]);
+            const file = e.target.files[0];
+            const maxSize = 20 * 1024 * 1024;
+            if (file.size > maxSize) {
+                toast.error('Kích thước file vượt quá 20MB.');
+                e.target.value = '';
+                return;
+            }
+            setNewFile(file);
         }
     };
 

@@ -42,6 +42,8 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
     const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
     const [selectedRoomId, setSelectedRoomId] = useState(null);
     const [requestType, setRequestType] = useState('schedule_change'); // schedule_change, absence, other
+    const [scheduleChangeMode, setScheduleChangeMode] = useState('full_schedule'); // full_schedule, single_session
+    const [targetSessionDate, setTargetSessionDate] = useState(''); // For single session change
     const [selectedClassId, setSelectedClassId] = useState(() => {
         if (classOptions.length > 0) return classOptions[0].classId;
         return initialData?.classInfo?.classId ?? null;
@@ -61,17 +63,66 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                 dayOfWeek: slot.dayOfWeek ?? slot.DayOfWeek,
                 startTime: slot.startTime ?? slot.StartTime,
                 endTime: slot.endTime ?? slot.EndTime,
-                roomName: slot.roomName ?? slot.RoomName ?? ''
+                roomName: slot.roomName ?? slot.RoomName ?? '',
+                roomId: slot.roomId ?? slot.RoomId ?? null
             }))
             .filter(slot => slot.dayOfWeek !== undefined && slot.startTime && slot.endTime);
     }, [selectedClass]);
+
+    // Generate future dates for selected slot's day of week
+    const futureSessionDates = useMemo(() => {
+        if (scheduleChangeMode !== 'single_session' || displaySlots.length === 0 || selectedSlotIdx >= displaySlots.length) {
+            return [];
+        }
+
+        const selectedSlot = displaySlots[selectedSlotIdx];
+        const targetDayOfWeek = selectedSlot.dayOfWeek;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const dates = [];
+        // Start from tomorrow
+        const currentDate = new Date(today);
+        currentDate.setDate(currentDate.getDate() + 1);
+
+        console.log('[ScheduleRequestModal] Generating dates for dayOfWeek:', targetDayOfWeek, 'starting from:', currentDate.toDateString());
+
+        // Generate dates for the next 12 weeks
+        for (let i = 0; i < 12; i++) {
+            // Find the next occurrence of targetDayOfWeek
+            while (currentDate.getDay() !== targetDayOfWeek) {
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Use local time methods for consistent timezone handling
+            const year = currentDate.getFullYear();
+            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const day = String(currentDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            console.log('[ScheduleRequestModal] Found date:', dateStr, 'dayOfWeek:', currentDate.getDay(), 'local date:', currentDate.toDateString());
+
+            // Add the date
+            dates.push({
+                date: dateStr,
+                display: `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`
+            });
+
+            // Move to next occurrence (7 days later)
+            currentDate.setDate(currentDate.getDate() + 7);
+        }
+
+        console.log('[ScheduleRequestModal] Generated dates:', dates);
+        return dates;
+    }, [scheduleChangeMode, displaySlots, selectedSlotIdx]);
 
     const isValid = useMemo(() => {
         if (!reason.trim()) return false;
         if (!targetStartTime || !targetEndTime) return false;
         if (targetStartTime >= targetEndTime) return false;
+        if (scheduleChangeMode === 'single_session' && !targetSessionDate) return false;
         return true;
-    }, [reason, targetStartTime, targetEndTime]);
+    }, [reason, targetStartTime, targetEndTime, scheduleChangeMode, targetSessionDate]);
 
     if (!isOpen) return null;
 
@@ -88,7 +139,9 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
             } : null,
             requestedRoomId: requestType === 'schedule_change' ? selectedRoomId : null,
             classInfo: selectedClass,
-            requestedAt: new Date().toISOString()
+            requestedAt: new Date().toISOString(),
+            changeType: scheduleChangeMode,
+            targetSessionDate: scheduleChangeMode === 'single_session' ? targetSessionDate : null
         };
 
         // Lấy currentSlot từ lựa chọn của giáo viên (hoặc mặc định)
@@ -115,6 +168,8 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
         setTargetEndTime(DEFAULT_END_TIME);
         setSelectedSlotIdx(0);
         setRequestType('schedule_change');
+        setScheduleChangeMode('full_schedule');
+        setTargetSessionDate('');
         onClose();
     };
 
@@ -204,6 +259,50 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                                         {selectedSlotIdx === idx && <div className="req-slot-check">✓</div>}
                                     </button>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {requestType === 'schedule_change' && (
+                        <div className="req-form-section">
+                            <label className="req-section-label">Phạm vi đổi lịch</label>
+                            <div className="req-change-mode-tabs">
+                                <button
+                                    type="button"
+                                    className={`req-mode-tab ${scheduleChangeMode === 'full_schedule' ? 'active' : ''}`}
+                                    onClick={() => setScheduleChangeMode('full_schedule')}
+                                >
+                                    Đổi toàn bộ lịch (tất cả buổi học tương lai)
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`req-mode-tab ${scheduleChangeMode === 'single_session' ? 'active' : ''}`}
+                                    onClick={() => setScheduleChangeMode('single_session')}
+                                >
+                                    Đổi 1 buổi học cụ thể
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {requestType === 'schedule_change' && scheduleChangeMode === 'single_session' && (
+                        <div className="req-form-section">
+                            <label className="req-section-label">Ngày muốn đổi</label>
+                            <div className="req-date-options">
+                                {futureSessionDates.length > 0 ? (
+                                    futureSessionDates.map((dateOption) => (
+                                        <button
+                                            key={dateOption.date}
+                                            type="button"
+                                            className={`req-date-option-btn ${targetSessionDate === dateOption.date ? 'active' : ''}`}
+                                            onClick={() => setTargetSessionDate(dateOption.date)}
+                                        >
+                                            {dateOption.display}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <p className="req-no-dates">Vui lòng chọn lớp học và lịch dạy hiện tại</p>
+                                )}
                             </div>
                         </div>
                     )}

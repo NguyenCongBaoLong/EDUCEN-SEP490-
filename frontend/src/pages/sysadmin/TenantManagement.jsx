@@ -359,8 +359,8 @@ const TenantManagement = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        // Tự động xóa khoảng trắng cho subdomain
-        const processedValue = name === 'subDomain' ? value.replace(/\s/g, '').toLowerCase() : value;
+        // Giữ nguyên input để backend có thể validate chính xác trường hợp chứa whitespace.
+        const processedValue = name === 'subDomain' ? value.toLowerCase() : value;
         setForm(f => ({ ...f, [name]: processedValue }));
     };
 
@@ -805,11 +805,22 @@ const TenantManagement = () => {
                                             <span className="sa-domain-tag">{t.subDomain}</span>
                                         </td>
                                         <td>
-                                            {t.planName ? (
+                                            {t.planDeleted ? (
+                                                <div className="sa-subscription-info">
+                                                    <span className="sa-plan-name" style={{ color: '#ef4444', fontWeight: 600 }}>
+                                                        Gói đã xóa
+                                                    </span>
+                                                    {t.expiredAt && (
+                                                        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 2 }}>
+                                                            Hết hạn: {new Date(t.expiredAt).toLocaleDateString('vi-VN')}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : t.planName ? (
                                                 <div className="sa-subscription-info">
                                                     <span className="sa-plan-name" style={{ color: t.planIsActive ? 'inherit' : '#ef4444', fontWeight: t.planIsActive ? 'inherit' : 600 }}>
                                                         {t.planName}
-                                                        {!t.planIsActive && <span style={{ fontSize: '0.7rem', display: 'block', color: '#ef4444' }}>(Gói đã bị xóa)</span>}
+                                                        {!t.planIsActive && <span style={{ fontSize: '0.7rem', display: 'block', color: '#ef4444' }}>(Gói đã lưu trữ)</span>}
                                                     </span>
                                                     {t.expiredAt && (
                                                         <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 2 }}>

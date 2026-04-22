@@ -43,7 +43,7 @@ namespace EducenAPI.Services.Payment
             var tenant = await _adminDbContext.Tenants.FindAsync(tenantId);
             if (tenant == null)
             {
-                return new CreditPaymentResult { Success = false, ErrorMessage = "Tenant not found" };
+                return new CreditPaymentResult { Success = false, ErrorMessage = "Không tìm thấy trung tâm" };
             }
 
             if (tenant.CreditBalance <= 0)
@@ -170,7 +170,7 @@ namespace EducenAPI.Services.Payment
                     return new PaymentResult
                     {
                         Success = false,
-                        ErrorMessage = "Da ngung thanh toan goi truc tiep. Vui long gui yeu cau doi goi va thanh toan hoa don SubscriptionInvoice."
+                        ErrorMessage = "Đã ngừng thanh toán gói trực tiếp. Vui lòng gửi yêu cầu đổi gói và thanh toán hóa đơn SubscriptionInvoice."
                     };
                 }
                 var tenantContext = await ResolveCreateTenantContextAsync(dto, isTuition);
@@ -179,7 +179,7 @@ namespace EducenAPI.Services.Payment
                     return new PaymentResult
                     {
                         Success = false,
-                        ErrorMessage = "Tenant context could not be resolved"
+                        ErrorMessage = "Không thể xác định ngữ cảnh trung tâm"
                     };
                 }
 
@@ -339,7 +339,7 @@ namespace EducenAPI.Services.Payment
                                         resolvedAmount);
 
                                     existingTxn.Status = "Failed";
-                                    existingTxn.ErrorMessage = "Pending payment amount mismatch";
+                                    existingTxn.ErrorMessage = "Số tiền thanh toán chờ xử lý không khớp";
                                     existingPending.Status = "Failed";
                                     await _tenantDbContext.SaveChangesAsync();
                                 }
@@ -377,7 +377,7 @@ namespace EducenAPI.Services.Payment
                                 }
                                 // Nếu tạo URL fail → đánh dấu cũ Failed, tạo mới
                                 existingTxn.Status = "Failed";
-                                existingTxn.ErrorMessage = "Reused payment URL creation failed";
+                                existingTxn.ErrorMessage = "Tạo lại URL thanh toán thất bại";
                                 existingPending.Status = "Failed";
                                 await _tenantDbContext.SaveChangesAsync();
                                 }
@@ -1573,7 +1573,7 @@ namespace EducenAPI.Services.Payment
                 await _subscriptionChangeService.ConfirmInvoicePaidAndApplyAsync(
                     invoiceId,
                     paymentMethod,
-                    $"Thanh toan online thanh cong. PaymentRecordId: {paymentRecordId}",
+                    $"Thanh toán online thành công. PaymentRecordId: {paymentRecordId}",
                     "VNPayCallback",
                     paymentRecordId);
             }
@@ -1624,8 +1624,8 @@ namespace EducenAPI.Services.Payment
 
                 await _mailService.SendEmailWithAttachmentsAsync(
                     recipientEmail,
-                    "Xac nhan thanh toan hoc phi - Kem hoa don dien tu (Sandbox)",
-                    $"<p>Thanh toan hoc phi thanh cong.</p><p>Ma hoa don: <strong>{invoice.InvoiceId}</strong></p>",
+                    "Xác nhận thanh toán học phí - Kèm hóa đơn điện tử (Sandbox)",
+                    $"<p>Thanh toán học phí thành công.</p><p>Mã hóa đơn: <strong>{invoice.InvoiceId}</strong></p>",
                     new[]
                     {
                         ($"{meta.InvoiceNo}.xml", "application/xml", System.Text.Encoding.UTF8.GetBytes(xml)),

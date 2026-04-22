@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Rooms;
+﻿using EducenAPI.DTOs.Rooms;
 using EducenAPI.DTOs.Schedules;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
@@ -111,11 +111,13 @@ namespace EducenAPI.Services
             var room = await _context.Rooms.FindAsync(id);
             if (room == null) return false;
 
-            // Check if room is used in any class
-            var isUsed = await _context.Classes.AnyAsync(c => c.RoomId == id);
-            if (isUsed)
+            // Block deletion if the room is referenced by any class directly
+            // or by class schedules (legacy/new flows may store room on schedules).
+            var isUsedByClass = await _context.Classes.AnyAsync(c => c.RoomId == id);
+            var isUsedBySchedule = await _context.Schedules.AnyAsync(s => s.RoomId == id);
+            if (isUsedByClass || isUsedBySchedule)
             {
-                throw new InvalidOperationException("Không thể xóa phòng học vì đang được sử dụng cho một hoặc nhiều lớp học.");
+                throw new InvalidOperationException("Không thể xóa phòng vì đang được sử dụng bởi một hoặc nhiều lớp học.");
             }
 
             _context.Rooms.Remove(room);

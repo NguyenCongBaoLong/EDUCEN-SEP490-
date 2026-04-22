@@ -16,7 +16,7 @@ namespace EducenAPI.DTOs
         public string? Email { get; set; }
 
         [MaxLength(20)]
-        [Phone]
+        [RegularExpression(@"^(0|\+84)[0-9]{9,10}$", ErrorMessage = "Invalid phone number format")]
         public string? PhoneNumber { get; set; }
 
         [MaxLength(300)]

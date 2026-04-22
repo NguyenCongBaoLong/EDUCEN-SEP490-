@@ -167,6 +167,96 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* Change Mode Tabs */
+.req-change-mode-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 14px;
+    margin-bottom: 0.5rem;
+}
+
+.req-mode-tab {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.req-mode-tab:hover {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.req-mode-tab.active {
+    background: white;
+    color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Date Input */
+.req-date-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+    background: white;
+}
+
+.req-date-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Date Options */
+.req-date-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+}
+
+.req-date-option-btn {
+    padding: 0.6rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: white;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.req-date-option-btn:hover {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+    transform: translateY(-2px);
+}
+
+.req-date-option-btn.active {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.req-no-dates {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-style: italic;
+}
+
 /* Class Grid */
 .req-class-grid {
     display: grid;

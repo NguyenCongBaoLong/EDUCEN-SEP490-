@@ -126,7 +126,7 @@ namespace EducenAPI.Services
 
             foreach (var sub in activeSubs)
             {
-                // Business rule: khong hoan credit khi huy/ha goi.
+                // Business rule: không hoàn credit khi hủy/hạ gói.
 
                 if (immediate)
                 {

@@ -436,6 +436,9 @@ namespace EducenAPI.Services
             return schedules.Select(s => new TeacherScheduleDto
             {
                 ScheduleId = s.ScheduleId,
+                SessionId = null,
+                SessionDate = null,
+                SessionStatus = null,
                 ClassId = s.ClassId,
                 ClassName = s.Class?.ClassName ?? "",
                 SubjectId = s.Class?.SubjectId ?? 0,
@@ -451,6 +454,99 @@ namespace EducenAPI.Services
                 EndDate = s.Class?.EndDate,
                 Status = s.Class?.Status ?? "",
                 Description = s.Class?.Description
+            });
+        }
+
+        public async Task<IEnumerable<TeacherScheduleDto>> GetAllSessionSchedulesAsync()
+        {
+            var sessions = await _context.ClassSessions
+                .Include(cs => cs.Schedule)
+                    .ThenInclude(sc => sc.Room)
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Subject)
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Teacher)
+                        .ThenInclude(t => t!.TeacherNavigation)
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Room)
+                .Where(cs =>
+                    cs.Class != null &&
+                    cs.Class.Status == "Active")
+                .OrderBy(cs => cs.SessionDate)
+                .ThenBy(cs => cs.Schedule!.StartTime)
+                .ToListAsync();
+
+            return sessions.Select(cs => new TeacherScheduleDto
+            {
+                ScheduleId = cs.ScheduleId,
+                SessionId = cs.SessionId,
+                SessionDate = cs.SessionDate,
+                SessionStatus = cs.Status,
+                ClassId = cs.ClassId ?? 0,
+                ClassName = cs.Class?.ClassName ?? "",
+                SubjectId = cs.Class?.SubjectId ?? 0,
+                SubjectName = cs.Class?.Subject?.SubjectName ?? "",
+                TeacherName = cs.Class?.Teacher?.TeacherNavigation?.FullName,
+                DayOfWeek = cs.Schedule != null ? cs.Schedule.DayOfWeek : (int)cs.SessionDate.DayOfWeek,
+                DayName = GetDayName(cs.Schedule != null ? cs.Schedule.DayOfWeek : (int)cs.SessionDate.DayOfWeek),
+                StartTime = (cs.Schedule != null ? cs.Schedule.StartTime : TimeOnly.MinValue).ToTimeSpan(),
+                EndTime = (cs.Schedule != null ? cs.Schedule.EndTime : TimeOnly.MinValue).ToTimeSpan(),
+                RoomId = cs.Schedule?.RoomId ?? cs.Class?.RoomId,
+                RoomName = cs.Schedule?.Room?.RoomName ?? cs.Class?.Room?.RoomName,
+                StartDate = cs.Class?.StartDate,
+                EndDate = cs.Class?.EndDate,
+                Status = cs.Class?.Status ?? "",
+                Description = cs.Class?.Description
+            });
+        }
+
+        public async Task<IEnumerable<TeacherScheduleDto>> GetTeacherSessionScheduleAsync(int userId)
+        {
+            var teacher = await _context.Teachers
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+
+            if (teacher == null)
+                return Enumerable.Empty<TeacherScheduleDto>();
+
+            var sessions = await _context.ClassSessions
+                .Include(cs => cs.Schedule)
+                    .ThenInclude(sc => sc.Room)
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Subject)
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Teacher)
+                        .ThenInclude(t => t!.TeacherNavigation)
+                .Include(cs => cs.Class)
+                    .ThenInclude(c => c.Room)
+                .Where(cs =>
+                    cs.Class != null &&
+                    cs.Class.TeacherId == teacher.UserId &&
+                    cs.Class.Status == "Active")
+                .OrderBy(cs => cs.SessionDate)
+                .ThenBy(cs => cs.Schedule!.StartTime)
+                .ToListAsync();
+
+            return sessions.Select(cs => new TeacherScheduleDto
+            {
+                ScheduleId = cs.ScheduleId,
+                SessionId = cs.SessionId,
+                SessionDate = cs.SessionDate,
+                SessionStatus = cs.Status,
+                ClassId = cs.ClassId ?? 0,
+                ClassName = cs.Class?.ClassName ?? "",
+                SubjectId = cs.Class?.SubjectId ?? 0,
+                SubjectName = cs.Class?.Subject?.SubjectName ?? "",
+                TeacherName = cs.Class?.Teacher?.TeacherNavigation?.FullName,
+                DayOfWeek = cs.Schedule != null ? cs.Schedule.DayOfWeek : (int)cs.SessionDate.DayOfWeek,
+                DayName = GetDayName(cs.Schedule != null ? cs.Schedule.DayOfWeek : (int)cs.SessionDate.DayOfWeek),
+                StartTime = (cs.Schedule != null ? cs.Schedule.StartTime : TimeOnly.MinValue).ToTimeSpan(),
+                EndTime = (cs.Schedule != null ? cs.Schedule.EndTime : TimeOnly.MinValue).ToTimeSpan(),
+                RoomId = cs.Schedule?.RoomId ?? cs.Class?.RoomId,
+                RoomName = cs.Schedule?.Room?.RoomName ?? cs.Class?.Room?.RoomName,
+                StartDate = cs.Class?.StartDate,
+                EndDate = cs.Class?.EndDate,
+                Status = cs.Class?.Status ?? "",
+                Description = cs.Class?.Description
             });
         }
 
@@ -478,6 +574,9 @@ namespace EducenAPI.Services
             return schedules.Select(s => new TeacherScheduleDto
             {
                 ScheduleId = s.ScheduleId,
+                SessionId = null,
+                SessionDate = null,
+                SessionStatus = null,
                 ClassId = s.ClassId,
                 ClassName = s.Class?.ClassName ?? "",
                 SubjectId = s.Class?.SubjectId ?? 0,
@@ -527,6 +626,9 @@ namespace EducenAPI.Services
                     schedules.Add(new StudentScheduleDto
                     {
                         ScheduleId = schedule.ScheduleId,
+                        SessionId = null,
+                        SessionDate = null,
+                        SessionStatus = null,
                         ClassId = classEntity.ClassId,
                         ClassName = classEntity.ClassName ?? "",
                         SubjectId = classEntity.SubjectId,
@@ -543,6 +645,54 @@ namespace EducenAPI.Services
                         EndDate = classEntity.EndDate,
                         Status = classEntity.Status ?? "",
                         Description = classEntity.Description
+                    });
+                }
+            }
+
+            var classIds = student.Classes
+                .Where(c => c.Status == "Active")
+                .Select(c => c.ClassId)
+                .ToList();
+
+            if (classIds.Any())
+            {
+                var sessions = await _context.ClassSessions
+                    .Include(cs => cs.Schedule)
+                        .ThenInclude(sc => sc.Room)
+                    .Include(cs => cs.Class)
+                        .ThenInclude(c => c.Subject)
+                    .Include(cs => cs.Class)
+                        .ThenInclude(c => c.Teacher)
+                            .ThenInclude(t => t!.TeacherNavigation)
+                    .Include(cs => cs.Class)
+                        .ThenInclude(c => c.Room)
+                    .Where(cs => cs.ClassId.HasValue && classIds.Contains(cs.ClassId.Value))
+                    .ToListAsync();
+
+                foreach (var cs in sessions)
+                {
+                    schedules.Add(new StudentScheduleDto
+                    {
+                        ScheduleId = cs.ScheduleId,
+                        SessionId = cs.SessionId,
+                        SessionDate = cs.SessionDate,
+                        SessionStatus = cs.Status,
+                        ClassId = cs.ClassId ?? 0,
+                        ClassName = cs.Class?.ClassName ?? "",
+                        SubjectId = cs.Class?.SubjectId ?? 0,
+                        SubjectName = cs.Class?.Subject?.SubjectName ?? "",
+                        TeacherId = cs.Class?.TeacherId,
+                        TeacherName = cs.Class?.Teacher?.TeacherNavigation?.FullName,
+                        DayOfWeek = cs.Schedule?.DayOfWeek ?? (int)cs.SessionDate.DayOfWeek,
+                        DayName = GetDayName(cs.Schedule?.DayOfWeek ?? (int)cs.SessionDate.DayOfWeek),
+                        StartTime = (cs.Schedule != null ? cs.Schedule.StartTime : TimeOnly.MinValue).ToTimeSpan(),
+                        EndTime = (cs.Schedule != null ? cs.Schedule.EndTime : TimeOnly.MinValue).ToTimeSpan(),
+                        RoomId = cs.Schedule?.RoomId ?? cs.Class?.RoomId,
+                        RoomName = cs.Schedule?.Room?.RoomName ?? cs.Class?.Room?.RoomName,
+                        StartDate = cs.Class?.StartDate,
+                        EndDate = cs.Class?.EndDate,
+                        Status = cs.Class?.Status ?? "",
+                        Description = cs.Class?.Description
                     });
                 }
             }

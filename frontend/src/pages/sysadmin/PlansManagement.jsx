@@ -27,6 +27,7 @@ const PlansManagement = () => {
     const [form, setForm] = useState(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteTargetType, setDeleteTargetType] = useState(null); // 'archive' or 'delete'
     const [toast, setToast] = useState(null);
 
     const showToast = (msg, type = 'success') => {
@@ -105,15 +106,28 @@ const PlansManagement = () => {
         }
     };
 
-    const handleDelete = async () => {
+    const handleArchive = async () => {
         if (!deleteTarget) return;
         try {
-            await adminApi.delete(`/admin/plans/${deleteTarget.planId}`);
+            await adminApi.put(`/admin/plans/${deleteTarget.planId}/status`, null, { params: { isActive: false } });
             showToast('Đã lưu trữ gói dịch vụ');
             setDeleteTarget(null);
             fetchPlans();
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể lưu trữ gói dịch vụ.', 'error');
+            setDeleteTarget(null);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        try {
+            await adminApi.delete(`/admin/plans/${deleteTarget.planId}`);
+            showToast('Đã xóa gói dịch vụ');
+            setDeleteTarget(null);
+            fetchPlans();
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Không thể xóa gói dịch vụ.', 'error');
             setDeleteTarget(null);
         }
     };
@@ -223,18 +237,27 @@ const PlansManagement = () => {
                                             <button
                                                 className="sa-btn-outline"
                                                 style={{ color: '#ef4444', borderColor: '#fca5a5' }}
-                                                onClick={() => setDeleteTarget(plan)}
+                                                onClick={() => { setDeleteTarget(plan); setDeleteTargetType('archive'); }}
                                             >
                                                 <Trash2 size={14} /> Lưu trữ
                                             </button>
                                         ) : (
-                                            <button
-                                                className="sa-btn-outline"
-                                                style={{ color: '#10b981', borderColor: '#86efac' }}
-                                                onClick={() => handleTogglePlanStatus(plan, true)}
-                                            >
-                                                <Check size={14} /> Khôi phục
-                                            </button>
+                                            <>
+                                                <button
+                                                    className="sa-btn-outline"
+                                                    style={{ color: '#10b981', borderColor: '#86efac' }}
+                                                    onClick={() => handleTogglePlanStatus(plan, true)}
+                                                >
+                                                    <Check size={14} /> Khôi phục
+                                                </button>
+                                                <button
+                                                    className="sa-btn-outline"
+                                                    style={{ color: '#ef4444', borderColor: '#fca5a5' }}
+                                                    onClick={() => { setDeleteTarget(plan); setDeleteTargetType('delete'); }}
+                                                >
+                                                    <Trash2 size={14} /> Xóa
+                                                </button>
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -296,27 +319,31 @@ const PlansManagement = () => {
                 </>
             )}
 
-            {/* Delete Confirmation */}
+            {/* Archive / Delete Confirmation */}
             {deleteTarget && (
                 <>
-                    <div className="sa-modal-overlay" onClick={() => setDeleteTarget(null)} />
+                    <div className="sa-modal-overlay" onClick={() => { setDeleteTarget(null); setDeleteTargetType(null); }} />
                     <div className="sa-modal" style={{ maxWidth: 440 }}>
                         <div className="sa-modal-header">
-                            <h2>Xác nhận xóa</h2>
-                            <button className="sa-modal-close" onClick={() => setDeleteTarget(null)}>
+                            <h2>{deleteTargetType === 'archive' ? 'Xác nhận lưu trữ' : 'Xác nhận xóa'}</h2>
+                            <button className="sa-modal-close" onClick={() => { setDeleteTarget(null); setDeleteTargetType(null); }}>
                                 <X size={20} />
                             </button>
                         </div>
                         <div className="sa-modal-form">
-                            <p>Bạn có chắc muốn xóa gói <strong>{deleteTarget.planName}</strong>? Hành động này không thể hoàn tác và sẽ thất bại nếu có trung tâm đang sử dụng gói này.</p>
+                            {deleteTargetType === 'archive' ? (
+                                <p>Bạn có chắc muốn lưu trữ gói <strong>{deleteTarget.planName}</strong>? Gói này sẽ vẫn hiển thị cho các trung tâm đang sử dụng với thông báo sắp ngừng hoạt động.</p>
+                            ) : (
+                                <p>Bạn có chắc muốn xóa gói <strong>{deleteTarget.planName}</strong>? Hành động này không thể hoàn tác và sẽ thất bại nếu có trung tâm đang sử dụng gói này.</p>
+                            )}
                             <div className="sa-modal-footer">
-                                <button className="sa-btn-cancel" onClick={() => setDeleteTarget(null)}>Hủy</button>
+                                <button className="sa-btn-cancel" onClick={() => { setDeleteTarget(null); setDeleteTargetType(null); }}>Hủy</button>
                                 <button
                                     className="sa-btn-primary"
                                     style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}
-                                    onClick={handleDelete}
+                                    onClick={deleteTargetType === 'archive' ? handleArchive : handleDelete}
                                 >
-                                    <Trash2 size={16} /> Xóa gói
+                                    <Trash2 size={16} /> {deleteTargetType === 'archive' ? 'Lưu trữ gói' : 'Xóa gói'}
                                 </button>
                             </div>
                         </div>

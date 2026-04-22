@@ -61,7 +61,7 @@ namespace EducenAPI.Services
                     new XElement("CreatedAt", invoice.CreatedAt.ToString("O")),
                     new XElement("Note", sanitizedNote)
                 ),
-                new XElement("Disclaimer", "Day la hoa don dien tu SANDBOX de demo, khong co gia tri phap ly thue.")
+                new XElement("Disclaimer", "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.")
             );
 
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), root);
@@ -76,7 +76,7 @@ namespace EducenAPI.Services
 <html>
 <head>
   <meta charset='utf-8'/>
-  <title>Hoa don dien tu sandbox</title>
+  <title>Hóa đơn điện tử sandbox</title>
   <style>
     body {{ font-family: Arial, sans-serif; margin: 24px; color: #111827; }}
     .card {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }}
@@ -89,24 +89,24 @@ namespace EducenAPI.Services
 </head>
 <body>
   <div class='card'>
-    <div class='title'>HOA DON DIEN TU (SANDBOX DEMO)</div>
+    <div class='title'>HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)</div>
     <div class='muted'>Provider: {encoder.Encode(metadata.Provider)}</div>
-    <div><strong>So hoa don:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
-    <div><strong>Ma tra cuu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
-    <div><strong>Ngay phat hanh:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
+    <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
+    <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
+    <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
 
     <table>
-      <tr><td><strong>Ma hoa don noi bo</strong></td><td>{encoder.Encode(invoice.InvoiceNumber)}</td></tr>
+      <tr><td><strong>Mã hóa đơn nội bộ</strong></td><td>{encoder.Encode(invoice.InvoiceNumber)}</td></tr>
       <tr><td><strong>Trung tam</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
-      <tr><td><strong>So tien</strong></td><td>{invoice.Amount:N0} VND</td></tr>
+      <tr><td><strong>Số tiền</strong></td><td>{invoice.Amount:N0} VND</td></tr>
       <tr><td><strong>Trang thai</strong></td><td>{encoder.Encode(invoice.Status)}</td></tr>
-      <tr><td><strong>Phuong thuc thanh toan</strong></td><td>{encoder.Encode(invoice.PaymentMethod ?? string.Empty)}</td></tr>
-      <tr><td><strong>Thoi diem thanh toan</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
+      <tr><td><strong>Phương thức thanh toán</strong></td><td>{encoder.Encode(invoice.PaymentMethod ?? string.Empty)}</td></tr>
+      <tr><td><strong>Thời điểm thanh toán</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
       <tr><td><strong>Ghi chu</strong></td><td>{encoder.Encode(sanitizedNote)}</td></tr>
     </table>
 
     <div class='warn'>
-      Day la hoa don dien tu SANDBOX de demo, khong co gia tri phap ly thue.
+      Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.
     </div>
   </div>
 </body>
@@ -116,26 +116,23 @@ namespace EducenAPI.Services
         public byte[] BuildPdfRepresentation(Invoice invoice, string tenantName, SandboxEInvoiceMetadata metadata)
         {
             var sanitizedNote = SanitizeDisplayNote(invoice.PaymentNote);
-            var lines = new List<string>
+            var data = new List<(string Label, string Value)>
             {
-                "HOA DON DIEN TU (SANDBOX DEMO)",
-                $"Provider: {metadata.Provider}",
-                $"So hoa don: {metadata.InvoiceNo}",
-                $"Ma tra cuu: {metadata.LookupCode}",
-                $"Ngay phat hanh: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}",
-                "",
-                $"Ma hoa don noi bo: {invoice.InvoiceNumber}",
-                $"Trung tam: {tenantName}",
-                $"So tien: {invoice.Amount:N0} VND",
-                $"Trang thai: {invoice.Status}",
-                $"Phuong thuc thanh toan: {invoice.PaymentMethod ?? string.Empty}",
-                $"Thoi diem thanh toan: {(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}",
-                $"Ghi chu: {sanitizedNote}",
-                "",
-                "Day la hoa don dien tu SANDBOX de demo, khong co gia tri phap ly thue."
+                ("Mã hóa đơn nội bộ", invoice.InvoiceNumber),
+                ("Trung tâm", tenantName),
+                ("Số tiền", $"{invoice.Amount:N0} VND"),
+                ("Trạng thái", invoice.Status),
+                ("Phương thức thanh toán", invoice.PaymentMethod ?? string.Empty),
+                ("Thời điểm thanh toán", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
+                ("Ghi chú", sanitizedNote)
             };
 
-            return BuildSimplePdf(lines);
+            return BuildStyledPdf(
+                "HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)",
+                metadata,
+                data,
+                "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế."
+            );
         }
 
         public string BuildXml(TuitionInvoice invoice, string tenantName, SandboxEInvoiceMetadata metadata)
@@ -161,7 +158,7 @@ namespace EducenAPI.Services
                     new XElement("CreatedAt", invoice.CreatedAt.ToString("O")),
                     new XElement("Note", sanitizedNote)
                 ),
-                new XElement("Disclaimer", "Day la hoa don dien tu SANDBOX de demo, khong co gia tri phap ly thue.")
+                new XElement("Disclaimer", "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.")
             );
 
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), root);
@@ -176,7 +173,7 @@ namespace EducenAPI.Services
 <html>
 <head>
   <meta charset='utf-8'/>
-  <title>Hoa don dien tu sandbox</title>
+  <title>Hóa đơn điện tử sandbox</title>
   <style>
     body {{ font-family: Arial, sans-serif; margin: 24px; color: #111827; }}
     .card {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }}
@@ -189,24 +186,24 @@ namespace EducenAPI.Services
 </head>
 <body>
   <div class='card'>
-    <div class='title'>HOA DON DIEN TU HOC PHI (SANDBOX DEMO)</div>
+    <div class='title'>HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)</div>
     <div class='muted'>Provider: {encoder.Encode(metadata.Provider)}</div>
-    <div><strong>So hoa don:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
-    <div><strong>Ma tra cuu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
-    <div><strong>Ngay phat hanh:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
+    <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
+    <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
+    <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
 
     <table>
       <tr><td><strong>Trung tam</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
-      <tr><td><strong>Ky hoc phi</strong></td><td>{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}</td></tr>
-      <tr><td><strong>So buoi hoc</strong></td><td>{invoice.AttendedSessions}/{invoice.TotalSessions}</td></tr>
-      <tr><td><strong>So tien</strong></td><td>{invoice.FinalAmount:N0} VND</td></tr>
+      <tr><td><strong>Kỳ học phí</strong></td><td>{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}</td></tr>
+      <tr><td><strong>Số buổi học</strong></td><td>{invoice.AttendedSessions}/{invoice.TotalSessions}</td></tr>
+      <tr><td><strong>Số tiền</strong></td><td>{invoice.FinalAmount:N0} VND</td></tr>
       <tr><td><strong>Trang thai</strong></td><td>{encoder.Encode(invoice.Status)}</td></tr>
-      <tr><td><strong>Thoi diem thanh toan</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
+      <tr><td><strong>Thời điểm thanh toán</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
       <tr><td><strong>Ghi chu</strong></td><td>{encoder.Encode(sanitizedNote)}</td></tr>
     </table>
 
     <div class='warn'>
-      Day la hoa don dien tu SANDBOX de demo, khong co gia tri phap ly thue.
+      Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.
     </div>
   </div>
 </body>
@@ -216,51 +213,93 @@ namespace EducenAPI.Services
         public byte[] BuildPdfRepresentation(TuitionInvoice invoice, string tenantName, SandboxEInvoiceMetadata metadata)
         {
             var sanitizedNote = SanitizeDisplayNote(invoice.Notes);
-            var lines = new List<string>
+            var data = new List<(string Label, string Value)>
             {
-                "HOA DON DIEN TU HOC PHI (SANDBOX DEMO)",
-                $"Provider: {metadata.Provider}",
-                $"So hoa don: {metadata.InvoiceNo}",
-                $"Ma tra cuu: {metadata.LookupCode}",
-                $"Ngay phat hanh: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}",
-                "",
-                $"Trung tam: {tenantName}",
-                $"Ky hoc phi: {invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}",
-                $"So buoi hoc: {invoice.AttendedSessions}/{invoice.TotalSessions}",
-                $"So tien: {invoice.FinalAmount:N0} VND",
-                $"Trang thai: {invoice.Status}",
-                $"Thoi diem thanh toan: {(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}",
-                $"Ghi chu: {sanitizedNote}",
-                "",
-                "Day la hoa don dien tu SANDBOX de demo, khong co gia tri phap ly thue."
+                ("Trung tâm", tenantName),
+                ("Kỳ học phí", $"{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}"),
+                ("Số buổi học", $"{invoice.AttendedSessions}/{invoice.TotalSessions}"),
+                ("Số tiền", $"{invoice.FinalAmount:N0} VND"),
+                ("Trạng thái", invoice.Status),
+                ("Thời điểm thanh toán", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
+                ("Ghi chú", sanitizedNote)
             };
 
-            return BuildSimplePdf(lines);
+            return BuildStyledPdf(
+                "HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)",
+                metadata,
+                data,
+                "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế."
+            );
         }
 
-        private static byte[] BuildSimplePdf(IEnumerable<string> lines)
+        private static byte[] BuildStyledPdf(string title, SandboxEInvoiceMetadata metadata, List<(string Label, string Value)> data, string disclaimer)
         {
-            var normalized = lines
-                .Where(l => !string.IsNullOrWhiteSpace(l) || l == string.Empty)
-                .Select(EscapePdfText)
-                .ToList();
-
             var contentBuilder = new StringBuilder();
+            var y = 780;
+            
             contentBuilder.AppendLine("BT");
-            contentBuilder.AppendLine("/F1 12 Tf");
-            contentBuilder.AppendLine("50 800 Td");
-            for (var i = 0; i < normalized.Count; i++)
+            
+            // Title
+            contentBuilder.AppendLine("/F1 16 Tf");
+            contentBuilder.AppendLine($"50 {y} Td");
+            contentBuilder.AppendLine($"({EscapePdfText(title)}) Tj");
+            y -= 30;
+            
+            // Provider info
+            contentBuilder.AppendLine("/F2 10 Tf");
+            contentBuilder.AppendLine($"50 {y} Td");
+            contentBuilder.AppendLine($"(Provider: {EscapePdfText(metadata.Provider)}) Tj");
+            y -= 20;
+            contentBuilder.AppendLine($"50 {y} Td");
+            contentBuilder.AppendLine($"(Số hóa đơn: {EscapePdfText(metadata.InvoiceNo)}) Tj");
+            y -= 20;
+            contentBuilder.AppendLine($"50 {y} Td");
+            contentBuilder.AppendLine($"(Mã tra cứu: {EscapePdfText(metadata.LookupCode)}) Tj");
+            y -= 20;
+            contentBuilder.AppendLine($"50 {y} Td");
+            contentBuilder.AppendLine($"(Ngày phát hành: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
+            y -= 30;
+            
+            // Draw table border
+            contentBuilder.AppendLine("0.5 w");
+            contentBuilder.AppendLine("0 0 0 RG");
+            contentBuilder.AppendLine($"50 {y} m");
+            contentBuilder.AppendLine("545 {y} l");
+            contentBuilder.AppendLine("S");
+            y -= 10;
+            
+            // Table content
+            contentBuilder.AppendLine("/F2 11 Tf");
+            foreach (var (label, value) in data)
             {
-                if (i == 0)
-                {
-                    contentBuilder.AppendLine($"({normalized[i]}) Tj");
-                }
-                else
-                {
-                    contentBuilder.AppendLine("0 -16 Td");
-                    contentBuilder.AppendLine($"({normalized[i]}) Tj");
-                }
+                contentBuilder.AppendLine($"50 {y} Td");
+                contentBuilder.AppendLine($"({EscapePdfText(label)}:) Tj");
+                contentBuilder.AppendLine($"300 {y} Td");
+                contentBuilder.AppendLine($"({EscapePdfText(value)}) Tj");
+                y -= 20;
+                
+                contentBuilder.AppendLine($"50 {y} m");
+                contentBuilder.AppendLine("545 {y} l");
+                contentBuilder.AppendLine("S");
+                y -= 10;
             }
+            
+            // Warning box
+            y -= 20;
+            contentBuilder.AppendLine("0.5 w");
+            contentBuilder.AppendLine("0.7 0.5 0.3 RG");
+            contentBuilder.AppendLine($"50 {y} m");
+            contentBuilder.AppendLine("545 {y} l");
+            contentBuilder.AppendLine("545 {y-40} l");
+            contentBuilder.AppendLine("50 {y-40} l");
+            contentBuilder.AppendLine("50 {y} l");
+            contentBuilder.AppendLine("S");
+            y -= 30;
+            
+            contentBuilder.AppendLine("/F2 10 Tf");
+            contentBuilder.AppendLine($"60 {y} Td");
+            contentBuilder.AppendLine($"({EscapePdfText(disclaimer)}) Tj");
+            
             contentBuilder.AppendLine("ET");
 
             var content = contentBuilder.ToString();
@@ -276,26 +315,29 @@ namespace EducenAPI.Services
             pdf.AppendLine("2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj");
 
             offsets.Add(pdf.Length);
-            pdf.AppendLine("3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj");
+            pdf.AppendLine("3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >> endobj");
 
             offsets.Add(pdf.Length);
-            pdf.AppendLine("4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj");
+            pdf.AppendLine("4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj");
 
             offsets.Add(pdf.Length);
-            pdf.AppendLine($"5 0 obj << /Length {Encoding.ASCII.GetByteCount(content)} >> stream");
+            pdf.AppendLine("5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj");
+
+            offsets.Add(pdf.Length);
+            pdf.AppendLine($"6 0 obj << /Length {Encoding.ASCII.GetByteCount(content)} >> stream");
             pdf.Append(content);
             pdf.AppendLine("endstream");
             pdf.AppendLine("endobj");
 
             var xrefStart = pdf.Length;
             pdf.AppendLine("xref");
-            pdf.AppendLine("0 6");
+            pdf.AppendLine("0 7");
             pdf.AppendLine("0000000000 65535 f ");
             foreach (var offset in offsets)
             {
                 pdf.AppendLine($"{offset:D10} 00000 n ");
             }
-            pdf.AppendLine("trailer << /Size 6 /Root 1 0 R >>");
+            pdf.AppendLine("trailer << /Size 7 /Root 1 0 R >>");
             pdf.AppendLine("startxref");
             pdf.AppendLine(xrefStart.ToString());
             pdf.AppendLine("%%EOF");

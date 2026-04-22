@@ -707,12 +707,19 @@
     padding: 12px;
     background: #f8fafc;
     border-radius: 12px;
+    min-width: 0;
 }
 
 .pc-report-feedback svg {
     margin-top: 3px;
     color: #6366f1;
     flex-shrink: 0;
+}
+
+.pc-report-feedback span {
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 768px) {

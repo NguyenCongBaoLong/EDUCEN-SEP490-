@@ -312,7 +312,27 @@ const ClassDetail = () => {
                 };
             });
             
-            setSessions(mappedSessions);
+            const sessionsWithItems = await Promise.all(
+                mappedSessions.map(async (session) => {
+                    try {
+                        const [matRes, asmRes] = await Promise.all([
+                            api.get(`/Materials/Get-By-Session/${session.sessionId}`),
+                            api.get(`/Assignments/Get-By-Session/${session.sessionId}`)
+                        ]);
+
+                        return {
+                            ...session,
+                            materials: (matRes.data || []).map(mapMaterial),
+                            assignments: (asmRes.data || []).map(mapAssignment),
+                            itemsLoaded: true
+                        };
+                    } catch {
+                        return session;
+                    }
+                })
+            );
+
+            setSessions(sessionsWithItems);
         } catch (err) {
             console.error('Lỗi tải thông tin buổi học:', err);
         }
@@ -1363,3 +1383,4 @@ const ClassDetail = () => {
 };
 
 export default ClassDetail;
+

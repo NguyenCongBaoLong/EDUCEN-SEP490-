@@ -194,22 +194,22 @@ namespace EducenAPI.Services
             var safeTitle = WebUtility.HtmlEncode(request.Title ?? "(không có tiêu đề)");
             var safeResponse = WebUtility.HtmlEncode(request.AdminResponse ?? string.Empty);
             var subject = approved
-                ? "[Educen] Ket qua xu ly yeu cau ho tro: Da duyet"
-                : "[Educen] Ket qua xu ly yeu cau ho tro: Tu choi";
-            var resultText = approved ? "DA DUYET" : "TU CHOI";
+                ? "[Educen] Kết quả xử lý yêu cầu hỗ trợ: Đã duyệt"
+                : "[Educen] Kết quả xử lý yêu cầu hỗ trợ: Từ chối";
+            var resultText = approved ? "ĐÃ DUYỆT" : "TỪ CHỐI";
             var actionHint = approved
-                ? "Yeu cau cua ban da duoc xu ly thanh cong. Vui long kiem tra he thong de xem cap nhat chi tiet."
-                : "Yeu cau cua ban da bi tu choi. Vui long xem ly do phan hoi va tao yeu cau moi neu can.";
+                ? "Yêu cầu của bạn đã được xử lý thành công. Vui lòng kiểm tra hệ thống để xem cập nhật chi tiết."
+                : "Yêu cầu của bạn đã bị từ chối. Vui lòng xem lý do phản hồi và tạo yêu cầu mới nếu cần.";
             var body = $@"
                 <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
-                    <p>Xin chao,</p>
-                    <p>Yeu cau ho tro cua ban da duoc cap nhat ket qua.</p>
-                    <p><strong>Ma yeu cau:</strong> #{request.Id}</p>
-                    <p><strong>Tieu de:</strong> {safeTitle}</p>
-                    <p><strong>Ket qua:</strong> {resultText}</p>
-                    <p><strong>Phan hoi tu trung tam:</strong> {safeResponse}</p>
+                    <p>Xin chào,</p>
+                    <p>Yêu cầu hỗ trợ của bạn đã được cập nhật kết quả.</p>
+                    <p><strong>Mã yêu cầu:</strong> #{request.Id}</p>
+                    <p><strong>Tiêu đề:</strong> {safeTitle}</p>
+                    <p><strong>Kết quả:</strong> {resultText}</p>
+                    <p><strong>Phản hồi từ trung tâm:</strong> {safeResponse}</p>
                     <p>{actionHint}</p>
-                    <p>Tran trong,<br/>He thong Educen</p>
+                    <p>Trân trọng,<br/>Hệ thống Educen</p>
                 </div>";
 
             try
@@ -243,7 +243,11 @@ namespace EducenAPI.Services
             if (parsed.NewStartTime >= parsed.NewEndTime)
                 throw new Exception("Không thể duyệt: giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
 
-            _logger.LogInformation("[ApplyScheduleChange] Starting for Request {RequestId}, Class {ClassId}", request.Id, parsed.ClassId);
+            // For single session change, require TargetSessionDate
+            if (parsed.ChangeType == "single_session" && parsed.TargetSessionDate == null)
+                throw new Exception("Không thể duyệt: thiếu ngày cụ thể để đổi (TargetSessionDate).");
+
+            _logger.LogInformation("[ApplyScheduleChange] Starting for Request {RequestId}, Class {ClassId}, ChangeType {ChangeType}", request.Id, parsed.ClassId, parsed.ChangeType);
 
             var classEntity = await _context.Classes
                 .Include(c => c.Schedules)
@@ -276,19 +280,29 @@ namespace EducenAPI.Services
             _logger.LogInformation("[ApplyScheduleChange] Target slot resolved: SlotId={SlotId}, Day={Day}, Time={Start}-{End}", 
                 targetSlotDto.Slot, targetSlotDto.DayOfWeek, targetSlotDto.StartTime, targetSlotDto.EndTime);
 
-            // 3. Cap nhat slot
-            targetSlotDto.DayOfWeek = parsed.NewDayOfWeek.Value;
-            targetSlotDto.StartTime = parsed.NewStartTime.Value.ToString("HH:mm");
-            targetSlotDto.EndTime = parsed.NewEndTime.Value.ToString("HH:mm");
-            if (parsed.RequestedRoomId.HasValue)
-                targetSlotDto.RoomId = parsed.RequestedRoomId.Value;
+            // 3. Cập nhật slot (chỉ cho full_schedule mode)
+            if (parsed.ChangeType == "full_schedule")
+            {
+                targetSlotDto.DayOfWeek = parsed.NewDayOfWeek.Value;
+                targetSlotDto.StartTime = parsed.NewStartTime.Value.ToString("HH:mm");
+                targetSlotDto.EndTime = parsed.NewEndTime.Value.ToString("HH:mm");
+                if (parsed.RequestedRoomId.HasValue)
+                    targetSlotDto.RoomId = parsed.RequestedRoomId.Value;
 
-            _logger.LogInformation("[ApplyScheduleChange] Slot updated in memory. New values: Day={Day}, Time={Start}-{End}", 
-                targetSlotDto.DayOfWeek, targetSlotDto.StartTime, targetSlotDto.EndTime);
+                _logger.LogInformation("[ApplyScheduleChange] Slot updated in memory. New values: Day={Day}, Time={Start}-{End}",
+                    targetSlotDto.DayOfWeek, targetSlotDto.StartTime, targetSlotDto.EndTime);
+            }
 
-            // 4. Goi UpdateClassAsync de thuc hien thay doi logic (gom ca session regeneration)
-            // QUAN TRONG: Phai copy toan bo thong tin hien tai cua lop de tranh bi UpdateClassAsync xoa trang
-            var updateDto = new EducenAPI.DTOs.Classes.UpdateClassDto
+            // 4. Xử lý theo change type
+            if (parsed.ChangeType == "single_session")
+            {
+                await ApplySingleSessionChangeAsync(classEntity, parsed);
+            }
+            else
+            {
+                // 5. Goi UpdateClassAsync de thuc hien thay doi logic (gom ca session regeneration)
+                // QUAN TRỌNG: Phải copy toàn bộ thông tin hiện tại của lớp để tránh bị UpdateClassAsync xóa trắng
+                var updateDto = new EducenAPI.DTOs.Classes.UpdateClassDto
             {
                 ClassName = classEntity.ClassName,
                 Description = classEntity.Description,
@@ -306,27 +320,136 @@ namespace EducenAPI.Services
                 ScheduleSlots = currentSlots
             };
             
-            // Xoa tracking class hien tai truoc khi goi Service khac (de tranh conflict)
+            // Xóa tracking class hiện tại trước khi gọi Service khác (để tránh conflict)
             _context.Entry(classEntity).State = EntityState.Detached;
             foreach(var s in classEntity.Schedules) _context.Entry(s).State = EntityState.Detached;
 
             var success = await _classService.UpdateClassAsync(classEntity.ClassId, updateDto);
             if (!success)
                 throw new Exception("Có lỗi xảy ra khi cập nhật lịch thực tế từ ClassService.");
-                
+
             _logger.LogInformation("[ApplyScheduleChange] UpdateClassAsync SUCCESS for Request {RequestId}", request.Id);
+            }
+        }
+
+        private async Task ApplySingleSessionChangeAsync(Class classEntity, ParsedScheduleChangeRequest parsed)
+        {
+            _logger.LogInformation("[ApplySingleSessionChange] Starting for Class {ClassId}, TargetDate {TargetDate}",
+                classEntity.ClassId, parsed.TargetSessionDate);
+
+            // Find the session to change
+            var targetDate = parsed.TargetSessionDate.Value.Date;
+            var targetSession = await _context.ClassSessions
+                .Include(s => s.Schedule)
+                .FirstOrDefaultAsync(s => s.ClassId == classEntity.ClassId && s.SessionDate.Date == targetDate);
+
+            // Validate: only future sessions can be changed
+            var today = DateTime.UtcNow.AddHours(7).Date;
+            if (targetDate < today)
+                throw new Exception("Không thể đổi buổi học đã diễn ra trong quá khứ.");
+
+            // If session doesn't exist, create it
+            if (targetSession == null)
+            {
+                _logger.LogInformation("[ApplySingleSessionChange] Session not found on {TargetDate}, creating new session", targetDate);
+                
+                // Find the original schedule for this class
+                var classSchedules = await _context.Schedules
+                    .Where(s => s.ClassId == classEntity.ClassId && s.DayOfWeek == parsed.CurrentDayOfWeek.Value)
+                    .ToListAsync();
+
+                Schedule originalSchedule = null;
+                originalSchedule = classSchedules.FirstOrDefault(s => 
+                    s.StartTime.ToString() == parsed.CurrentStartTime.Value.ToString("HH:mm") &&
+                    s.EndTime.ToString() == parsed.CurrentEndTime.Value.ToString("HH:mm"));
+
+                if (originalSchedule == null)
+                {
+                    _logger.LogWarning("[ApplySingleSessionChange] Could not find exact time match. Available schedules for day {DayOfWeek}:", parsed.CurrentDayOfWeek.Value);
+                    foreach (var sched in classSchedules)
+                    {
+                        _logger.LogWarning("  - ScheduleId: {ScheduleId}, StartTime: {StartTime}, EndTime: {EndTime}", 
+                            sched.ScheduleId, sched.StartTime, sched.EndTime);
+                    }
+                    _logger.LogWarning("  - Looking for StartTime: {StartTime}, EndTime: {EndTime}", 
+                        parsed.CurrentStartTime.Value, parsed.CurrentEndTime.Value);
+                    
+                    // Fallback: use any schedule on that day if exact time match fails
+                    originalSchedule = classSchedules.FirstOrDefault();
+                    if (originalSchedule == null)
+                    {
+                        throw new Exception($"Không tìm thấy lịch gốc cho lớp {classEntity.ClassId} vào thứ {parsed.CurrentDayOfWeek.Value}");
+                    }
+                    _logger.LogWarning("[ApplySingleSessionChange] Using fallback schedule {ScheduleId}", originalSchedule.ScheduleId);
+                }
+
+                targetSession = new ClassSession
+                {
+                    ClassId = classEntity.ClassId,
+                    SessionDate = targetDate,
+                    ScheduleId = originalSchedule.ScheduleId,
+                    Status = "Scheduled"
+                };
+
+                _context.ClassSessions.Add(targetSession);
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("[ApplySingleSessionChange] Created new session {SessionId} with original schedule {ScheduleId}", 
+                    targetSession.SessionId, originalSchedule.ScheduleId);
+            }
+
+            // For single session change:
+            // - Keep old date as an override marker (status Rescheduled) so recurring slot can be hidden on old date
+            // - Create/update one scheduled session at new date for actual teaching slot
+            var newDate = targetDate;
+            if (parsed.CurrentDayOfWeek.Value != parsed.NewDayOfWeek.Value)
+            {
+                // Calculate new date based on day difference
+                var dayDiff = parsed.NewDayOfWeek.Value - parsed.CurrentDayOfWeek.Value;
+                newDate = targetDate.AddDays(dayDiff);
+            }
+
+            var oldScheduleId = targetSession.ScheduleId;
+            targetSession.Status = "Rescheduled";
+
+            var movedSession = await _context.ClassSessions
+                .FirstOrDefaultAsync(s =>
+                    s.ClassId == classEntity.ClassId &&
+                    s.SessionDate.Date == newDate.Date &&
+                    s.ScheduleId == oldScheduleId);
+
+            if (movedSession == null)
+            {
+                movedSession = new ClassSession
+                {
+                    ClassId = classEntity.ClassId,
+                    SessionDate = newDate,
+                    ScheduleId = oldScheduleId,
+                    Status = "Scheduled"
+                };
+                _context.ClassSessions.Add(movedSession);
+            }
+            else
+            {
+                movedSession.Status = "Scheduled";
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("[ApplySingleSessionChange] SUCCESS: Session {SessionId} moved from {OldDate} to {NewDate}",
+                targetSession.SessionId, targetDate, newDate);
         }
 
         private static EducenAPI.DTOs.Classes.CreateScheduleSlotDto? ResolveTargetSlot(List<EducenAPI.DTOs.Classes.CreateScheduleSlotDto> slots, ParsedScheduleChangeRequest parsed)
         {
-            // UU TIEN 1: Khop theo SlotId (ID chinh xac tu DB)
+            // ƯU TIÊN 1: Khớp theo SlotId (ID chính xác từ DB)
             if (parsed.SlotId.HasValue)
             {
                 var matchedById = slots.FirstOrDefault(s => s.Slot == parsed.SlotId.Value);
                 if (matchedById != null) return matchedById;
             }
 
-            // UU TIEN 2: Khop theo Thứ + Giờ (Du phong neu gia tri ID bi sai lech)
+            // ƯU TIÊN 2: Khớp theo Thứ + Giờ (Dự phòng nếu giá trị ID bị sai lệch)
             if (parsed.CurrentDayOfWeek.HasValue && parsed.CurrentStartTime.HasValue && parsed.CurrentEndTime.HasValue)
             {
                 var curStartStr = parsed.CurrentStartTime.Value.ToString("HH:mm");
@@ -339,7 +462,7 @@ namespace EducenAPI.Services
                 if (matchedByTime != null) return matchedByTime;
             }
 
-            // UU TIEN 3: Lay slot dau tien neu khong tim thay (Tranh bi null)
+            // ƯU TIÊN 3: Lấy slot đầu tiên nếu không tìm thấy (Tránh bị null)
             return slots.OrderBy(s => s.Slot).FirstOrDefault();
         }
 
@@ -350,7 +473,7 @@ namespace EducenAPI.Services
 
             return title.Contains("[schedule_change]")
                 || content.Contains("type: schedule_change")
-                || title.Contains("doi lich day")
+                || title.Contains("đổi lịch dạy")
                 || content.Contains("requestedslot:");
         }
 
@@ -402,6 +525,37 @@ namespace EducenAPI.Services
                 parsed.NewEndTime = requestedSlot.Value.End;
             }
 
+            // Parse ChangeType (full_schedule or single_session)
+            var changeTypeMatch = Regex.Match(normalized, @"(?:ChangeType|Loại đổi):\s*(\w+)", RegexOptions.IgnoreCase);
+            if (changeTypeMatch.Success)
+            {
+                parsed.ChangeType = changeTypeMatch.Groups[1].Value.ToLower();
+            }
+            else
+            {
+                // Default to full_schedule if not specified
+                parsed.ChangeType = "full_schedule";
+            }
+
+            // Safety fallback:
+            // if payload still carries "single_session" token anywhere (e.g. "Loại đổi: single_session")
+            // but regex label parsing fails due content variations, force single_session to avoid changing full schedule.
+            if (parsed.ChangeType == "full_schedule" &&
+                normalized.Contains("single_session", StringComparison.OrdinalIgnoreCase))
+            {
+                parsed.ChangeType = "single_session";
+            }
+
+            // Parse TargetSessionDate for single session change
+            if (parsed.ChangeType == "single_session")
+            {
+                var dateMatch = Regex.Match(normalized, @"(?:TargetSessionDate|Ngày đổi):\s*(\d{4}-\d{2}-\d{2})", RegexOptions.IgnoreCase);
+                if (dateMatch.Success && DateTime.TryParseExact(dateMatch.Groups[1].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var targetDate))
+                {
+                    parsed.TargetSessionDate = targetDate;
+                }
+            }
+
             return parsed;
         }
 
@@ -412,7 +566,7 @@ namespace EducenAPI.Services
 
             var dayLabel = match.Groups[1].Value.Trim();
             var timeRange = match.Groups[2].Value.Trim();
-            // Ho tro nhieu loai dau gach ngang: -, –, —
+            // Hỗ trợ nhiều loại dấu gạch ngang: -, –, —
             var parts = timeRange.Split(new[] { '-', '–', '—' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length != 2) return null;
 
@@ -470,6 +624,8 @@ namespace EducenAPI.Services
             public int? NewDayOfWeek { get; set; }
             public TimeOnly? NewStartTime { get; set; }
             public TimeOnly? NewEndTime { get; set; }
+            public string ChangeType { get; set; } // "full_schedule" or "single_session"
+            public DateTime? TargetSessionDate { get; set; } // For single session change
         }
     }
 }

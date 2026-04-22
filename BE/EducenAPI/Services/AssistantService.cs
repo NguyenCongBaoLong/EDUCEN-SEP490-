@@ -93,45 +93,11 @@ namespace EducenAPI.Services
             dto.Email = dto.Email?.Trim()?.ToLower();
             dto.FullName = dto.FullName?.Trim();
 
-            // Skip user creation if username or password is null
-            if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
-            {
-                // Create assistant profile without user account
-                var assistantProfile = new Assistant
-                {
-                    UserId = 0, // Will be set when account is created
-                    SupportLevel = dto.SupportLevel
-                };
-
-                _context.Assistants.Add(assistantProfile);
-                await _context.SaveChangesAsync();
-
-                return new AssistantDto
-                {
-                    AssistantId = assistantProfile.UserId,
-                    UserId = assistantProfile.UserId,
-                    Username = "",
-                    FullName = dto.FullName,
-                    Email = dto.Email,
-                    PhoneNumber = dto.PhoneNumber,
-                    SupportLevel = assistantProfile.SupportLevel,
-                    AccountStatus = "Pending",
-                    AssignedClassesCount = 0,
-                    CreatedAt = DateTime.Now
-                };
-            }
-
-            var existingUser = await _context.Users
-                .AnyAsync(u => u.Username == dto.Username);
-
-            if (existingUser)
-                throw new Exception(ValidationMessages.DuplicateUsername);
-
             var existingEmail = await _context.Users
                 .AnyAsync(u => u.Email == dto.Email);
 
             if (existingEmail)
-                throw new Exception(ValidationMessages.DuplicateEmail);
+                throw new Exception("Email đã tồn tại.");
 
             var assistantRole = await _context.Roles
                 .FirstOrDefaultAsync(r => r.RoleName == "Assistant");
@@ -139,16 +105,19 @@ namespace EducenAPI.Services
             if (assistantRole == null)
                 throw new Exception("Không tìm thấy vai trò trợ giảng.");
 
+            // Tạo profile trợ giảng trước, chưa cấp tài khoản đăng nhập.
+            // Username/PasswordHash sẽ được gán khi bấm "Gửi tài khoản".
             var user = new User
             {
-                Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Username = null,
+                PasswordHash = null,
                 RoleId = assistantRole.RoleId,
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = dto.Address,
-                AccountStatus = "Active"
+                AccountStatus = "NoAccount",
+                IsAccountSent = false
             };
 
             _context.Users.Add(user);

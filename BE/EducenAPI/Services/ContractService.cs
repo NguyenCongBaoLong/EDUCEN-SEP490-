@@ -43,30 +43,43 @@ namespace EducenAPI.Services
         {
             var tenant = await _context.Tenants.FindAsync(tenantId);
             if (tenant == null)
-                throw new Exception("Không tìm thấy trung tâm.");
+                throw new Exception("Khong tim thay trung tam.");
+
+            if (file == null || file.Length <= 0)
+                throw new Exception("File hop dong la bat buoc.");
+
+            var normalizedTitle = title?.Trim();
+            var normalizedDescription = description?.Trim();
+
+            if (string.IsNullOrWhiteSpace(normalizedTitle))
+                throw new Exception("Tieu de hop dong la bat buoc.");
+            if (normalizedTitle.Length > 200)
+                throw new Exception("Tieu de hop dong khong duoc vuot qua 200 ky tu.");
+            if (!string.IsNullOrWhiteSpace(normalizedDescription) && normalizedDescription.Length > 500)
+                throw new Exception("Mo ta hop dong khong duoc vuot qua 500 ky tu.");
 
             var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
             var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            
+
             if (!allowedExtensions.Contains(fileExtension))
-                throw new Exception("Chỉ chấp nhận file PDF, JPG, PNG.");
+                throw new Exception("Chi chap nhan file PDF, JPG, PNG.");
 
             if (file.Length > 10 * 1024 * 1024)
-                throw new Exception("Dung lượng file không được vượt quá 10MB.");
+                throw new Exception("Dung luong file khong duoc vuot qua 10MB.");
 
             var uploads = await _fileUploadService.UploadResourceFile(
                 new Microsoft.AspNetCore.Http.FormFileCollection { file });
 
             if (uploads == null || uploads.Count == 0)
-                throw new Exception("Upload file thất bại.");
+                throw new Exception("Upload file that bai.");
 
             var uploadedFile = uploads[0];
 
             var contract = new TenantContract
             {
                 TenantId = tenantId,
-                ContractTitle = title.Trim(),
-                Description = description?.Trim(),
+                ContractTitle = normalizedTitle,
+                Description = normalizedDescription,
                 FilePath = $"wwwroot/{uploadedFile.FilePath}",
                 FileType = fileExtension.TrimStart('.').ToUpperInvariant(),
                 FileSize = file.Length,

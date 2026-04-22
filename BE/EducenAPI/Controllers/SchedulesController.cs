@@ -30,6 +30,15 @@ namespace EducenAPI.Controllers
             return Ok(schedules);
         }
 
+        // GET: api/Schedules/sessions - Get real class sessions (for center/admin calendar display)
+        [HttpGet("sessions")]
+        [Authorize(Roles = "Admin,TenantAdmin")]
+        public async Task<IActionResult> GetSessionSchedules()
+        {
+            var sessions = await _scheduleService.GetAllSessionSchedulesAsync();
+            return Ok(sessions);
+        }
+
         // GET: api/Schedules/class/5 (public)
         [HttpGet("class/{classId:int}")]
         [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant,Student,Parent")]
@@ -51,6 +60,19 @@ namespace EducenAPI.Controllers
             // Get teacher by userId
             var teacher = await _scheduleService.GetTeacherScheduleAsync(userId);
             return Ok(teacher);
+        }
+
+        // GET: api/Schedules/teacher/me/sessions - Get current teacher's real class sessions
+        [HttpGet("teacher/me/sessions")]
+        [Authorize(Roles = "Teacher")]
+        public async Task<IActionResult> GetMyTeacherSessionSchedule()
+        {
+            var userIdStr = User.FindFirst("UserId")?.Value;
+            if (!int.TryParse(userIdStr, out int userId))
+                return Unauthorized();
+
+            var sessions = await _scheduleService.GetTeacherSessionScheduleAsync(userId);
+            return Ok(sessions);
         }
 
         // GET: api/Schedules/teacher/{teacherId} - Get specific teacher's schedule

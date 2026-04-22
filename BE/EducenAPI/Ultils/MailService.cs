@@ -19,7 +19,7 @@ namespace EducenAPI.Ultils
             _systemAdminEmailSettings =
                 configuration.GetSection("EmailProfiles:SystemAdmin").Get<EmailSettings>()
                 ?? configuration.GetSection("EmailSettings").Get<EmailSettings>()
-                ?? throw new InvalidOperationException("Missing SystemAdmin email settings.");
+                ?? throw new InvalidOperationException("Thiếu cấu hình email quản trị hệ thống.");
 
             _centerFlowEmailSettings =
                 configuration.GetSection("EmailProfiles:CenterFlow").Get<EmailSettings>()
@@ -32,19 +32,19 @@ namespace EducenAPI.Ultils
             var emailSettings = ResolveEmailSettings();
             mail.From = new MailAddress(emailSettings.Email);
             mail.To.Add(toEmail);
-            mail.Subject = "Thong tin tai khoan hoc sinh";
+            mail.Subject = "Thông tin tài khoản học sinh";
 
             mail.Body = $@"
-            Xin chao,
+            Xin chào,
 
-            Day la thong tin tai khoan cua ban:
+            Đây là thông tin tài khoản của bạn:
 
-            Tai khoan: {username}
-            Mat khau: {password}
+            Tài khoản: {username}
+            Mật khẩu: {password}
 
-            Vui long dang nhap va doi mat khau.
+            Vui lòng đăng nhập và đổi mật khẩu.
 
-            Tran trong.
+            Trân trọng.
         ";
 
             var smtp = new SmtpClient(emailSettings.Host, emailSettings.Port)
@@ -62,21 +62,21 @@ namespace EducenAPI.Ultils
             var emailSettings = ResolveEmailSettings();
             mail.From = new MailAddress(emailSettings.Email);
             mail.To.Add(toEmail);
-            mail.Subject = "Thong tin tai khoan phu huynh - Educen";
+            mail.Subject = "Thông tin tài khoản phụ huynh - Educen";
 
             mail.Body = $@"
-            Xin chao,
+            Xin chào,
 
-            Chao mung ban den voi he thong Educen. Day la thong tin tai khoan truy cap danh cho phu huynh:
+            Chào mừng bạn đến với hệ thống Educen. Đây là thông tin tài khoản truy cập dành cho phụ huynh:
 
-            Tai khoan (Username): {username}
-            Mat khau (Password): {password}
+            Tài khoản (Username): {username}
+            Mật khẩu (Password): {password}
 
-            Ban co the su dung tai khoan nay de theo doi tinh hinh hoc tap cua con em minh.
-            Vui long dang nhap va doi mat khau ngay trong lan dau su dung.
+            Bạn có thể sử dụng tài khoản này để theo dõi tình hình học tập của con em mình.
+            Vui lòng đăng nhập và đổi mật khẩu ngay trong lần đầu sử dụng.
 
-            Tran trong,
-            Doi ngu Educen.
+            Trân trọng,
+            Đội ngũ Educen.
         ";
 
             var smtp = new SmtpClient(emailSettings.Host, emailSettings.Port)
@@ -94,21 +94,21 @@ namespace EducenAPI.Ultils
             var emailSettings = ResolveEmailSettings();
             mail.From = new MailAddress(emailSettings.Email);
             mail.To.Add(toEmail);
-            mail.Subject = "Thong tin tai khoan giao vien - Educen";
+            mail.Subject = "Thông tin tài khoản giáo viên - Educen";
 
             mail.Body = $@"
-            Xin chao,
+            Xin chào,
 
-            Chao mung ban den voi he thong Educen. Day la thong tin tai khoan truy cap danh cho giao vien:
+            Chào mừng bạn đến với hệ thống Educen. Đây là thông tin tài khoản truy cập dành cho giáo viên:
 
-            Tai khoan (Username): {username}
-            Mat khau (Password): {password}
+            Tài khoản (Username): {username}
+            Mật khẩu (Password): {password}
 
-            Ban co the su dung tai khoan nay de quan ly lop hoc va bai giang.
-            Vui long dang nhap va doi mat khau ngay trong lan dau su dung.
+            Bạn có thể sử dụng tài khoản này để quản lý lớp học và bài giảng.
+            Vui lòng đăng nhập và đổi mật khẩu ngay trong lần đầu sử dụng.
 
-            Tran trong,
-            Doi ngu Educen.
+            Trân trọng,
+            Đội ngũ Educen.
         ";
 
             var smtp = new SmtpClient(emailSettings.Host, emailSettings.Port)
@@ -126,21 +126,21 @@ namespace EducenAPI.Ultils
             var emailSettings = ResolveEmailSettings();
             mail.From = new MailAddress(emailSettings.Email);
             mail.To.Add(toEmail);
-            mail.Subject = "Ma xac thuc dat lai mat khau - Educen";
+            mail.Subject = "Mã xác thực đặt lại mật khẩu - Educen";
 
             mail.Body = $@"
-            Xin chao,
+            Xin chào,
 
-            Chung toi nhan duoc yeu cau dat lai mat khau cho tai khoan lien ket voi email nay.
+            Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản liên kết với email này.
             
-            Vui long su dung ma xac thuc gom 6 chu so ben duoi de hoan tat qua trinh dat lai mat khau:
+            Vui lòng sử dụng mã xác thực gồm 6 chữ số bên dưới để hoàn tất quá trình đặt lại mật khẩu:
             
             {resetCode}
             
-            Ma nay co hieu luc trong vong 15 phut. Neu ban khong yeu cau thay doi nay, hay bo qua email nay.
+            Mã này có hiệu lực trong vòng 15 phút. Nếu bạn không yêu cầu thay đổi này, hãy bỏ qua email này.
 
-            Tran trong,
-            Doi ngu Educen.
+            Trân trọng,
+            Đội ngũ Educen.
         ";
 
             var smtp = new SmtpClient(emailSettings.Host, emailSettings.Port)
@@ -206,15 +206,15 @@ namespace EducenAPI.Ultils
 
         public async Task SendStudentClassEnrollmentEmailAsync(string toEmail, string studentName, string className)
         {
-            var subject = "Thong bao: Ban da duoc them vao lop hoc moi";
+            var subject = "Thông báo: Bạn đã được thêm vào lớp học mới";
             var body = $@"
                 <div style='font-family: sans-serif; line-height: 1.6; color: #333;'>
-                    <h2>Chao mung {studentName},</h2>
-                    <p>Ban da duoc ban quan tri them vao lop hoc: <strong>{className}</strong>.</p>
-                    <p>Vui long dang nhap vao he thong Educen de xem thoi khoa bieu va tai lieu hoc tap.</p>
+                    <h2>Chào mừng {studentName},</h2>
+                    <p>Bạn đã được ban quản trị thêm vào lớp học: <strong>{className}</strong>.</p>
+                    <p>Vui lòng đăng nhập vào hệ thống Educen để xem thời khóa biểu và tài liệu học tập.</p>
                     <br/>
-                    <p>Tran trong,</p>
-                    <p>Doi ngu Educen.</p>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Educen.</p>
                 </div>
             ";
             await SendEmailAsync(toEmail, subject, body);
@@ -222,15 +222,15 @@ namespace EducenAPI.Ultils
 
         public async Task SendAssistantClassAssignmentEmailAsync(string toEmail, string assistantName, string className)
         {
-            var subject = "Thong bao: Ban da duoc phan cong ho tro lop hoc moi";
+            var subject = "Thông báo: Bạn đã được phân công hỗ trợ lớp học mới";
             var body = $@"
                 <div style='font-family: sans-serif; line-height: 1.6; color: #333;'>
-                    <h2>Xin chao tro giang {assistantName},</h2>
-                    <p>Ban da duoc phan cong ho tro lop hoc: <strong>{className}</strong>.</p>
-                    <p>Vui long dang nhap vao he thong de kiem tra danh sach hoc sinh va phoi hop cung giao vien chinh.</p>
+                    <h2>Xin chào trợ giảng {assistantName},</h2>
+                    <p>Bạn đã được phân công hỗ trợ lớp học: <strong>{className}</strong>.</p>
+                    <p>Vui lòng đăng nhập vào hệ thống để kiểm tra danh sách học sinh và phối hợp cùng giáo viên chính.</p>
                     <br/>
-                    <p>Tran trong,</p>
-                    <p>Doi ngu Educen.</p>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Educen.</p>
                 </div>
             ";
             await SendEmailAsync(toEmail, subject, body);
@@ -238,15 +238,15 @@ namespace EducenAPI.Ultils
 
         public async Task SendTeacherClassAssignmentEmailAsync(string toEmail, string teacherName, string className)
         {
-            var subject = "Thong bao: Ban da duoc phan cong giang day lop hoc moi";
+            var subject = "Thông báo: Bạn đã được phân công giảng dạy lớp học mới";
             var body = $@"
                 <div style='font-family: sans-serif; line-height: 1.6; color: #333;'>
-                    <h2>Xin chao giao vien {teacherName},</h2>
-                    <p>Ban da duoc phan cong giang day lop hoc: <strong>{className}</strong>.</p>
-                    <p>Vui long dang nhap vao he thong Educen de xem danh sach hoc sinh, thoi khoa bieu va chuan bi bai giang.</p>
+                    <h2>Xin chào giáo viên {teacherName},</h2>
+                    <p>Bạn đã được phân công giảng dạy lớp học: <strong>{className}</strong>.</p>
+                    <p>Vui lòng đăng nhập vào hệ thống Educen để xem danh sách học sinh, thời khóa biểu và chuẩn bị bài giảng.</p>
                     <br/>
-                    <p>Tran trong,</p>
-                    <p>Doi ngu Educen.</p>
+                    <p>Trân trọng,</p>
+                    <p>Đội ngũ Educen.</p>
                 </div>
             ";
             await SendEmailAsync(toEmail, subject, body);

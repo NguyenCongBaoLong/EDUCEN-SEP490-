@@ -108,7 +108,7 @@ namespace EducenAPI.Services
                     <p>Xin chào {System.Net.WebUtility.HtmlEncode(reg.ContactPerson ?? "Anh/Chị")},</p>
                     <p>
                         Yêu cầu đăng ký trung tâm <strong>{System.Net.WebUtility.HtmlEncode(reg.CenterName)}</strong>
-                        của bạn đã được cập nhật trạng thái:
+                        của bạn đã được:
                         <strong>{(isApproved ? "Đã duyệt" : "Từ chối")}</strong>.
                     </p>
                     {reasonHtml}

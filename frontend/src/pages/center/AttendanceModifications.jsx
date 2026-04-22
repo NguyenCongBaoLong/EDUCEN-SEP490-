@@ -20,7 +20,6 @@ const AttendanceModifications = () => {
 
     const loadAttendanceRequests = useCallback(async (reason = 'manual') => {
         setAttendanceRequestsLoading(true);
-        setSelectedRequest(null);
         try {
             const res = await api.get('/attendance/modification-requests/pending');
             let data = res.data;
@@ -29,8 +28,9 @@ const AttendanceModifications = () => {
             }
             setAttendanceRequests(data);
             setSelectedRequest((prev) => {
-                if (!prev?.requestId) return null;
-                return data.find((r) => r?.requestId === prev.requestId) || null;
+                if (!data.length) return null;
+                if (!prev?.requestId) return data[0];
+                return data.find((r) => r?.requestId === prev.requestId) || data[0];
             });
             console.debug('[AttendanceModifications] refreshed pending requests', { reason, total: data.length });
         } catch (error) {

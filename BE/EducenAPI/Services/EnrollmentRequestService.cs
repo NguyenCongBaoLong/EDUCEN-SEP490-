@@ -450,26 +450,26 @@ public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
             }
 
             var fullName = $"{request.FirstName} {request.LastName}".Trim();
-            var safeName = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(fullName) ? "ban" : fullName);
+            var safeName = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(fullName) ? "bạn" : fullName);
             var safeRequestType = WebUtility.HtmlEncode(request.RequestType ?? "N/A");
-            var safeClassId = request.ClassId?.ToString() ?? "Chua chon lop";
+            var safeClassId = request.ClassId?.ToString() ?? "Chưa chọn lớp";
             var subject = approved
-                ? "[Educen] Ket qua yeu cau dang ky: Da duyet"
-                : "[Educen] Ket qua yeu cau dang ky: Tu choi";
-            var resultText = approved ? "DA DUYET" : "TU CHOI";
+                ? "[Educen] Kết quả yêu cầu đăng ký: Đã duyệt"
+                : "[Educen] Kết quả yêu cầu đăng ký: Từ chối";
+            var resultText = approved ? "ĐÃ DUYỆT" : "TỪ CHỐI";
             var actionHint = approved
-                ? "Yeu cau da duoc phe duyet. Vui long dang nhap he thong de xem thong tin hoc tap."
-                : "Yeu cau chua duoc thong qua. Vui long kiem tra thong tin va gui lai yeu cau neu can.";
+                ? "Yêu cầu đã được phê duyệt. Vui lòng đăng nhập hệ thống để xem thông tin học tập."
+                : "Yêu cầu chưa được thông qua. Vui lòng kiểm tra thông tin và gửi lại yêu cầu nếu cần.";
             var body = $@"
                 <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
-                    <p>Xin chao {safeName},</p>
-                    <p>Yeu cau dang ky cua ban da co ket qua xu ly.</p>
-                    <p><strong>Ma yeu cau:</strong> #{request.RequestId}</p>
-                    <p><strong>Loai yeu cau:</strong> {safeRequestType}</p>
-                    <p><strong>Lop dang ky:</strong> {safeClassId}</p>
-                    <p><strong>Ket qua:</strong> {resultText}</p>
+                    <p>Xin chào {safeName},</p>
+                    <p>Yêu cầu đăng ký của bạn đã có kết quả xử lý.</p>
+                    <p><strong>Mã yêu cầu:</strong> #{request.RequestId}</p>
+                    <p><strong>Loại yêu cầu:</strong> {safeRequestType}</p>
+                    <p><strong>Lớp đăng ký:</strong> {safeClassId}</p>
+                    <p><strong>Kết quả:</strong> {resultText}</p>
                     <p>{actionHint}</p>
-                    <p>Tran trong,<br/>He thong Educen</p>
+                    <p>Trân trọng,<br/>Hệ thống Educen</p>
                 </div>";
 
             try

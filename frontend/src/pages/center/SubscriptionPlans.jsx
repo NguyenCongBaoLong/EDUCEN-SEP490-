@@ -53,8 +53,10 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     useEffect(() => {
         const fetchPlans = async () => {
             setLoading(true);
+            const tenantId = user?.tenantId || localStorage.getItem('tenantId');
+            
             const [plansResult, subscriptionResult, creditResult] = await Promise.allSettled([
-                api.get('/admin/plans'),
+                api.get(`/admin/plans/tenant/${tenantId}`),
                 api.get('/admin/subscription/current'),
                 api.get('/admin/subscription/credit-balance'),
             ]);
@@ -568,12 +570,18 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                 : [];
                             const isActivePlan = activeSubscription?.planId === plan.planId;
                             const isPaying = payingPlanId === plan.planId;
-                            const disablePay = isPaying || !plan.isActive;
+                            const isDeprecated = plan.isDeprecated || !plan.isActive;
+                            const disablePay = isPaying || isDeprecated;
 
                             return (
-                                <div key={plan.planId} className={`subscription-card ${isActivePlan ? 'is-active-plan' : ''}`}>
+                                <div key={plan.planId} className={`subscription-card ${isActivePlan ? 'is-active-plan' : ''} ${isDeprecated ? 'is-deprecated' : ''}`}>
                                     <div className="subscription-card-header">
                                         <h3>{plan.planName}</h3>
+                                        {isDeprecated && (
+                                            <div className="subscription-deprecation-notice">
+                                                ⚠️ Gói này sắp ngừng hoạt động
+                                            </div>
+                                        )}
                                         <div className="subscription-price">
                                             <span className="amount">{formatPrice(plan.price)}</span>
                                             <span className="unit">VNĐ / tháng</span>
@@ -610,7 +618,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     )}
                                     
                                     {/* Nút đổi gói - hiển thị cho tất cả gói không phải gói đang dùng */}
-                                    {!isActivePlan && activeSubscription && (
+                                    {!isActivePlan && activeSubscription && !isDeprecated && (
                                         <>
                                             {canChangePlan(plan) ? (
                                                 <button
@@ -640,7 +648,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     )}
 
                                     {/* Nút Gia hạn gói - chỉ hiển thị cho gói đang hoạt động và không phải gói Trial (giá = 0) */}
-                                    {isActivePlan && activeSubscription && plan.price > 0 && (
+                                    {isActivePlan && activeSubscription && plan.price > 0 && !isDeprecated && (
                                         <button
                                             className="subscription-extend-btn"
                                             onClick={openExtendModal}

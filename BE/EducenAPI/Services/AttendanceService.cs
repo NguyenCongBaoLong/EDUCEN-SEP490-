@@ -420,11 +420,11 @@ namespace EducenAPI.Services
         public async Task<List<AttendanceModificationRequest>> CreateModificationRequestsAsync(int sessionId, List<AttendanceModificationStudentRequestDto> requests, int requestedByUserId)
         {
             if (requests == null || requests.Count == 0)
-                throw new Exception("Danh sach yeu cau trong");
+                throw new Exception("Danh sách yêu cầu trống");
 
             var session = await _context.ClassSessions.FindAsync(sessionId);
             if (session == null)
-                throw new Exception("Khong tim thay buoi hoc");
+                throw new Exception("Không tìm thấy buổi học");
 
             var studentIds = requests.Select(r => r.StudentId).Distinct().ToList();
             var pendingStudentIds = await _context.AttendanceModificationRequests
@@ -436,7 +436,7 @@ namespace EducenAPI.Services
             if (pendingStudentIds.Count > 0)
             {
                 var ids = string.Join(", ", pendingStudentIds);
-                throw new Exception($"Da ton tai yeu cau dang cho duyet cho cac hoc sinh: {ids}");
+                throw new Exception($"Đã tồn tại yêu cầu đang chờ duyệt cho các học sinh: {ids}");
             }
 
             var currentStatusByStudent = await _context.Attendances
@@ -589,34 +589,34 @@ namespace EducenAPI.Services
             }
 
             var subject = approved
-                ? "[Educen] Ket qua yeu cau sua diem danh: Da duyet"
-                : "[Educen] Ket qua yeu cau sua diem danh: Tu choi";
-            var resultText = approved ? "DA DUYET" : "TU CHOI";
+                ? "[Educen] Kết quả yêu cầu sửa điểm danh: Đã duyệt"
+                : "[Educen] Kết quả yêu cầu sửa điểm danh: Từ chối";
+            var resultText = approved ? "ĐÃ DUYỆT" : "TỪ CHỐI";
             var safeReviewNote = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(request.ReviewNote)
-                ? "Khong co ghi chu bo sung."
+                ? "Không có ghi chú bổ sung."
                 : request.ReviewNote);
             var safeCurrentStatus = WebUtility.HtmlEncode(request.CurrentStatus ?? "N/A");
             var safeRequestedStatus = WebUtility.HtmlEncode(request.RequestedStatus ?? "N/A");
             var safeReason = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(request.Reason)
-                ? "Khong co ly do bo sung."
+                ? "Không có lý do bổ sung."
                 : request.Reason);
             var actionHint = approved
-                ? "Diem danh da duoc cap nhat theo ket qua phe duyet."
-                : "Vui long dieu chinh thong tin va gui lai yeu cau neu can.";
+                ? "Điểm danh đã được cập nhật theo kết quả phê duyệt."
+                : "Vui lòng điều chỉnh thông tin và gửi lại yêu cầu nếu cần.";
             var body = $@"
                 <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>
-                    <p>Xin chao,</p>
-                    <p>Yeu cau sua diem danh cua ban da duoc cap nhat ket qua.</p>
-                    <p><strong>Ma yeu cau:</strong> #{request.RequestId}</p>
+                    <p>Xin chào,</p>
+                    <p>Yêu cầu sửa điểm danh của bạn đã được cập nhật kết quả.</p>
+                    <p><strong>Mã yêu cầu:</strong> #{request.RequestId}</p>
                     <p><strong>Session:</strong> #{request.SessionId}</p>
-                    <p><strong>Hoc sinh:</strong> #{request.StudentId}</p>
-                    <p><strong>Trang thai hien tai:</strong> {safeCurrentStatus}</p>
-                    <p><strong>Trang thai de nghi:</strong> {safeRequestedStatus}</p>
-                    <p><strong>Ly do gui yeu cau:</strong> {safeReason}</p>
-                    <p><strong>Ket qua:</strong> {resultText}</p>
-                    <p><strong>Ghi chu tu nguoi duyet:</strong> {safeReviewNote}</p>
+                    <p><strong>Học sinh:</strong> #{request.StudentId}</p>
+                    <p><strong>Trạng thái hiện tại:</strong> {safeCurrentStatus}</p>
+                    <p><strong>Trạng thái đề nghị:</strong> {safeRequestedStatus}</p>
+                    <p><strong>Lý do gửi yêu cầu:</strong> {safeReason}</p>
+                    <p><strong>Kết quả:</strong> {resultText}</p>
+                    <p><strong>Ghi chú từ người duyệt:</strong> {safeReviewNote}</p>
                     <p>{actionHint}</p>
-                    <p>Tran trong,<br/>He thong Educen</p>
+                    <p>Trân trọng,<br/>Hệ thống Educen</p>
                 </div>";
 
             try

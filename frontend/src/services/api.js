@@ -112,6 +112,18 @@ api.interceptors.response.use(
             error.response.data.message = 'Kích thước file tải lên quá lớn. Vui lòng chọn file có dung lượng nhỏ hơn (Tối đa ~20MB).';
         }
 
+        const contentType = String(error.config?.headers?.['Content-Type'] || error.config?.headers?.['content-type'] || '').toLowerCase();
+        const isMultipartRequest = contentType.includes('multipart/form-data');
+        if (!error.response && isMultipartRequest && error.message === 'Network Error') {
+            if (!error.response) {
+                error.response = {};
+            }
+            if (!error.response.data) {
+                error.response.data = {};
+            }
+            error.response.data.message = 'Kích thước file tải lên quá lớn. Vui lòng chọn file có dung lượng nhỏ hơn (Tối đa 20MB).';
+        }
+
         return Promise.reject(error);
     }
 );

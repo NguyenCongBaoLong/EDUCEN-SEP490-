@@ -25,6 +25,20 @@ namespace EducenAPI.Controllers
             return Ok(plans);
         }
 
+        [HttpGet("tenant/{tenantId}")]
+        public async Task<IActionResult> GetPlansForTenant(string tenantId)
+        {
+            try
+            {
+                var plans = await _planService.GetPlansForTenantWithStatusAsync(tenantId);
+                return Ok(plans);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPlan(string id)
         {
@@ -98,9 +112,18 @@ namespace EducenAPI.Controllers
         [HttpPut("{id}/status")]
         public async Task<IActionResult> SetPlanStatus(string id, [FromQuery] bool isActive)
         {
-            var updated = await _planService.SetPlanActiveStatusAsync(id, isActive);
-            if (!updated) return NotFound();
-            return NoContent();
+            try
+            {
+                var updated = await _planService.SetPlanActiveStatusAsync(id, isActive);
+                if (!updated) return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("used by active centers", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

@@ -19,6 +19,7 @@ namespace EducenAPI.DTOs.Tenant
         public bool IsSubscribed { get; set; }
         public DateTime? ExpiredAt { get; set; }
         public bool PlanIsActive { get; set; } = true;
+        public bool PlanDeleted { get; set; } = false;
 
         // Plan limits (từ gói đang đăng ký)
         public int? LimitUsers { get; set; }

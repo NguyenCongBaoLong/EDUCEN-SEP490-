@@ -44,7 +44,15 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
     };
 
     const handleFiles = (newFiles) => {
-        const fileArray = Array.from(newFiles).map(file => ({
+        const maxSize = 20 * 1024 * 1024;
+        const oversizeFiles = Array.from(newFiles).filter(file => file.size > maxSize);
+        if (oversizeFiles.length > 0) {
+            toast.error('Có file vượt quá 20MB. Vui lòng chọn file nhỏ hơn.');
+        }
+
+        const fileArray = Array.from(newFiles)
+            .filter(file => file.size <= maxSize)
+            .map(file => ({
             id: Math.random().toString(36).substr(2, 9),
             file: file,
             name: file.name,
@@ -145,7 +153,7 @@ const UploadMaterialModal = ({ isOpen, onClose, onUpload, sessionId, grades = []
                                     Kéo thả file vào đây hoặc <span style={{ color: '#3b82f6' }}>duyệt qua máy tính</span>
                                 </div>
                                 <div style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
-                                    Hỗ trợ định dạng: PDF, Word, PowerPoint, MP4, ZIP (Tối đa 50MB)
+                                    Hỗ trợ định dạng: PDF, Word, PowerPoint, MP4, ZIP (Tối đa 20MB)
                                 </div>
                             </div>
 

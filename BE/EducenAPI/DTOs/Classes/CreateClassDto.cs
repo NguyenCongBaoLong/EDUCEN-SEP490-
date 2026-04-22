@@ -9,53 +9,53 @@ namespace EducenAPI.DTOs.Classes
         private string? _syllabusContent;
         private string? _status;
 
-        [Required(ErrorMessage = "ClassName is required")]
-        [StringLength(100, ErrorMessage = "ClassName cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "ClassName cannot be only whitespace")]
+        [Required(ErrorMessage = "Tên lớp là bắt buộc")]
+        [StringLength(100, ErrorMessage = "Tên lớp không được vượt quá 100 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Tên lớp không được chỉ chứa khoảng trắng")]
         public string ClassName 
         { 
             get => _className;
             set => _className = value?.Trim() ?? string.Empty;
         }
 
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Description cannot be only whitespace")]
+        [StringLength(500, ErrorMessage = "Mô tả không được vượt quá 500 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Mô tả không được chỉ chứa khoảng trắng")]
         public string? Description 
         { 
             get => _description;
             set => _description = value?.Trim();
         }
 
-        [StringLength(1000, ErrorMessage = "SyllabusContent cannot exceed 1000 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SyllabusContent cannot be only whitespace")]
+        [StringLength(1000, ErrorMessage = "Nội dung chương trình không được vượt quá 1000 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Nội dung chương trình không được chỉ chứa khoảng trắng")]
         public string? SyllabusContent 
         { 
             get => _syllabusContent;
             set => _syllabusContent = value?.Trim();
         }
 
-        [Required(ErrorMessage = "SubjectId is required")]
+        [Required(ErrorMessage = "Môn học là bắt buộc")]
         public int SubjectId { get; set; }
 
         public int? RoomId { get; set; }
 
         public int? GradeId { get; set; }
 
-        [Required(ErrorMessage = "TeacherId is required")]
+        [Required(ErrorMessage = "Giáo viên là bắt buộc")]
         public int TeacherId { get; set; }
 
         public int? AssistantId { get; set; }
 
-        [Required(ErrorMessage = "MaxStudents is required")]
-        [Range(1, 1000, ErrorMessage = "MaxStudents must be between 1 and 1000")]
+        [Required(ErrorMessage = "Số học sinh tối đa là bắt buộc")]
+        [Range(1, 1000, ErrorMessage = "Số học sinh tối đa phải từ 1 đến 1000")]
         public int MaxStudents { get; set; }
 
         public DateTime? StartDate { get; set; }
 
         public DateTime? EndDate { get; set; }
 
-        [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        [StringLength(50, ErrorMessage = "Trạng thái không được vượt quá 50 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Trạng thái không được chỉ chứa khoảng trắng")]
         public string? Status 
         { 
             get => _status;
@@ -70,7 +70,7 @@ namespace EducenAPI.DTOs.Classes
     public class CreateScheduleSlotDto
     {
         public int? Slot { get; set; }
-        [Range(0, 6, ErrorMessage = "DayOfWeek must be between 0 and 6")]
+        [Range(0, 6, ErrorMessage = "Thứ trong tuần phải từ 0 đến 6")]
         public int DayOfWeek { get; set; } // 0 = Sunday, 1 = Monday, ...
         [Required]
         public string StartTime { get; set; } = string.Empty; // Format "HH:mm"
@@ -82,16 +82,16 @@ namespace EducenAPI.DTOs.Classes
 
     public class UpdateClassDto
     {
-        [StringLength(100, ErrorMessage = "ClassName cannot exceed 100 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "ClassName cannot be only whitespace")]
+        [StringLength(100, ErrorMessage = "Tên lớp không được vượt quá 100 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Tên lớp không được chỉ chứa khoảng trắng")]
         public string? ClassName { get; set; }
 
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Description cannot be only whitespace")]
+        [StringLength(500, ErrorMessage = "Mô tả không được vượt quá 500 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Mô tả không được chỉ chứa khoảng trắng")]
         public string? Description { get; set; }
 
-        [StringLength(1000, ErrorMessage = "SyllabusContent cannot exceed 1000 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "SyllabusContent cannot be only whitespace")]
+        [StringLength(1000, ErrorMessage = "Nội dung chương trình không được vượt quá 1000 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Nội dung chương trình không được chỉ chứa khoảng trắng")]
         public string? SyllabusContent { get; set; }
 
         public int? SubjectId { get; set; }
@@ -110,8 +110,8 @@ namespace EducenAPI.DTOs.Classes
 
         public DateTime? EndDate { get; set; }
 
-        [StringLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
-        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Status cannot be only whitespace")]
+        [StringLength(50, ErrorMessage = "Trạng thái không được vượt quá 50 ký tự")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(?!\s+$).+", ErrorMessage = "Trạng thái không được chỉ chứa khoảng trắng")]
         public string? Status { get; set; }
 
         public List<CreateScheduleSlotDto>? ScheduleSlots { get; set; }
@@ -148,7 +148,7 @@ namespace EducenAPI.DTOs.Classes
     }
     public class UpdateClassPriceDto
     {
-        [Range(0, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 0")]
+        [Range(0, double.MaxValue, ErrorMessage = "Giá phải lớn hơn hoặc bằng 0")]
         public decimal Price { get; set; }
     }
 }

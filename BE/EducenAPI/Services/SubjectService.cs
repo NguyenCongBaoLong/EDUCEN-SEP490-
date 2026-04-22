@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Subjects;
+﻿using EducenAPI.DTOs.Subjects;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -9,6 +9,7 @@ namespace EducenAPI.Services
     public class SubjectService : ISubjectService
     {
         private readonly EducenV2Context _context;
+        private const int MaxSubjectNameLength = 100;
 
         public SubjectService(EducenV2Context context)
         {
@@ -28,15 +29,21 @@ namespace EducenAPI.Services
         public async Task<Subject> CreateSubjectAsync(CreateSubjectRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.SubjectName))
+            {
                 throw new Exception("Tên môn học không được để trống.");
+            }
 
             var name = request.SubjectName.Trim();
+            if (name.Length > MaxSubjectNameLength)
+            {
+                throw new Exception($"Tên môn học không được vượt quá {MaxSubjectNameLength} ký tự.");
+            }
 
-            var exists = await _context.Subjects
-                .AnyAsync(s => s.SubjectName == name);
-
+            var exists = await _context.Subjects.AnyAsync(s => s.SubjectName == name);
             if (exists)
+            {
                 throw new Exception("Tên môn học đã tồn tại.");
+            }
 
             var subject = new Subject
             {
@@ -54,23 +61,29 @@ namespace EducenAPI.Services
         {
             var existingSubject = await _context.Subjects.FindAsync(id);
             if (existingSubject == null)
+            {
                 return false;
+            }
 
-            // Validate name
             if (string.IsNullOrWhiteSpace(request.SubjectName))
+            {
                 throw new Exception("Tên môn học không được để trống.");
+            }
 
             var name = request.SubjectName.Trim();
+            if (name.Length > MaxSubjectNameLength)
+            {
+                throw new Exception($"Tên môn học không được vượt quá {MaxSubjectNameLength} ký tự.");
+            }
+
             var description = request.Description?.Trim();
 
-            // Check duplicate (exclude current subject)
-            var isDuplicate = await _context.Subjects
-                .AnyAsync(s => s.SubjectName == name && s.SubjectId != id);
-
+            var isDuplicate = await _context.Subjects.AnyAsync(s => s.SubjectName == name && s.SubjectId != id);
             if (isDuplicate)
+            {
                 throw new Exception("Tên môn học đã tồn tại.");
+            }
 
-            // Update fields
             existingSubject.SubjectName = name;
             existingSubject.Description = description;
 
@@ -82,11 +95,15 @@ namespace EducenAPI.Services
         {
             var subject = await _context.Subjects.FindAsync(id);
             if (subject == null)
+            {
                 return false;
+            }
 
             var isUsed = await IsSubjectUsedInClassesAsync(id);
             if (isUsed)
-                throw new Exception("Không thể xóa môn học: môn học đang được sử dụng trong các lớp học.");
+            {
+                throw new Exception("Không thể xóa môn học vì đang được sử dụng bởi một hoặc nhiều lớp học.");
+            }
 
             _context.Subjects.Remove(subject);
             await _context.SaveChangesAsync();

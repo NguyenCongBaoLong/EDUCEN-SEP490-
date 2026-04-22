@@ -205,7 +205,7 @@ namespace EducenAPI.Services
                 new Claim("TenantId", tenantIdOverride ?? GetCurrentTenantId())
             };
 
-            var jwtKey = jwt["Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
+            var jwtKey = jwt["Key"] ?? throw new InvalidOperationException("JWT Key chưa được cấu hình.");
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
             var expireMinutes = jwt["ExpireMinutes"] ?? "60";

@@ -27,6 +27,7 @@ namespace EducenAPI.Services
         private readonly IPaymentReminderService _notificationService;
         private readonly MailService _mailService;
         private readonly IServiceScopeFactory _scopeFactory;
+        private const int MaxClassNameLength = 100;
 
         public ClassService(EducenV2Context context, IPaymentReminderService notificationService, MailService mailService, IServiceScopeFactory scopeFactory)
         {
@@ -149,6 +150,10 @@ namespace EducenAPI.Services
         public async Task<ClassDto> CreateClassAsync(CreateClassDto dto)
         {
             dto.ClassName = dto.ClassName?.Trim();
+            if (string.IsNullOrWhiteSpace(dto.ClassName))
+                throw new Exception("Class name cannot be empty.");
+            if (dto.ClassName.Length > MaxClassNameLength)
+                throw new Exception($"Class name cannot exceed {MaxClassNameLength} characters.");
 
             // Validate Subject exists
             var subject = await _context.Subjects.FindAsync(dto.SubjectId);
@@ -228,7 +233,7 @@ namespace EducenAPI.Services
                 SyllabusContent = dto.SyllabusContent,
                 SubjectId = dto.SubjectId,
                 TeacherId = dto.TeacherId,
-                AssistantId = dto.AssistantId,
+                AssistantId = dto.AssistantId.HasValue && dto.AssistantId.Value > 0 ? dto.AssistantId : null,
                 RoomId = dto.RoomId,
                 GradeId = dto.GradeId,
                 StartDate = dto.StartDate,
@@ -644,7 +649,14 @@ namespace EducenAPI.Services
             try
             {
                 if (dto.ClassName != null)
-                    existingClass.ClassName = dto.ClassName;
+                {
+                    var normalizedClassName = dto.ClassName.Trim();
+                    if (string.IsNullOrWhiteSpace(normalizedClassName))
+                        throw new Exception("Class name cannot be empty.");
+                    if (normalizedClassName.Length > MaxClassNameLength)
+                        throw new Exception($"Class name cannot exceed {MaxClassNameLength} characters.");
+                    existingClass.ClassName = normalizedClassName;
+                }
 
                 if (dto.Description != null)
                     existingClass.Description = dto.Description;
@@ -681,10 +693,6 @@ namespace EducenAPI.Services
                         await ValidateTeacherAvailability(dto.TeacherId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
                     }
                     existingClass.TeacherId = dto.TeacherId;
-                }
-                else if (dto.TeacherId == null) 
-                {
-                    existingClass.TeacherId = null;
                 }
 
                 // Send email if teacher changed and is not null
@@ -732,10 +740,6 @@ namespace EducenAPI.Services
                         await ValidateAssistantAvailability(dto.AssistantId.Value, scheduleSlots, dto.StartDate ?? existingClass.StartDate, dto.EndDate ?? existingClass.EndDate, id);
                     }
                     existingClass.AssistantId = dto.AssistantId;
-                }
-                else if (dto.AssistantId == null)
-                {
-                    existingClass.AssistantId = null;
                 }
 
                 // Send email if assistant changed and is not null
@@ -787,10 +791,6 @@ namespace EducenAPI.Services
                     if (dto.RoomId.HasValue)
                         existingClass.RoomId = dto.RoomId.Value;
                 }
-                else if (dto.RoomId == null && dto.ScheduleSlots == null)
-                {
-                    existingClass.RoomId = null;
-                }
 
                 // Validate Room status when only RoomId is provided without schedule slots
                 if (dto.RoomId != null && dto.ScheduleSlots == null)
@@ -804,10 +804,6 @@ namespace EducenAPI.Services
                     if (grade == null)
                         throw new Exception("Không tìm thấy khối/lớp");
                     existingClass.GradeId = dto.GradeId;
-                }
-                else if (dto.GradeId == null)
-                {
-                    existingClass.GradeId = null;
                 }
 
                 if (dto.StartDate.HasValue)
@@ -918,42 +914,45 @@ namespace EducenAPI.Services
                         }
                         await _context.SaveChangesAsync();
 
-                        // Reassign kept sessions sang schedule moi (raw SQL)
-                        if (keptSessionIds.Any() && newSchedules.Any())
+                        // Giữ nguyên các session quá khứ - không reassign vào schedule mới
+                        // Tìm các schedules cũ có session quá khứ cần giữ lại
+                        var oldScheduleIdsWithPastSessions = new HashSet<int>();
+                        if (keptSessionIds.Any())
                         {
-                            var keptData = await _context.ClassSessions
+                            oldScheduleIdsWithPastSessions = (await _context.ClassSessions
                                 .Where(s => keptSessionIds.Contains(s.SessionId))
-                                .Select(s => new { s.SessionId, s.SessionDate })
-                                .ToListAsync();
-
-                            foreach (var ks in keptData)
-                            {
-                                var match = newSchedules.FirstOrDefault(ns => ns.DayOfWeek == (int)ks.SessionDate.DayOfWeek)
-                                            ?? newSchedules.First();
-                                await _context.Database.ExecuteSqlRawAsync(
-                                    $"UPDATE ClassSessions SET ScheduleId = {match.ScheduleId} WHERE SessionId = {ks.SessionId}");
-                            }
+                                .Select(s => s.ScheduleId)
+                                .Distinct()
+                                .ToListAsync())
+                                .ToHashSet();
                         }
 
+                        // Xóa sessions tương lai từ schedules cũ
                         if (oldSchedIds.Any())
                         {
-                            // Xoa tat ca sessions con tro vao old schedules (nhung cai khong phai keptSessions)
                             await _context.Database.ExecuteSqlRawAsync(
-                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({string.Join(",", oldSchedIds)})");
-
-                            // Xoa old schedules
-                            await _context.Database.ExecuteSqlRawAsync(
-                                $"DELETE FROM Schedules WHERE ScheduleId IN ({string.Join(",", oldSchedIds)})");
+                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({string.Join(",", oldSchedIds)}) AND SessionDate >= CAST(GETDATE() AS DATE)");
                         }
+
+                        // Xóa các schedules cũ KHÔNG có session quá khứ
+                        var schedulesToDelete = oldSchedIds.Except(oldScheduleIdsWithPastSessions).ToList();
+                        if (schedulesToDelete.Any())
+                        {
+                            await _context.Database.ExecuteSqlRawAsync(
+                                $"DELETE FROM Schedules WHERE ScheduleId IN ({string.Join(",", schedulesToDelete)})");
+                        }
+
+                        // Refresh context sau raw SQL để đảm bảo dữ liệu đồng bộ
+                        _context.ChangeTracker.Clear();
 
                         // Tao session moi theo lich moi
                         if (finalStartDate.HasValue && finalEndDate.HasValue)
                         {
-                            // Refresh context hoặc dùng AsNoTracking để tránh cache sau Raw SQL
+                            // Query lại các session còn lại (chỉ session quá khứ được giữ)
                             var existingKeptDates = await _context.ClassSessions
                                 .AsNoTracking()
                                 .Where(s => s.ClassId == id)
-                                .Select(s => new { s.SessionDate, s.ScheduleId })
+                                .Select(s => s.SessionDate)
                                 .ToListAsync();
 
                             foreach (var ns in newSchedules)
@@ -965,7 +964,8 @@ namespace EducenAPI.Services
                                     if (d.Date < today) continue;
                                     if (d.Date == today && ns.StartTime < currentTime) continue;
 
-                                    if (existingKeptDates.Any(e => e.SessionDate.Date == d.Date && e.ScheduleId == ns.ScheduleId)) continue;
+                                    // ✅ FIX: Check duplicate by SessionDate only, not ScheduleId (new schedules have different IDs)
+                                    if (existingKeptDates.Any(e => e.Date == d.Date)) continue;
                                     _context.ClassSessions.Add(new ClassSession
                                     {
                                         ClassId     = id,

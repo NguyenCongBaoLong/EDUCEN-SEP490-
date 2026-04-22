@@ -16,6 +16,7 @@ const ScheduleRequests = () => {
     const [processing, setProcessing] = useState(false);
     const [selectedClassData, setSelectedClassData] = useState(null);
     const [validationResults, setValidationResults] = useState(null);
+    const [rooms, setRooms] = useState([]);
 
     const fetchRequests = useCallback(async (reason = 'manual') => {
         if (isInitialMount.current || reason === 'manual') {
@@ -92,6 +93,18 @@ const ScheduleRequests = () => {
             document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [fetchRequests]);
+
+    useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const res = await api.get('/Rooms');
+                setRooms(res.data || []);
+            } catch (error) {
+                console.error('Error fetching rooms:', error);
+            }
+        };
+        fetchRooms();
+    }, []);
 
     useEffect(() => {
         const fetchClassData = async () => {
@@ -256,6 +269,9 @@ const ScheduleRequests = () => {
         const newSlotMatch = content?.match(/(?:RequestedSlot|Slot mới|Slot đề xuất)\s*:\s*([^\(]+)\s*\(([^)]+)\)/i);
         const newRoomMatch = content?.match(/(?:Phòng mới)\s*:\s*([^\n]+)/i);
         const requestedRoomIdMatch = content?.match(/RequestedRoomId:\s*(\d+)/i);
+        const changeTypeMatch = content?.match(/(?:ChangeType|Loại đổi)\s*:\s*(\w+)/i);
+        const targetSessionDateMatch = content?.match(/(?:TargetSessionDate|Ngày đổi)\s*:\s*(\d{4}-\d{2}-\d{2})/i);
+        const currentRoomMatch = content?.match(/(?:CurrentRoomId|Phòng hiện tại)\s*:\s*(\d+)/i);
         
         return {
             classId: classIdMatch ? parseInt(classIdMatch[1]) : null,
@@ -268,7 +284,10 @@ const ScheduleRequests = () => {
                 time: newSlotMatch[2].trim()
             } : null,
             newRoom: newRoomMatch ? newRoomMatch[1].trim() : null,
-            requestedRoomId: requestedRoomIdMatch ? Number(requestedRoomIdMatch[1]) : null
+            requestedRoomId: requestedRoomIdMatch ? Number(requestedRoomIdMatch[1]) : null,
+            changeType: changeTypeMatch ? changeTypeMatch[1].trim() : 'full_schedule',
+            targetSessionDate: targetSessionDateMatch ? targetSessionDateMatch[1].trim() : null,
+            currentRoomId: currentRoomMatch ? Number(currentRoomMatch[1]) : null
         };
     };
 
@@ -470,13 +489,81 @@ const ScheduleRequests = () => {
                                                             displayCurrentRoom = firstSlot.roomName || firstSlot.RoomName || `Phòng ${firstSlot.roomId}`;
                                                         }
 
+                                                        // Try to get current room from currentRoomId
+                                                        if (!displayCurrentRoom && slotInfo.currentRoomId) {
+                                                            const room = rooms.find(r => r.roomId === slotInfo.currentRoomId);
+                                                            if (room) displayCurrentRoom = room.roomName;
+                                                            else displayCurrentRoom = `Phòng ${slotInfo.currentRoomId}`;
+                                                        }
+
+                                                        // Try to get current room from class schedule slots
+                                                        if (!displayCurrentRoom && selectedClassData?.scheduleSlots && displayCurrentSlot) {
+                                                            const matchingSlot = selectedClassData.scheduleSlots.find(s => {
+                                                                const slotDay = s.dayOfWeek ?? s.DayOfWeek;
+                                                                const slotStart = s.startTime ?? s.StartTime;
+                                                                const slotEnd = s.endTime ?? s.EndTime;
+                                                                const targetDay = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'].map(d => d.toLowerCase()).indexOf(displayCurrentSlot.dayLabel.toLowerCase());
+                                                                return slotDay === targetDay && slotStart === displayCurrentSlot.time.split(' - ')[0] && slotEnd === displayCurrentSlot.time.split(' - ')[1];
+                                                            });
+                                                            if (matchingSlot) {
+                                                                displayCurrentRoom = matchingSlot.roomName || matchingSlot.RoomName;
+                                                                if (!displayCurrentRoom && matchingSlot.roomId) {
+                                                                    const room = rooms.find(r => r.roomId === matchingSlot.roomId);
+                                                                    if (room) displayCurrentRoom = room.roomName;
+                                                                    else displayCurrentRoom = `Phòng ${matchingSlot.roomId}`;
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // Get new room name
+                                                        let displayNewRoom = slotInfo.newRoom;
+                                                        if (!displayNewRoom && slotInfo.requestedRoomId) {
+                                                            const room = rooms.find(r => r.roomId === slotInfo.requestedRoomId);
+                                                            if (room) displayNewRoom = room.roomName;
+                                                            else displayNewRoom = `Phòng ${slotInfo.requestedRoomId}`;
+                                                        }
+                                                        // If still no new room and keeping same room, use current room
+                                                        if (!displayNewRoom && !slotInfo.requestedRoomId) {
+                                                            displayNewRoom = displayCurrentRoom || 'Giữ nguyên phòng';
+                                                        }
+
+                                                        // Calculate dates for single session change
+                                                        let formattedTargetDate = '';
+                                                        let formattedNewDate = '';
+                                                        if (slotInfo.changeType === 'single_session' && slotInfo.targetSessionDate) {
+                                                            const targetDate = new Date(slotInfo.targetSessionDate);
+                                                            formattedTargetDate = `${targetDate.getDate()}/${targetDate.getMonth() + 1}/${targetDate.getFullYear()}`;
+                                                            
+                                                            // Calculate new date based on day difference
+                                                            if (displayCurrentSlot?.dayLabel && slotInfo.newSlot?.dayLabel) {
+                                                                const dayMap = {
+                                                                    'chủ nhật': 0, 'thứ hai': 1, 'thứ ba': 2, 'thứ tư': 3,
+                                                                    'thứ năm': 4, 'thứ sáu': 5, 'thứ bảy': 6
+                                                                };
+                                                                const currentDay = dayMap[displayCurrentSlot.dayLabel.toLowerCase()] ?? 1;
+                                                                const newDay = dayMap[slotInfo.newSlot.dayLabel.toLowerCase()] ?? 1;
+                                                                const dayDiff = newDay - currentDay;
+                                                                const newDate = new Date(targetDate);
+                                                                newDate.setDate(newDate.getDate() + dayDiff);
+                                                                formattedNewDate = `${newDate.getDate()}/${newDate.getMonth() + 1}/${newDate.getFullYear()}`;
+                                                            }
+                                                        }
+
+                                                        const changeTypeText = slotInfo.changeType === 'single_session' ? 'Đổi 1 buổi học cụ thể' : 'Đổi toàn bộ lịch';
+
                                                         return (
                                                             <div className="change-comparison-card">
+                                                                <div style={{ marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--sr-primary)' }}>
+                                                                    {changeTypeText}
+                                                                </div>
                                                                 <div className="comparison-grid">
                                                                     <div className="slot-box current">
                                                                         <div className="info-label">Lịch hiện tại</div>
                                                                         <div className="info-value" style={{ fontSize: '1rem' }}>{displayCurrentSlot?.dayLabel}</div>
                                                                         <div className="adm-schedule-meta" style={{ fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>{displayCurrentSlot?.time}</div>
+                                                                        {formattedTargetDate && (
+                                                                            <div className="adm-schedule-meta" style={{ fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>📅 {formattedTargetDate}</div>
+                                                                        )}
                                                                         <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>🏠 {displayCurrentRoom || 'Chưa rõ'}</div>
                                                                     </div>
 
@@ -488,7 +575,10 @@ const ScheduleRequests = () => {
                                                                         <div className="info-label" style={{ color: 'var(--sr-success)' }}>Lịch đề xuất</div>
                                                                         <div className="info-value" style={{ fontSize: '1rem', color: 'var(--sr-success)' }}>{slotInfo.newSlot?.dayLabel}</div>
                                                                         <div className="adm-schedule-meta" style={{ color: 'var(--sr-success)', fontSize: '0.75rem' }}>{slotInfo.newSlot?.time}</div>
-                                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', color: 'var(--sr-success)', fontSize: '0.75rem' }}>🏠 {slotInfo.newRoom || 'Chưa rõ'}</div>
+                                                                        {formattedNewDate && (
+                                                                            <div className="adm-schedule-meta" style={{ color: 'var(--sr-success)', fontSize: '0.75rem' }}>📅 {formattedNewDate}</div>
+                                                                        )}
+                                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', color: 'var(--sr-success)', fontSize: '0.75rem' }}>🏠 {displayNewRoom || 'Chưa rõ'}</div>
                                                                     </div>
                                                                 </div>
                                                             </div>

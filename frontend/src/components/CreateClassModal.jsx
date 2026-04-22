@@ -224,7 +224,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         // Validation: Check all slots have valid data
@@ -379,7 +379,7 @@ const CreateClassModal = ({ isOpen, onClose, onSubmit, editingClass, existingCla
             classData.id = editingClass.id;
         }
 
-        onSubmit(classData);
+        await onSubmit(classData);
         onClose();
     };
 

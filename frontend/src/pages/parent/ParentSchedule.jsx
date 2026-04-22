@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
@@ -12,8 +12,17 @@ import '../../css/pages/parent/ParentSchedule.css';
 
 const weekDays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
 const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
-
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4'];
+
+const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.substring(0, 10).split('-');
+    if (parts.length !== 3) return null;
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+};
+const toDateKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+const isSameDate = (d1, d2) => d1 && d2 && d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+const getDayIndex = (classDay) => classDay === 0 ? 6 : classDay - 1;
 
 const ParentSchedule = () => {
     const navigate = useNavigate();
@@ -29,29 +38,29 @@ const ParentSchedule = () => {
         setIsLoading(true);
         const loadScheduleData = async () => {
             const isAllChildren = selectedChild?.studentId === 'all';
-            const children = isAllChildren
-                ? (await api.get('/Parents/my-children')).data || []
-                : [selectedChild];
+            const children = isAllChildren ? (await api.get('/Parents/my-children')).data || [] : [selectedChild];
 
-            const responses = await Promise.all(
-                children.map(async (child) => {
-                    const [schedRes, attRes] = await Promise.all([
-                        api.get(`/Schedules/parent/child/${child.studentId}`),
-                        api.get(`/attendance/student/${child.studentId}`)
-                    ]);
-                    return { child, schedules: schedRes.data || [], attendance: attRes.data || [] };
-                })
-            );
+            const responses = await Promise.all(children.map(async (child) => {
+                const [schedRes, attRes] = await Promise.all([
+                    api.get(`/Schedules/parent/child/${child.studentId}`),
+                    api.get(`/attendance/student/${child.studentId}`)
+                ]);
+                return { child, schedules: schedRes.data || [], attendance: attRes.data || [] };
+            }));
 
             const colorMap = {};
             let ci = 0;
             const mapped = responses.flatMap(({ child, schedules }) => schedules.map(item => {
                 const colorKey = `${child.studentId}-${item.classId}`;
-                if (!colorMap[colorKey]) {
-                    colorMap[colorKey] = COLORS[ci++ % COLORS.length];
-                }
+                if (!colorMap[colorKey]) colorMap[colorKey] = COLORS[ci++ % COLORS.length];
                 return {
-                    id: item.classId,
+                    id: item.scheduleId,
+                    eventKey: item.sessionId ? `session-${item.sessionId}` : `schedule-${item.scheduleId}`,
+                    source: item.sessionId ? 'session' : 'schedule',
+                    sessionId: item.sessionId || null,
+                    sessionDate: parseLocalDate(item.sessionDate),
+                    sessionStatus: item.sessionStatus || null,
+                    classId: item.classId,
                     studentId: child.studentId,
                     studentName: child.fullName,
                     code: item.subjectName || 'N/A',
@@ -66,20 +75,76 @@ const ParentSchedule = () => {
                 };
             }));
 
-            const attendance = responses.flatMap(({ child, attendance }) =>
-                attendance.map(record => ({ ...record, _studentId: child.studentId }))
-            );
-
+            const attendance = responses.flatMap(({ child, attendance }) => attendance.map(record => ({ ...record, _studentId: child.studentId })));
             setStudentClasses(mapped);
             setAttendanceRecords(attendance);
         };
 
-        loadScheduleData()
-            .catch(() => toast.error('Không thể tải lịch học'))
-            .finally(() => setIsLoading(false));
+        loadScheduleData().catch(() => toast.error('Không thể tải lịch học')).finally(() => setIsLoading(false));
     }, [selectedChild]);
 
-    /* ─ Date helpers ─ */
+    const sessionDateKeysByClass = useMemo(() => {
+        const map = new Map();
+        studentClasses.forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            const key = `${c.studentId}-${c.classId}`;
+            if (!map.has(key)) map.set(key, new Set());
+            map.get(key).add(toDateKey(c.sessionDate));
+        });
+        return map;
+    }, [studentClasses]);
+
+    const movedFromDateKeysByClass = useMemo(() => {
+        const map = new Map();
+        const scheduleDayByScheduleId = new Map();
+        studentClasses.forEach((c) => {
+            if (c.source === 'schedule' && c.id) scheduleDayByScheduleId.set(`${c.studentId}-${c.id}`, c.day);
+        });
+        studentClasses.forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            if (c.sessionStatus && c.sessionStatus !== 'Scheduled') return;
+            const sessionJsDay = c.sessionDate.getDay();
+            const expectedDay = scheduleDayByScheduleId.get(`${c.studentId}-${c.id}`) ?? c.day;
+            if (sessionJsDay === expectedDay) return;
+            const movedFromDate = new Date(c.sessionDate);
+            movedFromDate.setDate(movedFromDate.getDate() + (expectedDay - sessionJsDay));
+            const key = `${c.studentId}-${c.classId}`;
+            if (!map.has(key)) map.set(key, new Set());
+            map.get(key).add(toDateKey(movedFromDate));
+        });
+        return map;
+    }, [studentClasses]);
+
+    const occursOnDate = (classItem, date) => {
+        if (classItem.source === 'session' && classItem.sessionDate) {
+            if (classItem.sessionStatus && classItem.sessionStatus !== 'Scheduled') return false;
+            return isSameDate(classItem.sessionDate, date);
+        }
+
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+        if (getDayIndex(classItem.day) !== (date.getDay() === 0 ? 6 : date.getDay() - 1)) return false;
+
+        if (classItem.startDate) {
+            const start = new Date(classItem.startDate);
+            start.setHours(0, 0, 0, 0);
+            if (compareDate < start) return false;
+        }
+        if (classItem.endDate) {
+            const end = new Date(classItem.endDate);
+            end.setHours(0, 0, 0, 0);
+            if (compareDate > end) return false;
+        }
+
+        const key = `${classItem.studentId}-${classItem.classId}`;
+        const dateKey = toDateKey(date);
+        const overrideSet = sessionDateKeysByClass.get(key);
+        if (overrideSet && overrideSet.has(dateKey)) return false;
+        const movedFromSet = movedFromDateKeysByClass.get(key);
+        if (movedFromSet && movedFromSet.has(dateKey)) return false;
+        return true;
+    };
+
     const getWeekDates = () => {
         const start = new Date(currentDate);
         const day = start.getDay();
@@ -93,7 +158,6 @@ const ParentSchedule = () => {
     };
 
     const weekDates = getWeekDates();
-    const getDayIndex = (classDay) => classDay === 0 ? 6 : classDay - 1;
 
     const formatDateRange = () => {
         const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
@@ -106,7 +170,7 @@ const ParentSchedule = () => {
         return `${months[s.getMonth()]} ${s.getDate()} - ${e.getDate()}, ${s.getFullYear()}`;
     };
 
-    const navigate_date = (dir) => {
+    const navigateDate = (dir) => {
         const d = new Date(currentDate);
         if (viewMode === 'day') d.setDate(d.getDate() + dir);
         else if (viewMode === 'week') d.setDate(d.getDate() + dir * 7);
@@ -125,17 +189,11 @@ const ParentSchedule = () => {
 
     const getAttendanceStatus = (classItem, date) => {
         if (date > new Date()) return 'upcoming';
-        
-        // Use local date instead of toISOString to avoid timezone issues
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
-        
-        const found = attendanceRecords.find(a => {
-            const sessDate = a.sessionDate?.split('T')[0];
-            return sessDate === dateStr && a.className === classItem.name && a._studentId === classItem.studentId;
-        });
+        const found = attendanceRecords.find(a => a.sessionDate?.split('T')[0] === dateStr && a.className === classItem.name && a._studentId === classItem.studentId);
         return found?.status || 'unknown';
     };
 
@@ -144,7 +202,7 @@ const ParentSchedule = () => {
             present: { icon: <CheckCircle size={12} />, label: 'Có mặt', cls: 'present' },
             absent: { icon: <XCircle size={12} />, label: 'Vắng', cls: 'absent' },
             upcoming: { icon: <MinusCircle size={12} />, label: 'Sắp tới', cls: 'upcoming' },
-            unknown: { icon: <MinusCircle size={12} />, label: '—', cls: 'upcoming' },
+            unknown: { icon: <MinusCircle size={12} />, label: '-', cls: 'upcoming' },
         };
         const s = map[status] || map.unknown;
         return <span className={`ps-att-badge ${s.cls}`}>{s.icon} {s.label}</span>;
@@ -153,30 +211,12 @@ const ParentSchedule = () => {
     const getMonthDates = () => {
         const y = currentDate.getFullYear(), m = currentDate.getMonth();
         const dates = [];
-        for (let d = new Date(y, m, 1); d <= new Date(y, m + 1, 0); d.setDate(d.getDate() + 1))
-            dates.push(new Date(d));
+        for (let d = new Date(y, m, 1); d <= new Date(y, m + 1, 0); d.setDate(d.getDate() + 1)) dates.push(new Date(d));
         return dates;
     };
 
     const renderDayColumn = (date, dayIndex, single = false) => {
-        const compareDate = new Date(date);
-        compareDate.setHours(0, 0, 0, 0);
-
-        const dayClasses = studentClasses.filter(c => {
-            if (getDayIndex(c.day) !== dayIndex) return false;
-
-            if (c.startDate) {
-                const start = new Date(c.startDate);
-                start.setHours(0, 0, 0, 0);
-                if (compareDate < start) return false;
-            }
-            if (c.endDate) {
-                const end = new Date(c.endDate);
-                end.setHours(0, 0, 0, 0);
-                if (compareDate > end) return false;
-            }
-            return true;
-        });
+        const dayClasses = studentClasses.filter(c => occursOnDate(c, date));
         const isToday = date.toDateString() === new Date().toDateString();
 
         const groups = [];
@@ -204,29 +244,18 @@ const ParentSchedule = () => {
                 <div className="ps-day-grid">
                     {timeSlots.map((_, i) => <div key={i} className="ps-grid-cell" />)}
                     <div className="ps-classes-container">
-                        {groups.map(group =>
-                            group.map((c, idx) => {
-                                const status = getAttendanceStatus(c, date);
-                                return (
-                                    <div
-                                        key={`${c.id}-${c.day}`}
-                                        className="ps-class-card"
-                                        style={getClassStyle(c, idx, group.length)}
-                                        onClick={() => navigate('/parent/classes')}
-                                    >
-                                        <div className="ps-class-code">{c.code}</div>
-                                        <div className="ps-class-name">{c.name}</div>
-                                        <div className="ps-class-time">
-                                            <Clock size={10} />{c.startTime} - {c.endTime}
-                                        </div>
-                                        {selectedChild?.studentId === 'all' && (
-                                            <div className="ps-class-time">{c.studentName}</div>
-                                        )}
-                                        <AttendanceBadge status={status} />
-                                    </div>
-                                );
-                            })
-                        )}
+                        {groups.map(group => group.map((c, idx) => {
+                            const status = getAttendanceStatus(c, date);
+                            return (
+                                <div key={c.eventKey || `${c.studentId}-${c.classId}-${c.id}`} className="ps-class-card" style={getClassStyle(c, idx, group.length)} onClick={() => navigate('/parent/classes')}>
+                                    <div className="ps-class-code">{c.code}</div>
+                                    <div className="ps-class-name">{c.name}</div>
+                                    <div className="ps-class-time"><Clock size={10} />{c.startTime} - {c.endTime}</div>
+                                    {selectedChild?.studentId === 'all' && (<div className="ps-class-time">{c.studentName}</div>)}
+                                    <AttendanceBadge status={status} />
+                                </div>
+                            );
+                        }))}
                     </div>
                 </div>
             </div>
@@ -236,7 +265,6 @@ const ParentSchedule = () => {
     return (
         <div className="ps-page">
             <ParentSidebar />
-
             <main className="ps-main">
                 <div className="ps-header">
                     <div>
@@ -246,16 +274,14 @@ const ParentSchedule = () => {
                 </div>
 
                 {childLoading || isLoading ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-                        <Loader2 className="animate-spin" size={48} color="#6366f1" />
-                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><Loader2 className="animate-spin" size={48} color="#6366f1" /></div>
                 ) : (
                     <>
                         <div className="ps-controls">
                             <div className="ps-date-nav">
-                                <button className="ps-btn-nav" onClick={() => navigate_date(-1)}><ChevronLeft size={20} /></button>
+                                <button className="ps-btn-nav" onClick={() => navigateDate(-1)}><ChevronLeft size={20} /></button>
                                 <div className="ps-date-display"><CalendarIcon size={18} /><span>{formatDateRange()}</span></div>
-                                <button className="ps-btn-nav" onClick={() => navigate_date(1)}><ChevronRight size={20} /></button>
+                                <button className="ps-btn-nav" onClick={() => navigateDate(1)}><ChevronRight size={20} /></button>
                             </div>
                             <div className="ps-view-toggle">
                                 {['day', 'week', 'month'].map(m => (
@@ -275,20 +301,14 @@ const ParentSchedule = () => {
                         <div className="ps-content">
                             {viewMode === 'week' && (
                                 <div className="ps-calendar">
-                                    <div className="ps-time-column">
-                                        <div className="ps-day-header" />
-                                        {timeSlots.map(t => <div key={t} className="ps-time-slot">{t}</div>)}
-                                    </div>
+                                    <div className="ps-time-column"><div className="ps-day-header" />{timeSlots.map(t => <div key={t} className="ps-time-slot">{t}</div>)}</div>
                                     {weekDates.map((date, idx) => renderDayColumn(date, idx))}
                                 </div>
                             )}
 
                             {viewMode === 'day' && (
                                 <div className="ps-calendar">
-                                    <div className="ps-time-column">
-                                        <div className="ps-day-header" />
-                                        {timeSlots.map(t => <div key={t} className="ps-time-slot">{t}</div>)}
-                                    </div>
+                                    <div className="ps-time-column"><div className="ps-day-header" />{timeSlots.map(t => <div key={t} className="ps-time-slot">{t}</div>)}</div>
                                     {(() => {
                                         const d = new Date(currentDate);
                                         const idx = d.getDay() === 0 ? 6 : d.getDay() - 1;
@@ -299,9 +319,7 @@ const ParentSchedule = () => {
 
                             {viewMode === 'month' && (
                                 <div className="ps-month-view">
-                                    <div className="ps-month-weekdays">
-                                        {weekDays.map(d => <div key={d} className="ps-month-weekday">{d}</div>)}
-                                    </div>
+                                    <div className="ps-month-weekdays">{weekDays.map(d => <div key={d} className="ps-month-weekday">{d}</div>)}</div>
                                     <div className="ps-month-grid">
                                         {(() => {
                                             const monthDates = getMonthDates();
@@ -309,12 +327,9 @@ const ParentSchedule = () => {
                                             const padding = first === 0 ? 6 : first - 1;
                                             return (
                                                 <>
-                                                    {Array.from({ length: padding }).map((_, i) => (
-                                                        <div key={`p${i}`} className="ps-month-day-cell empty" />
-                                                    ))}
+                                                    {Array.from({ length: padding }).map((_, i) => (<div key={`p${i}`} className="ps-month-day-cell empty" />))}
                                                     {monthDates.map((date, i) => {
-                                                        const idx = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                                        const dayClasses = studentClasses.filter(c => getDayIndex(c.day) === idx);
+                                                        const dayClasses = studentClasses.filter(c => occursOnDate(c, date));
                                                         const isToday = date.toDateString() === new Date().toDateString();
                                                         return (
                                                             <div key={i} className={`ps-month-day-cell ${isToday ? 'today' : ''}`}>
@@ -323,12 +338,7 @@ const ParentSchedule = () => {
                                                                     {dayClasses.map(c => {
                                                                         const status = getAttendanceStatus(c, date);
                                                                         return (
-                                                                            <div
-                                                                                key={`${c.id}-${c.day}`}
-                                                                                className={`ps-month-class-badge att-${status}`}
-                                                                                style={{ background: c.color }}
-                                                                                title={`${c.name}`}
-                                                                            >
+                                                                            <div key={c.eventKey || `${c.studentId}-${c.classId}-${c.id}`} className={`ps-month-class-badge att-${status}`} style={{ background: c.color }} title={`${c.name}`}>
                                                                                 {c.code}
                                                                             </div>
                                                                         );
@@ -352,4 +362,3 @@ const ParentSchedule = () => {
 };
 
 export default ParentSchedule;
-

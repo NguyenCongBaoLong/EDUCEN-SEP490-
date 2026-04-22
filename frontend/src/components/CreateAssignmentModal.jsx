@@ -81,6 +81,12 @@ const CreateAssignmentModal = ({ isOpen, onClose, onSave, sessionId, initialData
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            const maxSize = 20 * 1024 * 1024;
+            if (file.size > maxSize) {
+                toast.error('Kích thước file vượt quá 20MB.');
+                e.target.value = '';
+                return;
+            }
             setFormData({ ...formData, file });
         }
     };

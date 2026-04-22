@@ -28,7 +28,7 @@ namespace EducenAPI.Services.Payment
         {
             if (string.IsNullOrWhiteSpace(tenantId))
             {
-                throw new BadRequestException("Tenant ID is required to resolve payment gateway config.");
+                throw new BadRequestException("Tenant ID là bắt buộc để xác định cấu hình cổng thanh toán.");
             }
 
             var normalizedGatewayType = NormalizeGatewayType(gatewayType);

@@ -53,6 +53,7 @@ const RoomManagement = () => {
             toast.success(`Đã xóa phòng "${deleteModal.room.roomName}" thành công!`);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Không thể xóa phòng học này!');
+            setDeleteModal({ show: false, room: null });
         }
     };
 

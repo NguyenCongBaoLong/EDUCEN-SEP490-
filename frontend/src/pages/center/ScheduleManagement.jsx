@@ -97,6 +97,82 @@ const ScheduleManagement = () => {
         return classDay - 1;
     };
 
+    const isSameDate = (d1, d2) =>
+        d1 && d2 &&
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+
+    const toDateKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+    const sessionDateKeysByClass = useCallback((classes) => {
+        const map = new Map();
+        (classes || []).forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            const classKey = String(c.classId);
+            if (!map.has(classKey)) map.set(classKey, new Set());
+            map.get(classKey).add(toDateKey(c.sessionDate));
+        });
+        return map;
+    }, []);
+
+    const movedFromDateKeysByClass = useCallback((classes) => {
+        const map = new Map();
+        const scheduleDayByScheduleId = new Map();
+        (classes || []).forEach((c) => {
+            if (c.source === 'schedule' && c.id) {
+                scheduleDayByScheduleId.set(c.id, c.day);
+            }
+        });
+        (classes || []).forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            if (c.sessionStatus && c.sessionStatus !== 'Scheduled') return;
+            const sessionJsDay = c.sessionDate.getDay();
+            const expectedDay = scheduleDayByScheduleId.get(c.id) ?? c.day;
+            if (sessionJsDay === expectedDay) return;
+            const movedFromDate = new Date(c.sessionDate);
+            movedFromDate.setDate(movedFromDate.getDate() + (expectedDay - sessionJsDay));
+            const classKey = String(c.classId);
+            if (!map.has(classKey)) map.set(classKey, new Set());
+            map.get(classKey).add(toDateKey(movedFromDate));
+        });
+        return map;
+    }, []);
+
+    const occursOnDate = (classItem, date, sessionKeysMap, movedFromKeysMap) => {
+        if (classItem.source === 'session' && classItem.sessionDate) {
+            if (classItem.sessionStatus && classItem.sessionStatus !== 'Scheduled') return false;
+            return isSameDate(classItem.sessionDate, date);
+        }
+
+        const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const check = compareDate.getTime();
+        const currentDayIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
+        const classDay = classItem.day === 0 ? 6 : classItem.day - 1;
+        if (classDay !== currentDayIdx) return false;
+
+        if (classItem.startDate) {
+            const start = new Date(classItem.startDate.getFullYear(), classItem.startDate.getMonth(), classItem.startDate.getDate()).getTime();
+            if (check < start) return false;
+        }
+        if (classItem.endDate) {
+            const end = new Date(classItem.endDate.getFullYear(), classItem.endDate.getMonth(), classItem.endDate.getDate()).getTime();
+            if (check > end) return false;
+        }
+
+        const classKey = String(classItem.classId || '');
+        const overrideDateSet = sessionKeysMap.get(classKey);
+        if (overrideDateSet && overrideDateSet.has(toDateKey(date))) {
+            return false;
+        }
+        const movedFromDateSet = movedFromKeysMap.get(classKey);
+        if (movedFromDateSet && movedFromDateSet.has(toDateKey(date))) {
+            return false;
+        }
+
+        return true;
+    };
+
     // Get single day date
     const getDayDate = () => {
         return new Date(currentDate);
@@ -141,7 +217,7 @@ const ScheduleManagement = () => {
     // (Modal handlers và Add class handlers cũ đã bị xóa)
 
     // Get all unique class codes in schedule
-    const scheduledClassCodes = [...new Set(scheduledClasses.map(c => c.code))];
+    const scheduledClassCodes = [...new Set(scheduledClasses.filter(c => c.source !== 'session').map(c => c.code))];
 
     // Modified delete handler - deletes ALL slots of the class
     const handleDeleteClassAll = (classItem) => {
@@ -152,8 +228,9 @@ const ScheduleManagement = () => {
         if (deleteModal.classItem) {
             try {
                 // Find all schedule IDs for this class code
-                const schedulesToDelete = scheduledClasses.filter(c => c.code === deleteModal.classItem.code);
-                const deletePromises = schedulesToDelete.map(s => api.delete(`/Schedules/${s.id}`));
+                const schedulesToDelete = scheduledClasses.filter(c => c.code === deleteModal.classItem.code && c.source !== 'session');
+                const uniqueScheduleIds = [...new Set(schedulesToDelete.map(s => s.id))];
+                const deletePromises = uniqueScheduleIds.map(id => api.delete(`/Schedules/${id}`));
 
                 await Promise.all(deletePromises);
                 refreshSchedules();
@@ -237,6 +314,8 @@ const ScheduleManagement = () => {
         if (subjectFilter && classItem.subjectName !== subjectFilter) return false;
         return true;
     });
+    const filteredSessionDateKeys = sessionDateKeysByClass(filteredClasses);
+    const filteredMovedFromDateKeys = movedFromDateKeysByClass(filteredClasses);
 
     return (
         <div className="schedule-management">
@@ -331,27 +410,8 @@ const ScheduleManagement = () => {
                             {/* Day columns */}
                             {(viewMode === 'week' ? weekDates : [getDayDate()]).map((date, dayIdxInView) => {
                                 // Normalize date for comparison
-                                const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
                                 const currentDayIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
-
-                                // Get all classes for this day based on recurring DayOfWeek and Date Range
-                                const dayClasses = filteredClasses.filter(c => {
-                                    const classDay = c.day === 0 ? 6 : c.day - 1; // Backend: 0=Sun, 1=Mon... -> Frontend logic: 0=Mon, 6=Sun
-
-                                    if (classDay !== currentDayIdx) return false;
-
-                                    // Check date range
-                                    if (c.startDate) {
-                                        const start = new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate());
-                                        if (compareDate < start) return false;
-                                    }
-                                    if (c.endDate) {
-                                        const end = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate());
-                                        if (compareDate > end) return false;
-                                    }
-
-                                    return true;
-                                });
+                                const dayClasses = filteredClasses.filter(c => occursOnDate(c, date, filteredSessionDateKeys, filteredMovedFromDateKeys));
 
                                 // Group overlapping classes
                                 const groupedClasses = [];
@@ -393,7 +453,7 @@ const ScheduleManagement = () => {
                                                 {groupedClasses.map((group) =>
                                                     group.map((classItem, indexInGroup) => (
                                                         <div
-                                                            key={classItem.id}
+                                                            key={classItem.eventKey || `${classItem.id}-${classItem.startTime}-${classItem.endTime}`}
                                                             className="schedule-class-card"
                                                             style={{ ...getClassStyle(classItem, indexInGroup, group.length), cursor: 'pointer' }}
                                                             onClick={(e) => {
@@ -463,25 +523,7 @@ const ScheduleManagement = () => {
 
                                             {/* Month days */}
                                             {monthDates.map((date, dateIndex) => {
-                                                const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-                                                const currentDayIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
-
-                                                const dayClasses = filteredClasses.filter(c => {
-                                                    const classDay = c.day === 0 ? 6 : c.day - 1;
-                                                    if (classDay !== currentDayIdx) return false;
-
-                                                    // Check date range
-                                                    if (c.startDate) {
-                                                        const start = new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate());
-                                                        if (compareDate < start) return false;
-                                                    }
-                                                    if (c.endDate) {
-                                                        const end = new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate());
-                                                        if (compareDate > end) return false;
-                                                    }
-
-                                                    return true;
-                                                });
+                                                const dayClasses = filteredClasses.filter(c => occursOnDate(c, date, filteredSessionDateKeys, filteredMovedFromDateKeys));
                                                 const isToday = date.toDateString() === new Date().toDateString();
 
                                                 return (
@@ -493,7 +535,7 @@ const ScheduleManagement = () => {
                                                         <div className="month-day-classes">
                                                             {dayClasses.slice(0, 3).map(classItem => (
                                                                 <div
-                                                                    key={classItem.id}
+                                                                    key={classItem.eventKey || `${classItem.id}-${classItem.startTime}-${classItem.endTime}`}
                                                                     className="month-class-badge"
                                                                     style={{ backgroundColor: classItem.color, cursor: 'pointer' }}
                                                                     title={`${classItem.code} - ${classItem.name}\n${classItem.startTime} - ${classItem.endTime}`}

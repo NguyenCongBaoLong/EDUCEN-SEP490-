@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock,
@@ -17,6 +17,17 @@ const timeSlots = [
     '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
 ];
 
+const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.substring(0, 10).split('-');
+    if (parts.length !== 3) return null;
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+};
+
+const toDateKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+const isSameDate = (d1, d2) => d1 && d2 && d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+const getDayIndex = (classDay) => classDay === 0 ? 6 : classDay - 1;
+
 const StudentSchedule = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -34,15 +45,20 @@ const StudentSchedule = () => {
                 api.get(`/attendance/student/${user.userId}`)
             ]);
 
-            // Map schedule data
             const colorMap = {};
             let ci = 0;
-            const mapped = scheduleRes.data.map(item => {
+            const mapped = (scheduleRes.data || []).map(item => {
                 if (!colorMap[item.classId]) {
                     colorMap[item.classId] = COLORS[ci++ % COLORS.length];
                 }
                 return {
-                    id: item.classId,
+                    id: item.scheduleId,
+                    eventKey: item.sessionId ? `session-${item.sessionId}` : `schedule-${item.scheduleId}`,
+                    source: item.sessionId ? 'session' : 'schedule',
+                    sessionId: item.sessionId || null,
+                    sessionDate: parseLocalDate(item.sessionDate),
+                    sessionStatus: item.sessionStatus || null,
+                    classId: item.classId,
                     code: item.subjectName || 'N/A',
                     name: item.className,
                     day: item.dayOfWeek,
@@ -55,7 +71,7 @@ const StudentSchedule = () => {
                 };
             });
             setStudentClasses(mapped);
-            setAttendanceRecords(attendanceRes.data);
+            setAttendanceRecords(attendanceRes.data || []);
         } catch (error) {
             console.error('Error fetching schedule/attendance:', error);
             toast.error('Không thể tải lịch học');
@@ -65,12 +81,72 @@ const StudentSchedule = () => {
     };
 
     useEffect(() => {
-        if (user?.userId) {
-            fetchSchedule();
-        }
+        if (user?.userId) fetchSchedule();
     }, [user?.userId]);
 
-    /* ─── Date helpers ─── */
+    const sessionDateKeysByClass = useMemo(() => {
+        const map = new Map();
+        studentClasses.forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            const classKey = String(c.classId);
+            if (!map.has(classKey)) map.set(classKey, new Set());
+            map.get(classKey).add(toDateKey(c.sessionDate));
+        });
+        return map;
+    }, [studentClasses]);
+
+    const movedFromDateKeysByClass = useMemo(() => {
+        const map = new Map();
+        const scheduleDayByScheduleId = new Map();
+        studentClasses.forEach((c) => {
+            if (c.source === 'schedule' && c.id) scheduleDayByScheduleId.set(c.id, c.day);
+        });
+        studentClasses.forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            if (c.sessionStatus && c.sessionStatus !== 'Scheduled') return;
+            const sessionJsDay = c.sessionDate.getDay();
+            const expectedDay = scheduleDayByScheduleId.get(c.id) ?? c.day;
+            if (sessionJsDay === expectedDay) return;
+            const movedFromDate = new Date(c.sessionDate);
+            movedFromDate.setDate(movedFromDate.getDate() + (expectedDay - sessionJsDay));
+            const classKey = String(c.classId);
+            if (!map.has(classKey)) map.set(classKey, new Set());
+            map.get(classKey).add(toDateKey(movedFromDate));
+        });
+        return map;
+    }, [studentClasses]);
+
+    const occursOnDate = (classItem, date) => {
+        if (classItem.source === 'session' && classItem.sessionDate) {
+            if (classItem.sessionStatus && classItem.sessionStatus !== 'Scheduled') return false;
+            return isSameDate(classItem.sessionDate, date);
+        }
+
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+        if (getDayIndex(classItem.day) !== (date.getDay() === 0 ? 6 : date.getDay() - 1)) return false;
+
+        if (classItem.startDate) {
+            const start = new Date(classItem.startDate);
+            start.setHours(0, 0, 0, 0);
+            if (compareDate < start) return false;
+        }
+        if (classItem.endDate) {
+            const end = new Date(classItem.endDate);
+            end.setHours(0, 0, 0, 0);
+            if (compareDate > end) return false;
+        }
+
+        const classKey = String(classItem.classId || '');
+        const dateKey = toDateKey(date);
+        const overrideSet = sessionDateKeysByClass.get(classKey);
+        if (overrideSet && overrideSet.has(dateKey)) return false;
+        const movedFromSet = movedFromDateKeysByClass.get(classKey);
+        if (movedFromSet && movedFromSet.has(dateKey)) return false;
+
+        return true;
+    };
+
     const getWeekDates = () => {
         const start = new Date(currentDate);
         const day = start.getDay();
@@ -85,25 +161,18 @@ const StudentSchedule = () => {
 
     const weekDates = getWeekDates();
 
-    const getDayIndex = (classDay) => classDay === 0 ? 6 : classDay - 1;
-
     const formatDateRange = () => {
-        const monthNames = [
-            'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12',
-        ];
+        const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
         if (viewMode === 'day') {
             const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
             return `${dayNames[currentDate.getDay()]}, ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
         }
-        if (viewMode === 'month') {
-            return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-        }
+        if (viewMode === 'month') return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
         const s = weekDates[0], e = weekDates[6];
         return `${monthNames[s.getMonth()]} ${s.getDate()} - ${e.getDate()}, ${s.getFullYear()}`;
     };
 
-    const navigate_date = (dir) => {
+    const navigateDate = (dir) => {
         const d = new Date(currentDate);
         if (viewMode === 'day') d.setDate(d.getDate() + dir);
         else if (viewMode === 'week') d.setDate(d.getDate() + dir * 7);
@@ -128,8 +197,6 @@ const StudentSchedule = () => {
 
     const getAttendanceStatus = (classItem, date) => {
         const dStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-        // Find if there's an attendance record for this class on this date
         const record = attendanceRecords.find(r => {
             if (!r.sessionDate) return false;
             const rDate = new Date(r.sessionDate);
@@ -155,17 +222,12 @@ const StudentSchedule = () => {
             absent: { icon: <XCircle size={12} />, label: 'Vắng', cls: 'absent' },
             upcoming: { icon: <MinusCircle size={12} />, label: 'Sắp tới', cls: 'upcoming' },
             missing: { icon: <AlertCircle size={12} />, label: 'Chưa điểm danh', cls: 'missing' },
-            unknown: { icon: <MinusCircle size={12} />, label: '—', cls: 'upcoming' },
+            unknown: { icon: <MinusCircle size={12} />, label: '-', cls: 'upcoming' },
         };
         const s = map[status] || map.unknown;
-        return (
-            <span className={`ss-att-badge ${s.cls}`}>
-                {s.icon} {s.label}
-            </span>
-        );
+        return (<span className={`ss-att-badge ${s.cls}`}>{s.icon} {s.label}</span>);
     };
 
-    /* ─── Month view helpers ─── */
     const getMonthDates = () => {
         const y = currentDate.getFullYear(), m = currentDate.getMonth();
         const first = new Date(y, m, 1);
@@ -176,27 +238,9 @@ const StudentSchedule = () => {
     };
 
     const renderDayColumn = (date, dayIndex, single = false) => {
-        const compareDate = new Date(date);
-        compareDate.setHours(0, 0, 0, 0);
-
-        const dayClasses = studentClasses.filter(c => {
-            if (getDayIndex(c.day) !== dayIndex) return false;
-
-            if (c.startDate) {
-                const start = new Date(c.startDate);
-                start.setHours(0, 0, 0, 0);
-                if (compareDate < start) return false;
-            }
-            if (c.endDate) {
-                const end = new Date(c.endDate);
-                end.setHours(0, 0, 0, 0);
-                if (compareDate > end) return false;
-            }
-            return true;
-        });
+        const dayClasses = studentClasses.filter(c => occursOnDate(c, date));
         const isToday = date.toDateString() === new Date().toDateString();
 
-        // Group overlapping
         const groups = [];
         dayClasses.forEach(c => {
             const [sh, sm] = c.startTime.split(':').map(Number);
@@ -231,21 +275,15 @@ const StudentSchedule = () => {
                                 const status = getAttendanceStatus(c, date);
                                 return (
                                     <div
-                                        key={`${c.id}-${c.day}-${gIdx}-${idx}`}
+                                        key={c.eventKey || `${c.id}-${c.day}-${gIdx}-${idx}`}
                                         className="ss-class-card"
                                         style={getClassStyle(c, idx, group.length)}
-                                        title={`${c.code} - ${c.name}\nGiờ: ${c.startTime} - ${c.endTime}\nPhòng: ${c.room}\nĐiểm danh: ${status === 'present' ? 'Có mặt' : status === 'absent' ? 'Vắng mặt' : status === 'upcoming' ? 'Sắp tới' : 'Chưa điểm danh'}`}
-                                        onClick={() => navigate(`/student/classes/${c.id}`)}
+                                        onClick={() => navigate(`/student/classes/${c.classId}`)}
                                     >
                                         <div className="ss-class-code">{c.code}</div>
                                         <div className="ss-class-name">{c.name}</div>
-                                        <div className="ss-class-room">
-                                            <BookOpen size={10} /> {c.room}
-                                        </div>
-                                        <div className="ss-class-time">
-                                            <Clock size={10} />
-                                            {c.startTime} - {c.endTime}
-                                        </div>
+                                        <div className="ss-class-room"><BookOpen size={10} /> {c.room}</div>
+                                        <div className="ss-class-time"><Clock size={10} />{c.startTime} - {c.endTime}</div>
                                         <AttendanceBadge status={status} />
                                     </div>
                                 );
@@ -258,37 +296,17 @@ const StudentSchedule = () => {
     };
 
     const renderMonthDayClasses = (date) => {
-        const idx = date.getDay() === 0 ? 6 : date.getDay() - 1;
-        const compareDate = new Date(date);
-        compareDate.setHours(0, 0, 0, 0);
-
-        const dayClasses = studentClasses.filter(c => {
-            if (getDayIndex(c.day) !== idx) return false;
-
-            if (c.startDate) {
-                const start = new Date(c.startDate);
-                start.setHours(0, 0, 0, 0);
-                if (compareDate < start) return false;
-            }
-            if (c.endDate) {
-                const end = new Date(c.endDate);
-                end.setHours(0, 0, 0, 0);
-                if (compareDate > end) return false;
-            }
-            return true;
-        });
-
+        const dayClasses = studentClasses.filter(c => occursOnDate(c, date));
         return dayClasses.map((c, i) => {
             const status = getAttendanceStatus(c, date);
             return (
                 <div
-                    key={`${c.id}-${c.day}-${i}`}
+                    key={c.eventKey || `${c.id}-${c.day}-${i}`}
                     className={`ss-month-class-badge att-${status}`}
                     style={{ background: c.color }}
-                    onClick={() => navigate(`/student/classes/${c.id}`)}
+                    onClick={() => navigate(`/student/classes/${c.classId}`)}
                 >
                     <span className="sc-code">{c.code}</span>
-                    <span className="sc-room">{c.room}</span>
                 </div>
             );
         });
@@ -309,79 +327,51 @@ const StudentSchedule = () => {
     return (
         <div className="ss-page">
             <StudentSidebar />
-
             <main className="ss-main">
                 <div className="ss-header">
                     <div>
                         <h1 className="ss-title">Lịch học của tôi</h1>
-                        <p className="ss-subtitle">
-                            Xem lịch học và trạng thái điểm danh từng buổi
-                        </p>
+                        <p className="ss-subtitle">Xem lịch học và trạng thái điểm danh từng buổi</p>
                     </div>
                 </div>
 
-                {/* Controls */}
                 <div className="ss-controls">
                     <div className="ss-date-nav">
-                        <button className="ss-btn-nav" onClick={() => navigate_date(-1)}>
-                            <ChevronLeft size={20} />
-                        </button>
-                        <div className="ss-date-display">
-                            <CalendarIcon size={18} />
-                            <span>{formatDateRange()}</span>
-                        </div>
-                        <button className="ss-btn-nav" onClick={() => navigate_date(1)}>
-                            <ChevronRight size={20} />
-                        </button>
+                        <button className="ss-btn-nav" onClick={() => navigateDate(-1)}><ChevronLeft size={20} /></button>
+                        <div className="ss-date-display"><CalendarIcon size={18} /><span>{formatDateRange()}</span></div>
+                        <button className="ss-btn-nav" onClick={() => navigateDate(1)}><ChevronRight size={20} /></button>
                     </div>
-
                     <div className="ss-view-toggle">
                         {['day', 'week', 'month'].map(m => (
-                            <button
-                                key={m}
-                                className={`ss-btn-view ${viewMode === m ? 'active' : ''}`}
-                                onClick={() => setViewMode(m)}
-                            >
+                            <button key={m} className={`ss-btn-view ${viewMode === m ? 'active' : ''}`} onClick={() => setViewMode(m)}>
                                 {m === 'day' ? 'Ngày' : m === 'week' ? 'Tuần' : 'Tháng'}
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* Legend */}
                 <div className="ss-legend">
                     <span className="ss-legend-item present"><CheckCircle size={12} /> Có mặt</span>
                     <span className="ss-legend-item absent"><XCircle size={12} /> Vắng mặt</span>
                     <span className="ss-legend-item upcoming"><MinusCircle size={12} /> Sắp tới</span>
                 </div>
 
-                {/* Calendar Content */}
                 <div className="ss-content">
-                    {/* WEEK VIEW */}
                     {viewMode === 'week' && (
                         <div className="ss-calendar">
                             <div className="ss-time-column">
                                 <div className="ss-day-header" />
-                                {timeSlots.map(t => (
-                                    <div key={t} className="ss-time-slot">
-                                        <span className="ss-time-label">{t}</span>
-                                    </div>
-                                ))}
+                                {timeSlots.map(t => (<div key={t} className="ss-time-slot"><span className="ss-time-label">{t}</span></div>))}
                             </div>
                             {weekDates.map((date, idx) => renderDayColumn(date, idx))}
                         </div>
                     )}
 
-                    {/* DAY VIEW */}
                     {viewMode === 'day' && (
                         <div className="ss-calendar">
                             <div className="ss-time-column">
                                 <div className="ss-day-header" />
-                                {timeSlots.map(t => (
-                                    <div key={t} className="ss-time-slot">
-                                        <span className="ss-time-label">{t}</span>
-                                    </div>
-                                ))}
+                                {timeSlots.map(t => (<div key={t} className="ss-time-slot"><span className="ss-time-label">{t}</span></div>))}
                             </div>
                             {(() => {
                                 const d = new Date(currentDate);
@@ -391,14 +381,9 @@ const StudentSchedule = () => {
                         </div>
                     )}
 
-                    {/* MONTH VIEW */}
                     {viewMode === 'month' && (
                         <div className="ss-month-view">
-                            <div className="ss-month-weekdays">
-                                {weekDays.map(d => (
-                                    <div key={d} className="ss-month-weekday">{d}</div>
-                                ))}
-                            </div>
+                            <div className="ss-month-weekdays">{weekDays.map(d => (<div key={d} className="ss-month-weekday">{d}</div>))}</div>
                             <div className="ss-month-grid">
                                 {(() => {
                                     const monthDates = getMonthDates();
@@ -406,17 +391,13 @@ const StudentSchedule = () => {
                                     const padding = first === 0 ? 6 : first - 1;
                                     return (
                                         <>
-                                            {Array.from({ length: padding }).map((_, i) => (
-                                                <div key={`p${i}`} className="ss-month-day-cell empty" />
-                                            ))}
+                                            {Array.from({ length: padding }).map((_, i) => (<div key={`p${i}`} className="ss-month-day-cell empty" />))}
                                             {monthDates.map((date, i) => {
                                                 const isToday = date.toDateString() === new Date().toDateString();
                                                 return (
                                                     <div key={i} className={`ss-month-day-cell ${isToday ? 'today' : ''}`}>
                                                         <div className="ss-month-day-number">{date.getDate()}</div>
-                                                        <div className="ss-month-day-classes">
-                                                            {renderMonthDayClasses(date)}
-                                                        </div>
+                                                        <div className="ss-month-day-classes">{renderMonthDayClasses(date)}</div>
                                                     </div>
                                                 );
                                             })}
@@ -433,5 +414,3 @@ const StudentSchedule = () => {
 };
 
 export default StudentSchedule;
-
-

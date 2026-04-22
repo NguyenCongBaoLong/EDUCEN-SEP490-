@@ -1257,6 +1257,8 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     `RequestedSlot: ${targetSlot?.dayLabel || ''} (${targetSlot?.startTime || ''} - ${targetSlot?.endTime || ''})`,
                                     `Slot đề xuất: ${targetSlot?.dayLabel || ''} (${targetSlot?.startTime || ''} - ${targetSlot?.endTime || ''})`,
                                     `RequestedRoomId: ${payload?.requestedRoomId || ''}`,
+                                    `ChangeType: ${payload?.changeType || ''}`,
+                                    `TargetSessionDate: ${payload?.targetSessionDate || ''}`,
                                     `Lý do: ${payload?.reason || ''}`
                                 ].join('\n');
 

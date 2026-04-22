@@ -53,6 +53,12 @@ const UserProfile = () => {
     });
     const [passwordError, setPasswordError] = useState('');
 
+    // Field-level validation errors
+    const [fieldErrors, setFieldErrors] = useState({
+        email: '',
+        phoneNumber: ''
+    });
+
     // Fetch profile on mount
     useEffect(() => {
         fetchProfile();
@@ -103,6 +109,26 @@ const UserProfile = () => {
     const handleFormChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Real-time validation for email
+        if (name === 'email') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (value && !emailRegex.test(value)) {
+                setFieldErrors(prev => ({ ...prev, email: 'Email không đúng định dạng.' }));
+            } else {
+                setFieldErrors(prev => ({ ...prev, email: '' }));
+            }
+        }
+
+        // Real-time validation for phone number
+        if (name === 'phoneNumber') {
+            const phoneRegex = /^(0\d{9}|84\d{9})$/;
+            if (value && !phoneRegex.test(value)) {
+                setFieldErrors(prev => ({ ...prev, phoneNumber: 'Số điện thoại không hợp lệ (10 số hoặc 84 + 9 số).' }));
+            } else {
+                setFieldErrors(prev => ({ ...prev, phoneNumber: '' }));
+            }
+        }
     };
 
     const handleSaveProfile = async (section) => {
@@ -151,7 +177,7 @@ const UserProfile = () => {
             toast.success(res.data.message || 'Cập nhật hồ sơ thành công!');
         } catch (err) {
             let errorMsg = 'Lỗi khi cập nhật hồ sơ.';
-            
+
             if (err.response?.data?.errors) {
                 const errorData = err.response.data.errors;
                 const messages = [];
@@ -176,14 +202,24 @@ const UserProfile = () => {
 
                 extractMessages(errorData);
                 if (messages.length > 0) {
-                    errorMsg = messages.join(' | ');
+                    // Filter out generic messages and keep only specific field errors
+                    const specificErrors = messages.filter(msg => 
+                        msg.toLowerCase().includes('email') || 
+                        msg.toLowerCase().includes('số điện thoại') ||
+                        msg.toLowerCase().includes('phone')
+                    );
+                    if (specificErrors.length > 0) {
+                        errorMsg = specificErrors[0];
+                    } else {
+                        errorMsg = messages[0];
+                    }
                 }
             } else if (err.response?.data?.message) {
                 errorMsg = err.response.data.message;
             } else if (typeof err.response?.data === 'string') {
                 errorMsg = err.response.data;
             }
-            
+
             toast.error(errorMsg);
         }
     };
@@ -437,7 +473,17 @@ const UserProfile = () => {
                                         <div className="info-field">
                                             <label><Mail size={14} /> Email</label>
                                             {isEditingPersonal ? (
-                                                <input name="email" value={formData.email} onChange={handleFormChange} />
+                                                <>
+                                                    <input 
+                                                        name="email" 
+                                                        value={formData.email} 
+                                                        onChange={handleFormChange} 
+                                                        style={{ borderColor: fieldErrors.email ? '#ef4444' : '' }}
+                                                    />
+                                                    {fieldErrors.email && (
+                                                        <p className="field-error-text">{fieldErrors.email}</p>
+                                                    )}
+                                                </>
                                             ) : (
                                                 <p>{profile.email || 'Chưa cập nhật'}</p>
                                             )}
@@ -445,7 +491,17 @@ const UserProfile = () => {
                                         <div className="info-field">
                                             <label><Phone size={14} /> Số điện thoại</label>
                                             {isEditingPersonal ? (
-                                                <input name="phoneNumber" value={formData.phoneNumber} onChange={handleFormChange} />
+                                                <>
+                                                    <input 
+                                                        name="phoneNumber" 
+                                                        value={formData.phoneNumber} 
+                                                        onChange={handleFormChange}
+                                                        style={{ borderColor: fieldErrors.phoneNumber ? '#ef4444' : '' }}
+                                                    />
+                                                    {fieldErrors.phoneNumber && (
+                                                        <p className="field-error-text">{fieldErrors.phoneNumber}</p>
+                                                    )}
+                                                </>
                                             ) : (
                                                 <p>{profile.phoneNumber || 'Chưa cập nhật'}</p>
                                             )}

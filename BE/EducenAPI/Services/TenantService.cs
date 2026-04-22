@@ -32,6 +32,7 @@ namespace EducenAPI.Services.TenantService
             request.SubDomain = request.SubDomain?.Trim().ToLower();
 
             ValidateSubDomain(request.SubDomain, null);
+            ValidateTenantContactFields(request.Email, request.PhoneNumber);
 
             // Check duplicate TenantName
             if (_adminDbContext.Tenants.Any(t => t.TenantName == request.TenantName))
@@ -308,6 +309,7 @@ namespace EducenAPI.Services.TenantService
             var subDomain = request.SubDomain?.Trim().ToLower();
 
             ValidateSubDomain(subDomain, tenantId);
+            ValidateTenantContactFields(request.Email, request.PhoneNumber);
 
             // Check duplicate TenantName (trừ chính nó)
             if (!string.IsNullOrWhiteSpace(tenantName) && tenantName != tenant.TenantName)
@@ -354,6 +356,25 @@ namespace EducenAPI.Services.TenantService
                 throw new Exception("SubDomain đã tồn tại.");
         }
 
+        private static void ValidateTenantContactFields(string? email, string? phoneNumber)
+        {
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var normalizedEmail = email.Trim();
+                var emailValidator = new System.ComponentModel.DataAnnotations.EmailAddressAttribute();
+                if (!emailValidator.IsValid(normalizedEmail))
+                    throw new Exception("Email không đúng định dạng.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                var normalizedPhone = phoneNumber.Trim();
+                var phoneRegex = new System.Text.RegularExpressions.Regex(@"^(0|\+84)[0-9]{9,10}$");
+                if (!phoneRegex.IsMatch(normalizedPhone))
+                    throw new Exception("Số điện thoại không đúng định dạng.");
+            }
+        }
+
         public IEnumerable<TenantWithSubscriptionRequest> GetAllTenantDetails()
         {
             var tenants = _adminDbContext.Tenants.ToList();
@@ -387,6 +408,7 @@ namespace EducenAPI.Services.TenantService
                     IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                     ExpiredAt = subscription?.EndDate,
                     PlanIsActive = subscription?.Plan?.IsActive ?? true,
+                    PlanDeleted = subscription?.Plan == null,
 
                     LimitUsers = subscription?.Plan?.LimitUsers,
                     StorageLimit = subscription?.Plan?.StorageLimit,
@@ -445,6 +467,7 @@ namespace EducenAPI.Services.TenantService
                 IsSubscribed = subscription != null && subscription.Status == "Active" && subscription.EndDate > DateTime.UtcNow,
                 ExpiredAt = subscription?.EndDate,
                 PlanIsActive = subscription?.Plan?.IsActive ?? true,
+                PlanDeleted = subscription?.Plan == null,
 
                 LimitUsers = subscription?.Plan?.LimitUsers,
                 StorageLimit = subscription?.Plan?.StorageLimit,

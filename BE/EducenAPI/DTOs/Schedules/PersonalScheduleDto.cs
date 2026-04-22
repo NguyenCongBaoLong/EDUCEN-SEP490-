@@ -6,6 +6,9 @@ namespace EducenAPI.DTOs.Schedules
     public class TeacherScheduleDto
     {
         public int ScheduleId { get; set; }
+        public int? SessionId { get; set; }
+        public DateTime? SessionDate { get; set; }
+        public string? SessionStatus { get; set; }
         public int ClassId { get; set; }
         public string ClassName { get; set; } = string.Empty;
         public int SubjectId { get; set; }
@@ -37,6 +40,9 @@ namespace EducenAPI.DTOs.Schedules
     public class StudentScheduleDto
     {
         public int ScheduleId { get; set; }
+        public int? SessionId { get; set; }
+        public DateTime? SessionDate { get; set; }
+        public string? SessionStatus { get; set; }
         public int ClassId { get; set; }
         public string ClassName { get; set; } = string.Empty;
         public int SubjectId { get; set; }

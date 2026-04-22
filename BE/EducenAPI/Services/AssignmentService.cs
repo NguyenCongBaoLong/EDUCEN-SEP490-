@@ -10,6 +10,7 @@ namespace EducenAPI.Services
 {
     public class AssignmentService : IAssignmentService
     {
+        private const long MaxAssignmentFileSizeBytes = 20 * 1024 * 1024; // 20MB
         private readonly EducenV2Context _context;
         private readonly IFileUploadService _fileService;
         private readonly IUserContextService _userContextService;
@@ -79,6 +80,19 @@ namespace EducenAPI.Services
             return session.SessionDate.Date.Add(session.Schedule.StartTime.ToTimeSpan());
         }
 
+        private static void ValidateAssignmentFile(IFormFile file)
+        {
+            if (file.Length == 0)
+            {
+                throw new BadRequestException("File tải lên không được rỗng (0MB).");
+            }
+
+            if (file.Length > MaxAssignmentFileSizeBytes)
+            {
+                throw new BadRequestException("Kích thước file vượt quá giới hạn 20MB.");
+            }
+        }
+
         public async Task<AssignmentResponseDto> CreateAssignmentAsync(CreateAssignmentDto dto, string baseUrl)
         {
             
@@ -100,7 +114,7 @@ namespace EducenAPI.Services
             //  Validate StartTime > EndTime
             if (dto.EndTime.HasValue && resolvedStartTime > dto.EndTime.Value)
             {
-                throw new BadRequestException("Start time cannot be later than end time.");
+                throw new BadRequestException("Thời gian bắt đầu không được sau thời gian kết thúc.");
             }
 
             string? fileUrl = null;
@@ -115,11 +129,7 @@ namespace EducenAPI.Services
             }
             if (dto.File != null)
             {
-                // Validate File = 0MB
-                if (dto.File.Length == 0)
-                {
-                    throw new BadRequestException("File tải lên không được rỗng (0MB).");
-                }
+                ValidateAssignmentFile(dto.File);
 
                 string originalFileName = dto.File.FileName;
 
@@ -267,6 +277,7 @@ namespace EducenAPI.Services
 
             if (dto.File != null)
             {
+                ValidateAssignmentFile(dto.File);
                 string newOriginalFileName = dto.File.FileName;
 
                 // Check duplicate (exclude current assignment)
@@ -718,3 +729,5 @@ namespace EducenAPI.Services
         }
     }
 }
+
+

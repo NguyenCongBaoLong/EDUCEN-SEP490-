@@ -1,4 +1,4 @@
-using EducenAPI.DTOs.Grades;
+﻿using EducenAPI.DTOs.Grades;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -11,6 +11,7 @@ namespace EducenAPI.Services
     {
         private readonly EducenV2Context _context;
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
+        private const int MaxGradeNameLength = 100;
 
         public GradeService(EducenV2Context context)
         {
@@ -36,7 +37,10 @@ namespace EducenAPI.Services
         public async Task<GradeDto?> GetGradeByIdAsync(int id)
         {
             var grade = await _context.Grades.FindAsync(id);
-            if (grade == null) return null;
+            if (grade == null)
+            {
+                return null;
+            }
 
             return new GradeDto
             {
@@ -50,17 +54,26 @@ namespace EducenAPI.Services
             dto.GradeName = dto.GradeName?.Trim();
 
             if (string.IsNullOrWhiteSpace(dto.GradeName))
-                throw new ArgumentException("Tên khối không được chỉ chứa khoảng trắng.");
+            {
+                throw new ArgumentException("Tên khối lớp không được để trống.");
+            }
+
+            if (dto.GradeName.Length > MaxGradeNameLength)
+            {
+                throw new ArgumentException($"Tên khối lớp không được vượt quá {MaxGradeNameLength} ký tự.");
+            }
 
             var normalizedName = dto.GradeName.ToLowerInvariant();
             var lockObj = GetLock($"grade_{normalizedName}");
-            
+
             await lockObj.WaitAsync();
             try
             {
                 var exists = await _context.Grades.AnyAsync(g => g.GradeName.ToLower() == normalizedName);
                 if (exists)
-                    throw new InvalidOperationException("Tên khối đã tồn tại.");
+                {
+                    throw new InvalidOperationException("Tên khối lớp đã tồn tại.");
+                }
 
                 var grade = new Grade
                 {
@@ -85,15 +98,31 @@ namespace EducenAPI.Services
         public async Task<bool> UpdateGradeAsync(int id, UpdateGradeDto dto)
         {
             var grade = await _context.Grades.FindAsync(id);
-            if (grade == null) return false;
+            if (grade == null)
+            {
+                return false;
+            }
 
-            var normalizedName = dto.GradeName?.Trim()?.ToLowerInvariant();
+            dto.GradeName = dto.GradeName?.Trim();
+            if (string.IsNullOrWhiteSpace(dto.GradeName))
+            {
+                throw new ArgumentException("Tên khối lớp không được để trống.");
+            }
+
+            if (dto.GradeName.Length > MaxGradeNameLength)
+            {
+                throw new ArgumentException($"Tên khối lớp không được vượt quá {MaxGradeNameLength} ký tự.");
+            }
+
+            var normalizedName = dto.GradeName.ToLowerInvariant();
             var duplicateExists = await _context.Grades
                 .AnyAsync(g => g.GradeName.ToLower() == normalizedName && g.GradeId != id);
             if (duplicateExists)
-                throw new InvalidOperationException("Tên khối đã tồn tại.");
+            {
+                throw new InvalidOperationException("Tên khối lớp đã tồn tại.");
+            }
 
-            grade.GradeName = dto.GradeName?.Trim();
+            grade.GradeName = dto.GradeName;
 
             _context.Grades.Update(grade);
             await _context.SaveChangesAsync();
@@ -103,12 +132,20 @@ namespace EducenAPI.Services
         public async Task<bool> DeleteGradeAsync(int id)
         {
             var grade = await _context.Grades.FindAsync(id);
-            if (grade == null) return false;
-
-            var isUsed = await _context.Classes.AnyAsync(c => c.GradeId == id);
-            if (isUsed)
+            if (grade == null)
             {
-                throw new InvalidOperationException("Không thể xóa khối/lớp vì đang được sử dụng cho một hoặc nhiều lớp học.");
+                return false;
+            }
+
+            var isUsedByClasses = await _context.Classes.AnyAsync(c => c.GradeId == id);
+            var normalizedGradeName = grade.GradeName.Trim().ToLower();
+            var isUsedByStudents = await _context.Students.AnyAsync(s =>
+                s.GradeId == id ||
+                (s.Grade != null && s.Grade.Trim().ToLower() == normalizedGradeName));
+
+            if (isUsedByClasses || isUsedByStudents)
+            {
+                throw new InvalidOperationException("Không thể xóa khối lớp vì đang được sử dụng bởi các lớp học hoặc học sinh hiện có.");
             }
 
             _context.Grades.Remove(grade);

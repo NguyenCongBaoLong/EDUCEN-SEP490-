@@ -204,9 +204,27 @@ body.sidebar-collapsed .subscription-main {
 
 /* Highlight Active Plan */
 .subscription-card.is-active-plan {
-    border: 2px solid #3b82f6;
-    background: linear-gradient(170deg, #ffffff 0%, #eff6ff 60%, #dbeafe 100%);
-    box-shadow: 0 8px 24px -4px rgba(59, 130, 246, 0.2);
+    border-color: #10b981;
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+    box-shadow: 0 8px 24px -8px rgba(16, 185, 129, 0.25);
+}
+
+.subscription-card.is-deprecated {
+    border-color: #f59e0b;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    opacity: 0.85;
+}
+
+.subscription-deprecation-notice {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+    border: 1px solid #fbbf24;
+    text-align: center;
 }
 
 .subscription-card.is-active-plan::before {

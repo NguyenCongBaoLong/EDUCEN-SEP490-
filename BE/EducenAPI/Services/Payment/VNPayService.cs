@@ -152,7 +152,7 @@ namespace EducenAPI.Services.Payment
                     return new PaymentVerificationResult
                     {
                         IsValid = false,
-                        Message = "Missing secure hash"
+                        Message = "Thiếu mã bảo mật"
                     };
                 }
 
@@ -189,7 +189,7 @@ namespace EducenAPI.Services.Payment
                     return new PaymentVerificationResult
                     {
                         IsValid = false,
-                        Message = "Invalid secure hash"
+                        Message = "Mã bảo mật không hợp lệ"
                     };
                 }
 

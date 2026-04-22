@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Search, Eye, Edit2, Lock, Unlock, X, AlertTriangle, Mail, CheckCircle } from 'lucide-react';
 
@@ -56,7 +56,7 @@ const StaffTable = ({
 
     // Pagination
 
-    const totalPages = Math.ceil(staffData.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(staffData.length / itemsPerPage));
 
     const startIndex = (currentPage - 1) * itemsPerPage;
 
@@ -79,6 +79,11 @@ const StaffTable = ({
         setCurrentPage(prev => Math.min(prev + 1, totalPages));
 
     };
+
+    // Reset to first page whenever filtered dataset changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [staffData.length, searchQuery, roleFilter, statusFilter]);
 
 
 

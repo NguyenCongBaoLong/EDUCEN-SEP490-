@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Eye, Edit2, Lock, Unlock, X, AlertTriangle, Mail, CheckCircle } from 'lucide-react';
 import PropTypes from 'prop-types';
 import '../css/components/StudentTable.css';
@@ -79,10 +79,15 @@ const StudentTable = ({
     // Filter Logic is handled in parent, this component receives filtered data
 
     // Pagination Logic
-    const totalPages = Math.ceil(studentData.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(studentData.length / itemsPerPage));
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentStudents = studentData.slice(indexOfFirstItem, indexOfLastItem);
+
+    // Reset to first page whenever filtered dataset changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [studentData.length, searchQuery, gradeFilter, classFilter, statusFilter]);
 
     const getInitials = (name) => {
         return name

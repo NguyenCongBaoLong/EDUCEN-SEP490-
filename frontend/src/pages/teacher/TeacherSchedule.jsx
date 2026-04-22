@@ -49,7 +49,7 @@ const TeacherSchedule = ({ isTA = false }) => {
 
     const classOptions = useMemo(() => {
         const grouped = new Map();
-        (activeClasses || []).forEach((c) => {
+        (activeClasses || []).filter(c => c.source !== 'session').forEach((c) => {
             const key = c.classId || c.id;
             if (!key) return;
             if (!grouped.has(key)) {
@@ -67,7 +67,8 @@ const TeacherSchedule = ({ isTA = false }) => {
                 dayOfWeek: c.day,
                 startTime: c.startTime,
                 endTime: c.endTime,
-                roomName: c.roomName || ""
+                roomName: c.roomName || "",
+                roomId: c.roomId || null
             });
         });
         return Array.from(grouped.values());
@@ -109,6 +110,81 @@ const TeacherSchedule = ({ isTA = false }) => {
     const getDayIndexForClass = (classDay) => {
         if (classDay === 0) return 6;
         return classDay - 1;
+    };
+
+    const isSameDate = (d1, d2) =>
+        d1 && d2 &&
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+
+    const toDateKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+    const sessionDateKeysByClass = useMemo(() => {
+        const map = new Map();
+        (filteredClasses || []).forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            const classKey = String(c.classId);
+            if (!map.has(classKey)) map.set(classKey, new Set());
+            map.get(classKey).add(toDateKey(c.sessionDate));
+        });
+        return map;
+    }, [filteredClasses]);
+
+    const movedFromDateKeysByClass = useMemo(() => {
+        const map = new Map();
+        const scheduleDayByScheduleId = new Map();
+        (filteredClasses || []).forEach((c) => {
+            if (c.source === 'schedule' && c.id) {
+                scheduleDayByScheduleId.set(c.id, c.day);
+            }
+        });
+        (filteredClasses || []).forEach((c) => {
+            if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+            if (c.sessionStatus && c.sessionStatus !== 'Scheduled') return;
+            const sessionJsDay = c.sessionDate.getDay();
+            const expectedDay = scheduleDayByScheduleId.get(c.id) ?? c.day;
+            if (sessionJsDay === expectedDay) return;
+            const movedFromDate = new Date(c.sessionDate);
+            movedFromDate.setDate(movedFromDate.getDate() + (expectedDay - sessionJsDay));
+            const classKey = String(c.classId);
+            if (!map.has(classKey)) map.set(classKey, new Set());
+            map.get(classKey).add(toDateKey(movedFromDate));
+        });
+        return map;
+    }, [filteredClasses]);
+
+    const occursOnDate = (classItem, date) => {
+        if (classItem.source === 'session' && classItem.sessionDate) {
+            if (classItem.sessionStatus && classItem.sessionStatus !== 'Scheduled') return false;
+            return isSameDate(classItem.sessionDate, date);
+        }
+
+        const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+        const isSameDay = getDayIndexForClass(classItem.day) === dayIndex;
+        if (!isSameDay) return false;
+
+        const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+        const start = classItem.startDate
+            ? new Date(classItem.startDate.getFullYear(), classItem.startDate.getMonth(), classItem.startDate.getDate()).getTime()
+            : 0;
+        const end = classItem.endDate
+            ? new Date(classItem.endDate.getFullYear(), classItem.endDate.getMonth(), classItem.endDate.getDate()).getTime()
+            : Infinity;
+
+        if (!(check >= start && check <= end)) return false;
+
+        const classKey = String(classItem.classId || '');
+        const overrideDateSet = sessionDateKeysByClass.get(classKey);
+        if (overrideDateSet && overrideDateSet.has(toDateKey(date))) {
+            return false;
+        }
+        const movedFromDateSet = movedFromDateKeysByClass.get(classKey);
+        if (movedFromDateSet && movedFromDateSet.has(toDateKey(date))) {
+            return false;
+        }
+
+        return true;
     };
 
     const formatDateRange = () => {
@@ -272,17 +348,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                             </div>
 
                             {weekDates.map((date, dayIndex) => {
-                                const dayClasses = filteredClasses.filter(c => {
-                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
-                                    if (!isSameDay) return false;
-
-                                    // Filter by date range
-                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
-                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
-
-                                    return check >= start && check <= end;
-                                });
+                                const dayClasses = filteredClasses.filter(c => occursOnDate(c, date));
 
                                 // Group overlapping
                                 const groupedClasses = [];
@@ -317,7 +383,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                 {groupedClasses.map(group =>
                                                     group.map((classItem, idx) => (
                                                         <div
-                                                            key={classItem.id}
+                                                            key={classItem.eventKey || `${classItem.id}-${classItem.startTime}-${classItem.endTime}`}
                                                             className="ts-class-card"
                                                             style={getClassStyle(classItem, idx, group.length)}
                                                             title={`${classItem.code} - ${classItem.name}\nGiờ: ${classItem.startTime} - ${classItem.endTime}\nPhòng: ${classItem.roomName || 'N/A'}\nGiáo viên: ${classItem.teacher || 'N/A'}`}
@@ -371,17 +437,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                             {(() => {
                                 const date = new Date(currentDate);
                                 const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                const dayClasses = filteredClasses.filter(c => {
-                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
-                                    if (!isSameDay) return false;
-
-                                    // Filter by date range
-                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
-                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
-
-                                    return check >= start && check <= end;
-                                });
+                                const dayClasses = filteredClasses.filter(c => occursOnDate(c, date));
 
                                 return (
                                     <div className="ts-day-column-single">
@@ -394,7 +450,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                             <div className="ts-classes-container">
                                                 {dayClasses.map((classItem) => (
                                                     <div
-                                                        key={classItem.id}
+                                                        key={classItem.eventKey || `${classItem.id}-${classItem.startTime}-${classItem.endTime}`}
                                                         className="ts-class-card"
                                                         style={getClassStyle(classItem, 0, 1)}
                                                         title={`${classItem.code} - ${classItem.name}\nGiờ: ${classItem.startTime} - ${classItem.endTime}\nPhòng: ${classItem.roomName || 'N/A'}\nGiáo viên: ${classItem.teacher || 'N/A'}`}
@@ -435,18 +491,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                 <div key={`p-${i}`} className="ts-month-day-cell empty"></div>
                                             ))}
                                             {monthDates.map((date, i) => {
-                                                const dayIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
-                                                const dayClasses = filteredClasses.filter(c => {
-                                                    const isSameDay = getDayIndexForClass(c.day) === dayIndex;
-                                                    if (!isSameDay) return false;
-
-                                                    // Filter by date range
-                                                    const check = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-                                                    const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
-                                                    const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
-
-                                                    return check >= start && check <= end;
-                                                });
+                                                const dayClasses = filteredClasses.filter(c => occursOnDate(c, date));
                                                 const isToday = date.toDateString() === new Date().toDateString();
 
                                                 return (
@@ -455,7 +500,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                                         <div className="ts-month-day-classes">
                                                             {dayClasses.map(c => (
                                                                 <div
-                                                                    key={c.id}
+                                                                    key={c.eventKey || `${c.id}-${c.startTime}-${c.endTime}`}
                                                                     className="ts-month-class-badge"
                                                                     style={{ backgroundColor: c.color }}
                                                                 >
@@ -505,7 +550,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                                         if (currentRoom) Content += `\nPhòng hiện tại: ${currentRoom.roomName}`;
                                     }
                                 }
-                                
+
                                 if (payload.requestedSlot) {
                                     Content += `\nSlot mới: ${payload.requestedSlot.dayLabel} (${payload.requestedSlot.startTime} - ${payload.requestedSlot.endTime})`;
                                 }
@@ -513,14 +558,25 @@ const TeacherSchedule = ({ isTA = false }) => {
                                     const room = rooms.find(r => r.roomId === payload.requestedRoomId);
                                     if (room) Content += `\nPhòng mới: ${room.roomName}`;
                                 }
+                                if (payload.changeType) {
+                                    const changeTypeLabel = payload.changeType === 'single_session' ? 'Đổi 1 buổi học cụ thể' : 'Đổi toàn bộ lịch';
+                                    Content += `\nLoại đổi: ${payload.changeType}`;
+                                }
+                                if (payload.targetSessionDate) {
+                                    const date = new Date(payload.targetSessionDate);
+                                    const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+                                    Content += `\nNgày đổi: ${payload.targetSessionDate}`;
+                                }
                             }
-                            
+
                             // DỮ LIỆU HỆ THỐNG (SẼ ĐƯỢC GIẤU KHỎI GIAO DIỆN)
                             const classId = (payload.type === 'schedule_change') ? payload.classInfo?.classId : '';
                             const slotId = (payload.type === 'schedule_change') ? payload.currentSlot?.id : '';
                             const roomId = (payload.type === 'schedule_change') ? payload.requestedRoomId : '';
+                            const changeType = (payload.type === 'schedule_change') ? payload.changeType : '';
+                            const targetSessionDate = (payload.type === 'schedule_change') ? payload.targetSessionDate : '';
 
-                            Content += `\n\n[SYSTEM_DATA]\nClassId: ${classId}\nSlotId: ${slotId}\nRoomId: ${roomId}\n[/SYSTEM_DATA]`;
+                            Content += `\n\n[SYSTEM_DATA]\nClassId: ${classId}\nSlotId: ${slotId}\nRoomId: ${roomId}\nChangeType: ${changeType}\nTargetSessionDate: ${targetSessionDate}\n[/SYSTEM_DATA]`;
 
                             console.log('[TeacherSchedule] Sending request:', { Title, Content, payload });
                             await api.post('/support-requests', { Title, Content });

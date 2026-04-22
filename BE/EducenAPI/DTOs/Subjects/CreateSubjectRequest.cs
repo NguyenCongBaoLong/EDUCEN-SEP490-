@@ -4,11 +4,11 @@ namespace EducenAPI.DTOs.Subjects
 {
     public class CreateSubjectRequest
     {
-        [Required(ErrorMessage = "SubjectName is required")]
-        [StringLength(100, ErrorMessage = "SubjectName cannot exceed 100 characters")]
+        [Required(ErrorMessage = "Tên môn học là bắt buộc")]
+        [StringLength(100, ErrorMessage = "Tên môn học không được vượt quá 100 ký tự")]
         public string SubjectName { get; set; } = string.Empty;
 
-        [StringLength(255, ErrorMessage = "Description cannot exceed 255 characters")]
+        [StringLength(255, ErrorMessage = "Mô tả không được vượt quá 255 ký tự")]
         public string? Description { get; set; }
     }
 }

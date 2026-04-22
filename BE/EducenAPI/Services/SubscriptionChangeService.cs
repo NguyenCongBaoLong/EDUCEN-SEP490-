@@ -70,7 +70,7 @@ public interface ISubscriptionChangeService
         public async Task<PackageChangeRequest> CreatePackageChangeRequestAsync(string tenantId, string requestedPlanId, int months, string? reason, string requestedBy)
         {
             if (months < 1 || months > 120)
-                throw new Exception("So thang dang ky phai tu 1 den 120.");
+                throw new Exception("Số tháng đăng ký phải từ 1 đến 120.");
 
             var tenant = await _context.Tenants
                 .Include(t => t.Subscriptions.Where(s => s.Status == "Active"))
@@ -97,11 +97,17 @@ public interface ISubscriptionChangeService
             }
 
             // Kiểm tra yêu cầu đổi gói đang chờ
-            var pendingRequest = await _context.PackageChangeRequests
-                .AnyAsync(r => r.TenantId == tenantId && r.Status == "Pending");
+            var hasOpenRequest = await _context.PackageChangeRequests
+                .AnyAsync(r => r.TenantId == tenantId && (r.Status == "Pending" || r.Status == "Approved"));
 
-            if (pendingRequest)
-                throw new Exception("Đã có yêu cầu đổi gói đang chờ xử lý.");
+            if (hasOpenRequest)
+                throw new Exception("Đã có yêu cầu đổi/gói gia hạn chưa xử lý xong.");
+
+            var hasUnresolvedInvoice = await _context.Invoices
+                .AnyAsync(i => i.TenantId == tenantId && (i.Status == "Pending" || i.Status == "AwaitingConfirmation"));
+
+            if (hasUnresolvedInvoice)
+                throw new Exception("Đã có hóa đơn đổi/gói gia hạn chưa thanh toán.");
 
             var request = new PackageChangeRequest
             {
@@ -180,19 +186,19 @@ if (request == null)
 
         private void CreateCenterReviewNotification(PackageChangeRequest request, bool approved, string reviewedBy)
         {
-            var reason = string.IsNullOrWhiteSpace(request.ReviewNote) ? "Khong co ly do." : request.ReviewNote.Trim();
+            var reason = string.IsNullOrWhiteSpace(request.ReviewNote) ? "Không có lý do." : request.ReviewNote.Trim();
             if (reason.Length > 700)
             {
                 reason = reason[..700];
             }
 
             var title = approved
-                ? "Yeu cau doi goi da duoc duyet"
-                : "Yeu cau doi goi da bi tu choi";
+                ? "Yêu cầu đổi gói đã được duyệt"
+                : "Yêu cầu đổi gói đã bị từ chối";
 
             var message = approved
-                ? $"Yeu cau doi sang goi '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' da duoc duyet boi {reviewedBy}. He thong se tao hoa don."
-                : $"Yeu cau doi sang goi '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' da bi tu choi boi {reviewedBy}. Ly do: {reason}";
+                ? $"Yêu cầu đổi sang gói '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' đã được duyệt bởi {reviewedBy}. Hệ thống sẽ tạo hóa đơn."
+                : $"Yêu cầu đổi sang gói '{request.RequestedPlan?.PlanName ?? request.RequestedPlanId}' đã bị từ chối bởi {reviewedBy}. Lý do: {reason}";
 
             var now = DateTime.UtcNow;
             _context.PaymentNotifications.Add(new PaymentNotification
@@ -274,7 +280,7 @@ if (request == null)
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy,
                 PaidAt = pricing.AmountToCharge <= 0 ? now : null,
-                PaymentNote = $"Goi: {request.RequestedPlan.PlanName} | {request.RequestedMonths} thang | Gia goi: {pricing.TotalAmount:N0} VND | {BuildPricingNote(pricing)}"
+                PaymentNote = $"Gói: {request.RequestedPlan.PlanName} | {request.RequestedMonths} tháng | Giá gói: {pricing.TotalAmount:N0} VND | {BuildPricingNote(pricing)}"
             };
 
             _context.Invoices.Add(invoice);
@@ -475,7 +481,7 @@ if (invoice == null)
                     TransactionType = "SubscriptionInvoice",
                     ReferenceId = invoice.InvoiceId,
                     PaymentMethod = paymentMethod,
-                    Description = $"Thanh toan hoa don {invoice.InvoiceNumber}"
+                    Description = $"Thanh toán hóa đơn {invoice.InvoiceNumber}"
                 };
                 _context.PaymentRecords.Add(paymentRecord);
                 paymentRecordId = paymentRecord.PaymentId;
@@ -492,7 +498,7 @@ if (invoice == null)
             var normalizedMethod = paymentMethod?.Trim();
             if (!string.Equals(normalizedMethod, "Cash", StringComparison.OrdinalIgnoreCase))
             {
-                throw new Exception("Phuong thuc thanh toan khong hop le. Chi ho tro thanh toan Tien mat.");
+                throw new Exception("Phương thức thanh toán không hợp lệ. Chỉ hỗ trợ thanh toán Tiền mặt.");
             }
 
             var invoice = await _context.Invoices
@@ -539,7 +545,7 @@ if (invoice == null)
             if (string.Equals(paymentMethod, "VNPay", StringComparison.OrdinalIgnoreCase)) return;
             if (string.Equals(paymentMethod, "Credit", StringComparison.OrdinalIgnoreCase)) return;
 
-            throw new Exception("Phuong thuc thanh toan khong hop le.");
+            throw new Exception("Phương thức thanh toán không hợp lệ.");
         }
 
         private static void ValidateChangeRules(Subscription? currentSub, Plan requestedPlan)
@@ -553,7 +559,7 @@ if (invoice == null)
 
             var daysSinceStart = (DateTime.UtcNow - currentSub.StartDate).Days;
             if (daysSinceStart > GracePeriodDays)
-                throw new Exception("Chi duoc ha goi trong 7 ngay dau tien cua goi hien tai.");
+                throw new Exception("Chỉ được hạ gói trong 7 ngày đầu tiên của gói hiện tại.");
         }
 
         private static decimal CalculateDowngradeCredit(Subscription? currentSub, Plan requestedPlan)
@@ -647,7 +653,7 @@ if (invoice == null)
                     ReferenceType = "PackageChangePayment",
                     ReferenceId = request.RequestId,
                     BalanceAfter = tenant.CreditBalance,
-                    Note = "Nap credit khi thanh toan doi goi bang tien mat/VNPay"
+                    Note = "Nạp credit khi thanh toán đổi gói bằng tiền mặt/VNPay"
                 });
             }
 
@@ -720,7 +726,7 @@ if (invoice == null)
                     ?? tenant.Email;
                 if (string.IsNullOrWhiteSpace(recipientEmail)) return;
 
-                var tenantName = tenant.TenantName ?? "Center";
+                var tenantName = tenant.TenantName ?? "Trung tâm";
                 var meta = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
                 var xml = _eInvoiceSandboxService.BuildXml(invoice, tenantName, meta);
                 var html = _eInvoiceSandboxService.BuildHtmlRepresentation(invoice, tenantName, meta);
@@ -734,8 +740,8 @@ if (invoice == null)
 
                 await _mailService.SendEmailWithAttachmentsAsync(
                     recipientEmail,
-                    "Xac nhan thanh toan hoa don doi goi - Kem hoa don dien tu (Sandbox)",
-                    $"<p>Hoa don doi goi da duoc thanh toan thanh cong.</p><p>Ma hoa don: <strong>{invoice.InvoiceNumber}</strong></p>",
+                    "Xác nhận thanh toán hóa đơn đổi gói - Kèm hóa đơn điện tử (Sandbox)",
+                    $"<p>Hóa đơn đổi gói đã được thanh toán thành công.</p><p>Mã hóa đơn: <strong>{invoice.InvoiceNumber}</strong></p>",
                     new[]
                     {
                         ($"{meta.InvoiceNo}.xml", "application/xml", System.Text.Encoding.UTF8.GetBytes(xml)),
@@ -799,37 +805,37 @@ if (invoice == null)
                     return;
                 }
 
-                var tenantName = request.Tenant?.TenantName ?? "Center";
+                var tenantName = request.Tenant?.TenantName ?? "Trung tâm";
                 var planName = request.RequestedPlan?.PlanName ?? request.RequestedPlanId;
                 var reviewedAt = request.ReviewedAt ?? DateTime.UtcNow;
                 var subject = approved
-                    ? "Yeu cau doi goi da duoc duyet"
-                    : "Yeu cau doi goi da bi tu choi";
+                    ? "Yêu cầu đổi gói đã được duyệt"
+                    : "Yêu cầu đổi gói đã bị từ chối";
                 var safeReviewedBy = System.Net.WebUtility.HtmlEncode(reviewedBy);
                 var safeTenantName = System.Net.WebUtility.HtmlEncode(tenantName);
                 var safePlanName = System.Net.WebUtility.HtmlEncode(planName);
                 var safeReason = string.IsNullOrWhiteSpace(request.ReviewNote)
-                    ? "Khong co"
+                    ? "Không có"
                     : System.Net.WebUtility.HtmlEncode(request.ReviewNote.Trim());
 
                 var body = approved
                     ? $@"
                         <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;'>
-                            <p>Xin chao <strong>{safeTenantName}</strong>,</p>
-                            <p>Yeu cau doi goi sang <strong>{safePlanName}</strong> cua ban da duoc duyet.</p>
-                            <p>Thoi gian duyet: <strong>{reviewedAt:dd/MM/yyyy HH:mm}</strong></p>
-                            <p>Nguoi duyet: <strong>{safeReviewedBy}</strong></p>
-                            <p>Hoa don se duoc tao tu dong de trung tam thuc hien thanh toan.</p>
-                            <p>Tran trong,<br/>He thong Educen</p>
+                            <p>Xin chào <strong>{safeTenantName}</strong>,</p>
+                            <p>Yêu cầu đổi gói sang <strong>{safePlanName}</strong> của bạn đã được duyệt.</p>
+                            <p>Thời gian duyệt: <strong>{reviewedAt:dd/MM/yyyy HH:mm}</strong></p>
+                            <p>Người duyệt: <strong>{safeReviewedBy}</strong></p>
+                            <p>Hóa đơn sẽ được tạo tự động để trung tâm thực hiện thanh toán.</p>
+                            <p>Trân trọng,<br/>Hệ thống Educen</p>
                         </div>"
                     : $@"
                         <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;'>
-                            <p>Xin chao <strong>{safeTenantName}</strong>,</p>
-                            <p>Yeu cau doi goi sang <strong>{safePlanName}</strong> cua ban da bi tu choi.</p>
-                            <p>Thoi gian xu ly: <strong>{reviewedAt:dd/MM/yyyy HH:mm}</strong></p>
-                            <p>Nguoi xu ly: <strong>{safeReviewedBy}</strong></p>
-                            <p>Ly do: <strong>{safeReason}</strong></p>
-                            <p>Tran trong,<br/>He thong Educen</p>
+                            <p>Xin chào <strong>{safeTenantName}</strong>,</p>
+                            <p>Yêu cầu đổi gói sang <strong>{safePlanName}</strong> của bạn đã bị từ chối.</p>
+                            <p>Thời gian xử lý: <strong>{reviewedAt:dd/MM/yyyy HH:mm}</strong></p>
+                            <p>Người xử lý: <strong>{safeReviewedBy}</strong></p>
+                            <p>Lý do: <strong>{safeReason}</strong></p>
+                            <p>Trân trọng,<br/>Hệ thống Educen</p>
                         </div>";
 
                 await _mailService.SendEmailAsync(recipientEmail, subject, body);
@@ -845,6 +851,7 @@ if (invoice == null)
         }
     }
 }
+
 
 
 

@@ -156,7 +156,7 @@ const ClassesManagement = () => {
         }
     };
 
-    const handleSubmitClass = async (classData) => {
+    const handleSaveClass = async (classData) => {
         try {
             const subject = subjects.find(s => s.subjectName === classData.subject);
             if (!subject) {
@@ -202,6 +202,7 @@ const ClassesManagement = () => {
             setEditingClass(null);
         } catch (error) {
             showValidationError(error, 'Có lỗi xảy ra khi lưu lớp học');
+            throw error; // Re-throw to prevent modal from closing
         }
     };
 
@@ -298,7 +299,7 @@ const ClassesManagement = () => {
             <CreateClassModal
                 isOpen={isModalOpen}
                 onClose={() => { setIsModalOpen(false); setEditingClass(null); }}
-                onSubmit={handleSubmitClass}
+                onSubmit={handleSaveClass}
                 editingClass={editingClass}
                 existingClasses={classes}
                 subjects={subjects}
