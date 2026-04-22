@@ -14,7 +14,7 @@ namespace EducenAPI.DTOs.TenantRegistrations
         [RegularExpression(@"^(?!\s*$).+", ErrorMessage = "Contact person cannot be only whitespace")]
         public string? ContactPerson { get; set; }
 
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [EmailAddress(ErrorMessage = "Định dạng email không hợp lệ")]
         [MaxLength(150)]
         public string? Email { get; set; }
 

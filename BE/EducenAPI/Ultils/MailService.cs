@@ -1,4 +1,5 @@
 using EducenAPI.DTOs;
+using EducenAPI.DTOs.Parents;
 using EducenAPI.Services;
 using System.IO;
 using System.Net;
@@ -233,6 +234,89 @@ namespace EducenAPI.Ultils
                     <p>Đội ngũ Educen.</p>
                 </div>
             ";
+            await SendEmailAsync(toEmail, subject, body);
+        }
+
+        public async Task SendMonthlyPerformanceReport(string toEmail, string parentName, string childName, int month, int year, ChildPerformanceReportDto report)
+        {
+            var subject = $"[Bao cao hoc tap] Thang {month}/{year} - Hoc sinh {childName}";
+            
+            var classRows = "";
+            foreach (var cls in report.ClassSummaries)
+            {
+                var rankColor = cls.Rank switch {
+                    "Xuất sắc" => "#15803d",
+                    "Giỏi" => "#16a34a",
+                    "Khá" => "#a16207",
+                    "Trung bình" => "#c2410c",
+                    "Yếu" => "#dc2626",
+                    _ => "#64748b"
+                };
+
+                classRows += $@"
+                    <tr>
+                        <td style='padding: 12px; border-bottom: 1px solid #edf2f7;'>
+                            <strong>{cls.ClassName}</strong><br/>
+                            <small style='color: #718096;'>{cls.SubjectName} • GV: {cls.TeacherName}</small>
+                        </td>
+                        <td style='padding: 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>{cls.AttendanceRate}%</td>
+                        <td style='padding: 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>{cls.AverageScore ?? 0}</td>
+                        <td style='padding: 12px; border-bottom: 1px solid #edf2f7; text-align: center;'>
+                            <span style='color: {rankColor}; font-weight: bold;'>{cls.Rank}</span>
+                        </td>
+                        <td style='padding: 12px; border-bottom: 1px solid #edf2f7; font-size: 0.85em;'>{cls.LatestFeedback ?? "—"}</td>
+                    </tr>";
+            }
+
+            var body = $@"
+                <div style='font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; color: #2d3748;'>
+                    <div style='background: #6366f1; padding: 24px; color: white; border-radius: 8px 8px 0 0;'>
+                        <h1 style='margin: 0; font-size: 20px;'>Bao cao hoc tap thang {month}/{year}</h1>
+                        <p style='margin: 8px 0 0; opacity: 0.9;'>Hoc sinh: {childName}</p>
+                    </div>
+                    
+                    <div style='padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;'>
+                        <p>Kinh gui phu huynh <strong>{parentName}</strong>,</p>
+                        <p>Trung tam gui den ban ket qua hoc tap cua con em trong thang {month}/{year} nhu sau:</p>
+                        
+                        <div style='display: flex; gap: 20px; margin: 24px 0; background: #f8fafc; padding: 16px; border-radius: 8px;'>
+                            <div style='flex: 1; text-align: center;'>
+                                <div style='font-size: 24px; font-weight: bold; color: #4f46e5;'>{report.OverallGPA}</div>
+                                <div style='font-size: 12px; color: #718096; text-transform: uppercase;'>GPA Tong</div>
+                            </div>
+                            <div style='flex: 1; text-align: center;'>
+                                <div style='font-size: 24px; font-weight: bold; color: #10b981;'>{report.OverallAttendanceRate}%</div>
+                                <div style='font-size: 12px; color: #718096; text-transform: uppercase;'>Chuyen can</div>
+                            </div>
+                            <div style='flex: 1; text-align: center;'>
+                                <div style='font-size: 24px; font-weight: bold; color: #4b5563;'>{report.TotalAssignmentsSubmitted}/{report.TotalAssignmentsAssigned}</div>
+                                <div style='font-size: 12px; color: #718096; text-transform: uppercase;'>Bai tap</div>
+                            </div>
+                        </div>
+
+                        <table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>
+                            <thead>
+                                <tr style='background: #f1f5f9;'>
+                                    <th style='padding: 12px; text-align: left; font-size: 13px;'>LOP HOC</th>
+                                    <th style='padding: 12px; text-align: center; font-size: 13px;'>DIEM DANH</th>
+                                    <th style='padding: 12px; text-align: center; font-size: 13px;'>DIEM TB</th>
+                                    <th style='padding: 12px; text-align: center; font-size: 13px;'>XEP LOAI</th>
+                                    <th style='padding: 12px; text-align: left; font-size: 13px;'>NHAN XET</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {classRows}
+                            </tbody>
+                        </table>
+
+                        <div style='margin-top: 32px; padding-top: 24px; border-top: 1px solid #edf2f7; color: #718096; font-size: 14px;'>
+                            <p>Ban co the dang nhap vao he thong Educen de xem chi tiet diem so tung bai tap va lich su diem danh.</p>
+                            <p>Tran trong,<br/>Doi ngu Educen.</p>
+                        </div>
+                    </div>
+                </div>
+            ";
+
             await SendEmailAsync(toEmail, subject, body);
         }
 

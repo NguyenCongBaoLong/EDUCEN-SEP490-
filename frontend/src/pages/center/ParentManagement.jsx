@@ -54,21 +54,29 @@ const ParentManagement = () => {
                 api.get('/admin/users')
             ]);
             
-            const parents = parentsRes.data.map(p => ({
-                id: p.userId.toString(),
-                username: p.username,
-                name: p.fullName || p.username,
-                email: p.email,
-                phone: p.phoneNumber || '',
-                address: p.address || '',
-                gender: 'male',
-                status: p.accountStatus === 'Active' ? 'active' : 'inactive',
-                accountSent: p.accountStatus === 'Active',
-                linkedStudentIds: p.studentIds?.map(id => id.toString()) || [],
-                linkedStudentNames: p.studentNames || [],
-                studentClassNames: p.studentClassNames || [],
-                childrenCount: p.childrenCount || 0
-            }));
+            const parents = parentsRes.data.map(p => {
+                const studentGradeNames = (p.studentIds || []).map(id => {
+                    const student = studentsRes.data.find(s => s.userId === id);
+                    return student ? (student.gradeName || student.grade || '') : '';
+                });
+
+                return {
+                    id: p.userId.toString(),
+                    username: p.username,
+                    name: p.fullName || p.username,
+                    email: p.email,
+                    phone: p.phoneNumber || '',
+                    address: p.address || '',
+                    gender: 'male',
+                    status: p.accountStatus === 'Active' ? 'active' : 'inactive',
+                    accountSent: p.accountStatus === 'Active',
+                    linkedStudentIds: p.studentIds?.map(id => id.toString()) || [],
+                    linkedStudentNames: p.studentNames || [],
+                    studentClassNames: p.studentClassNames || [],
+                    studentGradeNames: studentGradeNames,
+                    childrenCount: p.childrenCount || 0
+                };
+            });
 
             const students = studentsRes.data.map(s => ({
                 id: s.userId.toString(),

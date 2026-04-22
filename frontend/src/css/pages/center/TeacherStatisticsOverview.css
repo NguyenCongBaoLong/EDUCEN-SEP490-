@@ -186,11 +186,6 @@
     font-weight: 600;
 }
 
-.teacher-info-compact {
-    display: flex;
-    flex-direction: column;
-}
-
 .teacher-name {
     font-weight: 600;
     color: #1e293b;
@@ -198,9 +193,9 @@
     line-height: 1.2;
 }
 
-.teacher-email {
-    font-size: 0.75rem;
-    color: #94a3b8;
+.teacher-email-col {
+    font-size: 0.85rem;
+    color: #64748b;
 }
 
 /* Role Badges matching StaffTable */

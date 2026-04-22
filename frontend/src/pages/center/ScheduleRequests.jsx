@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertCircle, FileText, Calendar, MapPin, Puzzle, Check } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import notificationService from '../../services/notificationService';
 import api from '../../services/api';
@@ -259,8 +259,25 @@ const ScheduleRequests = () => {
 
     const formatDate = (iso) => {
         if (!iso) return '';
-        const d = new Date(iso);
-        return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        
+        // Handle potential missing 'Z' suffix for UTC dates from backend
+        let dateStr = iso;
+        if (typeof iso === 'string' && !iso.includes('Z') && !iso.includes('+') && iso.includes('T')) {
+            dateStr = iso + 'Z';
+        }
+        
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return iso; // Fallback if parsing fails
+
+        // Use a consistent format: HH:mm DD/MM/YYYY
+        const pad = (num) => String(num).padStart(2, '0');
+        const hours = pad(d.getHours());
+        const minutes = pad(d.getMinutes());
+        const day = pad(d.getDate());
+        const month = pad(d.getMonth() + 1);
+        const year = d.getFullYear();
+
+        return `${hours}:${minutes} ${day}/${month}/${year}`;
     };
 
     const parseSlotInfo = (content) => {
@@ -342,13 +359,13 @@ const ScheduleRequests = () => {
             <Sidebar />
             <main className="dashboard-main">
                 <div className="schedule-mgmt-container">
-                    <header className="mgmt-header">
-                        <div className="mgmt-title-area">
-                            <h1 className="mgmt-page-title">Yêu Cầu Đổi Lịch</h1>
-                            <p className="mgmt-subtitle">
+                    <header className="student-header">
+                        <div className="header-left">
+                            <h1>Yêu Cầu Đổi Lịch</h1>
+                            <p>
                                 Phê duyệt các yêu cầu đổi lịch dạy từ giáo viên và trợ giảng.
                                 {pendingCount > 0 && (
-                                    <span style={{ marginLeft: '1rem', color: 'var(--sr-warning)', fontWeight: 700 }}>
+                                    <span style={{ marginLeft: '1rem', color: '#ef4444', fontWeight: 700 }}>
                                         ({pendingCount} yêu cầu mới)
                                     </span>
                                 )}
@@ -372,7 +389,7 @@ const ScheduleRequests = () => {
                             <div className="adm-schedule-grid">
                                 <section className="adm-schedule-list-panel">
                                     <div className="adm-schedule-list-head">
-                                        <span>Danh sách yêu cầu</span>
+                                        <span>DANH SÁCH CHỜ DUYỆT ({pendingCount})</span>
                                     </div>
                                     <div className="adm-schedule-list">
                                         {/* Pending Section */}
@@ -387,8 +404,9 @@ const ScheduleRequests = () => {
                                                     <span className="adm-schedule-pending">Mới</span>
                                                 </div>
                                                 <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                <div className="adm-schedule-title-preview">Tiêu đề: {req?.title || '[SCHEDULE_CHANGE]'}</div>
                                                 <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
-                                                    {formatDate(req?.createdAt)}
+                                                    Ngày gửi: {formatDate(req?.createdAt)}
                                                 </div>
                                             </div>
                                         ))}
@@ -396,7 +414,7 @@ const ScheduleRequests = () => {
                                         {/* Processed Section Header */}
                                         {requests.some(r => r.adminResponse) && (
                                             <div className="adm-schedule-list-head" style={{ marginTop: '1rem', borderTop: '1px solid var(--sr-border)' }}>
-                                                <span>Đã xử lý</span>
+                                                <span>ĐÃ XỬ LÝ</span>
                                             </div>
                                         )}
 
@@ -413,7 +431,7 @@ const ScheduleRequests = () => {
                                                 </div>
                                                 <div className="adm-schedule-role">{req?.senderRoleName}</div>
                                                 <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
-                                                    {formatDate(req?.createdAt)}
+                                                    Ngày gửi: {formatDate(req?.createdAt)}
                                                 </div>
                                             </div>
                                         ))}
@@ -424,48 +442,113 @@ const ScheduleRequests = () => {
                                     {selectedRequest ? (
                                         <>
                                             <div className="compact-detail-content animate-fade-in">
-                                                <div className="detail-header">
-                                                    <h3 className="detail-title">
-                                                        <AlertCircle size={24} color="var(--sr-primary)" />
-                                                        Chi Tiết Yêu Cầu
-                                                    </h3>
-                                                    <div className="adm-schedule-meta" style={{ fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>ID: #{selectedRequest.id}</div>
+                                                <div className="detail-header-new">
+                                                    <div className="detail-title-new">
+                                                        <AlertCircle size={20} color="#3b82f6" />
+                                                        <span>Chi Tiết Yêu Cầu</span>
+                                                    </div>
                                                 </div>
 
-                                                <div className="detail-section">
-                                                    <div className="info-grid">
-                                                        <div className="info-card">
-                                                            <div className="info-label">Người gửi</div>
-                                                            <div className="info-value">{selectedRequest.senderName}</div>
+                                                <div className="sender-info-grid">
+                                                    <div className="info-item">
+                                                        <div className="info-label-new">NGƯỜI GỬI</div>
+                                                        <div className="info-value-new">{selectedRequest.senderName}</div>
+                                                    </div>
+                                                    <div className="info-item">
+                                                        <div className="info-label-new">VAI TRÒ</div>
+                                                        <div className="info-value-new">{selectedRequest.senderRoleName}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="detail-row-new">
+                                                    <div className="info-label-new">TIÊU ĐỀ</div>
+                                                    <div className="info-value-new title-bold">{selectedRequest.title || '[SCHEDULE_CHANGE] [Đổi lịch dạy]'}</div>
+                                                </div>
+
+                                                {/* Class Info Box */}
+                                                <div className="info-box-card">
+                                                    <div className="info-box-header">
+                                                        <FileText size={18} color="#f59e0b" />
+                                                        <span>THÔNG TIN LỚP HỌC</span>
+                                                    </div>
+                                                    <div className="info-box-grid">
+                                                        <div className="grid-item">
+                                                            <span className="item-label">Tên lớp:</span>
+                                                            <span className="item-value">{selectedClassData?.className || selectedClassData?.Name || 'N/A'}</span>
                                                         </div>
-                                                        <div className="info-card">
-                                                            <div className="info-label">Vai trò</div>
-                                                            <div className="info-value">{selectedRequest.senderRoleName}</div>
+                                                        <div className="grid-item">
+                                                            <span className="item-label">Giáo viên:</span>
+                                                            <span className="item-value">{selectedClassData?.teacherName || selectedRequest.senderName}</span>
                                                         </div>
-                                                        <div className="info-card">
-                                                            <div className="info-label">Lớp học</div>
-                                                            <div className="info-value">{selectedClassData?.className || selectedClassData?.Name || 'N/A'}</div>
-                                                        </div>
-                                                        <div className="info-card">
-                                                            <div className="info-label">Môn học</div>
-                                                            <div className="info-value">{selectedClassData?.subjectName || selectedClassData?.SubjectName || 'N/A'}</div>
+                                                        <div className="grid-item">
+                                                            <span className="item-label">Môn học:</span>
+                                                            <span className="item-value">{selectedClassData?.subjectName || 'N/A'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
+                                                {/* Schedule Info Box */}
+                                                <div className="info-box-card">
+                                                    <div className="info-box-header">
+                                                        <Calendar size={18} color="#ef4444" />
+                                                        <span>THÔNG TIN ĐỔI LỊCH</span>
+                                                    </div>
+                                                    <div className="schedule-box-content">
+                                                        {(() => {
+                                                            const slotInfo = parseSlotInfo(selectedRequest?.content || selectedRequest?.Content || '');
+                                                            let displayCurrentSlot = slotInfo.currentSlot;
+                                                            let displayCurrentRoom = null;
+                                                            
+                                                            if (!displayCurrentSlot && selectedClassData?.scheduleSlots?.[0]) {
+                                                                const firstSlot = selectedClassData.scheduleSlots[0];
+                                                                displayCurrentSlot = {
+                                                                    dayLabel: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'][firstSlot.dayOfWeek ?? firstSlot.DayOfWeek] || 'N/A',
+                                                                    time: `${firstSlot.startTime ?? firstSlot.StartTime} - ${firstSlot.endTime ?? firstSlot.EndTime}`
+                                                                };
+                                                                displayCurrentRoom = firstSlot.roomName || firstSlot.RoomName || `Phòng ${firstSlot.roomId}`;
+                                                            }
+
+                                                            return (
+                                                                <div className="schedule-comparison-new">
+                                                                    <div className="schedule-row current">
+                                                                         <div className="icon-wrap"><MapPin size={14} /></div>
+                                                                         <div className="slot-info">
+                                                                             <span className="slot-label">Slot hiện tại:</span>
+                                                                             <span className="slot-value">{displayCurrentSlot?.dayLabel} ({displayCurrentSlot?.time})</span>
+                                                                         </div>
+                                                                         <div className="room-info">
+                                                                             📍 Phòng: {displayCurrentRoom || 'Chưa rõ'}
+                                                                         </div>
+                                                                     </div>
+                                                                     <div className="schedule-row new">
+                                                                         <div className="icon-wrap success"><Puzzle size={14} /></div>
+                                                                         <div className="slot-info">
+                                                                             <span className="slot-label success">Slot mới:</span>
+                                                                             <span className="slot-value success">{slotInfo.newSlot?.dayLabel} ({slotInfo.newSlot?.time})</span>
+                                                                         </div>
+                                                                         <div className="room-info success">
+                                                                             🧩 Phòng: {slotInfo.newRoom || 'Chưa rõ'}
+                                                                         </div>
+                                                                     </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+
                                                 {validationResults?.hasConflict && (
-                                                    <div className="conflict-alert">
-                                                        <div style={{ fontWeight: 800, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <div className="conflict-alert-new">
+                                                        <div className="conflict-title">
                                                             <XCircle size={18} />
                                                             CẢNH BÁO XUNG ĐỘT LỊCH
                                                         </div>
                                                         {validationResults.teacherConflict && (
-                                                            <div className="conflict-item">
+                                                            <div className="conflict-detail">
                                                                 <strong>Giáo viên:</strong> Trùng {validationResults.teacherConflict.className} ({validationResults.teacherConflict.time})
                                                             </div>
                                                         )}
                                                         {validationResults.roomConflict && (
-                                                            <div className="conflict-item">
+                                                            <div className="conflict-detail">
                                                                 <strong>Phòng:</strong> Trùng {validationResults.roomConflict.className} ({validationResults.roomConflict.time})
                                                             </div>
                                                         )}
@@ -593,39 +676,44 @@ const ScheduleRequests = () => {
                                                     </div>
                                                 </div>
 
+                                                <div className="date-sent-new">
+                                                    <span className="label">NGÀY GỬI:</span>
+                                                    <span className="value">{formatDate(selectedRequest?.createdAt)}</span>
+                                                </div>
+
                                                 {selectedRequest?.adminResponse && (
-                                                    <div className="detail-section">
-                                                        <div className="info-label">Phản hồi từ Admin</div>
-                                                        <div className="adm-schedule-response compact" style={{ marginTop: '0.5rem' }}>
+                                                    <div className="reason-section-new">
+                                                        <div className="info-label-new">PHẢN HỒI TỪ ADMIN</div>
+                                                        <div className="reason-box-new response">
                                                             {selectedRequest?.adminResponse}
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            <div className="adm-schedule-actions compact">
-                                                <button
-                                                    onClick={() => handleReject(selectedRequest.id)}
-                                                    disabled={processing || selectedRequest?.adminResponse}
-                                                    className="sr-action-btn reject"
-                                                >
-                                                    <XCircle size={20} />
-                                                    Từ chối
-                                                </button>
+                                            <div className="detail-actions-new">
                                                 <button
                                                     onClick={() => handleApprove(selectedRequest.id)}
                                                     disabled={processing || validationResults?.hasConflict || selectedRequest?.adminResponse}
-                                                    className="sr-action-btn approve"
+                                                    className="btn-approve-new"
                                                 >
-                                                    <CheckCircle size={20} />
-                                                    Duyệt yêu cầu
+                                                    <CheckCircle size={18} />
+                                                    Duyệt
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(selectedRequest.id)}
+                                                    disabled={processing || selectedRequest?.adminResponse}
+                                                    className="btn-reject-new"
+                                                >
+                                                    <XCircle size={18} />
+                                                    Từ chối
                                                 </button>
                                             </div>
                                         </>
                                     ) : (
                                         <div className="adm-schedule-empty-selection">
-                                            <div style={{ background: 'var(--sr-primary-light)', padding: '2rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
-                                                <Clock size={48} color="var(--sr-primary)" />
+                                            <div style={{ background: '#eff6ff', padding: '2rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
+                                                <Clock size={48} color="#3b82f6" />
                                             </div>
                                             <h3 style={{ fontWeight: 700 }}>Chưa chọn yêu cầu</h3>
                                             <p>Vui lòng chọn một yêu cầu từ danh sách bên trái để xem chi tiết và xử lý.</p>
@@ -642,3 +730,4 @@ const ScheduleRequests = () => {
 };
 
 export default ScheduleRequests;
+
