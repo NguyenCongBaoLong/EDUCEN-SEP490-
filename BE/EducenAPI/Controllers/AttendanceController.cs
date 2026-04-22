@@ -312,6 +312,22 @@ namespace EducenAPI.Controllers
             }
         }
 
+        // GET: api/attendance/modification-requests - Admin xem toàn bộ yêu cầu
+        [HttpGet("modification-requests")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllModificationRequests([FromQuery] int? classId = null)
+        {
+            try
+            {
+                var requests = await _service.GetAllModificationRequestsAsync(classId);
+                return Ok(requests);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // GET: api/attendance/modification-requests/my - Teacher xem yêu cầu của mình
         [HttpGet("modification-requests/my")]
         [Authorize(Roles = "Admin,Teacher,Assistant")]

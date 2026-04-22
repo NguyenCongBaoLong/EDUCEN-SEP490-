@@ -506,6 +506,47 @@ namespace EducenAPI.Services
             }).ToList();
         }
 
+        public async Task<List<AttendanceModificationRequestDto>> GetAllModificationRequestsAsync(int? classId = null)
+        {
+            var query = _context.AttendanceModificationRequests
+                .Include(r => r.Student).ThenInclude(s => s.StudentNavigation)
+                .Include(r => r.Session).ThenInclude(s => s.Schedule).ThenInclude(sc => sc.Class)
+                .Include(r => r.RequestedByUser)
+                .Include(r => r.ReviewedByUser)
+                .AsNoTracking();
+
+            if (classId.HasValue)
+            {
+                query = query.Where(r => r.Session != null && r.Session.Schedule != null && r.Session.Schedule.ClassId == classId.Value);
+            }
+
+            var requests = await query
+                .OrderByDescending(r => r.RequestedAt)
+                .ToListAsync();
+
+            return requests.Select(r => new AttendanceModificationRequestDto
+            {
+                RequestId = r.RequestId,
+                SessionId = r.SessionId,
+                ClassId = r.Session?.Schedule?.ClassId ?? r.Session?.ClassId,
+                StudentId = r.StudentId,
+                StudentName = r.Student?.StudentNavigation?.FullName,
+                ClassName = r.Session?.Schedule?.Class?.ClassName ?? r.Session?.Class?.ClassName,
+                SessionDate = r.Session != null ? r.Session.SessionDate.ToString("dd/MM/yyyy") : null,
+                Status = r.Status,
+                CurrentStatus = r.CurrentStatus,
+                RequestedStatus = r.RequestedStatus,
+                Reason = r.Reason,
+                RequestedByUserId = r.RequestedByUserId,
+                RequestedByUserName = r.RequestedByUser?.FullName,
+                ReviewedByUserId = r.ReviewedByUserId,
+                ReviewedByUserName = r.ReviewedByUser?.FullName,
+                RequestedAt = r.RequestedAt.ToString("dd/MM/yyyy HH:mm"),
+                ReviewedAt = r.ReviewedAt?.ToString("dd/MM/yyyy HH:mm"),
+                ReviewNote = r.ReviewNote
+            }).ToList();
+        }
+
         public async Task<bool> ApproveModificationRequestAsync(int requestId, int reviewedByUserId, string newStatus)
         {
             var request = await _context.AttendanceModificationRequests
@@ -577,6 +618,27 @@ namespace EducenAPI.Services
 
         private async Task SendAttendanceModificationReviewEmailAsync(AttendanceModificationRequest request, bool approved)
         {
+            var requestContext = await _context.AttendanceModificationRequests
+                .AsNoTracking()
+                .Where(r => r.RequestId == request.RequestId)
+                .Select(r => new
+                {
+                    r.RequestId,
+                    r.SessionId,
+                    r.StudentId,
+                    r.CurrentStatus,
+                    r.RequestedStatus,
+                    r.Reason,
+                    StudentName = r.Student != null && r.Student.StudentNavigation != null ? r.Student.StudentNavigation.FullName : null,
+                    SessionDate = r.Session != null ? r.Session.SessionDate : (DateTime?)null,
+                    ClassName = r.Session != null
+                        ? (r.Session.Schedule != null && r.Session.Schedule.Class != null
+                            ? r.Session.Schedule.Class.ClassName
+                            : (r.Session.Class != null ? r.Session.Class.ClassName : null))
+                        : null
+                })
+                .FirstOrDefaultAsync();
+
             var toEmail = await _context.Users
                 .Where(u => u.UserId == request.RequestedByUserId)
                 .Select(u => u.Email)
@@ -595,11 +657,19 @@ namespace EducenAPI.Services
             var safeReviewNote = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(request.ReviewNote)
                 ? "Không có ghi chú bổ sung."
                 : request.ReviewNote);
-            var safeCurrentStatus = WebUtility.HtmlEncode(request.CurrentStatus ?? "N/A");
-            var safeRequestedStatus = WebUtility.HtmlEncode(request.RequestedStatus ?? "N/A");
-            var safeReason = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(request.Reason)
+            var safeCurrentStatus = WebUtility.HtmlEncode(ToDisplayStatus(requestContext?.CurrentStatus ?? request.CurrentStatus));
+            var safeRequestedStatus = WebUtility.HtmlEncode(ToDisplayStatus(requestContext?.RequestedStatus ?? request.RequestedStatus));
+            var safeReason = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(requestContext?.Reason ?? request.Reason)
                 ? "Không có lý do bổ sung."
-                : request.Reason);
+                : (requestContext?.Reason ?? request.Reason)!);
+            var safeSessionDisplay = WebUtility.HtmlEncode(requestContext?.SessionDate.HasValue == true
+                ? $"{requestContext.SessionDate.Value:dd/MM/yyyy}" +
+                  (!string.IsNullOrWhiteSpace(requestContext.ClassName) ? $" - Lớp {requestContext.ClassName}" : string.Empty) +
+                  $" (Session #{requestContext.SessionId})"
+                : $"Session #{request.SessionId}");
+            var safeStudentDisplay = WebUtility.HtmlEncode(!string.IsNullOrWhiteSpace(requestContext?.StudentName)
+                ? $"{requestContext.StudentName} (#{requestContext.StudentId})"
+                : $"Học sinh #{request.StudentId}");
             var actionHint = approved
                 ? "Điểm danh đã được cập nhật theo kết quả phê duyệt."
                 : "Vui lòng điều chỉnh thông tin và gửi lại yêu cầu nếu cần.";
@@ -608,8 +678,8 @@ namespace EducenAPI.Services
                     <p>Xin chào,</p>
                     <p>Yêu cầu sửa điểm danh của bạn đã được cập nhật kết quả.</p>
                     <p><strong>Mã yêu cầu:</strong> #{request.RequestId}</p>
-                    <p><strong>Session:</strong> #{request.SessionId}</p>
-                    <p><strong>Học sinh:</strong> #{request.StudentId}</p>
+                    <p><strong>Session:</strong> {safeSessionDisplay}</p>
+                    <p><strong>Học sinh:</strong> {safeStudentDisplay}</p>
                     <p><strong>Trạng thái hiện tại:</strong> {safeCurrentStatus}</p>
                     <p><strong>Trạng thái đề nghị:</strong> {safeRequestedStatus}</p>
                     <p><strong>Lý do gửi yêu cầu:</strong> {safeReason}</p>
@@ -627,6 +697,19 @@ namespace EducenAPI.Services
             {
                 _logger.LogWarning(ex, "Failed to send attendance modification review email. RequestId={RequestId}, Approved={Approved}", request.RequestId, approved);
             }
+        }
+
+        private static string ToDisplayStatus(string? rawStatus)
+        {
+            var normalized = (rawStatus ?? string.Empty).Trim().ToLowerInvariant();
+            return normalized switch
+            {
+                "present" => "Present",
+                "absent" => "Absent",
+                "notyet" => "Not yet",
+                "" => "N/A",
+                _ => char.ToUpper(normalized[0]) + normalized[1..]
+            };
         }
 
         public async Task<List<AttendanceModificationRequestDto>> GetMyModificationRequestsAsync(int userId)

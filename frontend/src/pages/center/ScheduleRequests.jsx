@@ -335,7 +335,9 @@ const ScheduleRequests = () => {
         return dayMap[normalized] ?? 1;
     };
 
-    const pendingCount = requests.filter(r => !r.adminResponse).length;
+    const pendingRequests = requests.filter(r => !r.adminResponse);
+    const processedRequests = requests.filter(r => r.adminResponse);
+    const pendingCount = pendingRequests.length;
 
     return (
         <div className="admin-dashboard">
@@ -374,49 +376,55 @@ const ScheduleRequests = () => {
                                     <div className="adm-schedule-list-head">
                                         <span>Danh sách yêu cầu</span>
                                     </div>
-                                    <div className="adm-schedule-list">
-                                        {/* Pending Section */}
-                                        {requests.filter(r => !r.adminResponse).map((req) => (
-                                            <div
-                                                key={req.id}
-                                                onClick={() => setSelectedRequest(req)}
-                                                className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
-                                            >
-                                                <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                                                    <div className="adm-schedule-sender">{req?.senderName}</div>
-                                                    <span className="adm-schedule-pending">Mới</span>
-                                                </div>
-                                                <div className="adm-schedule-role">{req?.senderRoleName}</div>
-                                                <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
-                                                    {formatDate(req?.createdAt)}
-                                                </div>
+                                    <div className="adm-schedule-sections">
+                                        <div className="adm-schedule-section">
+                                            <div className="adm-schedule-section-head">
+                                                <span>Yêu cầu mới</span>
                                             </div>
-                                        ))}
+                                            <div className="adm-schedule-list">
+                                                {pendingRequests.map((req) => (
+                                                    <div
+                                                        key={req.id}
+                                                        onClick={() => setSelectedRequest(req)}
+                                                        className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
+                                                    >
+                                                        <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                                                            <div className="adm-schedule-sender">{req?.senderName}</div>
+                                                            <span className="adm-schedule-pending">Mới</span>
+                                                        </div>
+                                                        <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
+                                                            {formatDate(req?.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                        {/* Processed Section Header */}
-                                        {requests.some(r => r.adminResponse) && (
-                                            <div className="adm-schedule-list-head" style={{ marginTop: '1rem', borderTop: '1px solid var(--sr-border)' }}>
+                                        <div className="adm-schedule-section">
+                                            <div className="adm-schedule-section-head">
                                                 <span>Đã xử lý</span>
                                             </div>
-                                        )}
-
-                                        {requests.filter(r => r.adminResponse).map((req) => (
-                                            <div
-                                                key={req.id}
-                                                onClick={() => setSelectedRequest(req)}
-                                                className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
-                                                style={{ opacity: 0.7 }}
-                                            >
-                                                <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                                                    <div className="adm-schedule-sender">{req?.senderName}</div>
-                                                    <span className="adm-schedule-processed">Đã xử lý</span>
-                                                </div>
-                                                <div className="adm-schedule-role">{req?.senderRoleName}</div>
-                                                <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
-                                                    {formatDate(req?.createdAt)}
-                                                </div>
+                                            <div className="adm-schedule-list">
+                                                {processedRequests.map((req) => (
+                                                    <div
+                                                        key={req.id}
+                                                        onClick={() => setSelectedRequest(req)}
+                                                        className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
+                                                        style={{ opacity: 0.7 }}
+                                                    >
+                                                        <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                                                            <div className="adm-schedule-sender">{req?.senderName}</div>
+                                                            <span className="adm-schedule-processed">Đã xử lý</span>
+                                                        </div>
+                                                        <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
+                                                            {formatDate(req?.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </div>
                                     </div>
                                 </section>
 
@@ -605,20 +613,20 @@ const ScheduleRequests = () => {
 
                                             <div className="adm-schedule-actions compact">
                                                 <button
-                                                    onClick={() => handleReject(selectedRequest.id)}
-                                                    disabled={processing || selectedRequest?.adminResponse}
-                                                    className="sr-action-btn reject"
-                                                >
-                                                    <XCircle size={20} />
-                                                    Từ chối
-                                                </button>
-                                                <button
                                                     onClick={() => handleApprove(selectedRequest.id)}
                                                     disabled={processing || validationResults?.hasConflict || selectedRequest?.adminResponse}
                                                     className="sr-action-btn approve"
                                                 >
                                                     <CheckCircle size={20} />
                                                     Duyệt yêu cầu
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReject(selectedRequest.id)}
+                                                    disabled={processing || selectedRequest?.adminResponse}
+                                                    className="sr-action-btn reject"
+                                                >
+                                                    <XCircle size={20} />
+                                                    Từ chối
                                                 </button>
                                             </div>
                                         </>

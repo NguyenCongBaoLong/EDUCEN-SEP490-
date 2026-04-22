@@ -20,6 +20,7 @@ namespace EducenAPI.Services.Interface
         // Modification requests
         Task<AttendanceModificationRequest> CreateModificationRequestAsync(int sessionId, int studentId, string requestedStatus, string? reason, int requestedByUserId);
         Task<List<AttendanceModificationRequest>> CreateModificationRequestsAsync(int sessionId, List<AttendanceModificationStudentRequestDto> requests, int requestedByUserId);
+        Task<List<AttendanceModificationRequestDto>> GetAllModificationRequestsAsync(int? classId = null);
         Task<List<AttendanceModificationRequestDto>> GetPendingModificationRequestsAsync(int? classId = null);
         Task<bool> ApproveModificationRequestAsync(int requestId, int reviewedByUserId, string newStatus);
         Task<bool> RejectModificationRequestAsync(int requestId, int reviewedByUserId, string? reviewNote);
