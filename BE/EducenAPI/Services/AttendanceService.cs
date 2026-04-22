@@ -75,7 +75,7 @@ namespace EducenAPI.Services
                 .ToListAsync();
         }
 
-        public async Task<Attendance> CreateOrUpdateAttendanceAsync(int sessionId, int studentId, string status, int updatedByUserId)
+        public async Task<Attendance> CreateOrUpdateAttendanceAsync(int sessionId, int studentId, string status, int updatedByUserId, string? role = null)
         {
             ValidateStatus(status);
 
@@ -87,7 +87,7 @@ namespace EducenAPI.Services
 
             if (existing != null)
             {
-                ValidateAttendanceModification(existing);
+                ValidateAttendanceModification(existing, role);
 
                 existing.Status = status;
                 existing.RecordedAt = DateTime.UtcNow;
@@ -112,13 +112,13 @@ namespace EducenAPI.Services
                 .FirstAsync(a => a.SessionId == sessionId && a.StudentId == studentId);
         }
 
-        public async Task<IEnumerable<Attendance>> BulkSaveAttendanceAsync(int sessionId, List<AttendanceRecord> records, int updatedByUserId)
+        public async Task<IEnumerable<Attendance>> BulkSaveAttendanceAsync(int sessionId, List<AttendanceRecord> records, int updatedByUserId, string? role = null)
         {
             var session = await _context.ClassSessions.FindAsync(sessionId);
             if (session == null)
                 throw new Exception("Không tìm thấy buổi học");
 
-            ValidateSessionForAttendance(session);
+            ValidateSessionForAttendance(session, role);
 
             var existingAttendances = await _context.Attendances
                 .Where(a => a.SessionId == sessionId)
@@ -187,7 +187,7 @@ namespace EducenAPI.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId)
+        public async Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId, string? role = null)
         {
             ValidateStatus(status);
 
@@ -201,7 +201,7 @@ namespace EducenAPI.Services
             if (attendance == null)
                 return false;
 
-            ValidateAttendanceModification(attendance);
+            ValidateAttendanceModification(attendance, role);
 
             var updater = await _context.Users.FindAsync(updatedByUserId);
             attendance.Status = status;
@@ -318,8 +318,11 @@ namespace EducenAPI.Services
                 throw new Exception($"Trạng thái điểm danh không hợp lệ: '{status}'. Chỉ chấp nhận: present, absent, notYet.");
         }
 
-        private void ValidateSessionForAttendance(ClassSession session)
+        private void ValidateSessionForAttendance(ClassSession session, string? role = null)
         {
+            // Admin được quyền điểm danh bất kỳ lúc nào
+            if (role == "Admin") return;
+
             // Teacher chỉ được điểm danh trong ngày hôm đó (không được quá hạn)
             // Nếu quá hạn phải gửi yêu cầu sửa điểm danh cho Admin
             var now = DateTime.UtcNow.AddHours(7);
@@ -348,8 +351,11 @@ namespace EducenAPI.Services
             }
         }
 
-        private void ValidateAttendanceModification(Attendance attendance)
+        private void ValidateAttendanceModification(Attendance attendance, string? role = null)
         {
+            // Admin được quyền chỉnh sửa điểm danh bất kỳ lúc nào
+            if (role == "Admin") return;
+
             // Teacher không được sửa điểm danh quá ngày - phải gửi yêu cầu cho Admin
             var now = DateTime.UtcNow.AddHours(7);
             var sessionDate = attendance.Session?.SessionDate.Date ??

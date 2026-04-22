@@ -31,23 +31,9 @@ namespace EducenAPI.Services.TenantService
             request.Address = request.Address?.Trim();
             request.SubDomain = request.SubDomain?.Trim().ToLower();
 
-            if (string.IsNullOrWhiteSpace(request.SubDomain))
-                throw new Exception("SubDomain là bắt buộc.");
+            ValidateSubDomain(request.SubDomain, null);
 
-            // 1. Check SubDomain chứa space
-            if (request.SubDomain.Contains(" "))
-                throw new Exception("SubDomain không được chứa khoảng trắng.");
-
-            // 2. Check ký tự hợp lệ
-            var regex = new System.Text.RegularExpressions.Regex("^[a-z0-9-]+$");
-            if (!regex.IsMatch(request.SubDomain))
-                throw new Exception("SubDomain chỉ được chứa chữ cái thường, số và dấu '-'.");
-
-            // 3. Check duplicate SubDomain
-            if (_adminDbContext.Tenants.Any(t => t.SubDomain == request.SubDomain))
-                throw new Exception("SubDomain đã tồn tại.");
-
-            // 4. Check duplicate TenantName
+            // Check duplicate TenantName
             if (_adminDbContext.Tenants.Any(t => t.TenantName == request.TenantName))
                 throw new Exception("Tên trung tâm đã tồn tại.");
 
@@ -321,12 +307,7 @@ namespace EducenAPI.Services.TenantService
             var tenantName = request.TenantName?.Trim();
             var subDomain = request.SubDomain?.Trim().ToLower();
 
-            // Check duplicate SubDomain (trừ chính nó)
-            if (!string.IsNullOrWhiteSpace(subDomain) && subDomain != tenant.SubDomain)
-            {
-                if (_adminDbContext.Tenants.Any(t => t.SubDomain == subDomain && t.TenantId != tenantId))
-                    throw new Exception("SubDomain đã tồn tại.");
-            }
+            ValidateSubDomain(subDomain, tenantId);
 
             // Check duplicate TenantName (trừ chính nó)
             if (!string.IsNullOrWhiteSpace(tenantName) && tenantName != tenant.TenantName)
@@ -346,6 +327,31 @@ namespace EducenAPI.Services.TenantService
             _adminDbContext.SaveChanges();
 
             return tenant;
+        }
+
+        private void ValidateSubDomain(string? subDomain, string? excludeTenantId = null)
+        {
+            if (string.IsNullOrWhiteSpace(subDomain))
+                throw new Exception("SubDomain là bắt buộc.");
+            
+            // Check khoảng trắng bên trong (Trim() đã xử lý đầu/cuối)
+            if (subDomain.Contains(" "))
+                throw new Exception("SubDomain không được chứa khoảng trắng.");
+
+            // Check ký tự hợp lệ: chỉ cho phép chữ thường, số và dấu gạch ngang
+            var regex = new System.Text.RegularExpressions.Regex("^[a-z0-9-]+$");
+            if (!regex.IsMatch(subDomain))
+                throw new Exception("SubDomain chỉ được chứa chữ cái thường, số và dấu '-'.");
+
+            // Check duplicate
+            var query = _adminDbContext.Tenants.AsQueryable();
+            if (!string.IsNullOrEmpty(excludeTenantId))
+            {
+                query = query.Where(t => t.TenantId != excludeTenantId);
+            }
+
+            if (query.Any(t => t.SubDomain == subDomain))
+                throw new Exception("SubDomain đã tồn tại.");
         }
 
         public IEnumerable<TenantWithSubscriptionRequest> GetAllTenantDetails()

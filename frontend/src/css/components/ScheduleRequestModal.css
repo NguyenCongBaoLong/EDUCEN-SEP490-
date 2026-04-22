@@ -132,6 +132,41 @@
     color: #3b82f6;
 }
 
+/* Request Type Tabs */
+.req-type-tabs {
+    display: flex;
+    gap: 0.5rem;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 14px;
+    margin-bottom: 0.5rem;
+}
+
+.req-type-tab {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.req-type-tab:hover {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.req-type-tab.active {
+    background: white;
+    color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
 /* Class Grid */
 .req-class-grid {
     display: grid;
@@ -189,20 +224,43 @@
     gap: 0.5rem;
 }
 
-.req-slot-badge {
+.req-slot-badge,
+.req-slot-badge-btn {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8125rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.65rem 1rem;
+    font-size: 0.875rem;
+    position: relative;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.req-slot-badge-btn {
+    cursor: pointer;
+}
+
+.req-slot-badge-btn:hover {
+    border-color: #3b82f6;
+    background: #f0f7ff;
+    transform: translateY(-2px);
+}
+
+.req-slot-badge-btn.active {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    padding-right: 2.5rem; /* Space for checkmark */
 }
 
 .req-badge-day {
-    font-weight: 600;
+    font-weight: 700;
     color: #1e293b;
+    border-right: 1px solid #cbd5e1;
+    padding-right: 0.5rem;
 }
 
 .req-badge-time {
@@ -216,6 +274,30 @@
     background: white;
     padding: 2px 8px;
     border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.req-slot-check {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    animation: reqScaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes reqScaleIn {
+    from { transform: translateY(-50%) scale(0); }
+    to { transform: translateY(-50%) scale(1); }
 }
 
 /* Target Grid */

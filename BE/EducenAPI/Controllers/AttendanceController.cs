@@ -143,7 +143,8 @@ namespace EducenAPI.Controllers
                     Status = r.Status
                 }).ToList();
 
-                await _service.BulkSaveAttendanceAsync(sessionId, attendanceRecords, currentUserId);
+                var role = GetCurrentUserRole();
+                await _service.BulkSaveAttendanceAsync(sessionId, attendanceRecords, currentUserId, role);
                 return Ok(new { message = "Lưu điểm danh thành công" });
             }
             catch (Exception ex)
@@ -172,7 +173,8 @@ namespace EducenAPI.Controllers
                     Status = "present"
                 }).ToList();
 
-                await _service.BulkSaveAttendanceAsync(sessionId, records, currentUserId);
+                var role = GetCurrentUserRole();
+                await _service.BulkSaveAttendanceAsync(sessionId, records, currentUserId, role);
                 return Ok(new { message = "Điểm danh nhanh thành công" });
             }
             catch (Exception ex)
@@ -192,7 +194,8 @@ namespace EducenAPI.Controllers
             try
             {
                 var currentUserId = GetCurrentUserId();
-                var success = await _service.UpdateAttendanceAsync(attendanceId, dto.Status, currentUserId);
+                var role = GetCurrentUserRole();
+                var success = await _service.UpdateAttendanceAsync(attendanceId, dto.Status, currentUserId, role);
                 
                 if (!success)
                     return NotFound(new { message = "Không tìm thấy bản ghi điểm danh" });

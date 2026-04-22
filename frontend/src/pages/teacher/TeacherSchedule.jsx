@@ -63,6 +63,7 @@ const TeacherSchedule = ({ isTA = false }) => {
                 });
             }
             grouped.get(key).scheduleSlots.push({
+                id: c.id, // day: scheduleId mapped in context
                 dayOfWeek: c.day,
                 startTime: c.startTime,
                 endTime: c.endTime,
@@ -489,31 +490,37 @@ const TeacherSchedule = ({ isTA = false }) => {
                                 absence: 'Xin nghỉ / Hủy buổi',
                                 other: 'Thay đổi khác',
                             };
-                            const classInfo = payload.classInfo ? ` [${payload.classInfo.code} - ${payload.classInfo.name}]` : '';
-                            const Title = `${SCHEDULE_CHANGE_TAG} [${typeLabels[payload.type] || 'Yêu cầu'}]${classInfo}`;
+                            const classInfo = (payload.classInfo && payload.type !== 'other') ? ` [${payload.classInfo.code} - ${payload.classInfo.name}]` : '';
+                            const tag = payload.type === 'schedule_change' ? SCHEDULE_CHANGE_TAG : '[SUPPORT]';
+                            const Title = `${tag} [${typeLabels[payload.type] || 'Yêu cầu'}]${classInfo}`;
 
-                            // Thêm thông tin slot chi tiết vào Content
-                            let Content = `Type: schedule_change\nLoại yêu cầu: ${typeLabels[payload.type] || payload.type}\nLý do: ${payload.reason || 'Không có'}`;
+                            // Giao diện thuần Tiếng Việt cho người dùng
+                            let Content = `Loại yêu cầu: ${typeLabels[payload.type] || payload.type}\nLý do: ${payload.reason || 'Không có'}`;
 
-                            // Thêm classId để admin có thể cập nhật lịch
-                            if (payload.classInfo?.classId) {
-                                Content += `\nClassId: ${payload.classInfo.classId}`;
+                            if (payload.type === 'schedule_change') {
+                                if (payload.currentSlot) {
+                                    Content += `\nSlot hiện tại: ${payload.currentSlot.dayLabel} (${payload.currentSlot.startTime} - ${payload.currentSlot.endTime})`;
+                                    if (payload.currentRoomId) {
+                                        const currentRoom = rooms.find(r => r.roomId === payload.currentRoomId);
+                                        if (currentRoom) Content += `\nPhòng hiện tại: ${currentRoom.roomName}`;
+                                    }
+                                }
+                                
+                                if (payload.requestedSlot) {
+                                    Content += `\nSlot mới: ${payload.requestedSlot.dayLabel} (${payload.requestedSlot.startTime} - ${payload.requestedSlot.endTime})`;
+                                }
+                                if (payload.requestedRoomId) {
+                                    const room = rooms.find(r => r.roomId === payload.requestedRoomId);
+                                    if (room) Content += `\nPhòng mới: ${room.roomName}`;
+                                }
                             }
+                            
+                            // DỮ LIỆU HỆ THỐNG (SẼ ĐƯỢC GIẤU KHỎI GIAO DIỆN)
+                            const classId = (payload.type === 'schedule_change') ? payload.classInfo?.classId : '';
+                            const slotId = (payload.type === 'schedule_change') ? payload.currentSlot?.id : '';
+                            const roomId = (payload.type === 'schedule_change') ? payload.requestedRoomId : '';
 
-                            // Nếu có thông tin slot hiện tại và slot mới, thêm vào Content
-                            if (payload.currentSlot) {
-                                Content += `\nCurrentSlot: ${payload.currentSlot.dayLabel} (${payload.currentSlot.startTime} - ${payload.currentSlot.endTime})`;
-                                Content += `\nSlot hiện tại: ${payload.currentSlot.dayLabel} (${payload.currentSlot.startTime} - ${payload.currentSlot.endTime})`;
-                            }
-                            if (payload.requestedSlot) {
-                                Content += `\nRequestedSlot: ${payload.requestedSlot.dayLabel} (${payload.requestedSlot.startTime} - ${payload.requestedSlot.endTime})`;
-                                Content += `\nSlot mới: ${payload.requestedSlot.dayLabel} (${payload.requestedSlot.startTime} - ${payload.requestedSlot.endTime})`;
-                            }
-                            if (payload.requestedRoomId) {
-                                const room = rooms.find(r => r.roomId === payload.requestedRoomId);
-                                Content += `\nRequestedRoomId: ${payload.requestedRoomId}`;
-                                Content += `\nPhòng mới: ${room?.roomName || `Phòng ${payload.requestedRoomId}`}`;
-                            }
+                            Content += `\n\n[SYSTEM_DATA]\nClassId: ${classId}\nSlotId: ${slotId}\nRoomId: ${roomId}\n[/SYSTEM_DATA]`;
 
                             console.log('[TeacherSchedule] Sending request:', { Title, Content, payload });
                             await api.post('/support-requests', { Title, Content });

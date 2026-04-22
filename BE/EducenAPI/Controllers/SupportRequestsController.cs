@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.SupportRequestDTOs;
+using EducenAPI.DTOs.SupportRequestDTOs;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -135,6 +135,14 @@ namespace EducenAPI.Controllers
 
             response.IsValid = !response.Errors.Any();
             return Ok(response);
+        }
+
+        [HttpPut("{id}/read")]
+        public async Task<IActionResult> MarkAsRead(int id)
+        {
+            var success = await _service.MarkAsReadAsync(id);
+            if (!success) return NotFound("Không tìm thấy request.");
+            return Ok("Đã đánh dấu đã đọc.");
         }
     }
 }

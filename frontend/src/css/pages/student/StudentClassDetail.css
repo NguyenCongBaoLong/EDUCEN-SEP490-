@@ -880,6 +880,13 @@
     font-size: 0.8437rem;
     color: #475569;
     line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.scd-sub-comment span {
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .scd-no-comment {

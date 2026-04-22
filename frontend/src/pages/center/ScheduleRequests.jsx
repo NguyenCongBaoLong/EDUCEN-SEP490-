@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import notificationService from '../../services/notificationService';
@@ -11,13 +11,17 @@ const SCHEDULE_CHANGE_TAG = '[SCHEDULE_CHANGE]';
 const ScheduleRequests = () => {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(false);
+    const isInitialMount = useRef(true);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [processing, setProcessing] = useState(false);
     const [selectedClassData, setSelectedClassData] = useState(null);
     const [validationResults, setValidationResults] = useState(null);
 
     const fetchRequests = useCallback(async (reason = 'manual') => {
-        setLoading(true);
+        if (isInitialMount.current || reason === 'manual') {
+            setLoading(true);
+            isInitialMount.current = false;
+        }
         try {
             const res = await notificationService.getSupportRequests();
             let data = res.data;
@@ -319,280 +323,222 @@ const ScheduleRequests = () => {
             <Sidebar />
             <main className="dashboard-main">
                 <div className="schedule-mgmt-container">
-                    <header className="mgmt-header" style={{ marginBottom: '1rem' }}>
+                    <header className="mgmt-header">
                         <div className="mgmt-title-area">
-                            <div className="mgmt-title-row">
-                                <h1 className="mgmt-page-title">Yêu Cầu Đổi Lịch</h1>
+                            <h1 className="mgmt-page-title">Yêu Cầu Đổi Lịch</h1>
+                            <p className="mgmt-subtitle">
+                                Phê duyệt các yêu cầu đổi lịch dạy từ giáo viên và trợ giảng.
                                 {pendingCount > 0 && (
-                                    <span className="mgmt-badge">
-                                        <AlertCircle size={14} />
-                                        {pendingCount} chờ duyệt
+                                    <span style={{ marginLeft: '1rem', color: 'var(--sr-warning)', fontWeight: 700 }}>
+                                        ({pendingCount} yêu cầu mới)
                                     </span>
                                 )}
-                            </div>
-                            <p className="mgmt-subtitle">
-                                Phê duyệt các yêu cầu đổi lịch dạy từ giáo viên/phụ huynh.
                             </p>
                         </div>
                     </header>
 
                     <div className="adm-schedule-wrap">
                         {loading ? (
-                            <div className="adm-schedule-loading" style={{ textAlign: 'center', padding: '4rem', color: '#6b7280' }}>
+                            <div className="adm-schedule-loading" style={{ textAlign: 'center', padding: '4rem' }}>
                                 <div className="loading-spinner"></div>
-                                <p style={{ marginTop: '1rem' }}>Đang tải yêu cầu...</p>
+                                <p style={{ marginTop: '1rem', color: 'var(--sr-text-muted)' }}>Đang tải dữ liệu...</p>
                             </div>
                         ) : requests.length === 0 ? (
-                            <div className="adm-schedule-empty" style={{ textAlign: 'center', padding: '5rem', background: 'white', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                <div style={{ background: '#f9fafb', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                                    <Clock size={40} color="#3b82f6" />
-                                </div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>Hoàn thành công việc!</h3>
-                                <p style={{ color: '#6b7280' }}>Hiện tại không có yêu cầu đổi lịch nào cần xử lý.</p>
+                            <div className="adm-schedule-empty-selection">
+                                <Clock size={48} color="var(--sr-primary)" />
+                                <h3 style={{ marginTop: '1rem', fontWeight: 700 }}>Hoàn thành công việc!</h3>
+                                <p>Hiện tại không có yêu cầu đổi lịch nào cần xử lý.</p>
                             </div>
                         ) : (
                             <div className="adm-schedule-grid">
                                 <section className="adm-schedule-list-panel">
                                     <div className="adm-schedule-list-head">
-                                        <span>DANH SÁCH CHỜ DUYỆT ({requests.filter(r => !r.adminResponse).length})</span>
+                                        <span>Danh sách yêu cầu</span>
                                     </div>
                                     <div className="adm-schedule-list">
+                                        {/* Pending Section */}
                                         {requests.filter(r => !r.adminResponse).map((req) => (
                                             <div
                                                 key={req.id}
                                                 onClick={() => setSelectedRequest(req)}
                                                 className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
                                             >
-                                                <div className="adm-schedule-item-top">
-                                                    <div>
-                                                        <div className="adm-schedule-sender">{req?.senderName || 'Không xác định'}</div>
-                                                        <div className="adm-schedule-role">{req?.senderRoleName || 'Người dùng'}</div>
-                                                    </div>
+                                                <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                                                    <div className="adm-schedule-sender">{req?.senderName}</div>
                                                     <span className="adm-schedule-pending">Mới</span>
                                                 </div>
-                                                <div className="adm-schedule-meta">
-                                                    <strong>Tiêu đề:</strong> {req?.title || 'Yêu cầu đổi lịch'}
+                                                <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
+                                                    {formatDate(req?.createdAt)}
                                                 </div>
-                                                <div className="adm-schedule-meta" style={{ marginTop: '4px' }}>
-                                                    <strong>Ngày gửi:</strong> {formatDate(req?.createdAt)}
+                                            </div>
+                                        ))}
+
+                                        {/* Processed Section Header */}
+                                        {requests.some(r => r.adminResponse) && (
+                                            <div className="adm-schedule-list-head" style={{ marginTop: '1rem', borderTop: '1px solid var(--sr-border)' }}>
+                                                <span>Đã xử lý</span>
+                                            </div>
+                                        )}
+
+                                        {requests.filter(r => r.adminResponse).map((req) => (
+                                            <div
+                                                key={req.id}
+                                                onClick={() => setSelectedRequest(req)}
+                                                className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
+                                                style={{ opacity: 0.7 }}
+                                            >
+                                                <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                                                    <div className="adm-schedule-sender">{req?.senderName}</div>
+                                                    <span className="adm-schedule-processed">Đã xử lý</span>
+                                                </div>
+                                                <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
+                                                    {formatDate(req?.createdAt)}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                    {requests.filter(r => r.adminResponse).length > 0 && (
-                                        <div className="adm-schedule-list-head" style={{ marginTop: '1rem' }}>
-                                            <span>ĐÃ XỬ LÝ ({requests.filter(r => r.adminResponse).length})</span>
-                                        </div>
-                                    )}
-                                    {requests.filter(r => r.adminResponse).length > 0 && (
-                                        <div className="adm-schedule-list">
-                                            {requests.filter(r => r.adminResponse).map((req) => (
-                                                <div
-                                                    key={req.id}
-                                                    onClick={() => setSelectedRequest(req)}
-                                                    className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
-                                                    style={{ opacity: '0.6' }}
-                                                >
-                                                    <div className="adm-schedule-item-top">
-                                                        <div>
-                                                            <div className="adm-schedule-sender">{req?.senderName || 'Không xác định'}</div>
-                                                            <div className="adm-schedule-role">{req?.senderRoleName || 'Người dùng'}</div>
-                                                        </div>
-                                                        <span className="adm-schedule-processed">ĐÃ XỬ LÝ</span>
-                                                    </div>
-                                                    <div className="adm-schedule-meta">
-                                                        <strong>Tiêu đề:</strong> {req?.title || 'Yêu cầu đổi lịch'}
-                                                    </div>
-                                                    <div className="adm-schedule-meta" style={{ marginTop: '4px' }}>
-                                                        <strong>Ngày gửi:</strong> {formatDate(req?.createdAt)}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </section>
 
                                 <section className="adm-schedule-detail-panel">
                                     {selectedRequest ? (
                                         <>
-                                            <div className="compact-detail-content" style={{ animation: 'fade-in 0.3s ease-out' }}>
-                                                <div style={{ marginBottom: '1rem' }}>
-                                                    <h3 className="adm-schedule-detail-title">
-                                                        <AlertCircle size={20} color="#3b82f6" />
+                                            <div className="compact-detail-content animate-fade-in">
+                                                <div className="detail-header">
+                                                    <h3 className="detail-title">
+                                                        <AlertCircle size={24} color="var(--sr-primary)" />
                                                         Chi Tiết Yêu Cầu
                                                     </h3>
+                                                    <div className="adm-schedule-meta" style={{ fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>ID: #{selectedRequest.id}</div>
                                                 </div>
 
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                                                    <div className="adm-schedule-field compact">
-                                                        <div className="adm-schedule-field-label">Người gửi</div>
-                                                        <div className="adm-schedule-field-value" style={{ fontSize: '0.85rem' }}>{selectedRequest?.senderName}</div>
-                                                    </div>
-                                                    <div className="adm-schedule-field compact">
-                                                        <div className="adm-schedule-field-label">Vai trò</div>
-                                                        <div className="adm-schedule-field-value" style={{ fontSize: '0.85rem' }}>{selectedRequest?.senderRoleName}</div>
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ marginBottom: '1rem' }}>
-                                                    <div className="adm-schedule-field-label">Tiêu đề</div>
-                                                    <div className="adm-schedule-field-value">{selectedRequest?.title || 'Yêu cầu đổi lịch'}</div>
-                                                </div>
-
-                                                {selectedClassData && (
-                                                    <div style={{ marginBottom: '1rem', background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                                        <div className="adm-schedule-field-label" style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>📚 Thông tin lớp học</div>
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem', fontSize: '0.8rem' }}>
-                                                            <div>
-                                                                <span style={{ color: '#64748b', fontWeight: 600 }}>Tên lớp:</span>
-                                                                <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.name || selectedClassData.Name || 'N/A'}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span style={{ color: '#64748b', fontWeight: 600 }}>Giáo viên:</span>
-                                                                <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.teacherName || selectedClassData.TeacherName || 'N/A'}</span>
-                                                            </div>
-                                                            <div>
-                                                                <span style={{ color: '#64748b', fontWeight: 600 }}>Môn học:</span>
-                                                                <span style={{ color: '#334155', marginLeft: '0.375rem' }}>{selectedClassData.subjectName || selectedClassData.SubjectName || 'N/A'}</span>
-                                                            </div>
+                                                <div className="detail-section">
+                                                    <div className="info-grid">
+                                                        <div className="info-card">
+                                                            <div className="info-label">Người gửi</div>
+                                                            <div className="info-value">{selectedRequest.senderName}</div>
+                                                        </div>
+                                                        <div className="info-card">
+                                                            <div className="info-label">Vai trò</div>
+                                                            <div className="info-value">{selectedRequest.senderRoleName}</div>
+                                                        </div>
+                                                        <div className="info-card">
+                                                            <div className="info-label">Lớp học</div>
+                                                            <div className="info-value">{selectedClassData?.className || selectedClassData?.Name || 'N/A'}</div>
+                                                        </div>
+                                                        <div className="info-card">
+                                                            <div className="info-label">Môn học</div>
+                                                            <div className="info-value">{selectedClassData?.subjectName || selectedClassData?.SubjectName || 'N/A'}</div>
                                                         </div>
                                                     </div>
-                                                )}
+                                                </div>
 
                                                 {validationResults?.hasConflict && (
-                                                    <div style={{ marginBottom: '1rem', background: '#fef2f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fecaca' }}>
-                                                        <div className="adm-schedule-field-label" style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#dc2626' }}>⚠️ Cảnh báo xung đột</div>
+                                                    <div className="conflict-alert">
+                                                        <div style={{ fontWeight: 800, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <XCircle size={18} />
+                                                            CẢNH BÁO XUNG ĐỘT LỊCH
+                                                        </div>
                                                         {validationResults.teacherConflict && (
-                                                            <div style={{ marginBottom: '0.375rem', fontSize: '0.8rem', color: '#991b1b' }}>
-                                                                <strong>Trùng lịch giáo viên:</strong> Giáo viên đã có lớp {validationResults.teacherConflict.className} vào {validationResults.teacherConflict.day} ({validationResults.teacherConflict.time})
+                                                            <div className="conflict-item">
+                                                                <strong>Giáo viên:</strong> Trùng {validationResults.teacherConflict.className} ({validationResults.teacherConflict.time})
                                                             </div>
                                                         )}
                                                         {validationResults.roomConflict && (
-                                                            <div style={{ fontSize: '0.8rem', color: '#991b1b' }}>
-                                                                <strong>Trùng phòng:</strong> Phòng đã được lớp {validationResults.roomConflict.className} sử dụng vào {validationResults.roomConflict.day} ({validationResults.roomConflict.time})
+                                                            <div className="conflict-item">
+                                                                <strong>Phòng:</strong> Trùng {validationResults.roomConflict.className} ({validationResults.roomConflict.time})
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
 
-                                                {(() => {
-                                                    const slotInfo = parseSlotInfo(selectedRequest?.content || selectedRequest?.Content || '');
-                                                    console.log('[ScheduleRequests] Content:', selectedRequest?.content || selectedRequest?.Content);
-                                                    console.log('[ScheduleRequests] Parsed slotInfo:', slotInfo);
-                                                    console.log('[ScheduleRequests] Selected class data:', selectedClassData);
-                                                    
-                                                    let displayCurrentSlot = slotInfo.currentSlot;
-                                                    let displayCurrentRoom = null;
-                                                    
-                                                    if (!displayCurrentSlot && selectedClassData?.scheduleSlots && selectedClassData.scheduleSlots.length > 0) {
-                                                        const firstSlot = selectedClassData.scheduleSlots[0];
-                                                        const dayOfWeek = firstSlot.dayOfWeek ?? firstSlot.DayOfWeek;
-                                                        displayCurrentSlot = {
-                                                            dayLabel: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'][dayOfWeek] || 'Không xác định',
-                                                            time: `${firstSlot.startTime ?? firstSlot.StartTime} - ${firstSlot.endTime ?? firstSlot.EndTime}`
-                                                        };
-                                                        displayCurrentRoom = firstSlot.roomId ? selectedClassData.scheduleSlots.find(s => 
-                                                            (s.dayOfWeek ?? s.DayOfWeek) === dayOfWeek && 
-                                                            s.startTime === (firstSlot.startTime ?? firstSlot.StartTime)
-                                                        )?.roomId : null;
-                                                    } else if (slotInfo.currentSlot && selectedClassData?.scheduleSlots) {
-                                                        // Tìm room cho current slot
-                                                        const [currentStartTime, currentEndTime] = slotInfo.currentSlot.time.split(' - ');
-                                                        const currentDayOfWeek = getDayOfWeekFromLabel(slotInfo.currentSlot.dayLabel);
-                                                        displayCurrentRoom = selectedClassData.scheduleSlots.find(s => 
-                                                            (s.dayOfWeek ?? s.DayOfWeek) === currentDayOfWeek && 
-                                                            s.startTime === currentStartTime
-                                                        )?.roomId;
-                                                    }
-                                                    
-                                                    // Lấy room name từ classData
-                                                    const getRoomName = (roomId) => {
-                                                        if (!roomId) return 'Chưa phân công';
-                                                        const room = selectedClassData?.rooms?.find(r => r.roomId === roomId) || 
-                                                                    selectedClassData?.scheduleSlots?.find(s => s.roomId === roomId);
-                                                        return room?.roomName || room?.RoomName || `Phòng ${roomId}`;
-                                                    };
-                                                    
-                                                    if (displayCurrentSlot || slotInfo.newSlot) {
+                                                <div className="detail-section">
+                                                    <div className="info-label" style={{ marginBottom: '1rem' }}>Thay đổi lịch học</div>
+                                                    {(() => {
+                                                        const slotInfo = parseSlotInfo(selectedRequest?.content || selectedRequest?.Content || '');
+                                                        
+                                                        let displayCurrentSlot = slotInfo.currentSlot;
+                                                        let displayCurrentRoom = null;
+                                                        
+                                                        if (!displayCurrentSlot && selectedClassData?.scheduleSlots?.[0]) {
+                                                            const firstSlot = selectedClassData.scheduleSlots[0];
+                                                            displayCurrentSlot = {
+                                                                dayLabel: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'][firstSlot.dayOfWeek ?? firstSlot.DayOfWeek] || 'N/A',
+                                                                time: `${firstSlot.startTime ?? firstSlot.StartTime} - ${firstSlot.endTime ?? firstSlot.EndTime}`
+                                                            };
+                                                            displayCurrentRoom = firstSlot.roomName || firstSlot.RoomName || `Phòng ${firstSlot.roomId}`;
+                                                        }
+
                                                         return (
-                                                            <div style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                                                <div className="adm-schedule-field-label" style={{ marginBottom: '0.5rem', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>📅 Thông tin đổi lịch</div>
-                                                                {displayCurrentSlot && (
-                                                                    <div style={{ marginBottom: '0.5rem' }}>
-                                                                        <div style={{ marginBottom: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                                                                            <span style={{ fontWeight: 600, color: '#64748b', fontSize: '0.8rem' }}>📍 Slot hiện tại:</span>
-                                                                            <span style={{ color: '#334155', fontWeight: 500, fontSize: '0.85rem' }}>{displayCurrentSlot.dayLabel} ({displayCurrentSlot.time})</span>
-                                                                        </div>
-                                                                        <div style={{ marginLeft: '1.25rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                                                            🏠 Phòng: {getRoomName(displayCurrentRoom)}
-                                                                        </div>
+                                                            <div className="change-comparison-card">
+                                                                <div className="comparison-grid">
+                                                                    <div className="slot-box current">
+                                                                        <div className="info-label">Lịch hiện tại</div>
+                                                                        <div className="info-value" style={{ fontSize: '1rem' }}>{displayCurrentSlot?.dayLabel}</div>
+                                                                        <div className="adm-schedule-meta" style={{ fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>{displayCurrentSlot?.time}</div>
+                                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>🏠 {displayCurrentRoom || 'Chưa rõ'}</div>
                                                                     </div>
-                                                                )}
-                                                                {slotInfo.newSlot && (
-                                                                    <div>
-                                                                        <div style={{ marginBottom: '0.15rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                                                                            <span style={{ fontWeight: 600, color: '#059669', fontSize: '0.8rem' }}>✨ Slot mới:</span>
-                                                                            <span style={{ color: '#047857', fontWeight: 600, fontSize: '0.85rem' }}>{slotInfo.newSlot.dayLabel} ({slotInfo.newSlot.time})</span>
-                                                                        </div>
-                                                                        <div style={{ marginLeft: '1.25rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                                                            🏠 Phòng: {slotInfo.newRoom || getRoomName(null)}
-                                                                        </div>
+
+                                                                    <div className="slot-arrow">
+                                                                        <CheckCircle size={20} color="var(--sr-primary)" />
                                                                     </div>
-                                                                )}
+
+                                                                    <div className="slot-box new">
+                                                                        <div className="info-label" style={{ color: 'var(--sr-success)' }}>Lịch đề xuất</div>
+                                                                        <div className="info-value" style={{ fontSize: '1rem', color: 'var(--sr-success)' }}>{slotInfo.newSlot?.dayLabel}</div>
+                                                                        <div className="adm-schedule-meta" style={{ color: 'var(--sr-success)', fontSize: '0.75rem' }}>{slotInfo.newSlot?.time}</div>
+                                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', color: 'var(--sr-success)', fontSize: '0.75rem' }}>🏠 {slotInfo.newRoom || 'Chưa rõ'}</div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         );
-                                                    }
-                                                    return null;
-                                                })()}
+                                                    })()}
+                                                </div>
 
-                                                <div style={{ marginBottom: '1rem' }}>
-                                                    <div className="adm-schedule-field-label">Lý do</div>
-                                                    <div className="adm-schedule-reason compact">
+                                                <div className="detail-section">
+                                                    <div className="info-label">Lý do thay đổi</div>
+                                                    <div className="adm-schedule-reason compact" style={{ marginTop: '0.5rem' }}>
                                                         {extractDisplayReason(selectedRequest?.content || selectedRequest?.Content || '')}
                                                     </div>
                                                 </div>
 
-                                                <div style={{ marginBottom: '1rem' }}>
-                                                    <div className="adm-schedule-field-label">Ngày gửi</div>
-                                                    <div className="adm-schedule-field-value">{formatDate(selectedRequest?.createdAt)}</div>
-                                                </div>
-
                                                 {selectedRequest?.adminResponse && (
-                                                    <div style={{ marginBottom: '1rem' }}>
-                                                        <div className="adm-schedule-field-label">Phản hồi của admin</div>
-                                                        <div className="adm-schedule-response compact">{selectedRequest?.adminResponse}</div>
+                                                    <div className="detail-section">
+                                                        <div className="info-label">Phản hồi từ Admin</div>
+                                                        <div className="adm-schedule-response compact" style={{ marginTop: '0.5rem' }}>
+                                                            {selectedRequest?.adminResponse}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
 
                                             <div className="adm-schedule-actions compact">
                                                 <button
-                                                    onClick={() => handleApprove(selectedRequest.id)}
-                                                    disabled={processing || validationResults?.hasConflict || selectedRequest?.adminResponse}
-                                                    className="adm-schedule-btn approve"
-                                                    style={{ opacity: (validationResults?.hasConflict || selectedRequest?.adminResponse) ? 0.5 : 1 }}
-                                                >
-                                                    <CheckCircle size={18} />
-                                                    Duyệt
-                                                </button>
-                                                <button
                                                     onClick={() => handleReject(selectedRequest.id)}
                                                     disabled={processing || selectedRequest?.adminResponse}
-                                                    className="adm-schedule-btn deny"
-                                                    style={{ opacity: selectedRequest?.adminResponse ? 0.5 : 1 }}
+                                                    className="sr-action-btn reject"
                                                 >
-                                                    <XCircle size={18} />
+                                                    <XCircle size={20} />
                                                     Từ chối
+                                                </button>
+                                                <button
+                                                    onClick={() => handleApprove(selectedRequest.id)}
+                                                    disabled={processing || validationResults?.hasConflict || selectedRequest?.adminResponse}
+                                                    className="sr-action-btn approve"
+                                                >
+                                                    <CheckCircle size={20} />
+                                                    Duyệt yêu cầu
                                                 </button>
                                             </div>
                                         </>
                                     ) : (
                                         <div className="adm-schedule-empty-selection">
-                                            <div style={{ background: '#f3f4f6', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-                                                <Clock size={32} color="#9ca3af" />
+                                            <div style={{ background: 'var(--sr-primary-light)', padding: '2rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
+                                                <Clock size={48} color="var(--sr-primary)" />
                                             </div>
-                                            <div style={{ fontWeight: 600, color: '#4b5563' }}>Chọn một yêu cầu từ danh sách bên trái</div>
-                                            <div style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Nội dung chi tiết sẽ hiện ra tại đây</div>
+                                            <h3 style={{ fontWeight: 700 }}>Chưa chọn yêu cầu</h3>
+                                            <p>Vui lòng chọn một yêu cầu từ danh sách bên trái để xem chi tiết và xử lý.</p>
                                         </div>
                                     )}
                                 </section>

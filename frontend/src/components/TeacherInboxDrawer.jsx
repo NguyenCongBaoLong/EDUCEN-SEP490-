@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Inbox, X, ArrowLeft, Clock, MailOpen, CheckCircle, MessageSquare } from 'lucide-react';
 import api from '../services/api';
 import '../css/components/TeacherInboxDrawer.css';
@@ -139,9 +139,19 @@ const TeacherInboxDrawer = () => {
                                 </div>
                             </div>
 
-                            <h3 className="tid-detail-subject">{selectedMsg.title}</h3>
+                            <h3 className="tid-detail-subject">
+                                {(selectedMsg.title || '').replace(/\[SUPPORT\]|\[SCHEDULE_CHANGE\]/gi, '').trim()}
+                            </h3>
 
-                            <div className="tid-detail-content">{selectedMsg.content}</div>
+                            <div className="tid-detail-content">
+                                {(() => {
+                                    const raw = selectedMsg.content || '';
+                                    const cleaned = raw.replace(/\[SYSTEM_DATA\][\s\S]*?\[\/SYSTEM_DATA\]/g, '').trim();
+                                    return cleaned.split('\n').map((line, i) => (
+                                        <p key={i}>{line || '\u00a0'}</p>
+                                    ));
+                                })()}
+                            </div>
 
                             <div className="tid-status-wrap">
                                 <span className={`tid-status-badge ${selectedMsg.adminResponse ? 'answered' : 'pending'}`}>
@@ -178,38 +188,57 @@ const TeacherInboxDrawer = () => {
                                     <MailOpen size={48} strokeWidth={1} />
                                     <p>Không có tin nhắn nào</p>
                                 </div>
-                            ) : messages.map(msg => (
-                                <div
-                                    key={msg.id}
-                                    className={`tid-msg-item ${msg.adminResponse && !msg.isReadByUser ? 'unread' : ''}`}
-                                    onClick={() => setSelectedMsg(msg)}
-                                >
-                                    <div className={`tid-msg-avatar ${msg.adminResponse ? 'replied' : 'pending'}`}>
-                                        {msg.adminResponse ? 'A' : 'T'}
-                                    </div>
-                                    <div className="tid-msg-body">
-                                        <div className="tid-msg-top">
-                                            <span className="tid-msg-sender">
-                                                {msg.adminResponse ? 'Admin đã phản hồi' : 'Chờ phản hồi'}
-                                            </span>
-                                            <span className="tid-msg-time">
-                                                {formatDateTime(msg.createdAt)}
-                                            </span>
+                            ) : messages.map(msg => {
+                                    const handleClick = async () => {
+                                        setSelectedMsg(msg);
+                                        // Nếu là tin nhắn chưa đọc từ admin thì đánh dấu đã đọc
+                                        if (msg.adminResponse && !msg.isReadByUser) {
+                                            try {
+                                                await api.put(`/support-requests/${msg.id}/read`);
+                                                // Cập nhật state local để mất dấu đỏ ngay lập tức
+                                                setRequests(prev => prev.map(r => 
+                                                    r.id === msg.id ? { ...r, isReadByUser: true, isRead: true } : r
+                                                ));
+                                            } catch (err) {
+                                                console.warn("Failed to mark support request as read:", err);
+                                            }
+                                        }
+                                    };
+                                    
+                                    return (
+                                        <div
+                                            key={msg.id}
+                                            className={`tid-msg-item ${msg.adminResponse && !msg.isReadByUser ? 'unread' : ''}`}
+                                            onClick={handleClick}
+                                        >
+                                            <div className={`tid-msg-avatar ${msg.adminResponse ? 'replied' : 'pending'}`}>
+                                                {msg.adminResponse ? 'A' : 'T'}
+                                            </div>
+                                            <div className="tid-msg-body">
+                                                <div className="tid-msg-top">
+                                                    <span className="tid-msg-sender">
+                                                        {msg.adminResponse ? 'Admin đã phản hồi' : 'Chờ phản hồi'}
+                                                    </span>
+                                                    <span className="tid-msg-time">
+                                                        {formatDateTime(msg.createdAt)}
+                                                    </span>
+                                                </div>
+                                                <div className={`tid-msg-title ${msg.adminResponse && !msg.isReadByUser ? 'unread' : ''}`}>
+                                                    {msg.adminResponse && !msg.isReadByUser && (
+                                                        <span className="tid-unread-dot" />
+                                                    )}
+                                                    {(msg.title || '').replace(/\[SUPPORT\]|\[SCHEDULE_CHANGE\]/gi, '').trim()}
+                                                </div>
+                                                <div className="tid-msg-preview">
+                                                    {(() => {
+                                                        const base = msg.adminResponse || (msg.content || '').replace(/\[SYSTEM_DATA\][\s\S]*?\[\/SYSTEM_DATA\]/g, '').trim();
+                                                        return base.substring(0, 60) + (base.length > 60 ? '...' : '');
+                                                    })()}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className={`tid-msg-title ${msg.adminResponse && !msg.isReadByUser ? 'unread' : ''}`}>
-                                            {msg.adminResponse && !msg.isReadByUser && (
-                                                <span className="tid-unread-dot" />
-                                            )}
-                                            {msg.title}
-                                        </div>
-                                        <div className="tid-msg-preview">
-                                            {msg.adminResponse
-                                                ? msg.adminResponse.substring(0, 60) + (msg.adminResponse.length > 60 ? '...' : '')
-                                                : msg.content?.substring(0, 60) + (msg.content?.length > 60 ? '...' : '')}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+                                    );
+                                })}
                         </div>
                     )}
                 </div>

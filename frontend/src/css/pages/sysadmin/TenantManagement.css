@@ -291,6 +291,27 @@
     vertical-align: middle;
 }
 
+.sa-table-title-cell {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    min-width: 200px;
+}
+
+.sa-nowrap {
+    white-space: nowrap !important;
+}
+
+/* Specific ensure for contract table columns */
+.sa-date-col {
+    min-width: 120px;
+    white-space: nowrap !important;
+}
+
+.sa-actions-col {
+    min-width: 140px;
+    white-space: nowrap !important;
+}
+
 .sa-table tr:last-child td {
     border-bottom: none;
 }

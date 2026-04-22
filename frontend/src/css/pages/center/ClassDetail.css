@@ -96,7 +96,60 @@
 .cd-title-meta {
     font-size: 0.875rem;
     color: #64748b;
-    margin: 0;
+    margin: 0 0 1rem 0;
+}
+
+.cd-header-more-info {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.cd-header-info-box {
+    flex: 1;
+    min-width: 280px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cd-header-info-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
+}
+
+.cd-info-box-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #2563eb;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cd-info-box-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563eb;
+}
+
+.cd-info-box-content {
+    font-size: 0.9375rem;
+    color: #334155;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .cd-header-actions {
@@ -1513,4 +1566,307 @@
 
 .cd-spinner {
     animation: cd-spin 1s linear infinite;
+}
+
+/* ─── Attendance History Table ────────────────────────── */
+.att-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+}
+
+.att-history-table th {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid #f1f5f9;
+    text-align: left;
+}
+
+.att-history-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.att-history-table tr:hover {
+    background-color: #f8fafc;
+}
+
+.att-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.att-action-btn.view {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.att-action-btn.view:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.att-action-btn.edit {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #dbeafe;
+}
+
+.att-action-btn.edit:hover {
+    background: #2563eb;
+    color: white;
+}
+
+/* ─── Academic Tab Styles ──────────────────────────────── */
+.cd-academic-tab {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.cd-session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cd-session-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.cd-session-item.expanded {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.cd-session-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    background: white;
+}
+
+.cd-session-header:hover {
+    background: #f8fafc;
+}
+
+.cd-session-idx {
+    background: #eff6ff;
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.cd-session-main {
+    flex: 1;
+}
+
+.cd-session-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.cd-session-title-row h4 {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.cd-session-date-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.cd-session-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.cd-dot {
+    color: #cbd5e1;
+}
+
+.cd-session-body {
+    padding: 0 1.5rem 1.5rem;
+    background: #fcfdfe;
+    border-top: 1px solid #f1f5f9;
+}
+
+.cd-session-section {
+    margin-top: 1.5rem;
+}
+
+.cd-session-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 1rem;
+}
+
+.cd-item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+.cd-resource-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.cd-resource-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.cd-resource-card.assignment {
+    border-left: 3px solid #8b5cf6;
+}
+
+.cd-resource-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cd-resource-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cd-resource-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.cd-resource-download {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cd-resource-download:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.cd-empty-inner {
+    grid-column: 1 / -1;
+    font-size: 0.875rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #e2e8f0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Schedule Sidebar Card ──────────────────────────── */
+.cd-schedule-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 1.25rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.cd-schedule-box:hover {
+    border-color: #3b82f6;
+    background: #f1f5f9;
+}
+
+.cd-schedule-icon {
+    color: #3b82f6;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.cd-schedule-info {
+    flex: 1;
+}
+
+.cd-schedule-title {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.cd-schedule-item {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.5;
+    margin-bottom: 2px;
+}
+
+.cd-schedule-item:last-child {
+    margin-bottom: 0;
 }

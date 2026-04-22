@@ -285,11 +285,6 @@ public partial class EducenV2Context : DbContext
             .HasForeignKey(s => s.CenterProfileId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Attendance>()
-        .HasOne(a => a.Session)
-        .WithMany(s => s.Attendances)
-        .HasForeignKey(a => a.SessionId)
-        .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<ClassSession>()
         .HasOne(cs => cs.Schedule)

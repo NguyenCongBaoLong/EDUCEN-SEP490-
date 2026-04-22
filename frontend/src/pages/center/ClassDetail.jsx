@@ -3,14 +3,20 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
     ChevronLeft, Pencil, Calendar, Clock,
     UserPlus, Upload, Search, X, Trash2,
-    CheckCircle, UserCheck, CalendarClock, FileSpreadsheet,
-    Plus, AlertTriangle, BookOpen, Info, Loader2
+    Plus, AlertTriangle, BookOpen, Info, Loader2,
+    MessageSquare, FileText, Download, PlayCircle, MoreVertical,
+    ChevronDown, ChevronUp, History, ClipboardCheck,
+    CheckCircle, UserCheck, CalendarClock, FileSpreadsheet
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
 import CreateClassModal from '../../components/CreateClassModal';
+import AttendanceModal from '../../components/AttendanceModal';
+import MaterialDetailModal from '../../components/MaterialDetailModal';
+import AssignmentDetailModal from '../../components/AssignmentDetailModal';
 import api from '../../services/api';
 import '../../css/pages/center/ClassDetail.css';
+import '../../css/components/AttendanceModal.css';
 import '../../css/components/DeleteModal.css';
 
 /* ─── Helpers ────────────────────────────────────────── */
@@ -62,6 +68,69 @@ function formatGrade(grade) {
     return g;
 }
 
+function formatDateVN(isoDate) {
+    if (!isoDate) return '—';
+    const d = new Date(isoDate);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+}
+
+const formatSize = (bytes) => {
+    if (!bytes) return '0 KB';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const mapMaterial = (m) => ({
+    id: m.materialId || m.MaterialId,
+    name: m.title || m.Title || '',
+    title: m.title || m.Title || '',
+    size: formatSize(m.fileSize || m.FileSize),
+    fileSize: m.fileSize || m.FileSize,
+    fileName: m.originalFileName || m.OriginalFileName || '',
+    originalFileName: m.originalFileName || m.OriginalFileName || '',
+    type: (() => {
+        const ct = (m.contentType || m.ContentType || '').toLowerCase();
+        const fn = (m.originalFileName || m.OriginalFileName || '').toLowerCase();
+        if (ct.includes('pdf') || fn.endsWith('.pdf')) return 'pdf';
+        if (ct.includes('word') || fn.endsWith('.doc') || fn.endsWith('.docx')) return 'word';
+        if (ct.includes('excel') || ct.includes('spreadsheet') || fn.endsWith('.xls') || fn.endsWith('.xlsx')) return 'excel';
+        if (ct.includes('powerpoint') || ct.includes('presentation') || fn.endsWith('.ppt') || fn.endsWith('.pptx')) return 'ppt';
+        if (ct.includes('video') || fn.endsWith('.mp4') || fn.endsWith('.mov') || fn.endsWith('.avi')) return 'video';
+        return 'other';
+    })(),
+    fileUrl: m.fileUrl || m.FileUrl,
+    description: m.description || m.Description || '',
+    sessionId: m.sessionId || m.SessionId
+});
+
+const mapAssignment = (a) => {
+    const fileName = (a.originalFileName || a.OriginalFileName || a.fileName || a.FileName || "").toLowerCase();
+    const contentType = (a.contentType || a.ContentType || "").toLowerCase();
+    const type = fileName.includes('.pdf') || contentType.includes('pdf') ? 'pdf'
+               : (fileName.includes('.doc') || fileName.includes('.docx') || contentType.includes('word')) ? 'word'
+               : (fileName.includes('.xls') || fileName.includes('.xlsx') || contentType.includes('excel') || contentType.includes('spreadsheet')) ? 'excel'
+               : (fileName.includes('.ppt') || fileName.includes('.pptx') || contentType.includes('powerpoint') || contentType.includes('presentation')) ? 'ppt'
+               : (fileName.includes('.mp4') || fileName.includes('.mov') || fileName.includes('.avi') || contentType.includes('video')) ? 'video'
+               : 'other';
+
+    return {
+        id: a.asmId || a.AsmId,
+        title: a.title || a.Title || '',
+        description: a.description || a.Description || '',
+        type: type,
+        dueDate: (a.endTime || a.EndTime) ? new Date(a.endTime || a.EndTime).toLocaleDateString('vi-VN') : 'Chưa thiết lập',
+        fileUrl: a.fileUrl || a.FileUrl,
+        fileName: a.originalFileName || a.OriginalFileName || '',
+        originalFileName: a.originalFileName || a.OriginalFileName || '',
+        sessionId: a.sessionId || a.SessionId
+    };
+};
+
 const AttendanceBar = ({ value }) => {
     const color = value >= 90 ? '#16a34a' : value >= 75 ? '#f59e0b' : '#dc2626';
     return (
@@ -110,10 +179,27 @@ const ClassDetail = () => {
     const [excelFile, setExcelFile] = useState(null);
     const [removeModal, setRemoveModal] = useState({ show: false, student: null });
     const [showAllStudents, setShowAllStudents] = useState(false);
+    const [showAllSessions, setShowAllSessions] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [addingStudentId, setAddingStudentId] = useState(null);
+    const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+    const [batchAdding, setBatchAdding] = useState(false);
     const [importResult, setImportResult] = useState(null); // { total, success, failed, errors[] }
+
+    // New states for sessions and tabs
+    const [activeTab, setActiveTab] = useState('overview');
+    const [sessions, setSessions] = useState([]);
+    const [attendanceSummary, setAttendanceSummary] = useState([]);
+    const [expandedSessionId, setExpandedSessionId] = useState(null);
+    
+    // Modal states for sessions
+    const [attendanceOpen, setAttendanceOpen] = useState(false);
+    const [selectedSession, setSelectedSession] = useState(null);
+    const [detailMaterial, setDetailMaterial] = useState(null);
+    const [detailAssignment, setDetailAssignment] = useState(null);
+    const [isAttendanceEdit, setIsAttendanceEdit] = useState(false);
+    const [loadingItems, setLoadingItems] = useState({}); // Tracking loading state for each session: { sessionId: true/false }
 
     // ── Fetch class data ──
     const fetchClassData = async () => {
@@ -196,6 +282,82 @@ const ClassDetail = () => {
         } catch (err) { console.error('Lỗi tải khối lớp:', err); }
     };
 
+    const fetchSessionsAndAttendance = async () => {
+        try {
+            const [sessionsRes, attendanceRes] = await Promise.all([
+                api.get(`/Classes/${classId}/sessions`),
+                api.get(`/attendance/class/${classId}/sessions-summary`)
+            ]);
+            
+            const rawSessions = sessionsRes.data || [];
+            const summaryData = attendanceRes.data || [];
+            
+            setAttendanceSummary(summaryData);
+            
+            const mappedSessions = rawSessions.map((s, idx) => {
+                const summary = summaryData.find(sum => sum.sessionId === s.sessionId);
+                return {
+                    sessionId: s.sessionId,
+                    sessionNum: idx + 1,
+                    date: formatDateVN(s.sessionDate),
+                    dayLabel: DAY_NAMES_FULL[new Date(s.sessionDate).getDay()],
+                    time: s.time || '',
+                    title: s.title || `Buổi ${idx + 1}`,
+                    status: s.status,
+                    presentCount: summary?.presentCount || 0,
+                    absentCount: summary?.absentCount || 0,
+                    sessionDate: s.sessionDate, // Raw ISO date for sorting
+                    materials: [],
+                    assignments: [],
+                };
+            });
+            
+            setSessions(mappedSessions);
+        } catch (err) {
+            console.error('Lỗi tải thông tin buổi học:', err);
+        }
+    };
+
+    const fetchSessionItems = async (sessionId) => {
+        if (loadingItems[sessionId]) return;
+        setLoadingItems(prev => ({ ...prev, [sessionId]: true }));
+        try {
+            const [matRes, asmRes] = await Promise.all([
+                api.get(`/Materials/Get-By-Session/${sessionId}`),
+                api.get(`/Assignments/Get-By-Session/${sessionId}`)
+            ]);
+
+            setSessions(prev => prev.map(s => {
+                if (s.sessionId === sessionId) {
+                    return {
+                        ...s,
+                        materials: (matRes.data || []).map(mapMaterial),
+                        assignments: (asmRes.data || []).map(mapAssignment),
+                        itemsLoaded: true
+                    };
+                }
+                return s;
+            }));
+        } catch (err) {
+            console.error(`Lỗi khi tải dữ liệu cho buổi ${sessionId}:`, err);
+            toast.error('Không thể tải tài liệu của buổi học này.');
+        } finally {
+            setLoadingItems(prev => ({ ...prev, [sessionId]: false }));
+        }
+    };
+
+    const handleToggleExpand = (sessionId) => {
+        if (expandedSessionId === sessionId) {
+            setExpandedSessionId(null);
+        } else {
+            setExpandedSessionId(sessionId);
+            const session = sessions.find(s => s.sessionId === sessionId);
+            if (session && !session.itemsLoaded) {
+                fetchSessionItems(sessionId);
+            }
+        }
+    };
+
     useEffect(() => {
         if (!classId) return;
         setLoading(true);
@@ -206,7 +368,8 @@ const ClassDetail = () => {
             fetchSubjects(),
             fetchTeachersAndAssistants(),
             fetchRooms(),
-            fetchGrades()
+            fetchGrades(),
+            fetchSessionsAndAttendance()
         ]).finally(() => setLoading(false));
     }, [classId]);
 
@@ -225,17 +388,60 @@ const ClassDetail = () => {
         setAddingStudentId(student.userId);
         try {
             await api.post(`/Classes/${classId}/students/${student.userId}`);
-            // Optimistic update: close modal and reset search immediately for better UX
-            setAddStudentModal(false);
+            // Keep modal open and clear search for better batch UX
             setStudentSearch('');
             toast.success(`Đã thêm ${student.fullName} vào lớp thành công!`);
             // Fetch list in the background
             fetchStudents();
+            // Clear from selection if it was there
+            setSelectedStudentIds(prev => {
+                const next = new Set(prev);
+                next.delete(student.userId);
+                return next;
+            });
         } catch (err) {
             toast.error(err.response?.data?.message || 'Không thể thêm học sinh.');
         } finally {
             setAddingStudentId(null);
         }
+    };
+
+    const handleBatchAdd = async () => {
+        if (selectedStudentIds.size === 0) return;
+        
+        setBatchAdding(true);
+        const ids = Array.from(selectedStudentIds);
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const studentId of ids) {
+            try {
+                await api.post(`/Classes/${classId}/students/${studentId}`);
+                successCount++;
+            } catch (err) {
+                console.error(`Failed to add student ${studentId}:`, err);
+                failCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            toast.success(`Đã thêm ${successCount} học sinh vào lớp!`);
+            fetchStudents();
+            setSelectedStudentIds(new Set());
+        }
+        if (failCount > 0) {
+            toast.error(`Thất bại ${failCount} học sinh.`);
+        }
+        setBatchAdding(false);
+    };
+
+    const toggleStudentSelection = (studentId) => {
+        setSelectedStudentIds(prev => {
+            const next = new Set(prev);
+            if (next.has(studentId)) next.delete(studentId);
+            else next.add(studentId);
+            return next;
+        });
     };
 
     const handleRemoveStudent = async () => {
@@ -303,27 +509,28 @@ const ClassDetail = () => {
             const assistantId = modalData.assistant?.id;
 
             const updateDto = {
-    className: modalData.name,
-    description: modalData.description || null,
-    syllabusContent: modalData.syllabusContent || null,
-    subjectId: subject?.subjectId || classData.subjectId,
-    teacherId: teacherId || null,
-    assistantId: assistantId || null,
-    roomId: modalData.roomId || null,
-    gradeId: modalData.gradeId || null,
-    startDate: modalData.startDate || null,
-    endDate: modalData.endDate || null,
-    status: modalData.status === 'active' ? 'Active' : modalData.status === 'completed' ? 'Completed' : 'Inactive',
-    pricePerSession: modalData.pricePerSession ? Number(modalData.pricePerSession) : null, // <-- THÊM DÒNG NÀY
-    scheduleSlots: (modalData.scheduleSlots || [])
-        .filter(s => s.day && s.startTime && s.endTime)
-        .map(s => ({
-            dayOfWeek: DAY_NAME_TO_NUMBER[s.day] ?? 1,
-            startTime: s.startTime,
-            endTime: s.endTime,
-            roomId: s.roomId
-        }))
-};
+                className: modalData.name,
+                description: modalData.description || null,
+                syllabusContent: modalData.syllabusContent || null,
+                subjectId: subject?.subjectId || classData.subjectId,
+                teacherId: teacherId || null,
+                assistantId: assistantId || null,
+                roomId: modalData.roomId || null,
+                gradeId: modalData.gradeId || null,
+                startDate: modalData.startDate || null,
+                endDate: modalData.endDate || null,
+                maxStudents: Number(modalData.maxStudents),
+                status: modalData.status === 'active' ? 'Active' : modalData.status === 'completed' ? 'Completed' : 'Inactive',
+                pricePerSession: modalData.pricePerSession ? Number(modalData.pricePerSession) : null,
+                scheduleSlots: (modalData.scheduleSlots || [])
+                    .filter(s => s.day && s.startTime && s.endTime)
+                    .map(s => ({
+                        dayOfWeek: DAY_NAME_TO_NUMBER[s.day] ?? 1,
+                        startTime: s.startTime,
+                        endTime: s.endTime,
+                        roomId: s.roomId
+                    }))
+            };
             await api.put(`/Classes/${classId}`, updateDto);
             await fetchClassData();
             await fetchTeachersAndAssistants();
@@ -333,6 +540,34 @@ const ClassDetail = () => {
         } catch (err) {
             console.error("Lỗi khi cập nhật lớp học:", err);
             toast.error(err.response?.data?.message || 'Không thể cập nhật lớp học.');
+        }
+    };
+
+    // ── Helpers ──
+    const getFileIcon = (type) => {
+        switch (type) {
+            case 'pdf':   return <FileText size={20} color="#ef4444" />;
+            case 'word':  return <FileText size={20} color="#2563eb" />;
+            case 'excel': return <FileText size={20} color="#16a34a" />;
+            case 'ppt':   return <FileText size={20} color="#ea580c" />;
+            case 'video': return <PlayCircle size={20} color="#8b5cf6" />;
+            default:      return <FileText size={20} color="#64748b" />;
+        }
+    };
+
+    const handleDownload = (item) => {
+        const downloadUrl = item.fileUrl || item.url;
+        if (downloadUrl) {
+            toast.success(`Đang tải xuống: ${item.title}`);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = item.title;
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            toast.error("Không có đường dẫn tải về");
         }
     };
 
@@ -395,8 +630,25 @@ const ClassDetail = () => {
                             <StatusBadge status={classData.status} />
                         </div>
                         <p className="cd-title-meta">
-                            Môn: {classData.subjectName} &nbsp;•&nbsp; Mã lớp: #{classData.classId} &nbsp;•&nbsp; {classData.status}
+                            Môn: {classData.subjectName} &nbsp;•&nbsp; Khối: {classData.gradeName || 'Chưa rõ'} &nbsp;•&nbsp; {classData.status}
                         </p>
+                        
+                        {(classData.description || classData.syllabusContent) && (
+                            <div className="cd-header-more-info">
+                                {classData.description && (
+                                    <div className="cd-header-info-box">
+                                        <div className="cd-info-box-label">Mô tả lớp học</div>
+                                        <div className="cd-info-box-content">{classData.description}</div>
+                                    </div>
+                                )}
+                                {classData.syllabusContent && (
+                                    <div className="cd-header-info-box">
+                                        <div className="cd-info-box-label">Nội dung giáo trình</div>
+                                        <div className="cd-info-box-content">{classData.syllabusContent}</div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                     <div className="cd-header-actions">
                         <button className="cd-btn-primary" onClick={() => setEditModalOpen(true)}>
@@ -405,215 +657,397 @@ const ClassDetail = () => {
                     </div>
                 </div>
 
-                {/* Info Cards */}
-                <div className="cd-info-cards">
-                    <div className="cd-info-card">
-                        <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
-                        <div className="cd-info-card-value">{scheduleLabel}</div>
-                        <div className="cd-info-card-sub">{timeLabel}</div>
-                        {roomLabel && (
-                            <div className="cd-info-card-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                                <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'currentColor' }}></div>
-                                {roomLabel}
-                            </div>
-                        )}
-                    </div>
-                    <div className="cd-info-card">
-                        <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
-                        <div className="cd-info-card-value">{durationLabel}</div>
-                        <div className="cd-info-card-sub">
-                            {formatDate(classData.startDate)} → {formatDate(classData.endDate)}
-                        </div>
-                    </div>
+                {/* Tab Navigation */}
+                <div className="cd-tabs-nav">
+                    <button
+                        className={`cd-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('overview')}
+                    >
+                        Tổng quan
+                    </button>
+                    <button
+                        className={`cd-tab-btn ${activeTab === 'academic' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('academic')}
+                    >
+                        Tài liệu & Bài tập ({sessions.reduce((acc, s) => acc + (s.materials?.length || 0) + (s.assignments?.length || 0), 0)})
+                    </button>
                 </div>
 
-                {/* Description & Syllabus */}
-                {(classData.description || classData.syllabusContent) && (
-                    <div className="cd-info-cards" style={{ marginTop: 0 }}>
-                        {classData.description && (
-                            <div className="cd-info-card" style={{ flex: 1 }}>
-                                <div className="cd-info-card-label"><Info size={16} /> MÔ TẢ LỚP HỌC</div>
-                                <div className="cd-info-card-value" style={{ fontSize: '0.9rem', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                                    {classData.description}
+                {/* Tab Content */}
+                <div className="cd-tab-content">
+                    {activeTab === 'overview' ? (
+                        <div className="cd-content-grid">
+                            {/* LEFT */}
+                            <div className="cd-left">
+                                {/* Student Roster */}
+                                <div className="cd-card">
+                                    <div className="cd-card-header">
+                                        <h3>Danh sách học sinh ({students.length})</h3>
+                                        <button className="cd-btn-add-student" onClick={() => setAddStudentModal(true)}>
+                                            <UserPlus size={16} /> Thêm học sinh
+                                        </button>
+                                    </div>
+
+                                    {students.length === 0 ? (
+                                        <div className="cd-add-empty" style={{ padding: '2rem', textAlign: 'center' }}>
+                                            Chưa có học sinh nào trong lớp này.
+                                        </div>
+                                    ) : (
+                                        <table className="cd-roster-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>HỌ VÀ TÊN</th>
+                                                    <th>EMAIL</th>
+                                                    <th>KHỐI</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {displayedStudents.map(st => (
+                                                    <tr key={st.userId}>
+                                                        <td>
+                                                            <div className="cd-student-cell">
+                                                                <div className="cd-avatar">{getInitials(st.fullName)}</div>
+                                                                <div>
+                                                                    <div className="cd-student-name">{st.fullName}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="cd-last-attended">{st.email || '—'}</td>
+                                                        <td>
+                                                            <span style={{
+                                                                fontSize: '0.75rem',
+                                                                padding: '2px 10px',
+                                                                borderRadius: 12,
+                                                                background: st.grade && st.grade !== '—' ? '#eff6ff' : '#f1f5f9',
+                                                                color: st.grade && st.grade !== '—' ? '#2563eb' : '#94a3b8',
+                                                                fontWeight: 600
+                                                            }}>
+                                                                {formatGrade(st.grade)}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <button
+                                                                className="cd-remove-btn"
+                                                                onClick={() => setRemoveModal({ show: true, student: st })}
+                                                                title="Xóa khỏi lớp"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    )}
+
+                                    {students.length > 5 && (
+                                        <button className="cd-view-all" onClick={() => setShowAllStudents(p => !p)}>
+                                            {showAllStudents ? 'Thu gọn' : `Xem tất cả ${students.length} học sinh`}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Attendance History */}
+                                <div className="cd-card">
+                                    <div className="cd-card-header">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <h3>Lịch sử điểm danh</h3>
+                                            <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 500 }}>
+                                                {sessions.filter(s => new Date(s.sessionDate) <= new Date()).length} buổi đã diễn ra
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {sessions.length === 0 ? (
+                                        <p style={{ color: '#9ca3af', fontSize: '0.875rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                                            Chưa có buổi học nào được tạo.
+                                        </p>
+                                    ) : (
+                                        <>
+                                            <div style={{ overflowX: 'auto' }}>
+                                                <table className="att-history-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>NGÀY</th>
+                                                            <th style={{ textAlign: 'center' }}>CÓ MẶT</th>
+                                                            <th style={{ textAlign: 'center' }}>VẮNG</th>
+                                                            <th style={{ textAlign: 'right' }}>THAO TÁC</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {[...sessions]
+                                                            .filter(s => new Date(s.sessionDate) <= new Date())
+                                                            .sort((a, b) => new Date(b.sessionDate) - new Date(a.sessionDate))
+                                                            .slice(0, showAllSessions ? sessions.length : 5)
+                                                            .map((session) => {
+                                                                const hasAttendance = session.presentCount > 0 || session.absentCount > 0;
+                                                                return (
+                                                                    <tr key={session.sessionId}>
+                                                                        <td>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                                <span style={{ fontWeight: 600, color: '#1e293b' }}>{session.date}</span>
+                                                                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{session.dayLabel} • {session.time}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td style={{ textAlign: 'center' }}>
+                                                                            {hasAttendance ? (
+                                                                                <span style={{ fontWeight: 700, color: '#16a34a' }}>{session.presentCount}</span>
+                                                                            ) : (
+                                                                                <span style={{ color: '#cbd5e1' }}>—</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td style={{ textAlign: 'center' }}>
+                                                                            {hasAttendance ? (
+                                                                                <span style={{ fontWeight: 700, color: '#dc2626' }}>{session.absentCount}</span>
+                                                                            ) : (
+                                                                                <span style={{ color: '#cbd5e1' }}>—</span>
+                                                                            )}
+                                                                        </td>
+                                                                        <td style={{ textAlign: 'right' }}>
+                                                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                                                                <button 
+                                                                                    className="att-action-btn view"
+                                                                                    onClick={() => {
+                                                                                        setSelectedSession(session);
+                                                                                        setIsAttendanceEdit(false);
+                                                                                        setAttendanceOpen(true);
+                                                                                    }}
+                                                                                    title="Xem chi tiết"
+                                                                                >
+                                                                                    <Search size={14} />
+                                                                                    <span>Chi tiết</span>
+                                                                                </button>
+                                                                                <button 
+                                                                                    className="att-action-btn edit"
+                                                                                    onClick={() => {
+                                                                                        setSelectedSession(session);
+                                                                                        setIsAttendanceEdit(true);
+                                                                                        setAttendanceOpen(true);
+                                                                                    }}
+                                                                                    title="Chỉnh sửa điểm danh"
+                                                                                >
+                                                                                    <Pencil size={14} />
+                                                                                    <span>Sửa</span>
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {sessions.filter(s => new Date(s.sessionDate) <= new Date()).length > 5 && (
+                                                <button className="cd-view-all" onClick={() => setShowAllSessions(p => !p)}>
+                                                    {showAllSessions ? 'Thu gọn' : `Xem tất cả ${sessions.filter(s => new Date(s.sessionDate) <= new Date()).length} buổi đã diễn ra`}
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             </div>
-                        )}
-                        {classData.syllabusContent && (
-                            <div className="cd-info-card" style={{ flex: 1 }}>
-                                <div className="cd-info-card-label"><BookOpen size={16} /> CHƯƠNG TRÌNH HỌC</div>
-                                <div className="cd-info-card-value" style={{ fontSize: '0.9rem', fontWeight: 400, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                                    {classData.syllabusContent}
+
+                            {/* RIGHT */}
+                            <div className="cd-right">
+                                {/* Assigned Staff */}
+                                <div className="cd-card">
+                                    <div className="cd-card-header">
+                                        <h3>Giáo viên phụ trách</h3>
+                                    </div>
+                                    <div className="cd-staff-list">
+                                        {classData.teacherName ? (
+                                            <div className="cd-staff-item">
+                                                <div className="cd-staff-avatar">{getInitials(classData.teacherName)}</div>
+                                                <div className="cd-staff-info">
+                                                    <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
+                                                    <div className="cd-staff-name">{classData.teacherName}</div>
+                                                    <div className="cd-staff-sub">{classData.subjectName}</div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: '#94a3b8', fontSize: '0.875rem', padding: '0.5rem 0' }}>Chưa phân công giáo viên</div>
+                                        )}
+
+                                        {classData.assistantName && (
+                                            <div className="cd-staff-item">
+                                                <div className="cd-staff-avatar assistant">{getInitials(classData.assistantName)}</div>
+                                                <div className="cd-staff-info">
+                                                    <div className="cd-staff-role">TRỢ GIẢNG</div>
+                                                    <div className="cd-staff-name">{classData.assistantName}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Class Overview */}
+                                <div className="cd-card cd-overview-card">
+                                    <div className="cd-card-header">
+                                        <h3>Tổng quan lớp học</h3>
+                                    </div>
+                                    <div className="cd-overview-stats">
+                                        <div className="cd-overview-row">
+                                            <span>Sĩ số hiện tại</span>
+                                            <span className="cd-overview-val">{students.length} / {classData.maxStudents || 30}</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                             <span>Sĩ số tối đa</span>
+                                             <span className="cd-overview-val">{classData.maxStudents || 30}</span>
+                                         </div>
+                                        <div className="cd-overview-row">
+                                            <span>Môn học</span>
+                                            <span className="cd-overview-val">{classData.subjectName}</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                            <span>Ngày bắt đầu</span>
+                                            <span className="cd-overview-val">{formatDate(classData.startDate)}</span>
+                                        </div>
+                                        <div className="cd-overview-row">
+                                            <span>Ngày kết thúc</span>
+                                            <span className="cd-overview-val">{formatDate(classData.endDate)}</span>
+                                        </div>
+                                    </div>
+
+                                    {classData.scheduleSlots && classData.scheduleSlots.length > 0 && (
+                                        <div className="cd-schedule-box">
+                                            <CalendarClock size={16} className="cd-schedule-icon" />
+                                            <div className="cd-schedule-info">
+                                                <div className="cd-schedule-title">Lịch học:</div>
+                                                {classData.scheduleSlots.map((s, idx) => (
+                                                    <div key={idx} className="cd-schedule-item">
+                                                        {DAY_NAMES[s.dayOfWeek]} ({s.startTime}–{s.endTime})
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Content Grid */}
-                <div className="cd-content-grid">
-                    {/* LEFT */}
-                    <div className="cd-left">
-                        {/* Student Roster */}
-                        <div className="cd-card">
-                            <div className="cd-card-header">
-                                <h3>Danh sách học sinh ({students.length})</h3>
-                                <button className="cd-btn-add-student" onClick={() => setAddStudentModal(true)}>
-                                    <UserPlus size={16} /> Thêm học sinh
-                                </button>
-                            </div>
-
-                            {students.length === 0 ? (
-                                <div className="cd-add-empty" style={{ padding: '2rem', textAlign: 'center' }}>
-                                    Chưa có học sinh nào trong lớp này.
+                        </div>
+                    ) : (
+                        /* ACADEMIC TAB */
+                        <div className="cd-academic-tab">
+                            {sessions.length === 0 ? (
+                                <div className="cd-card" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                                    <BookOpen size={48} style={{ margin: '0 auto 1rem', opacity: 0.2 }} />
+                                    <p>Chưa có dữ liệu buổi học cho lớp này.</p>
                                 </div>
                             ) : (
-                                <table className="cd-roster-table">
-                                    <thead>
-                                        <tr>
-                                            <th>HỌ VÀ TÊN</th>
-                                            <th>EMAIL</th>
-                                            <th>KHỐI</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {displayedStudents.map(st => (
-                                            <tr key={st.userId}>
-                                                <td>
-                                                    <div className="cd-student-cell">
-                                                        <div className="cd-avatar">{getInitials(st.fullName)}</div>
-                                                        <div>
-                                                            <div className="cd-student-name">{st.fullName}</div>
-                                                        </div>
+                                <div className="cd-session-list">
+                                    {sessions.map((session) => (
+                                        <div key={session.sessionId} className={`cd-session-item ${expandedSessionId === session.sessionId ? 'expanded' : ''}`}>
+                                            <div 
+                                                className="cd-session-header"
+                                                onClick={() => handleToggleExpand(session.sessionId)}
+                                            >
+                                                <div className="cd-session-idx">Buổi {session.sessionNum}</div>
+                                                <div className="cd-session-main">
+                                                    <div className="cd-session-title-row">
+                                                        <h4>{session.title}</h4>
+                                                        <span className="cd-session-date-tag">{session.date}</span>
                                                     </div>
-                                                </td>
-                                                <td className="cd-last-attended">{st.email || '—'}</td>
-                                                <td>
-                                                    <span style={{
-                                                        fontSize: '0.75rem',
-                                                        padding: '2px 10px',
-                                                        borderRadius: 12,
-                                                        background: st.grade && st.grade !== '—' ? '#eff6ff' : '#f1f5f9',
-                                                        color: st.grade && st.grade !== '—' ? '#2563eb' : '#94a3b8',
-                                                        fontWeight: 600
-                                                    }}>
-                                                        {formatGrade(st.grade)}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <button
-                                                        className="cd-remove-btn"
-                                                        onClick={() => setRemoveModal({ show: true, student: st })}
-                                                        title="Xóa khỏi lớp"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
+                                                    <div className="cd-session-meta-row">
+                                                        <span>{session.dayLabel} • {session.time}</span>
+                                                        <span className="cd-dot">•</span>
+                                                        <span style={{ color: '#2563eb', fontWeight: 500 }}>
+                                                            {loadingItems[session.sessionId] ? (
+                                                                <Loader2 size={12} className="cd-spinner" style={{ display: 'inline', marginRight: '4px' }} />
+                                                            ) : (
+                                                                (session.materials?.length || 0) + (session.assignments?.length || 0)
+                                                            )} tệp đính kèm
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="cd-session-toggle">
+                                                    {expandedSessionId === session.sessionId ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                                </div>
+                                            </div>
 
-                            {students.length > 5 && (
-                                <button className="cd-view-all" onClick={() => setShowAllStudents(p => !p)}>
-                                    {showAllStudents ? 'Thu gọn' : `Xem tất cả ${students.length} học sinh`}
-                                </button>
-                            )}
-                        </div>
+                                            {expandedSessionId === session.sessionId && (
+                                                <div className="cd-session-body">
+                                                    {loadingItems[session.sessionId] ? (
+                                                        <div className="cd-loading-inline" style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                                                            <Loader2 size={24} className="cd-spinner" style={{ margin: '0 auto 10px' }} />
+                                                            <p style={{ fontSize: '0.875rem' }}>Đang tải tài liệu...</p>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            {/* Materials */}
+                                                            <div className="cd-session-section">
+                                                                <div className="cd-session-section-title">
+                                                                    <BookOpen size={16} />
+                                                                    <span>Tài liệu bài học ({(session.materials || []).length})</span>
+                                                                </div>
+                                                                <div className="cd-item-grid">
+                                                                    {(session.materials || []).length === 0 ? (
+                                                                        <p className="cd-empty-inner">Không có tài liệu.</p>
+                                                                    ) : (
+                                                                        session.materials.map(mat => (
+                                                                            <div key={mat.id} className="cd-resource-card">
+                                                                                <div className="cd-resource-icon">{getFileIcon(mat.type)}</div>
+                                                                                <div className="cd-resource-info" onClick={() => setDetailMaterial(mat)}>
+                                                                                    <div className="cd-resource-name">{mat.title}</div>
+                                                                                    <div className="cd-resource-meta">{mat.size} • {mat.fileName}</div>
+                                                                                </div>
+                                                                                <button 
+                                                                                    className="cd-resource-download"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleDownload(mat);
+                                                                                    }}
+                                                                                    title="Tải xuống"
+                                                                                >
+                                                                                    <Download size={16} />
+                                                                                </button>
+                                                                            </div>
+                                                                        ))
+                                                                    )}
+                                                                </div>
+                                                            </div>
 
-                        {/* Attendance – Read only notice */}
-                        <div className="cd-card">
-                            <div className="cd-card-header">
-                                <h3>Điểm danh</h3>
-                            </div>
-                            <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b' }}>
-                                <CalendarClock size={32} style={{ margin: '0 auto 10px', display: 'block', opacity: 0.4 }} />
-                                <p style={{ fontSize: '0.9rem' }}>Điểm danh do <strong>giáo viên phụ trách</strong> thực hiện trực tiếp trong buổi học.</p>
-                                <p style={{ fontSize: '0.8rem', marginTop: 6, color: '#94a3b8' }}>
-                                    Admin trung tâm chỉ có quyền xem báo cáo điểm danh.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* RIGHT */}
-                    <div className="cd-right">
-                        {/* Assigned Staff */}
-                        <div className="cd-card">
-                            <div className="cd-card-header">
-                                <h3>Giáo viên phụ trách</h3>
-                            </div>
-                            <div className="cd-staff-list">
-                                {classData.teacherName ? (
-                                    <div className="cd-staff-item">
-                                        <div className="cd-staff-avatar">{getInitials(classData.teacherName)}</div>
-                                        <div className="cd-staff-info">
-                                            <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
-                                            <div className="cd-staff-name">{classData.teacherName}</div>
-                                            <div className="cd-staff-sub">{classData.subjectName}</div>
+                                                            {/* Assignments */}
+                                                            <div className="cd-session-section">
+                                                                <div className="cd-session-section-title">
+                                                                    <ClipboardCheck size={16} />
+                                                                    <span>Bài tập về nhà ({(session.assignments || []).length})</span>
+                                                                </div>
+                                                                <div className="cd-item-grid">
+                                                                    {(session.assignments || []).length === 0 ? (
+                                                                        <p className="cd-empty-inner">Không có bài tập.</p>
+                                                                    ) : (
+                                                                        session.assignments.map(asm => (
+                                                                            <div key={asm.id} className="cd-resource-card assignment">
+                                                                                <div className="cd-resource-icon">{getFileIcon(asm.type)}</div>
+                                                                                <div className="cd-resource-info" onClick={() => setDetailAssignment(asm)}>
+                                                                                    <div className="cd-resource-name">{asm.title}</div>
+                                                                                    <div className="cd-resource-meta">Hạn: {asm.dueDate} • {asm.fileName}</div>
+                                                                                </div>
+                                                                                <button 
+                                                                                    className="cd-resource-download"
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        handleDownload(asm);
+                                                                                    }}
+                                                                                    title="Tải xuống"
+                                                                                >
+                                                                                    <Download size={16} />
+                                                                                </button>
+                                                                            </div>
+                                                                        ))
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div style={{ color: '#94a3b8', fontSize: '0.875rem', padding: '0.5rem 0' }}>Chưa phân công giáo viên</div>
-                                )}
-
-                                {classData.assistantName && (
-                                    <div className="cd-staff-item">
-                                        <div className="cd-staff-avatar assistant">{getInitials(classData.assistantName)}</div>
-                                        <div className="cd-staff-info">
-                                            <div className="cd-staff-role">TRỢ GIẢNG</div>
-                                            <div className="cd-staff-name">{classData.assistantName}</div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Class Overview */}
-                        <div className="cd-card cd-overview-card">
-                            <div className="cd-card-header">
-                                <h3>Tổng quan lớp học</h3>
-                            </div>
-                            <div className="cd-overview-stats">
-                                <div className="cd-overview-row">
-                                    <span>Tổng học sinh</span>
-                                    <span className="cd-overview-val">{students.length}</span>
-                                </div>
-                                <div className="cd-overview-row">
-                                    <span>Môn học</span>
-                                    <span className="cd-overview-val">{classData.subjectName}</span>
-                                </div>
-                                <div className="cd-overview-row">
-                                    <span>Ngày bắt đầu</span>
-                                    <span className="cd-overview-val">{formatDate(classData.startDate)}</span>
-                                </div>
-                                <div className="cd-overview-row">
-                                    <span>Ngày kết thúc</span>
-                                    <span className="cd-overview-val">{formatDate(classData.endDate)}</span>
-                                </div>
-                            </div>
-
-                            {classData.scheduleSlots && classData.scheduleSlots.length > 0 && (
-                                <div className="cd-next-session">
-                                    <CalendarClock size={14} />
-                                    <span>
-                                        Lịch học: {classData.scheduleSlots.map(s =>
-                                            `${DAY_NAMES[s.dayOfWeek]} (${s.startTime}–${s.endTime})`
-                                        ).join(', ')}
-                                    </span>
+                                    ))}
                                 </div>
                             )}
-
-                            {/* Read-only attendance note */}
-                            <div style={{ marginTop: 12, padding: '10px 12px', background: '#f0f9ff', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <CheckCircle size={16} style={{ color: '#0ea5e9', flexShrink: 0 }} />
-                                <span style={{ fontSize: '0.8rem', color: '#0369a1' }}>
-                                    Điểm danh do giáo viên thực hiện
-                                </span>
-                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </main>
 
@@ -661,6 +1095,20 @@ const ClassDetail = () => {
                                         )}
                                     </div>
 
+                                    {selectedStudentIds.size > 0 && (
+                                        <div className="cd-batch-actions" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Đã chọn <strong>{selectedStudentIds.size}</strong> học sinh</span>
+                                            <button 
+                                                className="cd-btn-primary" 
+                                                style={{ padding: '6px 16px', fontSize: '0.85rem' }}
+                                                onClick={handleBatchAdd}
+                                                disabled={batchAdding}
+                                            >
+                                                {batchAdding ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : 'Thêm các bạn đã chọn'}
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {filteredAvailable.length === 0 ? (
                                         <div className="cd-add-empty">
                                             {availableStudents.length === 0
@@ -670,15 +1118,31 @@ const ClassDetail = () => {
                                     ) : (
                                         <div className="cd-student-pick-list">
                                             {filteredAvailable.map(s => (
-                                                <div key={s.userId} className="cd-student-pick-item">
+                                                <div 
+                                                    key={s.userId} 
+                                                    className={`cd-student-pick-item${selectedStudentIds.has(s.userId) ? ' selected' : ''}`}
+                                                    onClick={() => toggleStudentSelection(s.userId)}
+                                                    style={{ cursor: 'pointer', transition: 'all 0.2s', background: selectedStudentIds.has(s.userId) ? '#f0f9ff' : 'transparent' }}
+                                                >
+                                                    <div className="cd-pick-checkbox" style={{ marginRight: '10px' }}>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={selectedStudentIds.has(s.userId)} 
+                                                            onChange={() => {}} // Controlled by parent div click
+                                                            style={{ cursor: 'pointer' }}
+                                                        />
+                                                    </div>
                                                     <div className="cd-avatar">{getInitials(s.fullName)}</div>
                                                     <div className="cd-pick-info">
                                                         <div className="cd-student-name">{s.fullName}</div>
                                                     </div>
                                                     <button
                                                         className="cd-btn-pick"
-                                                        onClick={() => handleAddStudent(s)}
-                                                        disabled={addingStudentId === s.userId || actionLoading}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleAddStudent(s);
+                                                        }}
+                                                        disabled={addingStudentId === s.userId || actionLoading || batchAdding}
                                                     >
                                                         {addingStudentId === s.userId ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <><Plus size={14} /> Thêm</>}
                                                     </button>
@@ -798,61 +1262,102 @@ const ClassDetail = () => {
                         <div className="delete-modal-body">
                             <div className="delete-modal-warning">
                                 <div className="delete-modal-warning-icon"><AlertTriangle size={20} /></div>
-                                <div className="delete-modal-warning-content">
-                                    <h4>Xác nhận xóa học sinh</h4>
-                                    <p>Bạn có chắc muốn xóa <strong>{removeModal.student?.fullName}</strong> khỏi lớp <strong>{classData.className}</strong>? Thao tác này không xóa học sinh khỏi trung tâm.</p>
+                                <div className="delete-modal-warning-text">
+                                    Hàn động này sẽ xóa <strong>{removeModal.student?.fullName}</strong> khỏi danh sách lớp. Kết quả học tập và điểm danh (nếu có) sẽ bị ảnh hưởng.
                                 </div>
                             </div>
                         </div>
                         <div className="delete-modal-footer">
                             <button className="btn-delete-cancel" onClick={() => setRemoveModal({ show: false, student: null })}>Hủy</button>
-                            <button
-                                className="btn-delete-confirm"
-                                onClick={handleRemoveStudent}
-                                disabled={actionLoading}
-                            >
-                                {actionLoading ? 'Đang xóa...' : 'Xóa khỏi lớp'}
+                            <button className="btn-delete-confirm" onClick={handleRemoveStudent} disabled={actionLoading}>
+                                {actionLoading ? 'Đang xóa...' : 'Xác nhận xóa'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Attendance Modal */}
+            {attendanceOpen && selectedSession && (
+                <AttendanceModal
+                    isOpen={attendanceOpen}
+                    onClose={() => setAttendanceOpen(false)}
+                    session={{
+                        ...selectedSession,
+                        dayLabel: selectedSession.dayLabel,
+                        date: selectedSession.date,
+                        time: selectedSession.time
+                    }}
+                    sessionId={selectedSession.sessionId}
+                    students={students.map(s => ({
+                        id: String(s.userId),
+                        name: s.fullName,
+                        avatar: getInitials(s.fullName)
+                    }))}
+                    canAttend={isAttendanceEdit}
+                    isAdmin={true}
+                    lockMessage={!isAttendanceEdit ? "Bạn đang ở chế độ xem chi tiết điểm danh." : ""}
+                    onSave={async () => {
+                        await fetchSessionsAndAttendance();
+                    }}
+                />
+            )}
+
+            {/* Material Detail Modal */}
+            {detailMaterial && (
+                <MaterialDetailModal
+                    isOpen={!!detailMaterial}
+                    onClose={() => setDetailMaterial(null)}
+                    material={detailMaterial}
+                />
+            )}
+
+            {/* Assignment Detail Modal */}
+            {detailAssignment && (
+                <AssignmentDetailModal
+                    isOpen={!!detailAssignment}
+                    onClose={() => setDetailAssignment(null)}
+                    assignment={detailAssignment}
+                />
+            )}
+
             {/* Edit Class Modal */}
-            <CreateClassModal
-                isOpen={editModalOpen}
-                onClose={() => setEditModalOpen(false)}
-                onSubmit={handleEditSubmit}
-                editingClass={classData ? {
-                    id: classData.classId,
-                    name: classData.className,
-                    subject: classData.subjectName,
-                    mainTeacher: classData.teacherName ? { id: classData.teacherId, name: classData.teacherName } : null,
-                    assistant: classData.assistantName ? { id: classData.assistantId, name: classData.assistantName } : null,
-                    roomName: classData.roomName || classData.RoomName || '',
-                    roomId: classData.roomId || classData.RoomId,
-                    gradeId: classData.gradeId || classData.GradeId,
-                    description: classData.description || '',
-                    syllabusContent: classData.syllabusContent || '',
-                    pricePerSession: classData.pricePerSession ?? classData.PricePerSession ?? '',
-                    startDate: classData.startDate ? classData.startDate.split('T')[0] : '',
-                    endDate: classData.endDate ? classData.endDate.split('T')[0] : '',
-                    status: classData.status?.toLowerCase() || 'active',
-                    scheduleSlots: (classData.scheduleSlots || []).map(s => ({
-                        day: ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][s.dayOfWeek] || '',
-                        startTime: s.startTime || s.StartTime,
-                        endTime: s.endTime || s.EndTime,
-                        roomId: s.roomId || s.RoomId,
-                        roomName: s.roomName || s.RoomName
-                    }))
-                } : null}
-                subjects={subjects}
-                teachersList={teachers}
-                assistantsList={assistants}
-                roomsList={rooms}
-                gradesList={grades}
-                existingClasses={[]}
-            />
+            {editModalOpen && (
+                <CreateClassModal
+                    isOpen={editModalOpen}
+                    onClose={() => setEditModalOpen(false)}
+                    onSubmit={handleEditSubmit}
+                    editingClass={classData ? {
+                        id: classData.classId,
+                        name: classData.className,
+                        subject: classData.subjectName,
+                        mainTeacher: classData.teacherName ? { id: classData.teacherId, name: classData.teacherName } : null,
+                        assistant: classData.assistantName ? { id: classData.assistantId, name: classData.assistantName } : null,
+                        roomName: classData.roomName || '',
+                        roomId: classData.roomId,
+                        gradeId: classData.gradeId,
+                        description: classData.description || '',
+                        syllabusContent: classData.syllabusContent || '',
+                        pricePerSession: classData.pricePerSession ?? '',
+                        startDate: classData.startDate ? classData.startDate.split('T')[0] : '',
+                        endDate: classData.endDate ? classData.endDate.split('T')[0] : '',
+                        maxStudents: classData.maxStudents ?? 30,
+                        status: classData.status?.toLowerCase() || 'active',
+                        scheduleSlots: (classData.scheduleSlots || []).map(s => ({
+                            day: ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][s.dayOfWeek] || '',
+                            startTime: s.startTime,
+                            endTime: s.endTime,
+                            roomId: s.roomId,
+                            roomName: s.roomName
+                        }))
+                    } : null}
+                    subjects={subjects}
+                    teachersList={teachers}
+                    assistantsList={assistants}
+                    roomsList={rooms}
+                    gradesList={grades}
+                />
+            )}
         </div>
     );
 };

@@ -43,9 +43,9 @@ const NotificationMailbox = ({
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState('all'); // all, unread, system, feedback
+    const [filterType, setFilterType] = useState('all'); // all, unread, system, support, feedback, replied
 
-    const unreadCount = useMemo(() => messages.filter(m => !m.isRead).length, [messages]);
+    const unreadCount = useMemo(() => messages.filter(m => !m.isRead && !m.adminResponse).length, [messages]);
 
     const filteredMessages = useMemo(() => {
         return messages.filter(m => {
@@ -54,10 +54,11 @@ const NotificationMailbox = ({
                 const textTarget = `${m.subject} ${m.senderName} ${m.preview}`.toLowerCase();
                 if (!textTarget.includes(query)) return false;
             }
-            if (filterType === 'unread') return !m.isRead;
+            if (filterType === 'unread') return !m.isRead && !m.adminResponse;
             if (filterType === 'system') return m.type === 'system';
-            if (filterType === 'support') return m.type === 'support';
+            if (filterType === 'support') return m.type === 'support' && m.status !== 'Approved' && m.status !== 'Rejected' && m.status !== 'Answered';
             if (filterType === 'feedback') return m.type === 'feedback';
+            if (filterType === 'replied') return m.status === 'Answered' || m.status === 'Approved' || m.status === 'Rejected';
             return true;
         });
     }, [messages, searchQuery, filterType]);
@@ -148,9 +149,9 @@ const NotificationMailbox = ({
                         <div className="inbox-filter-tabs">
                             <button className={filterType === 'all' ? 'active' : ''} onClick={() => setFilterType('all')}>Tất cả</button>
                             <button className={filterType === 'unread' ? 'active' : ''} onClick={() => setFilterType('unread')}>Chưa đọc</button>
+                            <button className={filterType === 'replied' ? 'active' : ''} onClick={() => setFilterType('replied')}>Đã phản hồi</button>
+                            <button className={filterType === 'support' ? 'active' : ''} onClick={() => setFilterType('support')}>Chờ xử lý</button>
                             <button className={filterType === 'system' ? 'active' : ''} onClick={() => setFilterType('system')}>Hệ thống</button>
-                            <button className={filterType === 'support' ? 'active' : ''} onClick={() => setFilterType('support')}>Yêu cầu</button>
-                            <button className={filterType === 'feedback' ? 'active' : ''} onClick={() => setFilterType('feedback')}>Nhận xét</button>
                         </div>
                     </div>
                 )}
@@ -177,9 +178,15 @@ const NotificationMailbox = ({
                         </div>
                         <h3 className="drawer-detail-subject">{selectedMessage.subject}</h3>
                         <div className="drawer-detail-body">
-                            {(selectedMessage.content || '').split('\n').map((line, i) => (
-                                <p key={i}>{line || '\u00a0'}</p>
-                            ))}
+                            {(() => {
+                                // Xử lý giấu thông tin hệ thống khỏi giao diện người dùng
+                                const rawContent = selectedMessage.content || '';
+                                const cleanContent = rawContent.replace(/\[SYSTEM_DATA\][\s\S]*?\[\/SYSTEM_DATA\]/g, '').trim();
+                                
+                                return cleanContent.split('\n').map((line, i) => (
+                                    <p key={i}>{line || '\u00a0'}</p>
+                                ));
+                            })()}
                         </div>
                         {renderDetailExtra && renderDetailExtra(selectedMessage)}
                     </div>
@@ -200,7 +207,7 @@ const NotificationMailbox = ({
                         {!loading && !error && filteredMessages.length > 0 && filteredMessages.map(msg => (
                             <div
                                 key={msg.id}
-                                className={`drawer-msg-item ${!msg.isRead ? 'unread' : ''} ${msg.priority === 'high' ? 'high-priority' : ''}`}
+                                className={`drawer-msg-item ${(!msg.isRead && !msg.adminResponse) ? 'unread' : ''} ${msg.priority === 'high' ? 'high-priority' : ''}`}
                                 onClick={() => handleSelectMessage(msg)}
                             >
                                 <div className={`inbox-avatar ${msg.type} ${msg.priority === 'high' ? 'warning' : ''}`}>
@@ -216,7 +223,7 @@ const NotificationMailbox = ({
                                         <span className="drawer-msg-time">{formatDateTime(msg.sentAt)}</span>
                                     </div>
                                     <div className="drawer-msg-subject">
-                                        {!msg.isRead && <span className="unread-dot" />}
+                                        {!msg.isRead && !msg.adminResponse && <span className="unread-dot" />}
                                         {msg.priority === 'high' && <Star size={12} className="priority-star" />}
                                         {msg.subject}
                                     </div>

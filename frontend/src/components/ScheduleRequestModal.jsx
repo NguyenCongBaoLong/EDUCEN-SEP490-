@@ -39,7 +39,9 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
     const [targetDay, setTargetDay] = useState(DEFAULT_DAY);
     const [targetStartTime, setTargetStartTime] = useState(DEFAULT_START_TIME);
     const [targetEndTime, setTargetEndTime] = useState(DEFAULT_END_TIME);
+    const [selectedSlotIdx, setSelectedSlotIdx] = useState(0);
     const [selectedRoomId, setSelectedRoomId] = useState(null);
+    const [requestType, setRequestType] = useState('schedule_change'); // schedule_change, absence, other
     const [selectedClassId, setSelectedClassId] = useState(() => {
         if (classOptions.length > 0) return classOptions[0].classId;
         return initialData?.classInfo?.classId ?? null;
@@ -55,6 +57,7 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
         const raw = selectedClass?.scheduleSlots || [];
         return raw
             .map((slot) => ({
+                id: slot.id ?? slot.SlotId ?? slot.scheduleId,
                 dayOfWeek: slot.dayOfWeek ?? slot.DayOfWeek,
                 startTime: slot.startTime ?? slot.StartTime,
                 endTime: slot.endTime ?? slot.EndTime,
@@ -75,38 +78,30 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
     const handleSend = () => {
         const selectedDayLabel = DAY_OPTIONS.find(d => d.value === Number(targetDay))?.label || 'Không xác định';
         const payload = {
-            type: 'schedule_change',
+            type: requestType,
             reason,
-            requestedSlot: {
+            requestedSlot: requestType === 'schedule_change' ? {
                 dayOfWeek: Number(targetDay),
                 dayLabel: selectedDayLabel,
                 startTime: targetStartTime,
                 endTime: targetEndTime
-            },
-            requestedRoomId: selectedRoomId,
+            } : null,
+            requestedRoomId: requestType === 'schedule_change' ? selectedRoomId : null,
             classInfo: selectedClass,
             requestedAt: new Date().toISOString()
         };
 
-        // Lấy currentSlot từ initialData hoặc từ scheduleSlots của class được chọn
-        if (initialData?.currentSlot) {
-            payload.currentSlot = initialData.currentSlot;
-        } else if (selectedClass?.scheduleSlots && selectedClass.scheduleSlots.length > 0) {
-            // Lấy slot đầu tiên làm slot hiện tại
-            const firstSlot = selectedClass.scheduleSlots[0];
-            const currentDayOfWeek = firstSlot.dayOfWeek ?? firstSlot.DayOfWeek;
+        // Lấy currentSlot từ lựa chọn của giáo viên (hoặc mặc định)
+        if (displaySlots.length > selectedSlotIdx) {
+            const chosen = displaySlots[selectedSlotIdx];
             payload.currentSlot = {
-                dayOfWeek: currentDayOfWeek,
-                dayLabel: DAY_LABEL_MAP[currentDayOfWeek] || 'Không xác định',
-                startTime: firstSlot.startTime ?? firstSlot.StartTime,
-                endTime: firstSlot.endTime ?? firstSlot.EndTime
+                id: chosen.id,
+                dayOfWeek: chosen.dayOfWeek,
+                dayLabel: DAY_LABEL_MAP[chosen.dayOfWeek] || 'Không xác định',
+                startTime: chosen.startTime,
+                endTime: chosen.endTime
             };
-        }
-
-        // Lấy currentRoomId từ scheduleSlots
-        if (selectedClass?.scheduleSlots && selectedClass.scheduleSlots.length > 0) {
-            const firstSlot = selectedClass.scheduleSlots[0];
-            payload.currentRoomId = firstSlot.roomId ?? firstSlot.RoomId;
+            payload.currentRoomId = chosen.roomId || null;
         }
 
         onSend(payload);
@@ -118,6 +113,8 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
         setTargetDay(DEFAULT_DAY);
         setTargetStartTime(DEFAULT_START_TIME);
         setTargetEndTime(DEFAULT_END_TIME);
+        setSelectedSlotIdx(0);
+        setRequestType('schedule_change');
         onClose();
     };
 
@@ -140,7 +137,31 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                 </div>
 
                 <div className="req-modal-content">
-                    {classOptions.length > 0 && (
+                    <div className="req-form-section">
+                        <label className="req-section-label">Loại yêu cầu</label>
+                        <div className="req-type-tabs">
+                            <button 
+                                className={`req-type-tab ${requestType === 'schedule_change' ? 'active' : ''}`}
+                                onClick={() => setRequestType('schedule_change')}
+                            >
+                                Đổi lịch dạy
+                            </button>
+                            <button 
+                                className={`req-type-tab ${requestType === 'absence' ? 'active' : ''}`}
+                                onClick={() => setRequestType('absence')}
+                            >
+                                Xin nghỉ
+                            </button>
+                            <button 
+                                className={`req-type-tab ${requestType === 'other' ? 'active' : ''}`}
+                                onClick={() => setRequestType('other')}
+                            >
+                                Yêu cầu khác
+                            </button>
+                        </div>
+                    </div>
+
+                    {requestType === 'schedule_change' && classOptions.length > 0 && (
                         <div className="req-form-section">
                             <label className="req-section-label">
                                 <BookOpen size={16} />
@@ -163,7 +184,7 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                         </div>
                     )}
 
-                    {selectedClass && displaySlots.length > 0 && (
+                    {requestType === 'schedule_change' && selectedClass && displaySlots.length > 0 && (
                         <div className="req-form-section">
                             <label className="req-section-label">
                                 <Clock size={16} />
@@ -171,79 +192,87 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                             </label>
                             <div className="req-current-slots">
                                 {displaySlots.map((slot, idx) => (
-                                    <div key={idx} className="req-slot-badge">
+                                    <button 
+                                        key={idx} 
+                                        type="button"
+                                        className={'req-slot-badge-btn ' + (selectedSlotIdx === idx ? 'active' : '')}
+                                        onClick={() => setSelectedSlotIdx(idx)}
+                                    >
                                         <span className="req-badge-day">{DAY_LABEL_MAP[slot.dayOfWeek]}</span>
                                         <span className="req-badge-time">{slot.startTime} - {slot.endTime}</span>
                                         {slot.roomName && <span className="req-badge-room">{slot.roomName}</span>}
-                                    </div>
+                                        {selectedSlotIdx === idx && <div className="req-slot-check">✓</div>}
+                                    </button>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {requestType === 'schedule_change' && (
+                        <div className="req-form-section">
+                            <label className="req-section-label">
+                                <ArrowRight size={16} />
+                                Lịch muốn đổi sang
+                            </label>
+                            <div className="req-target-grid">
+                                <div className="req-target-item">
+                                    <span className="req-target-label">Ngày</span>
+                                    <select 
+                                        className="req-select" 
+                                        value={targetDay} 
+                                        onChange={(e) => setTargetDay(Number(e.target.value))}
+                                    >
+                                        {DAY_OPTIONS.map(day => (
+                                            <option key={day.value} value={day.value}>{day.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="req-target-item">
+                                    <span className="req-target-label">Bắt đầu</span>
+                                    <select 
+                                        className="req-select" 
+                                        value={targetStartTime} 
+                                        onChange={(e) => setTargetStartTime(e.target.value)}
+                                    >
+                                        {TIME_OPTIONS.map(time => (
+                                            <option key={time} value={time}>{time}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="req-target-item">
+                                    <span className="req-target-label">Kết thúc</span>
+                                    <select 
+                                        className="req-select" 
+                                        value={targetEndTime} 
+                                        onChange={(e) => setTargetEndTime(e.target.value)}
+                                    >
+                                        {TIME_OPTIONS.filter(t => t > targetStartTime).map(time => (
+                                            <option key={time} value={time}>{time}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {rooms.length > 0 && (
+                                    <div className="req-target-item">
+                                        <span className="req-target-label">Phòng</span>
+                                        <select 
+                                            className="req-select" 
+                                            value={selectedRoomId || ''} 
+                                            onChange={(e) => setSelectedRoomId(e.target.value ? Number(e.target.value) : null)}
+                                        >
+                                            <option value="">Giữ nguyên phòng</option>
+                                            {rooms.map(room => (
+                                                <option key={room.roomId} value={room.roomId}>{room.roomName}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
 
                     <div className="req-form-section">
                         <label className="req-section-label">
-                            <ArrowRight size={16} />
-                            Lịch muốn đổi sang
-                        </label>
-                        <div className="req-target-grid">
-                            <div className="req-target-item">
-                                <span className="req-target-label">Ngày</span>
-                                <select 
-                                    className="req-select" 
-                                    value={targetDay} 
-                                    onChange={(e) => setTargetDay(Number(e.target.value))}
-                                >
-                                    {DAY_OPTIONS.map(day => (
-                                        <option key={day.value} value={day.value}>{day.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="req-target-item">
-                                <span className="req-target-label">Bắt đầu</span>
-                                <select 
-                                    className="req-select" 
-                                    value={targetStartTime} 
-                                    onChange={(e) => setTargetStartTime(e.target.value)}
-                                >
-                                    {TIME_OPTIONS.map(time => (
-                                        <option key={time} value={time}>{time}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="req-target-item">
-                                <span className="req-target-label">Kết thúc</span>
-                                <select 
-                                    className="req-select" 
-                                    value={targetEndTime} 
-                                    onChange={(e) => setTargetEndTime(e.target.value)}
-                                >
-                                    {TIME_OPTIONS.filter(t => t > targetStartTime).map(time => (
-                                        <option key={time} value={time}>{time}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            {rooms.length > 0 && (
-                                <div className="req-target-item">
-                                    <span className="req-target-label">Phòng</span>
-                                    <select 
-                                        className="req-select" 
-                                        value={selectedRoomId || ''} 
-                                        onChange={(e) => setSelectedRoomId(e.target.value ? Number(e.target.value) : null)}
-                                    >
-                                        <option value="">Giữ nguyên phòng</option>
-                                        {rooms.map(room => (
-                                            <option key={room.roomId} value={room.roomId}>{room.roomName}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="req-form-section">
-                        <label className="req-section-label">
-                            Lý do đổi lịch
+                            {requestType === 'schedule_change' ? 'Lý do đổi lịch' : 'Mô tả chi tiết yêu cầu'}
                         </label>
                         <textarea
                             className="req-textarea"

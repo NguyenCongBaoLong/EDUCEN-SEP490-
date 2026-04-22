@@ -24,7 +24,8 @@ const AttendanceModal = ({
     sessionId,
     canAttend = true,
     lockMessage = '',
-    onRequestModification 
+    onRequestModification,
+    isAdmin = false // New: differentiation for Admin portal
 }) => {
     const getAttendanceStatusMeta = (status) => {
         switch (status) {
@@ -47,6 +48,7 @@ const AttendanceModal = ({
     const [requestedStatuses, setRequestedStatuses] = useState({});
     const [submittingRequest, setSubmittingRequest] = useState(false);
     const [selectedStudentsForRequest, setSelectedStudentsForRequest] = useState([]);
+    const [hasFetchedData, setHasFetchedData] = useState(false); // New: track if DB has records
 
     useEffect(() => {
         if (isOpen) {
@@ -66,7 +68,9 @@ const AttendanceModal = ({
                     recordMap[r.studentId] = r.status || 'notYet';
                 });
                 setRecords(recordMap);
+                setHasFetchedData(true);
             } else {
+                setHasFetchedData(false);
                 const defaultRecords = {};
                 students.forEach(s => {
                     defaultRecords[s.id] = 'present';
@@ -106,7 +110,7 @@ const AttendanceModal = ({
     const absentCount = Object.values(records).filter(s => s === 'absent').length;
 
     const handleSave = async () => {
-        if (!canAttend) {
+        if (!canAttend && !isAdmin) {
             toast.error(lockMessage || 'Đã quá ngày điểm danh. Vui lòng gửi yêu cầu sửa điểm danh cho Admin.');
             return;
         }
@@ -360,8 +364,9 @@ const AttendanceModal = ({
         );
     }
 
-    // Show blocked state when can't attend
-    if (!canAttend && sessionId) {
+    // Logic for TEACHER (Logic cũ)
+    if (!isAdmin && !canAttend && sessionId) {
+        const isFuture = lockMessage.toLowerCase().includes('chưa bắt đầu') || lockMessage.toLowerCase().includes('chưa diễn ra');
         return (
             <div className="atm-overlay" onClick={onClose}>
                 <div className="atm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
@@ -393,17 +398,97 @@ const AttendanceModal = ({
                         }}>
                             <Clock size={28} color="#f59e0b" />
                         </div>
-                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>{lockMessage || 'Đã quá ngày điểm danh'}</h4>
+                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>
+                            {isFuture ? 'Buổi học chưa bắt đầu' : 'Đã quá ngày điểm danh'}
+                        </h4>
                         <p style={{ margin: '0 0 20px', color: '#b45309', fontSize: '14px' }}>
-                            {lockMessage ? 'Vui lòng kiểm tra lại thời gian hoặc gửi yêu cầu cho Admin.' : 'Bạn chỉ có thể điểm danh trong ngày diễn ra buổi học. Để sửa điểm danh cho ngày đã qua, vui lòng gửi yêu cầu cho Admin.'}
+                            {lockMessage || 'Bạn chỉ có thể điểm danh trong ngày diễn ra buổi học.'}
+                        </p>
+                        
+                        {!isFuture ? (
+                            <button 
+                                onClick={() => setShowRequestForm(true)}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '12px 24px',
+                                    background: '#f59e0b',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <AlertCircle size={18} />
+                                Gửi yêu cầu sửa điểm danh
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={onClose}
+                                style={{
+                                    padding: '10px 24px',
+                                    background: '#f59e0b',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Quay lại
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Logic for ADMIN - Chỉ hiện thông báo khi ở chế độ XEM và chưa có dữ liệu
+    if (isAdmin && !canAttend && sessionId && !hasFetchedData) {
+        return (
+            <div className="atm-overlay" onClick={onClose}>
+                <div className="atm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+                    <div className="atm-header">
+                        <div className="atm-header-info">
+                            <h3>Điểm danh buổi học</h3>
+                            <div className="atm-session-meta">
+                                <Calendar size={14} />
+                                <span>{session.dayLabel} - {session.date}</span>
+                                <span className="atm-dot">•</span>
+                                <span>{session.time}</span>
+                            </div>
+                        </div>
+                        <button className="atm-close" onClick={onClose}>
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    <div style={{ padding: '30px 20px', textAlign: 'center' }}>
+                        <div style={{ 
+                            width: '60px', 
+                            height: '60px', 
+                            borderRadius: '50%', 
+                            background: '#fef3c7',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: '0 auto 16px'
+                        }}>
+                            <Clock size={28} color="#f59e0b" />
+                        </div>
+                        <h4 style={{ margin: '0 0 8px', color: '#92400e' }}>Buổi học chưa có dữ liệu</h4>
+                        <p style={{ margin: '0 0 20px', color: '#b45309', fontSize: '14px' }}>
+                            Buổi học này chưa được điểm danh bởi giáo viên.
                         </p>
                         <button 
-                            onClick={() => setShowRequestForm(true)}
+                            onClick={onClose}
                             style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '12px 24px',
+                                padding: '10px 24px',
                                 background: '#f59e0b',
                                 color: 'white',
                                 border: 'none',
@@ -413,14 +498,15 @@ const AttendanceModal = ({
                                 cursor: 'pointer'
                             }}
                         >
-                            <AlertCircle size={18} />
-                            Gửi yêu cầu sửa điểm danh
+                            Quay lại
                         </button>
                     </div>
                 </div>
             </div>
         );
     }
+
+    const isEditAllowed = canAttend;
 
     return (
         <div className="atm-overlay" onClick={onClose}>
@@ -441,27 +527,35 @@ const AttendanceModal = ({
                     </button>
                 </div>
 
-                {/* Quick Attendance Button */}
-                <div style={{ padding: '12px 20px', borderBottom: '1px solid #e5e7eb' }}>
-                    <button 
-                        onClick={handleQuickAttendance}
-                        style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px',
-                            padding: '8px 16px',
-                            background: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '14px'
-                        }}
-                    >
-                        <Zap size={16} />
-                        Điểm danh nhanh (Tất cả có mặt)
-                    </button>
-                </div>
+                {/* Header Actions - Hidden in read-only mode */}
+                {isEditAllowed && (
+                    <div style={{ padding: '12px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <button 
+                            onClick={handleQuickAttendance}
+                            style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px',
+                                padding: '8px 16px',
+                                background: '#10b981',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            <Zap size={16} />
+                            Điểm danh nhanh (Tất cả có mặt)
+                        </button>
+
+                        {isAdmin && !hasFetchedData && (
+                            <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600, background: '#fef3c7', padding: '4px 10px', borderRadius: '12px' }}>
+                                Chưa có dữ liệu điểm danh
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {/* Summary bar */}
                 <div className="atm-summary">
@@ -507,6 +601,7 @@ const AttendanceModal = ({
                                         <button
                                             className={`atm-btn-status ${isPresent ? 'active-present' : ''}`}
                                             onClick={() => handleStatusChange(st.id, 'present')}
+                                            disabled={!isEditAllowed}
                                         >
                                             <CheckCircle size={15} />
                                             Có mặt
@@ -514,6 +609,7 @@ const AttendanceModal = ({
                                         <button
                                             className={`atm-btn-status ${isAbsent ? 'active-absent' : ''}`}
                                             onClick={() => handleStatusChange(st.id, 'absent')}
+                                            disabled={!isEditAllowed}
                                         >
                                             <XCircle size={15} />
                                             Vắng mặt
@@ -528,11 +624,13 @@ const AttendanceModal = ({
                 {/* Footer */}
                 <div className="atm-footer">
                     <button className="atm-btn-cancel" onClick={onClose} disabled={saving}>
-                        Hủy
+                        {isEditAllowed ? 'Hủy' : 'Đóng'}
                     </button>
-                    <button className="atm-btn-save" onClick={handleSave} disabled={saving}>
-                        {saving ? 'Đang lưu...' : 'Lưu điểm danh'}
-                    </button>
+                    {isEditAllowed && (
+                        <button className="atm-btn-save" onClick={handleSave} disabled={saving}>
+                            {saving ? 'Đang lưu...' : 'Lưu điểm danh'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -563,6 +661,7 @@ AttendanceModal.propTypes = {
     canAttend: PropTypes.bool,
     lockMessage: PropTypes.string,
     onRequestModification: PropTypes.func,
+    isAdmin: PropTypes.bool,
 };
 
 AttendanceModal.defaultProps = { 
@@ -570,7 +669,8 @@ AttendanceModal.defaultProps = {
     sessionId: null,
     onSave: null,
     canAttend: true,
-    onRequestModification: null
+    onRequestModification: null,
+    isAdmin: false
 };
 
 export default AttendanceModal;

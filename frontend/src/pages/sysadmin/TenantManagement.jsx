@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Building2, Plus, Search, Edit2, Eye, Lock, Unlock, Package,
     X, CheckCircle, AlertCircle, Loader2, ClipboardList, Check, Filter, TrendingUp,
@@ -357,13 +357,25 @@ const TenantManagement = () => {
         setModalOpen(true);
     };
 
-    const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        // Tự động xóa khoảng trắng cho subdomain
+        const processedValue = name === 'subDomain' ? value.replace(/\s/g, '').toLowerCase() : value;
+        setForm(f => ({ ...f, [name]: processedValue }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!hasText(form.tenantName) || !hasText(form.subDomain)) {
-            showToast('Tên trung tâm và subdomain không được để trống hoặc chỉ chứa khoảng trắng.', 'error');
+            showToast('Tên trung tâm và subdomain không được để trống.', 'error');
+            return;
+        }
+
+        // Validate subdomain pattern: lowercase, numbers, hyphens only
+        const subDomainRegex = /^[a-z0-9-]+$/;
+        if (!subDomainRegex.test(form.subDomain)) {
+            showToast('Subdomain chỉ được chứa chữ cái thường, số và dấu gạch ngang (-).', 'error');
             return;
         }
 
@@ -560,16 +572,25 @@ const TenantManagement = () => {
         });
     };
 
-    const handleDeleteContract = async (contractId) => {
-        if (!confirm('Bạn có chắc chắn muốn xóa hợp đồng này?')) return;
+    const handleDeleteContract = (contract) => {
+        setDeleteContractTarget(contract);
+    };
+
+    const executeDeleteContract = async () => {
+        if (!deleteContractTarget) return;
         
+        setSaving(true);
         try {
-            await adminApi.delete(`/admin/tenants/contracts/${contractId}`);
+            await adminApi.delete(`/admin/tenants/contracts/${deleteContractTarget.contractId}`);
             showToast('Xóa hợp đồng thành công!');
             setDeleteContractTarget(null);
-            openContracts(contractModalTarget);
+            if (contractModalTarget) {
+                openContracts(contractModalTarget);
+            }
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể xóa hợp đồng.', 'error');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -1664,11 +1685,11 @@ const TenantManagement = () => {
                                             <tbody>
                                                 {contracts.map(c => (
                                                     <tr key={c.contractId}>
-                                                        <td>{c.contractTitle}</td>
+                                                        <td className="sa-table-title-cell">{c.contractTitle}</td>
                                                         <td>{c.fileType}</td>
                                                         <td>{(c.fileSize / 1024).toFixed(1)} KB</td>
-                                                        <td>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
-                                                        <td>
+                                                        <td className="sa-date-col">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                        <td className="sa-actions-col">
                                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                                 <button 
                                                                     className="sa-btn-primary"
@@ -1680,7 +1701,7 @@ const TenantManagement = () => {
                                                                 <button 
                                                                     className="sa-btn-cancel"
                                                                     style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5' }}
-                                                                    onClick={() => handleDeleteContract(c.contractId)}
+                                                                    onClick={() => handleDeleteContract(c)}
                                                                 >
                                                                     Xóa
                                                                 </button>
@@ -1731,6 +1752,49 @@ const TenantManagement = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </>
+                )}
+
+                {/* Confirm Delete Contract Modal */}
+                {deleteContractTarget && (
+                    <>
+                        <div className="sa-modal-overlay" style={{ zIndex: 1100 }} onClick={() => !saving && setDeleteContractTarget(null)} />
+                        <div className="sa-modal" style={{ zIndex: 1101, maxWidth: '400px', textAlign: 'center' }}>
+                            <div style={{ padding: '2rem 1.5rem' }}>
+                                <div style={{ 
+                                    width: 60, height: 60, borderRadius: '50%', background: '#fef2f2', 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                    margin: '0 auto 1.5rem', color: '#ef4444' 
+                                }}>
+                                    <AlertCircle size={32} />
+                                </div>
+                                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.75rem' }}>
+                                    Xóa hợp đồng?
+                                </h2>
+                                <p style={{ color: '#64748b', lineHeight: 1.5, fontSize: '0.95rem' }}>
+                                    Bạn có chắc chắn muốn xóa hợp đồng <strong>{deleteContractTarget.contractTitle}</strong>? 
+                                    Hành động này không thể hoàn tác.
+                                </p>
+                                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                    <button 
+                                        className="sa-btn-cancel" 
+                                        style={{ flex: 1 }} 
+                                        onClick={() => setDeleteContractTarget(null)}
+                                        disabled={saving}
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button 
+                                        className="sa-btn-primary" 
+                                        style={{ flex: 1, background: '#ef4444', borderColor: '#ef4444' }}
+                                        onClick={executeDeleteContract}
+                                        disabled={saving}
+                                    >
+                                        {saving ? <Loader2 size={16} className="spin" /> : 'Xác Nhận Xóa'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </>
                 )}

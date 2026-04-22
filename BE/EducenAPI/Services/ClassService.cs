@@ -558,9 +558,16 @@ namespace EducenAPI.Services
                 if (startDate.HasValue && endDate.HasValue && startDate.Value <= endDate.Value)
                 {
                     var sessionDates = GenerateSessionDates(startDate.Value, endDate.Value, slot.DayOfWeek);
+                    var nowVn = DateTime.UtcNow.AddHours(7);
+                    var today = nowVn.Date;
+                    var currentTime = TimeOnly.FromDateTime(nowVn);
                     
                     foreach (var sessionDate in sessionDates)
                     {
+                        // ✅ FIX: Chỉ tạo buổi học từ hôm nay trở đi. Nếu là hôm nay, phải sau giờ hiện tại.
+                        if (sessionDate.Date < today) continue;
+                        if (sessionDate.Date == today && TimeOnly.Parse(slot.StartTime) < currentTime) continue;
+
                         // ✅ FIX: Tránh tạo trùng session (cùng ngày, cùng giờ)
                         var startTime = TimeOnly.Parse(slot.StartTime);
                         var exists = await _context.ClassSessions
@@ -585,12 +592,20 @@ namespace EducenAPI.Services
 
         private async Task GenerateSessionsForClass(int classId, DateTime startDate, DateTime endDate, List<Schedule> schedules)
         {
+            var nowVn = DateTime.UtcNow.AddHours(7);
+            var today = nowVn.Date;
+            var currentTime = TimeOnly.FromDateTime(nowVn);
+
             for (var date = startDate.Date; date <= endDate.Date; date = date.AddDays(1))
             {
                 var dayOfWeek = (int)date.DayOfWeek;
                 var matchingSchedule = schedules.FirstOrDefault(s => s.DayOfWeek == dayOfWeek);
                 if (matchingSchedule != null)
                 {
+                    // ✅ FIX: Chỉ tạo buổi học từ hôm nay trở đi. Nếu là hôm nay, phải sau giờ hiện tại.
+                    if (date < today) continue;
+                    if (date == today && matchingSchedule.StartTime < currentTime) continue;
+
                     _context.ClassSessions.Add(new ClassSession
                     {
                         ClassId = classId,
@@ -615,6 +630,7 @@ namespace EducenAPI.Services
                 .Include(c => c.Schedules)
                     .ThenInclude(s => s.Sessions)
                         .ThenInclude(sess => sess.LessonMaterials)
+                .AsSplitQuery() // FIX: Avoid cartesian product and fix EF Core loading error
                 .FirstOrDefaultAsync(c => c.ClassId == id);
                 
             if (existingClass == null)
@@ -852,111 +868,114 @@ namespace EducenAPI.Services
                     if (!AreScheduleSlotsEqual(dto.ScheduleSlots, existingSlots))
                     {
                         scheduleSlotsChanged = true;
+
                         var finalStartDate = existingClass.StartDate;
                         var finalEndDate   = existingClass.EndDate;
-                        var today          = DateTime.UtcNow.AddHours(7).Date;
+                        var nowVn          = DateTime.UtcNow.AddHours(7);
+                        var today          = nowVn.Date;
+                        var currentTime    = TimeOnly.FromDateTime(nowVn);
 
-                        // ✅ FIX: Chỉ xóa sessions TƯƠNG LAI không có dữ liệu (không xóa lịch sử)
-                        foreach (var schedule in existingClass.Schedules)
+                        var oldSchedIds = existingClass.Schedules.Select(s => s.ScheduleId).ToList();
+                        var keptSessionIds = new HashSet<int>();
+
+                        if (oldSchedIds.Any())
                         {
-                            if (schedule.Sessions == null || !schedule.Sessions.Any()) continue;
-
-                            var futureSafeSessions = schedule.Sessions
-                                .Where(s => s.SessionDate.Date >= today
-                                         && !s.Assignments.Any()
-                                         && !s.LessonMaterials.Any())
-                                .ToList();
-
-                            if (!futureSafeSessions.Any()) continue;
-
-                            var futureSessionIds = futureSafeSessions.Select(s => s.SessionId).ToList();
-                            var attendancesToDelete = await _context.Attendances
-                                .Where(a => futureSessionIds.Contains(a.SessionId))
+                            // Tìm các buổi học cần giữ lại:
+                            // 1. Đã qua (Ngày < Hôm nay HOẶC Ngày == Hôm nay và Giờ < Hiện tại)
+                            // 2. Có dữ liệu (Bài tập, Tài liệu)
+                            var sessionIdsWithData = await _context.ClassSessions
+                                .Where(s => oldSchedIds.Contains(s.ScheduleId) &&
+                                    (s.SessionDate.Date < today ||
+                                     (s.SessionDate.Date == today && s.Schedule.StartTime < currentTime) ||
+                                     s.Assignments.Any() ||
+                                     s.LessonMaterials.Any()))
+                                .Select(s => s.SessionId)
                                 .ToListAsync();
-                            if (attendancesToDelete.Any())
-                                _context.Attendances.RemoveRange(attendancesToDelete);
 
-                            _context.ClassSessions.RemoveRange(futureSafeSessions);
+                            var invoicedIds = await _context.TuitionInvoiceItems
+                                .Where(x => sessionIdsWithData.Contains(x.SessionId))
+                                .Select(x => x.SessionId)
+                                .Distinct()
+                                .ToListAsync();
+
+                            keptSessionIds = sessionIdsWithData.Union(invoicedIds).ToHashSet();
+                        }
+
+                        // Tao new schedules
+                        var newSchedules = new List<Schedule>();
+                        foreach (var slot in dto.ScheduleSlots)
+                        {
+                            var ns = new Schedule
+                            {
+                                ClassId   = id,
+                                DayOfWeek = slot.DayOfWeek,
+                                StartTime = TimeOnly.Parse(slot.StartTime),
+                                EndTime   = TimeOnly.Parse(slot.EndTime),
+                                RoomId    = slot.RoomId ?? (dto.RoomId ?? existingClass.RoomId)
+                            };
+                            _context.Schedules.Add(ns);
+                            newSchedules.Add(ns);
                         }
                         await _context.SaveChangesAsync();
 
-                        // Lấy danh sách session cần giữ lại làm lịch sử
-                        var pastSessionsWithData = existingClass.Schedules
-                            .SelectMany(sc => sc.Sessions ?? new List<ClassSession>())
-                            .Where(s => s.SessionDate.Date < today
-                                     || s.Assignments.Any()
-                                     || s.LessonMaterials.Any())
-                            .Select(s => s.SessionId)
-                            .ToHashSet();
-
-                        if (pastSessionsWithData.Any())
+                        // Reassign kept sessions sang schedule moi (raw SQL)
+                        if (keptSessionIds.Any() && newSchedules.Any())
                         {
-                            var newSchedules = new List<Schedule>();
-                            var slotMap = new Dictionary<int, Schedule>();
-                            foreach (var slot in dto.ScheduleSlots)
-                            {
-                                var newSched = new Schedule
-                                {
-                                    ClassId    = id,
-                                    DayOfWeek  = slot.DayOfWeek,
-                                    StartTime  = TimeOnly.Parse(slot.StartTime),
-                                    EndTime    = TimeOnly.Parse(slot.EndTime),
-                                    RoomId     = slot.RoomId ?? (dto.RoomId ?? existingClass.RoomId)
-                                };
-                                _context.Schedules.Add(newSched);
-                                newSchedules.Add(newSched);
-                                if (slot.Slot.HasValue)
-                                {
-                                    slotMap[slot.Slot.Value] = newSched;
-                                }
-                            }
-                            await _context.SaveChangesAsync();
-
-                            var keptSessions = await _context.ClassSessions
-                                .Where(s => pastSessionsWithData.Contains(s.SessionId))
+                            var keptData = await _context.ClassSessions
+                                .Where(s => keptSessionIds.Contains(s.SessionId))
+                                .Select(s => new { s.SessionId, s.SessionDate })
                                 .ToListAsync();
 
-                            foreach (var ks in keptSessions)
+                            foreach (var ks in keptData)
                             {
-                                var matchingSched = slotMap.TryGetValue(ks.ScheduleId, out var mapped)
-                                    ? mapped
-                                    : (newSchedules.FirstOrDefault(ns => ns.DayOfWeek == (int)ks.SessionDate.DayOfWeek)
-                                        ?? newSchedules.First());
-                                ks.ScheduleId = matchingSched.ScheduleId;
+                                var match = newSchedules.FirstOrDefault(ns => ns.DayOfWeek == (int)ks.SessionDate.DayOfWeek)
+                                            ?? newSchedules.First();
+                                await _context.Database.ExecuteSqlRawAsync(
+                                    $"UPDATE ClassSessions SET ScheduleId = {match.ScheduleId} WHERE SessionId = {ks.SessionId}");
                             }
-                            await _context.SaveChangesAsync();
+                        }
 
-                            _context.Schedules.RemoveRange(existingClass.Schedules);
-                            await _context.SaveChangesAsync();
+                        if (oldSchedIds.Any())
+                        {
+                            // Xoa tat ca sessions con tro vao old schedules (nhung cai khong phai keptSessions)
+                            await _context.Database.ExecuteSqlRawAsync(
+                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({string.Join(",", oldSchedIds)})");
 
-                            var existingSessionDates = await _context.ClassSessions
+                            // Xoa old schedules
+                            await _context.Database.ExecuteSqlRawAsync(
+                                $"DELETE FROM Schedules WHERE ScheduleId IN ({string.Join(",", oldSchedIds)})");
+                        }
+
+                        // Tao session moi theo lich moi
+                        if (finalStartDate.HasValue && finalEndDate.HasValue)
+                        {
+                            // Refresh context hoặc dùng AsNoTracking để tránh cache sau Raw SQL
+                            var existingKeptDates = await _context.ClassSessions
+                                .AsNoTracking()
                                 .Where(s => s.ClassId == id)
                                 .Select(s => new { s.SessionDate, s.ScheduleId })
                                 .ToListAsync();
 
-                            foreach (var newSched in newSchedules)
+                            foreach (var ns in newSchedules)
                             {
-                                if (!finalStartDate.HasValue || !finalEndDate.HasValue) continue;
-                                var dates = GenerateSessionDates(finalStartDate.Value, finalEndDate.Value, newSched.DayOfWeek);
+                                var dates = GenerateSessionDates(finalStartDate.Value, finalEndDate.Value, ns.DayOfWeek);
                                 foreach (var d in dates)
                                 {
-                                    if (existingSessionDates.Any(e => e.SessionDate.Date == d.Date && e.ScheduleId == newSched.ScheduleId)) continue;
+                                    // ✅ FIX: Chỉ tạo buổi học từ hôm nay trở đi. Nếu là hôm nay, phải sau giờ hiện tại.
+                                    if (d.Date < today) continue;
+                                    if (d.Date == today && ns.StartTime < currentTime) continue;
+
+                                    if (existingKeptDates.Any(e => e.SessionDate.Date == d.Date && e.ScheduleId == ns.ScheduleId)) continue;
                                     _context.ClassSessions.Add(new ClassSession
                                     {
                                         ClassId     = id,
-                                        ScheduleId  = newSched.ScheduleId,
+                                        ScheduleId  = ns.ScheduleId,
                                         SessionDate = d,
                                         Status      = "Scheduled"
                                     });
                                 }
                             }
                             await _context.SaveChangesAsync();
-                        }
-                        else
-                        {
-                            _context.Schedules.RemoveRange(existingClass.Schedules);
-                            await _context.SaveChangesAsync();
-                            await CreateSchedulesForClass(id, dto.RoomId ?? existingClass.RoomId, dto.ScheduleSlots, finalStartDate, finalEndDate);
                         }
                     }
                 }
@@ -970,7 +989,9 @@ namespace EducenAPI.Services
 
                     if (finalStartDate.HasValue && finalEndDate.HasValue && existingClass.Schedules.Any())
                     {
-                        var today = DateTime.UtcNow.AddHours(7).Date;
+                        var nowVn = DateTime.UtcNow.AddHours(7);
+                        var today = nowVn.Date;
+                        var currentTime = TimeOnly.FromDateTime(nowVn);
 
                         var existingSessionsBySchedule = await _context.ClassSessions
                             .Where(s => s.ClassId == id)
@@ -985,18 +1006,40 @@ namespace EducenAPI.Services
                                      && s.SessionDate.Date >= today)
                             .ToListAsync();
 
+                        var sessionIdsOutOfRangeBase = sessionIdsOutOfRange.Select(s => s.SessionId).ToList();
+
+                        // Tìm các buổi học đã có hóa đơn
+                        var invoicedSessionIds = await _context.TuitionInvoiceItems
+                            .Where(tii => sessionIdsOutOfRangeBase.Contains(tii.SessionId))
+                            .Select(tii => tii.SessionId)
+                            .Distinct()
+                            .ToListAsync();
+
                         var safeToRemove = sessionIdsOutOfRange
-                            .Where(s => !s.Assignments.Any() && !s.LessonMaterials.Any())
+                            .Where(s => !s.Assignments.Any() 
+                                     && !s.LessonMaterials.Any()
+                                     && !invoicedSessionIds.Contains(s.SessionId))
                             .ToList();
 
                         if (safeToRemove.Any())
                         {
                             var removeIds = safeToRemove.Select(s => s.SessionId).ToList();
+
+                            // 1. Xóa các yêu cầu sửa điểm danh liên quan
+                            var requestsToDelete = await _context.AttendanceModificationRequests
+                                .Where(r => removeIds.Contains(r.SessionId))
+                                .ToListAsync();
+                            if (requestsToDelete.Any())
+                                _context.AttendanceModificationRequests.RemoveRange(requestsToDelete);
+
+                            // 2. Xóa dữ liệu điểm danh
                             var attToDelete = await _context.Attendances
                                 .Where(a => removeIds.Contains(a.SessionId))
                                 .ToListAsync();
                             if (attToDelete.Any())
                                 _context.Attendances.RemoveRange(attToDelete);
+
+                            // 3. Xóa buổi học
                             _context.ClassSessions.RemoveRange(safeToRemove);
                             await _context.SaveChangesAsync();
                         }
@@ -1010,6 +1053,10 @@ namespace EducenAPI.Services
                             var newDates = GenerateSessionDates(finalStartDate.Value, finalEndDate.Value, schedule.DayOfWeek);
                             foreach (var d in newDates)
                             {
+                                // ✅ FIX: Chỉ tạo buổi học từ hôm nay trở đi khi đổi ngày bắt đầu/kết thúc
+                                if (d.Date < today) continue;
+                                if (d.Date == today && schedule.StartTime < currentTime) continue;
+
                                 // Chỗ này quan trọng: dùng d.Date để so sánh
                                 if (existingDates.Any(e => e.Date == d.Date && e.ScheduleId == schedule.ScheduleId)) continue;
                                 _context.ClassSessions.Add(new ClassSession
@@ -1091,6 +1138,7 @@ namespace EducenAPI.Services
             }
 
             // Xóa Schedules
+            foreach (var s in existingClass.Schedules) { if (s.Sessions != null) s.Sessions.Clear(); }
             _context.Schedules.RemoveRange(existingClass.Schedules);
 
             // Xóa Class

@@ -11,9 +11,9 @@ namespace EducenAPI.Services.Interface
         Task<Attendance?> GetAttendanceByIdAsync(int attendanceId);
         Task<IEnumerable<Attendance>> GetAttendanceByStudentAsync(int studentId);
         Task<IEnumerable<Attendance>> GetAttendanceByClassAsync(int classId);
-        Task<Attendance> CreateOrUpdateAttendanceAsync(int sessionId, int studentId, string status, int updatedByUserId);
-        Task<IEnumerable<Attendance>> BulkSaveAttendanceAsync(int sessionId, List<AttendanceRecord> records, int updatedByUserId);
-        Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId);
+        Task<Attendance> CreateOrUpdateAttendanceAsync(int sessionId, int studentId, string status, int updatedByUserId, string? role = null);
+        Task<IEnumerable<Attendance>> BulkSaveAttendanceAsync(int sessionId, List<AttendanceRecord> records, int updatedByUserId, string? role = null);
+        Task<bool> UpdateAttendanceAsync(int attendanceId, string status, int updatedByUserId, string? role = null);
         Task<AttendanceReportDto> GetClassAttendanceReportAsync(int classId);
         Task<IEnumerable<AttendanceSessionSummaryDto>> GetClassAttendanceSessionSummaryAsync(int classId);
 

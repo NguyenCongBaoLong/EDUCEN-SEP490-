@@ -125,7 +125,7 @@ const AdminDashboard = () => {
             srId: sr.id,
             type: isScheduleChange(sr)
                 ? 'schedule_change'
-                : (sr.senderRoleName?.toLowerCase().includes('parent') ? 'feedback' : 'support'),
+                : ((sr.senderRoleName?.toLowerCase().includes('teacher') || sr.senderRoleName?.toLowerCase().includes('staff')) ? 'support' : 'feedback'),
             senderName: sr.senderName || 'Người dùng',
             senderRole: sr.senderRoleName || 'Yêu cầu',
             subject: sr.title || 'Hỗ trợ',
@@ -137,7 +137,7 @@ const AdminDashboard = () => {
         }))
     ].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt)), [systemNotifications, supportRequests]);
 
-    const unreadCount = inboxMessages.filter(m => !m.isRead).length;
+    const unreadCount = inboxMessages.filter(m => !m.isRead && !m.adminResponse).length;
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -624,6 +624,28 @@ const AdminDashboard = () => {
                                         Từ chối
                                     </button>
                                 </div>
+                            </div>
+                        );
+                    }
+
+                    if (msg?.type === 'support' && !msg.adminResponse) {
+                        return (
+                            <div style={{ marginTop: '1rem' }}>
+                                <textarea 
+                                    className="zalo-textarea" 
+                                    rows={3} 
+                                    placeholder="Phản hồi giáo viên..." 
+                                    value={replyText} 
+                                    onChange={(e) => setReplyText(e.target.value)} 
+                                />
+                                <button 
+                                    className="zalo-send-btn" 
+                                    style={{ marginTop: '0.5rem' }} 
+                                    disabled={replying} 
+                                    onClick={() => handleReply(msg)}
+                                >
+                                    Gửi phản hồi
+                                </button>
                             </div>
                         );
                     }

@@ -84,7 +84,16 @@ namespace EducenAPI.Controllers
             }
             catch (Exception ex)
             {
-                return Conflict(new { message = ex.Message });
+                var msg = ex.InnerException != null
+                    ? ex.Message + " | Inner: " + ex.InnerException.Message
+                    : ex.Message;
+                Console.WriteLine("[UpdateClass Error]: " + msg);
+
+                var conflictKeywords = new[] { "da duoc dat", "da duoc phan cong", "xung dot", "Conflict" };
+                if (conflictKeywords.Any(k => msg.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                    return Conflict(new { message = ex.Message });
+
+                return BadRequest(new { message = ex.Message });
             }
         }
 
