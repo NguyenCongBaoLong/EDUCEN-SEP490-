@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EducenAPI.DTOs
 {
@@ -15,8 +15,8 @@ namespace EducenAPI.DTOs
         [EmailAddress]
         public string? Email { get; set; }
 
-        [MaxLength(20)]
-        [Phone]
+        [Phone(ErrorMessage = "Định dạng số điện thoại không hợp lệ")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Số điện thoại phải có đúng 10 chữ số")]
         public string? PhoneNumber { get; set; }
 
         [MaxLength(300)]

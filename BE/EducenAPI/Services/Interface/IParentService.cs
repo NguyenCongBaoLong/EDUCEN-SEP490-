@@ -11,6 +11,6 @@ namespace EducenAPI.Services.Interface
         Task<bool> DeleteParentAsync(int id);
         Task<bool> SendAccountAsync(int parentId);
         Task<IEnumerable<ChildInfoDto>> GetMyChildrenAsync(int parentUserId);
-        Task<ChildPerformanceReportDto?> GetChildPerformanceReportAsync(int childId);
+        Task<ChildPerformanceReportDto?> GetChildPerformanceReportAsync(int childId, int? month = null, int? year = null);
     }
 }

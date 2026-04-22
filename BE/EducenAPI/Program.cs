@@ -1,4 +1,4 @@
-﻿using EducenAPI.Middleware;
+using EducenAPI.Middleware;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services;
 using EducenAPI.Services.Interface;
@@ -207,6 +207,7 @@ builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.Subscrip
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.CreditDeductionService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.MonthlyInvoiceGenerationService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.LegacyCreditLedgerCleanupService>();
+builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.MonthlyPerformanceReportService>();
 
 // === Zalo OA ===
 builder.Services.AddHttpClient("ZaloAPI", client =>

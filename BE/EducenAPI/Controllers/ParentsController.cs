@@ -126,7 +126,7 @@ namespace EducenAPI.Controllers
         // GET: api/Parents/child/{childId}/performance-report
         [HttpGet("child/{childId:int}/performance-report")]
         [Authorize(Roles = "Parent")]
-        public async Task<IActionResult> GetChildPerformanceReport(int childId)
+        public async Task<IActionResult> GetChildPerformanceReport(int childId, [FromQuery] int? month = null, [FromQuery] int? year = null)
         {
             try
             {
@@ -141,7 +141,7 @@ namespace EducenAPI.Controllers
                     return StatusCode(403, new { message = "Bạn không có quyền xem báo cáo của học sinh này." });
                 }
 
-                var report = await _parentService.GetChildPerformanceReportAsync(childId);
+                var report = await _parentService.GetChildPerformanceReportAsync(childId, month, year);
                 if (report == null) return NotFound(new { message = "Không tìm thấy dữ liệu học sinh." });
 
                 return Ok(report);

@@ -99,7 +99,6 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                                         <div className="parent-avatar">{getInitials(p.name)}</div>
                                         <div>
                                             <div className="parent-name">{p.name}</div>
-                                            <div className="parent-id">{p.id}</div>
                                         </div>
                                     </div>
                                 </td>

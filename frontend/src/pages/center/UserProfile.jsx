@@ -174,17 +174,28 @@ const UserProfile = () => {
                     }
                 };
 
-                extractMessages(errorData);
-                if (messages.length > 0) {
-                    errorMsg = messages.join(' | ');
-                }
+            extractMessages(errorData);
+            
+            // Nếu đã có lỗi chi tiết từng trường, ta bỏ qua các thông báo chung chung như "Dữ liệu đầu vào không hợp lệ"
+            const filteredMessages = messages.filter(m => 
+                m !== 'Dữ liệu đầu vào không hợp lệ' && 
+                m !== 'One or more validation errors occurred.' &&
+                m !== 'Invalid input'
+            );
+
+            if (filteredMessages.length > 0) {
+                errorMsg = filteredMessages.join(' | ');
+            }
             } else if (err.response?.data?.message) {
                 errorMsg = err.response.data.message;
             } else if (typeof err.response?.data === 'string') {
                 errorMsg = err.response.data;
             }
             
-            toast.error(errorMsg);
+            // Chỉ hiển thị toast nếu Interceptor chưa xử lý (tránh lặp lại 2 toast)
+            if (!err.config?._validationHandled) {
+                toast.error(errorMsg);
+            }
         }
     };
 
@@ -266,8 +277,13 @@ const UserProfile = () => {
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             setIsChangingPassword(false);
         } catch (err) {
-            setPasswordError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
-            toast.error(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+            const errorMsg = err.response?.data?.message || 'Lỗi khi đổi mật khẩu.';
+            setPasswordError(errorMsg);
+            
+            // Chỉ hiển thị toast nếu Interceptor chưa xử lý
+            if (!err.config?._validationHandled) {
+                toast.error(errorMsg);
+            }
         }
     };
 

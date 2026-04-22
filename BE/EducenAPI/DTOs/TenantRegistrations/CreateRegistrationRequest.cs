@@ -14,12 +14,12 @@ namespace EducenAPI.DTOs.TenantRegistrations
         [RegularExpression(@"^(?!\s*$).+", ErrorMessage = "Contact person cannot be only whitespace")]
         public string? ContactPerson { get; set; }
 
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [EmailAddress(ErrorMessage = "Định dạng email không hợp lệ")]
         [MaxLength(150)]
         public string? Email { get; set; }
 
-        [Phone(ErrorMessage = "Invalid phone number format")]
-        [MaxLength(20)]
+        [Phone(ErrorMessage = "Định dạng số điện thoại không hợp lệ")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Số điện thoại phải có đúng 10 chữ số")]
         public string? PhoneNumber { get; set; }
 
         [Required(ErrorMessage = "Tax code is required")]

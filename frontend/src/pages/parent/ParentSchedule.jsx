@@ -144,7 +144,7 @@ const ParentSchedule = () => {
             present: { icon: <CheckCircle size={12} />, label: 'Có mặt', cls: 'present' },
             absent: { icon: <XCircle size={12} />, label: 'Vắng', cls: 'absent' },
             upcoming: { icon: <MinusCircle size={12} />, label: 'Sắp tới', cls: 'upcoming' },
-            unknown: { icon: <MinusCircle size={12} />, label: '—', cls: 'upcoming' },
+            unknown: { icon: <MinusCircle size={12} />, label: 'Chưa điểm danh', cls: 'upcoming' },
         };
         const s = map[status] || map.unknown;
         return <span className={`ps-att-badge ${s.cls}`}>{s.icon} {s.label}</span>;

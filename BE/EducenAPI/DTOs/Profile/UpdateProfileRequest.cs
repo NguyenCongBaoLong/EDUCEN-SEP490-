@@ -16,8 +16,7 @@ namespace EducenAPI.DTOs.Profile
         public string? Email { get; set; }
  
         [Phone(ErrorMessage = "Định dạng số điện thoại không hợp lệ")]
-        [RegularExpression(@"^\d{9,10}$", ErrorMessage = "Số điện thoại phải là 10 hoặc 9 chữ số")]
-        [StringLength(20, ErrorMessage = "Số điện thoại không được quá 20 ký tự")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Số điện thoại phải có đúng 10 chữ số")]
         public string? PhoneNumber { get; set; }
  
         [StringLength(200, ErrorMessage = "Địa chỉ không được quá 200 ký tự")]

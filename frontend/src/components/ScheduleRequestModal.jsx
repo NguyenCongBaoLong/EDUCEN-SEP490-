@@ -23,12 +23,6 @@ const DAY_LABEL_MAP = {
     6: 'Thứ Bảy'
 };
 
-const TIME_OPTIONS = [
-    '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
-    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
-    '19:00', '20:00', '21:00', '22:00'
-];
-
 const DEFAULT_REASON = '';
 const DEFAULT_DAY = 1;
 const DEFAULT_START_TIME = '16:00';
@@ -229,27 +223,21 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                                 </div>
                                 <div className="req-target-item">
                                     <span className="req-target-label">Bắt đầu</span>
-                                    <select 
-                                        className="req-select" 
+                                    <input 
+                                        type="time"
+                                        className="req-time-input" 
                                         value={targetStartTime} 
                                         onChange={(e) => setTargetStartTime(e.target.value)}
-                                    >
-                                        {TIME_OPTIONS.map(time => (
-                                            <option key={time} value={time}>{time}</option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                                 <div className="req-target-item">
                                     <span className="req-target-label">Kết thúc</span>
-                                    <select 
-                                        className="req-select" 
+                                    <input 
+                                        type="time"
+                                        className="req-time-input" 
                                         value={targetEndTime} 
                                         onChange={(e) => setTargetEndTime(e.target.value)}
-                                    >
-                                        {TIME_OPTIONS.filter(t => t > targetStartTime).map(time => (
-                                            <option key={time} value={time}>{time}</option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                                 {rooms.length > 0 && (
                                     <div className="req-target-item">
