@@ -930,16 +930,18 @@ namespace EducenAPI.Services
                         // Xóa sessions tương lai từ schedules cũ
                         if (oldSchedIds.Any())
                         {
+                            var oldSchedIdsParam = string.Join(",", oldSchedIds);
                             await _context.Database.ExecuteSqlRawAsync(
-                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({string.Join(",", oldSchedIds)}) AND SessionDate >= CAST(GETDATE() AS DATE)");
+                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({oldSchedIdsParam}) AND SessionDate >= CAST(GETDATE() AS DATE)");
                         }
 
                         // Xóa các schedules cũ KHÔNG có session quá khứ
                         var schedulesToDelete = oldSchedIds.Except(oldScheduleIdsWithPastSessions).ToList();
                         if (schedulesToDelete.Any())
                         {
+                            var schedulesToDeleteParam = string.Join(",", schedulesToDelete);
                             await _context.Database.ExecuteSqlRawAsync(
-                                $"DELETE FROM Schedules WHERE ScheduleId IN ({string.Join(",", schedulesToDelete)})");
+                                $"DELETE FROM Schedules WHERE ScheduleId IN ({schedulesToDeleteParam})");
                         }
 
                         // Refresh context sau raw SQL để đảm bảo dữ liệu đồng bộ

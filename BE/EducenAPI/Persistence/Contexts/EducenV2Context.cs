@@ -85,7 +85,11 @@ public partial class EducenV2Context : DbContext
                 .Build();
 
             var connectionString = config.GetConnectionString("DefaultTenantConnection");
-            optionsBuilder.UseSqlServer(connectionString);
+            // Ensure UTF-8 encoding for Vietnamese characters
+            optionsBuilder.UseSqlServer(connectionString, options => 
+            {
+                options.EnableRetryOnFailure();
+            });
         }
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

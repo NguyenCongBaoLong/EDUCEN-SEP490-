@@ -18,6 +18,9 @@ using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// === UTF-8 Encoding Configuration ===
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
 // === Services ===
 builder.Services.AddControllers(options =>
 {
@@ -28,6 +31,8 @@ builder.Services.AddControllers(options =>
         // Xử lý circular reference (Student ↔ User navigation)
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        // Ensure proper Unicode handling
+        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
     })
     .ConfigureApiBehaviorOptions(options =>
     {
