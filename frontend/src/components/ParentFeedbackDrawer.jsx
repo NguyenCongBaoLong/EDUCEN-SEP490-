@@ -39,7 +39,7 @@ const StarRating = ({ value, onChange }) => (
 const StatusBadge = ({ status }) => {
     if (status === 'Answered')
         return <span className="pf-status-badge replied"><MessageSquare size={13} /> Đã trả lời</span>;
-    if (status === 'Read')
+    if (status === 'Read' || status === 'Pending')
         return <span className="pf-status-badge read"><CheckCircle size={13} /> Đã xem</span>;
     return <span className="pf-status-badge pending"><Clock size={13} /> Chờ xử lý</span>;
 };

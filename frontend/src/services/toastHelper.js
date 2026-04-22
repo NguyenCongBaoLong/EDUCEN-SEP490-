@@ -147,10 +147,7 @@ export function parseValidationErrors(errorResponse) {
         let errorMessages = [];
 
         data.errors.forEach(err => {
-            const field = err.Field || err.field;
-            const messages = err.Errors || err.errors;
-
-            if (field && messages) {
+            if (err.Field && err.Errors) {
                 // Map common field names from BE to Vietnamese
                 const fieldNameMap = {
                     'ClassName': 'Tên lớp',
@@ -192,11 +189,11 @@ export function parseValidationErrors(errorResponse) {
                     'ParentIds': 'Danh sách phụ huynh',
                 };
 
-                const displayName = fieldNameMap[field] || fieldNameMap[field.charAt(0).toUpperCase() + field.slice(1)] || fieldNameMap[field.toLowerCase()] || field;
-                const messagesArray = Array.isArray(messages) ? messages : [messages];
+                const displayName = fieldNameMap[err.Field] || err.Field;
+                const messages = Array.isArray(err.Errors) ? err.Errors : [err.Errors];
                 
                 // Translate each error message to Vietnamese
-                const translatedMessages = messagesArray.map(m => translateErrorMessage(m));
+                const translatedMessages = messages.map(m => translateErrorMessage(m));
                 
                 fieldErrors[displayName] = translatedMessages;
                 errorMessages.push(...translatedMessages.map(m => `• ${displayName}: ${m}`));

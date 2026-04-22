@@ -68,7 +68,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
     };
     const validatePhone = (val, allUsersList = []) => {
         if (!val || val.trim() === '') return 'Số điện thoại bắt buộc';
-        if (!/^(0[0-9]{9})$/.test(val)) return 'Số điện thoại phải có đúng 10 chữ số (bắt đầu bằng 0)';
+        if (!/^(0[0-9]{9,10})$/.test(val)) return 'SĐT không hợp lệ (10-11 số, bắt đầu bằng 0)';
         // Validate uniqueness within SAME ROLE only (Parent)
         const isDuplicate = allUsersList.some(user => {
             if (!user.roleName || !user.roleName.toLowerCase().includes('parent')) return false;
@@ -227,7 +227,7 @@ const AddParentModal = ({ isOpen, onClose, onSubmit, editingParent, studentList 
                                         <div>
                                             <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.name}</div>
                                             <div style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-                                                {s.grade ? `Khối ${s.grade}` : ''} {s.class ? `· Lớp ${s.class}` : ''}
+                                                ID: {s.id} {s.grade ? `· Khối ${s.grade}` : ''} {s.class ? `· Lớp ${s.class}` : ''}
                                             </div>
                                         </div>
                                     </label>

@@ -57,6 +57,7 @@ const EnrollmentDetailModal = ({ isOpen, onClose, request }) => {
                             </span>
                         </div>
                         <h3 className="student-name-large">{request.studentName}</h3>
+                        <span className="student-id-large">ID: {request.id}</span>
 
                         <div className="student-badges">
                             <span className="info-badge grade-badge-large">

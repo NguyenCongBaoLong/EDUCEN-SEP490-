@@ -33,8 +33,8 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
         const e = {};
         if (!form.category) e.category = 'Vui lòng chọn một danh mục.';
         if (!form.subject.trim()) e.subject = 'Vui lòng nhập tiêu đề.';
-        if (!form.content.trim()) 
-            e.content = 'Vui lòng nhập nội dung chi tiết.';
+        if (!form.content.trim() || form.content.trim().length < 20) 
+            e.content = 'Nội dung phản hồi cần ít nhất 20 ký tự.';
         if (form.rating === 0) e.rating = 'Vui lòng đánh giá mức độ hài lòng.';
         return e;
     };

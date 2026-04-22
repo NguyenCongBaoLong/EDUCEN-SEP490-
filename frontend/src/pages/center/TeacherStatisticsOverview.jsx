@@ -180,10 +180,9 @@ const TeacherStatisticsOverview = () => {
                                 <table className="stats-table">
                                     <thead>
                                         <tr>
-                                            <th style={{ width: '80px', textAlign: 'center' }}>STT</th>
-                                            <th style={{ textAlign: 'left' }}>Nhân viên</th>
-                                            <th style={{ textAlign: 'left' }}>Email</th>
-                                            <th style={{ textAlign: 'left' }}>Vai trò</th>
+                                            <th style={{ width: '60px', textAlign: 'center' }}>STT</th>
+                                            <th>Nhân viên</th>
+                                            <th>Vai trò</th>
                                             <th style={{ textAlign: 'center' }}>Số buổi dạy</th>
                                             <th style={{ textAlign: 'center' }}>Lớp phụ trách</th>
                                         </tr>
@@ -199,30 +198,28 @@ const TeacherStatisticsOverview = () => {
                                                         className={`main-row ${isExpanded ? 'expanded' : ''}`}
                                                         onClick={() => toggleRow(item.teacherId, item.role)}
                                                     >
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                                                <div style={{ width: '14px', display: 'flex', alignItems: 'center' }}>
-                                                                    {item.classDetails?.length > 0 && (
-                                                                        isExpanded ? <ChevronDown size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />
-                                                                    )}
+                                                        <td style={{ textAlign: 'center', position: 'relative' }}>
+                                                            {item.classDetails?.length > 0 && (
+                                                                <div style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }}>
+                                                                    {isExpanded ? <ChevronDown size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
                                                                 </div>
-                                                                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '0.85rem', width: '20px' }}>{index + 1}</span>
-                                                            </div>
+                                                            )}
+                                                            <span style={{ fontWeight: '600', color: '#64748b', fontSize: '0.85rem' }}>{index + 1}</span>
                                                         </td>
-                                                        <td style={{ textAlign: 'left' }}>
+                                                        <td>
                                                             <div className="teacher-cell">
                                                                 <div className="teacher-avatar">
                                                                     <div className="teacher-avatar-initials">
                                                                         {getInitials(item.fullName)}
                                                                     </div>
                                                                 </div>
-                                                                <span className="teacher-name">{item.fullName}</span>
+                                                                <div className="teacher-info-compact">
+                                                                    <span className="teacher-name">{item.fullName}</span>
+                                                                    <span className="teacher-email">{item.email}</span>
+                                                                </div>
                                                             </div>
                                                         </td>
-                                                        <td style={{ textAlign: 'left' }}>
-                                                            <span className="teacher-email-col">{item.email}</span>
-                                                        </td>
-                                                        <td style={{ textAlign: 'left' }}>
+                                                        <td>
                                                             <span className={`role-badge ${item.role.toLowerCase()}`}>
                                                                 {item.role === 'Teacher' ? 'Giáo Viên' : 'Trợ Giảng'}
                                                             </span>
@@ -238,7 +235,7 @@ const TeacherStatisticsOverview = () => {
                                                     {/* Expanded Row Details */}
                                                     {isExpanded && item.classDetails?.length > 0 && (
                                                         <tr className="expanded-row-content">
-                                                            <td colSpan="6">
+                                                            <td colSpan="5">
                                                                 <div className="details-wrapper">
                                                                     <span className="details-title">Chi tiết lịch dạy theo lớp</span>
                                                                     <table className="details-table">

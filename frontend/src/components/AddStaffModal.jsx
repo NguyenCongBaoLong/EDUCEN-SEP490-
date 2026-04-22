@@ -53,7 +53,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
 
     const validatePhone = (phone, allUsersList = []) => {
         if (!phone || phone.trim() === '') return ''; // optional
-        if (!/^(0[0-9]{9})$/.test(phone)) return 'Số điện thoại phải có đúng 10 chữ số (bắt đầu bằng 0)';
+        if (!/^(0[0-9]{9,10})$/.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
         // Validate uniqueness within SAME ROLE only (Teacher / Assistant)
         const currentRoleName = formData.role === 'assistant' ? 'assistant' : 'teacher';
         const isDuplicate = allUsersList.some(user => {

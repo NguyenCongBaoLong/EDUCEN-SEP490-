@@ -100,8 +100,8 @@ const AddStudentModal = ({ isOpen, onClose, onSubmit, editingStudent, existingSt
 
     const validatePhone = (phone, allUsersList = []) => {
         if (!phone || phone.trim() === '') return ''; // optional
-        const phoneRegex = /^(0[0-9]{9})$/;
-        if (!phoneRegex.test(phone)) return 'Số điện thoại phải có đúng 10 chữ số (bắt đầu bằng 0)';
+        const phoneRegex = /^(0[0-9]{9,10})$/;
+        if (!phoneRegex.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
 
         // Validate uniqueness within SAME ROLE only (roleId=3 for Student)
         const STUDENT_ROLE_ID = 3;

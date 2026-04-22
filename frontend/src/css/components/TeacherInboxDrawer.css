@@ -185,8 +185,6 @@
     font-size: 0.9rem;
     color: #334155;
     line-height: 1.6;
-    word-break: break-word;
-    overflow-wrap: break-word;
 }
 
 .tid-status-wrap {
@@ -235,8 +233,6 @@
     font-size: 0.9rem;
     color: #1e293b;
     line-height: 1.6;
-    word-break: break-word;
-    overflow-wrap: break-word;
 }
 
 .tid-response-by {

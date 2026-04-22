@@ -52,6 +52,7 @@ const StudentDetailModal = ({ isOpen, onClose, student }) => {
                             )}
                         </div>
                         <h3 className="student-name-large">{student.name}</h3>
+                        <span className="student-id-large">ID: {student.id}</span>
 
                         <div className="student-badges">
                             <span className="info-badge grade-badge-large">

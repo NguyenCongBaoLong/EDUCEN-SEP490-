@@ -202,6 +202,7 @@ const StudentTable = ({
                                             </div>
                                             <div className="student-details">
                                                 <h4>{student.name}</h4>
+                                                <span>{student.id}</span>
                                             </div>
                                         </div>
                                     </td>
@@ -351,8 +352,8 @@ const StudentTable = ({
                                     </h4>
                                     <p>
                                         {lockModal.student?.status === 'active'
-                                            ? <>Học sinh <strong>{lockModal.student?.name}</strong> sẽ chuyển sang trạng thái ngưng hoạt động.</>
-                                            : <>Học sinh <strong>{lockModal.student?.name}</strong> sẽ được kích hoạt lại trạng thái hoạt động.</>
+                                            ? <>Học sinh <strong>{lockModal.student?.name}</strong> (ID: {lockModal.student?.id}) sẽ chuyển sang trạng thái ngưng hoạt động.</>
+                                            : <>Học sinh <strong>{lockModal.student?.name}</strong> (ID: {lockModal.student?.id}) sẽ được kích hoạt lại trạng thái hoạt động.</>
                                         }
                                     </p>
                                 </div>

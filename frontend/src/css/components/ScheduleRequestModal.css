@@ -393,8 +393,8 @@
 /* Target Grid */
 .req-target-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
 }
 
 .req-target-item {
@@ -412,7 +412,6 @@
 }
 
 /* Form Elements */
-.req-time-input,
 .req-select,
 .req-textarea {
     width: 100%;
@@ -424,7 +423,6 @@
     background: white;
 }
 
-.req-time-input:focus,
 .req-select:focus,
 .req-textarea:focus {
     outline: none;

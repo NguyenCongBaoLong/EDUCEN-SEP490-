@@ -277,7 +277,11 @@ const StaffTable = ({
                                             </div>
 
                                             <div className="staff-info">
+
                                                 <div className="staff-name">{staff.name}</div>
+
+                                                <div className="staff-id">ID: {staff.id}</div>
+
                                             </div>
 
                                         </div>
@@ -498,10 +502,15 @@ const StaffTable = ({
                                     </h4>
 
                                     <p>
+
                                         {lockModal.staff?.status === 'active'
-                                            ? <>Tài khoản <strong>{lockModal.staff?.name}</strong> sẽ bị khóa và không thể đăng nhập.</>
-                                            : <>Tài khoản <strong>{lockModal.staff?.name}</strong> sẽ được mở khóa và có thể đăng nhập trở lại.</>
+
+                                            ? <>Tài khoản <strong>{lockModal.staff?.name}</strong> (ID: {lockModal.staff?.id}) sẽ bị khóa và không thể đăng nhập.</>
+
+                                            : <>Tài khoản <strong>{lockModal.staff?.name}</strong> (ID: {lockModal.staff?.id}) sẽ được mở khóa và có thể đăng nhập trở lại.</>
+
                                         }
+
                                     </p>
 
                                 </div>

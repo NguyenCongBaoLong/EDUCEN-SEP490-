@@ -302,13 +302,8 @@ const UserProfile = () => {
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             setIsChangingPassword(false);
         } catch (err) {
-            const errorMsg = err.response?.data?.message || 'Lỗi khi đổi mật khẩu.';
-            setPasswordError(errorMsg);
-            
-            // Chỉ hiển thị toast nếu Interceptor chưa xử lý
-            if (!err.config?._validationHandled) {
-                toast.error(errorMsg);
-            }
+            setPasswordError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+            toast.error(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
         }
     };
 
