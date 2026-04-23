@@ -125,7 +125,7 @@ namespace EducenAPI.Services
             entity.ReceiverId = adminId;
             entity.AdminResponse = dto.AdminResponse;
             entity.Status = "Answered";
-            entity.IsRead = false; // Reset de thong bao cho nguoi gui
+            entity.IsRead = false; // Reset để thông báo cho người gửi
 
             await _context.SaveChangesAsync();
 
@@ -151,7 +151,7 @@ namespace EducenAPI.Services
             entity.ReceiverId = adminId;
             entity.Status = "Approved";
             entity.AdminResponse = string.IsNullOrWhiteSpace(note) ? "Yêu cầu đã được duyệt." : note.Trim();
-            entity.IsRead = false; // Reset de thong bao cho nguoi gui
+            entity.IsRead = false; // Reset để thông báo cho người gửi
 
             await _context.SaveChangesAsync();
             await SendSupportRequestReviewEmailAsync(entity, true);
@@ -175,7 +175,7 @@ namespace EducenAPI.Services
             entity.ReceiverId = adminId;
             entity.Status = "Rejected";
             entity.AdminResponse = reason.Trim();
-            entity.IsRead = false; // Reset de thong bao cho nguoi gui
+            entity.IsRead = false; // Reset để thông báo cho người gửi
 
             await _context.SaveChangesAsync();
             await SendSupportRequestReviewEmailAsync(entity, false);

@@ -43,35 +43,35 @@ namespace EducenAPI.Services
         {
             var tenant = await _context.Tenants.FindAsync(tenantId);
             if (tenant == null)
-                throw new Exception("Khong tim thay trung tam.");
+                throw new Exception("Không tìm thấy trung tâm.");
 
             if (file == null || file.Length <= 0)
-                throw new Exception("File hop dong la bat buoc.");
+                throw new Exception("File hợp đồng là bắt buộc.");
 
             var normalizedTitle = title?.Trim();
             var normalizedDescription = description?.Trim();
 
             if (string.IsNullOrWhiteSpace(normalizedTitle))
-                throw new Exception("Tieu de hop dong la bat buoc.");
+                throw new Exception("Tiêu đề hợp đồng là bắt buộc.");
             if (normalizedTitle.Length > 200)
-                throw new Exception("Tieu de hop dong khong duoc vuot qua 200 ky tu.");
+                throw new Exception("Tiêu đề hợp đồng không được vượt quá 200 ký tự.");
             if (!string.IsNullOrWhiteSpace(normalizedDescription) && normalizedDescription.Length > 500)
-                throw new Exception("Mo ta hop dong khong duoc vuot qua 500 ky tu.");
+                throw new Exception("Mô tả hợp đồng không được vượt quá 500 ký tự.");
 
             var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
             var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
             if (!allowedExtensions.Contains(fileExtension))
-                throw new Exception("Chi chap nhan file PDF, JPG, PNG.");
+                throw new Exception("Chỉ chấp nhận file PDF, JPG, PNG.");
 
             if (file.Length > 10 * 1024 * 1024)
-                throw new Exception("Dung luong file khong duoc vuot qua 10MB.");
+                throw new Exception("Dung lượng file không được vượt quá 10MB.");
 
             var uploads = await _fileUploadService.UploadResourceFile(
                 new Microsoft.AspNetCore.Http.FormFileCollection { file });
 
             if (uploads == null || uploads.Count == 0)
-                throw new Exception("Upload file that bai.");
+                throw new Exception("Upload file thất bại.");
 
             var uploadedFile = uploads[0];
 

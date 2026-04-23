@@ -72,8 +72,8 @@ export const ScheduleProvider = ({ children }) => {
                     sessionStatus: s.sessionStatus || null,
                     classId: s.classId,
                     code: s.className ? s.className.substring(0, 4).toUpperCase() : `LOP-${s.classId}`,
-                    name: s.className || `Lop hoc ${s.classId}`,
-                    teacher: s.teacherName || 'Giao vien',
+                    name: s.className || `Lớp học ${s.classId}`,
+                    teacher: s.teacherName || 'Giáo viên',
                     subjectId: s.subjectId,
                     subjectName: s.subjectName,
                     day: s.dayOfWeek,
@@ -102,7 +102,7 @@ export const ScheduleProvider = ({ children }) => {
                 setScheduledClasses(mapped);
             }
         } catch (error) {
-            console.error('Loi khi tai lich hoc:', error);
+            console.error('Lỗi khi tải lịch học:', error);
         } finally {
             setLoading(false);
         }

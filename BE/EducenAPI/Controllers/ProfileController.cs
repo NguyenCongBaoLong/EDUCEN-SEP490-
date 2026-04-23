@@ -42,7 +42,7 @@ namespace EducenAPI.Controllers
 
             if (user == null)
             {
-                return NotFound(new { message = "Khong tim thay nguoi dung." });
+                return NotFound(new { message = "Không tìm thấy người dùng." });
             }
 
             var result = new
@@ -89,7 +89,7 @@ namespace EducenAPI.Controllers
 
             if (user == null)
             {
-                return NotFound(new { message = "Khong tim thay nguoi dung." });
+                return NotFound(new { message = "Không tìm thấy người dùng." });
             }
 
             var normalizedUsername = request.Username?.Trim();
@@ -100,13 +100,13 @@ namespace EducenAPI.Controllers
             {
                 if (string.IsNullOrWhiteSpace(normalizedEmail))
                 {
-                    return BadRequest(new { message = "Email khong hop le" });
+                    return BadRequest(new { message = "Email không hợp lệ" });
                 }
 
                 var emailValidator = new EmailAddressAttribute();
                 if (!emailValidator.IsValid(normalizedEmail))
                 {
-                    return BadRequest(new { message = "Email khong hop le" });
+                    return BadRequest(new { message = "Email không hợp lệ" });
                 }
             }
 
@@ -114,13 +114,13 @@ namespace EducenAPI.Controllers
             {
                 if (string.IsNullOrWhiteSpace(normalizedPhone))
                 {
-                    return BadRequest(new { message = "So dien thoai khong hop le" });
+                    return BadRequest(new { message = "Số điện thoại không hợp lệ" });
                 }
 
                 var phoneRegex = new System.Text.RegularExpressions.Regex(@"^(0|\+84)[0-9]{9,10}$");
                 if (!phoneRegex.IsMatch(normalizedPhone))
                 {
-                    return BadRequest(new { message = "So dien thoai khong hop le. Phai bat dau bang 0 hoac +84 va co 10-11 chu so." });
+                    return BadRequest(new { message = "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 hoặc +84 và có 10-11 chữ số." });
                 }
             }
 
@@ -129,7 +129,7 @@ namespace EducenAPI.Controllers
                 var existingUser = _context.Users.Any(u => u.Username == normalizedUsername && u.UserId != userId);
                 if (existingUser)
                 {
-                    return Conflict(new { message = "Ten dang nhap da ton tai" });
+                    return Conflict(new { message = "Tên đăng nhập đã tồn tại" });
                 }
 
                 user.Username = normalizedUsername;
@@ -145,7 +145,7 @@ namespace EducenAPI.Controllers
                 var existingEmail = _context.Users.Any(u => u.Email == normalizedEmail && u.UserId != user.UserId);
                 if (existingEmail)
                 {
-                    return Conflict(new { message = "Email da ton tai" });
+                    return Conflict(new { message = "Email đã tồn tại" });
                 }
 
                 user.Email = normalizedEmail;
@@ -194,7 +194,7 @@ namespace EducenAPI.Controllers
 
             _context.SaveChanges();
 
-            return Ok(new { message = "Cap nhat ho so thanh cong" });
+            return Ok(new { message = "Cập nhật hồ sơ thành công" });
         }
 
         [HttpPut("change-password")]
@@ -205,23 +205,23 @@ namespace EducenAPI.Controllers
             var user = _context.Users.FirstOrDefault(u => u.UserId.ToString() == userId);
             if (user == null)
             {
-                return NotFound(new { message = "Khong tim thay nguoi dung." });
+                return NotFound(new { message = "Không tìm thấy người dùng." });
             }
 
             if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
             {
-                return BadRequest(new { message = "Mat khau hien tai khong dung" });
+                return BadRequest(new { message = "Mật khẩu hiện tại không đúng" });
             }
 
             if (request.OldPassword == request.NewPassword)
             {
-                return BadRequest(new { message = "Mat khau moi phai khac mat khau hien tai" });
+                return BadRequest(new { message = "Mật khẩu mới phải khác mật khẩu hiện tại" });
             }
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             _context.SaveChanges();
 
-            return Ok(new { message = "Doi mat khau thanh cong" });
+            return Ok(new { message = "Đổi mật khẩu thành công" });
         }
     }
 }

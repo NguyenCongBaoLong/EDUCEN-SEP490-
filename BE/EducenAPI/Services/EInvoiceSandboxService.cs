@@ -120,20 +120,20 @@ namespace EducenAPI.Services
             var sanitizedNote = SanitizeDisplayNote(invoice.PaymentNote);
             var data = new List<(string Label, string Value)>
             {
-                ("MÃ£ hÃ³a Ä‘Æ¡n ná»™i bá»™", invoice.InvoiceNumber),
-                ("Trung tÃ¢m", tenantName),
-                ("Sá»‘ tiá»n", $"{invoice.Amount:N0} VND"),
-                ("Tráº¡ng thÃ¡i", invoice.Status),
-                ("PhÆ°Æ¡ng thá»©c thanh toÃ¡n", invoice.PaymentMethod ?? string.Empty),
-                ("Thá»i Ä‘iá»ƒm thanh toÃ¡n", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
-                ("Ghi chÃº", sanitizedNote)
+                ("Mã hóa đơn nội bộ", invoice.InvoiceNumber),
+                ("Trung tâm", tenantName),
+                ("Số tiền", $"{invoice.Amount:N0} VND"),
+                ("Trạng thái", invoice.Status),
+                ("Phương thức thanh toán", invoice.PaymentMethod ?? string.Empty),
+                ("Thời điểm thanh toán", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
+                ("Ghi chú", sanitizedNote)
             };
 
             return BuildStyledPdf(
-                "HÃ“A ÄÆ N ÄIá»†N Tá»¬ (SANDBOX DEMO)",
+                "HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)",
                 metadata,
                 data,
-                "ÄÃ¢y lÃ  hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ SANDBOX Ä‘á»ƒ demo, khÃ´ng cÃ³ giÃ¡ trá»‹ phÃ¡p lÃ½ thuáº¿."
+                "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế."
             );
         }
 
@@ -160,7 +160,7 @@ namespace EducenAPI.Services
                     new XElement("CreatedAt", invoice.CreatedAt.ToString("O")),
                     new XElement("Note", sanitizedNote)
                 ),
-                new XElement("Disclaimer", "ÄÃ¢y lÃ  hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ SANDBOX Ä‘á»ƒ demo, khÃ´ng cÃ³ giÃ¡ trá»‹ phÃ¡p lÃ½ thuáº¿.")
+                new XElement("Disclaimer", "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.")
             );
 
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), root);
@@ -219,20 +219,20 @@ namespace EducenAPI.Services
             var sanitizedNote = SanitizeDisplayNote(invoice.Notes);
             var data = new List<(string Label, string Value)>
             {
-                ("Trung tÃ¢m", tenantName),
-                ("Ká»³ há»c phÃ­", $"{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}"),
-                ("Sá»‘ buá»•i há»c", $"{invoice.AttendedSessions}/{invoice.TotalSessions}"),
-                ("Sá»‘ tiá»n", $"{invoice.FinalAmount:N0} VND"),
-                ("Tráº¡ng thÃ¡i", invoice.Status),
-                ("Thá»i Ä‘iá»ƒm thanh toÃ¡n", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
-                ("Ghi chÃº", sanitizedNote)
+                ("Trung tâm", tenantName),
+                ("Kỳ học phí", $"{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}"),
+                ("Số buổi học", $"{invoice.AttendedSessions}/{invoice.TotalSessions}"),
+                ("Số tiền", $"{invoice.FinalAmount:N0} VND"),
+                ("Trạng thái", invoice.Status),
+                ("Thời điểm thanh toán", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
+                ("Ghi chú", sanitizedNote)
             };
 
             return BuildStyledPdf(
-                "HÃ“A ÄÆ N ÄIá»†N Tá»¬ Há»ŒC PHÃ (SANDBOX DEMO)",
+                "HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)",
                 metadata,
                 data,
-                "ÄÃ¢y lÃ  hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ SANDBOX Ä‘á»ƒ demo, khÃ´ng cÃ³ giÃ¡ trá»‹ phÃ¡p lÃ½ thuáº¿."
+                "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế."
             );
         }
 
@@ -255,13 +255,13 @@ namespace EducenAPI.Services
             contentBuilder.AppendLine($"(Provider: {EscapePdfText(metadata.Provider)}) Tj");
             y -= 20;
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Sá»‘ hÃ³a Ä‘Æ¡n: {EscapePdfText(metadata.InvoiceNo)}) Tj");
+            contentBuilder.AppendLine($"(Số hóa đơn: {EscapePdfText(metadata.InvoiceNo)}) Tj");
             y -= 20;
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(MÃ£ tra cá»©u: {EscapePdfText(metadata.LookupCode)}) Tj");
+            contentBuilder.AppendLine($"(Mã tra cứu: {EscapePdfText(metadata.LookupCode)}) Tj");
             y -= 20;
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(NgÃ y phÃ¡t hÃ nh: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
+            contentBuilder.AppendLine($"(Ngày phát hành: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
             y -= 30;
             
             // Draw table border
