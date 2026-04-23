@@ -18,21 +18,16 @@ using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// === UTF-8 Encoding Configuration ===
-System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-
-// === Services ===
+// â”€â”€ Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<QuotaCheckAttribute>();
 })
     .AddJsonOptions(options =>
     {
-        // Xử lý circular reference (Student ↔ User navigation)
+        // Xá»­ lÃ½ circular reference (Student â†” User navigation)
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-        // Ensure proper Unicode handling
-        options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
     })
     .ConfigureApiBehaviorOptions(options =>
     {
@@ -47,13 +42,10 @@ builder.Services.AddControllers(options =>
                     Errors = e.Value?.Errors.Select(err => err.ErrorMessage)
                 });
 
-            // Get the first error message for display
-            var firstErrorMessage = errors.FirstOrDefault()?.Errors?.FirstOrDefault();
-
             return new BadRequestObjectResult(new
             {
                 statusCode = 400,
-                message = firstErrorMessage ?? "Dữ liệu đầu vào không hợp lệ",
+                message = "Dữ liệu đầu vào không hợp lệ",
                 errors = errors
             });
         };
@@ -63,7 +55,7 @@ builder.Services.AddRouting();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<MailService>();
 
-// === Swagger ===
+// â”€â”€ Swagger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
@@ -155,10 +147,10 @@ builder.Services.AddDbContext<EducenV2Context>((serviceProvider, options) =>
 });
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 20 * 1024 * 1024; // 20 MB
+    options.MultipartBodyLengthLimit = 10 * 1024 * 1024; // 10 MB
 });
 
-// === Auth Service ===
+// â”€â”€ Auth Service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
@@ -193,7 +185,7 @@ builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>(
 builder.Services.AddScoped<ISupportRequestsService, SupportRequestsService>();
 builder.Services.AddScoped<ITeacherReportService, TeacherReportService>();
 
-// === Payment Services ===
+// â”€â”€ Payment Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 builder.Services.Configure<PaymentConfigResolutionOptions>(
     builder.Configuration.GetSection(PaymentConfigResolutionOptions.SectionName));
 builder.Services.AddScoped<VNPayService>();
@@ -209,12 +201,13 @@ builder.Services.AddScoped<IRevenueReportService, RevenueReportService>();
 builder.Services.AddScoped<IAdminReportService, AdminReportService>();
 builder.Services.AddScoped<IQuotaService, QuotaService>();
 
-// === Background Services ===
+// â”€â”€ Background Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.OverdueInvoiceService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.SubscriptionExpirationService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.CreditDeductionService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.MonthlyInvoiceGenerationService>();
 builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.LegacyCreditLedgerCleanupService>();
+builder.Services.AddHostedService<EducenAPI.Services.BackgroundServices.MonthlyPerformanceReportService>();
 
 // === Zalo OA ===
 builder.Services.AddHttpClient("ZaloAPI", client =>
@@ -224,7 +217,7 @@ builder.Services.AddHttpClient("ZaloAPI", client =>
 });
 builder.Services.AddScoped<IZaloOANotificationService, ZaloOANotificationService>();
 
-// === CORS: cho phép FE gọi API ===
+// â”€â”€ CORS: cho phÃ©p FE gá»i API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -239,15 +232,15 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials()
-              .SetPreflightMaxAge(TimeSpan.FromSeconds(3600));
+              .SetPreflightMaxAge(TimeSpan.FromSeconds(3600)); ;
     });
 });
 
 
-// === JWT Authentication ===
+// â”€â”€ JWT Authentication â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSettings["Key"]
-    ?? throw new InvalidOperationException("JWT Key chưa được cấu hình.");
+    ?? throw new InvalidOperationException("JWT Key is not configured");
 
 var key = Encoding.UTF8.GetBytes(jwtKey);
 
@@ -272,7 +265,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// === Build App ===
+// â”€â”€ Build App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var app = builder.Build();
 
 // ===============================

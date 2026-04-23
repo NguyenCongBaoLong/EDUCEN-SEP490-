@@ -318,7 +318,7 @@ namespace EducenAPI.Services
             }).ToList();
         }
 
-        public async Task<ChildPerformanceReportDto?> GetChildPerformanceReportAsync(int childId)
+        public async Task<ChildPerformanceReportDto?> GetChildPerformanceReportAsync(int childId, int? month = null, int? year = null)
         {
             var student = await _context.Students
                 .Include(s => s.StudentNavigation)
@@ -345,16 +345,25 @@ namespace EducenAPI.Services
             int totalSubmissionsCount = 0;
             int totalAssignmentsCount = 0;
 
+            DateTime now = DateTime.Now;
+            bool isMonthly = month.HasValue && year.HasValue;
+
             foreach (var cls in student.Classes)
             {
                 // Attendance
-                var sessions = await _context.ClassSessions
-                    .Where(cs => cs.ClassId == cls.ClassId)
-                    .ToListAsync();
+                var sessionsQuery = _context.ClassSessions
+                    .Where(cs => cs.ClassId == cls.ClassId && cs.SessionDate <= now);
+                
+                if (isMonthly)
+                {
+                    sessionsQuery = sessionsQuery.Where(s => s.SessionDate.Month == month && s.SessionDate.Year == year);
+                }
 
-                var pastSessions = sessions.Where(s => s.SessionDate <= DateTime.Now).ToList();
+                var pastSessions = await sessionsQuery.ToListAsync();
+                var pastSessionIds = pastSessions.Select(ps => ps.SessionId).ToList();
+
                 var attendanceRecords = await _context.Attendances
-                    .Where(a => a.StudentId == childId && pastSessions.Select(ps => ps.SessionId).Contains(a.SessionId))
+                    .Where(a => a.StudentId == childId && pastSessionIds.Contains(a.SessionId))
                     .ToListAsync();
 
                 int attended = attendanceRecords.Count(a => 
@@ -366,8 +375,16 @@ namespace EducenAPI.Services
                 decimal attRate = totalPast > 0 ? (decimal)attended / totalPast * 100 : 0;
 
                 // Assignments & Grades
-                var classAssignments = await _context.Assignments
-                    .Where(a => a.Session.ClassId == cls.ClassId)
+                var assignmentsQuery = _context.Assignments
+                    .Include(a => a.Session)
+                    .Where(a => a.Session.ClassId == cls.ClassId);
+
+                if (isMonthly)
+                {
+                    assignmentsQuery = assignmentsQuery.Where(a => a.Session.SessionDate.Month == month && a.Session.SessionDate.Year == year);
+                }
+
+                var classAssignments = await assignmentsQuery
                     .Include(a => a.Submissions)
                     .ToListAsync();
 
@@ -384,11 +401,13 @@ namespace EducenAPI.Services
                 int submittedCount = mySubmissions.Count();
                 int totalAsms = classAssignments.Count();
 
-                // Latest Feedback
-                var latestFeedback = publishedGrades
-                    .OrderByDescending(s => s.GradedAt ?? s.SubmittedAt)
-                    .Select(s => s.TeacherComment)
-                    .FirstOrDefault(c => !string.IsNullOrWhiteSpace(c));
+                // Latest Feedback - ordered by session date to get the truly latest in that month
+                var latestFeedback = classAssignments
+                    .OrderByDescending(a => a.Session.SessionDate)
+                    .SelectMany(a => a.Submissions)
+                    .Where(sub => sub.StudentId == childId && sub.IsPublished && !string.IsNullOrWhiteSpace(sub.TeacherComment))
+                    .Select(sub => sub.TeacherComment)
+                    .FirstOrDefault();
 
                 // Ranking
                 string rank = "—";
