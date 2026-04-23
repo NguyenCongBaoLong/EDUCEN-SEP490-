@@ -7,7 +7,7 @@ import '../css/components/Sidebar.css';
 const ParentSidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, logout, centerBranding } = useAuth();
+    const { user, logout, centerBranding } = useAuth(); //
     const { childrenList, selectedChild, setSelectedChild, loading } = useChild();
 
     const handleLogout = () => {
@@ -16,15 +16,15 @@ const ParentSidebar = () => {
     };
 
     const menuItems = [
-        { 
-            path: '/parent/classes', 
-            icon: GraduationCap, 
-            label: selectedChild?.studentId === 'all' ? 'Lớp học của tất cả con' : 'Lớp học của con' 
+        {
+            path: '/parent/classes',
+            icon: GraduationCap,
+            label: selectedChild?.studentId === 'all' ? 'Lớp học của tất cả con' : 'Lớp học của con'
         },
-        { 
-            path: '/parent/schedule', 
-            icon: Calendar, 
-            label: selectedChild?.studentId === 'all' ? 'Lịch học của tất cả con' : 'Lịch học của con' 
+        {
+            path: '/parent/schedule',
+            icon: Calendar,
+            label: selectedChild?.studentId === 'all' ? 'Lịch học của tất cả con' : 'Lịch học của con'
         },
         { path: '/parent/invoices', icon: FileText, label: 'Hóa đơn học phí' },
     ];
