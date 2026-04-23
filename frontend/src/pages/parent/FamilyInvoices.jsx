@@ -18,6 +18,7 @@ import familyInvoiceService from '../../services/familyInvoiceService';
 import paymentService from '../../services/paymentService';
 import { useAuth } from '../../context/AuthContext';
 import { useChild } from '../../context/ChildContext';
+import EInvoiceModal from '../../components/EInvoiceModal';
 import '../../css/pages/parent/FamilyInvoices.css';
 
 const FamilyInvoices = ({ embedded = false }) => {
@@ -37,6 +38,10 @@ const FamilyInvoices = ({ embedded = false }) => {
     const [selectedPeriodFilter, setSelectedPeriodFilter] = useState('all');
     const [cancellingInvoiceId, setCancellingInvoiceId] = useState(null);
     const [expandedInvoiceIds, setExpandedInvoiceIds] = useState([]);
+    const [processingEInvoiceId, setProcessingEInvoiceId] = useState(null);
+    const [showEInvoiceModal, setShowEInvoiceModal] = useState(false);
+    const [selectedEInvoice, setSelectedEInvoice] = useState(null);
+    const [eInvoicePreviewUrl, setEInvoicePreviewUrl] = useState('');
 
     const selectedInvoices = useMemo(
         () => outstandingTuitionInvoices.filter((invoice) => selectedTuitionInvoiceIds.includes(invoice.invoiceId)),
@@ -154,7 +159,7 @@ const FamilyInvoices = ({ embedded = false }) => {
             // Luôn fetch tất cả hóa đơn gia đình
             const response = await familyInvoiceService.getFamilyInvoices('all');
             
-            // Filter theo tab ở frontend
+            // Filter theo tab ? frontend
             let filteredInvoices = response;
             if (activeTab === 'paid') {
                 filteredInvoices = response.filter(invoice => invoice.status === 'Paid');
@@ -283,7 +288,7 @@ const FamilyInvoices = ({ embedded = false }) => {
         let invoiceDetails = null;
         
         try {
-            // Lấy chi tiết hóa đơn gộp trước khi huỷ để có thông tin tuitionInvoiceIds
+            // Lấy chi tiết hóa đơn gộp trước khi hủy để có thông tin tuitionInvoiceIds
             try {
                 invoiceDetails = await familyInvoiceService.getFamilyInvoiceById(invoiceId);
                 console.log('Invoice details before cancel:', invoiceDetails);
@@ -459,6 +464,72 @@ const FamilyInvoices = ({ embedded = false }) => {
     const getStudentName = (studentId) => {
         const child = childrenList.find((item) => item.studentId === studentId);
         return child?.fullName || `Học sinh ${studentId}`;
+    };
+
+    const downloadBlob = (response, fallbackFileName) => {
+        const disposition = response?.headers?.['content-disposition'] || '';
+        const fileNameFromHeader = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
+        const fileName = decodeURIComponent(fileNameFromHeader?.[1] || fileNameFromHeader?.[2] || fallbackFileName);
+        const blob = new Blob([response.data], { type: response.data?.type || 'application/octet-stream' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const openRepresentationPreview = (response) => {
+        if (eInvoicePreviewUrl) {
+            window.URL.revokeObjectURL(eInvoicePreviewUrl);
+        }
+        const blob = new Blob([response.data], { type: 'text/html;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        setEInvoicePreviewUrl(url);
+        setShowEInvoiceModal(true);
+    };
+
+    const closeEInvoiceModal = () => {
+        setShowEInvoiceModal(false);
+        setSelectedEInvoice(null);
+        if (eInvoicePreviewUrl) {
+            window.URL.revokeObjectURL(eInvoicePreviewUrl);
+            setEInvoicePreviewUrl('');
+        }
+    };
+
+    const handleViewFamilyEInvoice = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await familyInvoiceService.downloadFamilyEInvoiceRepresentation(invoice.invoiceId);
+            openRepresentationPreview(response);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể xem hóa đơn điện tử');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
+    };
+
+    const handleOpenFamilyEInvoiceModal = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setSelectedEInvoice(invoice);
+        await handleViewFamilyEInvoice(invoice);
+    };
+
+    const handleDownloadFamilyEInvoiceXml = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await familyInvoiceService.downloadFamilyEInvoiceXml(invoice.invoiceId);
+            downloadBlob(response, `${invoice.invoiceId}.xml`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tải XML hóa đơn điện tử');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
     };
 
     const formatCurrency = (amount) => {
@@ -668,6 +739,18 @@ const FamilyInvoices = ({ embedded = false }) => {
                                         </>
                                     )}
 
+                                    {invoice.status === 'Paid' && (
+                                        <>
+                                            <button
+                                                className="invoice-action-btn details"
+                                                onClick={() => handleOpenFamilyEInvoiceModal(invoice)}
+                                                disabled={processingEInvoiceId === invoice.invoiceId}
+                                            >
+                                                Xem hóa đơn điện tử
+                                            </button>
+                                        </>
+                                    )}
+
                                     {invoice.studentInvoices && invoice.studentInvoices.length > 0 && (
                                         <button
                                             className="invoice-action-btn details"
@@ -786,7 +869,7 @@ const FamilyInvoices = ({ embedded = false }) => {
                             <div className="create-modal-layout">
                                 <div className="create-modal-main">
                                     <div className="selection-hint">
-                                        Chọn các hóa đơn chưa thanh toán để tạo một lô thanh toán mới. Nếu chỉ chọn hóa đơn của 1 học sinh, hệ thống sẽ tạo gộp theo học sinh; chọn từ nhiều học sinh sẽ tạo gộp gia đình.
+                                        Chọn các hóa đơn chưa thanh toán để tạo một lần thanh toán mới. Nếu chỉ chọn hóa đơn của 1 học sinh, hệ thống sẽ tạo gộp theo học sinh; chọn từ nhiều học sinh sẽ tạo gộp gia đình.
                                     </div>
 
                                     {periodOptions.length > 0 && (
@@ -948,6 +1031,15 @@ const FamilyInvoices = ({ embedded = false }) => {
                     </div>
                 </div>
             )}
+
+            <EInvoiceModal
+                isOpen={showEInvoiceModal && !!selectedEInvoice}
+                previewUrl={eInvoicePreviewUrl}
+                iframeTitle="family-einvoice-representation"
+                onClose={closeEInvoiceModal}
+                onDownload={() => handleDownloadFamilyEInvoiceXml(selectedEInvoice)}
+                disableDownload={processingEInvoiceId === selectedEInvoice?.invoiceId}
+            />
         </div>
     );
 };

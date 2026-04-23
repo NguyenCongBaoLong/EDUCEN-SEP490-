@@ -596,4 +596,3 @@ StaffTable.propTypes = {
 
 
 export default StaffTable;
-

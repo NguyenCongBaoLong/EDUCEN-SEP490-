@@ -318,6 +318,15 @@
     color: #16a34a;
 }
 
+/* Prevent overflow for long unbroken feedback strings in drawer detail */
+.tid-detail-content,
+.tid-response-text,
+.tid-response-by {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
 .pf-history-subject {
     font-size: 0.9rem;
     font-weight: 700;

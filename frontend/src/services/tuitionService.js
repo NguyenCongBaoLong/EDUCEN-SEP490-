@@ -116,9 +116,22 @@ const tuitionService = {
     },
 
     // Lấy hóa đơn chưa thanh toán
+    
     getOutstandingInvoices: async () => {
         const response = await api.get('/tuition/outstanding');
         return response.data;
+    },
+
+    downloadMyEInvoiceXml: async (invoiceId) => {
+        return api.get(`/tuition/my-invoices/${invoiceId}/einvoice/xml`, {
+            responseType: 'blob'
+        });
+    },
+
+    downloadMyEInvoiceRepresentation: async (invoiceId) => {
+        return api.get(`/tuition/my-invoices/${invoiceId}/einvoice/representation`, {
+            responseType: 'blob'
+        });
     },
     // Cập nhật đơn giá buổi học của lớp
     updateClassPrice: async (classId, price) => {

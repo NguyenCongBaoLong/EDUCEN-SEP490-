@@ -906,4 +906,3 @@ CreateClassModal.propTypes = {
 };
 
 export default CreateClassModal;
-

@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Rooms;
+using EducenAPI.DTOs.Rooms;
 using EducenAPI.DTOs.Schedules;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;

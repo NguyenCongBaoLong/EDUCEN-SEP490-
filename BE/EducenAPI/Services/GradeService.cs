@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Grades;
+using EducenAPI.DTOs.Grades;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;

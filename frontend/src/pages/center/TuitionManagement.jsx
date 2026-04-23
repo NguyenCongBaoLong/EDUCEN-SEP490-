@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import {
     Calculator,
@@ -30,6 +30,7 @@ import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
 import api from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import vnpayLogo from '../../vnpay-logo.png';
 import '../../css/pages/center/TuitionManagement.css';
 
 const TuitionManagement = () => {
@@ -1206,7 +1207,7 @@ const TuitionManagement = () => {
                             <div className="gateway-info">
                                 <label>Phương thức thanh toán:</label>
                                 <div className="gateway-display">
-                                    <img src="/vnpay-logo.png" alt="VNPay" />
+                                    <img src={vnpayLogo} alt="VNPay" />
                                     <span>Thanh toán qua VNPay</span>
                                 </div>
                                 <p className="gateway-note">

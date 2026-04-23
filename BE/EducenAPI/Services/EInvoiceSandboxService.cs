@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
@@ -72,6 +72,8 @@ namespace EducenAPI.Services
         {
             var encoder = HtmlEncoder.Default;
             var sanitizedNote = SanitizeDisplayNote(invoice.PaymentNote);
+            var localizedStatus = LocalizeStatus(invoice.Status);
+            var localizedNote = LocalizeNote(sanitizedNote);
             return $@"<!doctype html>
 <html>
 <head>
@@ -90,19 +92,19 @@ namespace EducenAPI.Services
 <body>
   <div class='card'>
     <div class='title'>HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)</div>
-    <div class='muted'>Provider: {encoder.Encode(metadata.Provider)}</div>
+    <div class='muted'>Nhà cung cấp: {encoder.Encode(metadata.Provider)}</div>
     <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
     <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
     <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
 
     <table>
       <tr><td><strong>Mã hóa đơn nội bộ</strong></td><td>{encoder.Encode(invoice.InvoiceNumber)}</td></tr>
-      <tr><td><strong>Trung tam</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
+      <tr><td><strong>Trung tâm</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
       <tr><td><strong>Số tiền</strong></td><td>{invoice.Amount:N0} VND</td></tr>
-      <tr><td><strong>Trang thai</strong></td><td>{encoder.Encode(invoice.Status)}</td></tr>
+      <tr><td><strong>Trạng thái</strong></td><td>{encoder.Encode(localizedStatus)}</td></tr>
       <tr><td><strong>Phương thức thanh toán</strong></td><td>{encoder.Encode(invoice.PaymentMethod ?? string.Empty)}</td></tr>
       <tr><td><strong>Thời điểm thanh toán</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
-      <tr><td><strong>Ghi chu</strong></td><td>{encoder.Encode(sanitizedNote)}</td></tr>
+      <tr><td><strong>Ghi chú</strong></td><td>{encoder.Encode(localizedNote)}</td></tr>
     </table>
 
     <div class='warn'>
@@ -118,20 +120,20 @@ namespace EducenAPI.Services
             var sanitizedNote = SanitizeDisplayNote(invoice.PaymentNote);
             var data = new List<(string Label, string Value)>
             {
-                ("Mã hóa đơn nội bộ", invoice.InvoiceNumber),
-                ("Trung tâm", tenantName),
-                ("Số tiền", $"{invoice.Amount:N0} VND"),
-                ("Trạng thái", invoice.Status),
-                ("Phương thức thanh toán", invoice.PaymentMethod ?? string.Empty),
-                ("Thời điểm thanh toán", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
-                ("Ghi chú", sanitizedNote)
+                ("MÃ£ hÃ³a Ä‘Æ¡n ná»™i bá»™", invoice.InvoiceNumber),
+                ("Trung tÃ¢m", tenantName),
+                ("Sá»‘ tiá»n", $"{invoice.Amount:N0} VND"),
+                ("Tráº¡ng thÃ¡i", invoice.Status),
+                ("PhÆ°Æ¡ng thá»©c thanh toÃ¡n", invoice.PaymentMethod ?? string.Empty),
+                ("Thá»i Ä‘iá»ƒm thanh toÃ¡n", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
+                ("Ghi chÃº", sanitizedNote)
             };
 
             return BuildStyledPdf(
-                "HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)",
+                "HÃ“A ÄÆ N ÄIá»†N Tá»¬ (SANDBOX DEMO)",
                 metadata,
                 data,
-                "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế."
+                "ÄÃ¢y lÃ  hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ SANDBOX Ä‘á»ƒ demo, khÃ´ng cÃ³ giÃ¡ trá»‹ phÃ¡p lÃ½ thuáº¿."
             );
         }
 
@@ -158,7 +160,7 @@ namespace EducenAPI.Services
                     new XElement("CreatedAt", invoice.CreatedAt.ToString("O")),
                     new XElement("Note", sanitizedNote)
                 ),
-                new XElement("Disclaimer", "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.")
+                new XElement("Disclaimer", "ÄÃ¢y lÃ  hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ SANDBOX Ä‘á»ƒ demo, khÃ´ng cÃ³ giÃ¡ trá»‹ phÃ¡p lÃ½ thuáº¿.")
             );
 
             var doc = new XDocument(new XDeclaration("1.0", "utf-8", "yes"), root);
@@ -169,6 +171,8 @@ namespace EducenAPI.Services
         {
             var encoder = HtmlEncoder.Default;
             var sanitizedNote = SanitizeDisplayNote(invoice.Notes);
+            var localizedStatus = LocalizeStatus(invoice.Status);
+            var localizedNote = LocalizeNote(sanitizedNote);
             return $@"<!doctype html>
 <html>
 <head>
@@ -187,19 +191,19 @@ namespace EducenAPI.Services
 <body>
   <div class='card'>
     <div class='title'>HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)</div>
-    <div class='muted'>Provider: {encoder.Encode(metadata.Provider)}</div>
+    <div class='muted'>Nhà cung cấp: {encoder.Encode(metadata.Provider)}</div>
     <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
     <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
     <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
 
     <table>
-      <tr><td><strong>Trung tam</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
+      <tr><td><strong>Trung tâm</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
       <tr><td><strong>Kỳ học phí</strong></td><td>{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}</td></tr>
       <tr><td><strong>Số buổi học</strong></td><td>{invoice.AttendedSessions}/{invoice.TotalSessions}</td></tr>
       <tr><td><strong>Số tiền</strong></td><td>{invoice.FinalAmount:N0} VND</td></tr>
-      <tr><td><strong>Trang thai</strong></td><td>{encoder.Encode(invoice.Status)}</td></tr>
+      <tr><td><strong>Trạng thái</strong></td><td>{encoder.Encode(localizedStatus)}</td></tr>
       <tr><td><strong>Thời điểm thanh toán</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
-      <tr><td><strong>Ghi chu</strong></td><td>{encoder.Encode(sanitizedNote)}</td></tr>
+      <tr><td><strong>Ghi chú</strong></td><td>{encoder.Encode(localizedNote)}</td></tr>
     </table>
 
     <div class='warn'>
@@ -215,20 +219,20 @@ namespace EducenAPI.Services
             var sanitizedNote = SanitizeDisplayNote(invoice.Notes);
             var data = new List<(string Label, string Value)>
             {
-                ("Trung tâm", tenantName),
-                ("Kỳ học phí", $"{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}"),
-                ("Số buổi học", $"{invoice.AttendedSessions}/{invoice.TotalSessions}"),
-                ("Số tiền", $"{invoice.FinalAmount:N0} VND"),
-                ("Trạng thái", invoice.Status),
-                ("Thời điểm thanh toán", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
-                ("Ghi chú", sanitizedNote)
+                ("Trung tÃ¢m", tenantName),
+                ("Ká»³ há»c phÃ­", $"{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}"),
+                ("Sá»‘ buá»•i há»c", $"{invoice.AttendedSessions}/{invoice.TotalSessions}"),
+                ("Sá»‘ tiá»n", $"{invoice.FinalAmount:N0} VND"),
+                ("Tráº¡ng thÃ¡i", invoice.Status),
+                ("Thá»i Ä‘iá»ƒm thanh toÃ¡n", invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-"),
+                ("Ghi chÃº", sanitizedNote)
             };
 
             return BuildStyledPdf(
-                "HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)",
+                "HÃ“A ÄÆ N ÄIá»†N Tá»¬ Há»ŒC PHÃ (SANDBOX DEMO)",
                 metadata,
                 data,
-                "Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế."
+                "ÄÃ¢y lÃ  hÃ³a Ä‘Æ¡n Ä‘iá»‡n tá»­ SANDBOX Ä‘á»ƒ demo, khÃ´ng cÃ³ giÃ¡ trá»‹ phÃ¡p lÃ½ thuáº¿."
             );
         }
 
@@ -251,13 +255,13 @@ namespace EducenAPI.Services
             contentBuilder.AppendLine($"(Provider: {EscapePdfText(metadata.Provider)}) Tj");
             y -= 20;
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Số hóa đơn: {EscapePdfText(metadata.InvoiceNo)}) Tj");
+            contentBuilder.AppendLine($"(Sá»‘ hÃ³a Ä‘Æ¡n: {EscapePdfText(metadata.InvoiceNo)}) Tj");
             y -= 20;
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Mã tra cứu: {EscapePdfText(metadata.LookupCode)}) Tj");
+            contentBuilder.AppendLine($"(MÃ£ tra cá»©u: {EscapePdfText(metadata.LookupCode)}) Tj");
             y -= 20;
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Ngày phát hành: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
+            contentBuilder.AppendLine($"(NgÃ y phÃ¡t hÃ nh: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
             y -= 30;
             
             // Draw table border
@@ -373,6 +377,39 @@ namespace EducenAPI.Services
             sanitized = Regex.Replace(sanitized, @"^\s*\|\s*|\s*\|\s*$", string.Empty);
             sanitized = Regex.Replace(sanitized, @"\s{2,}", " ");
             return sanitized.Trim();
+        }
+
+        private static string LocalizeStatus(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return "-";
+
+            return status.Trim().ToLowerInvariant() switch
+            {
+                "paid" => "Đã thanh toán",
+                "unpaid" => "Chưa thanh toán",
+                "cancelled" => "Đã hủy",
+                "draft" => "Nháp",
+                _ => status
+            };
+        }
+
+        private static string LocalizeNote(string note)
+        {
+            if (string.IsNullOrWhiteSpace(note))
+                return string.Empty;
+
+            var normalized = note.Trim();
+            var lower = normalized.ToLowerInvariant();
+
+            if (lower == "cash payment at center")
+                return "Thanh toán tiền mặt tại trung tâm";
+
+            // Keep only user-facing payment success text, remove technical metadata.
+            if (lower.StartsWith("thanh toan online thanh cong") || lower.StartsWith("thanh toán online thành công"))
+                return "Thanh toán online thành công.";
+
+            return note;
         }
     }
 }

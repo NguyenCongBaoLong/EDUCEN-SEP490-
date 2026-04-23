@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useLocation } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
 import ContractViewer from '../../components/ContractViewer';
+import EInvoiceModal from '../../components/EInvoiceModal';
 import api from '../../services/api';
 import paymentService from '../../services/paymentService';
 import { useAuth } from '../../context/AuthContext';
@@ -47,6 +48,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [processingEInvoiceId, setProcessingEInvoiceId] = useState(null);
     const [showRepresentationModal, setShowRepresentationModal] = useState(false);
     const [representationUrl, setRepresentationUrl] = useState('');
+    const [selectedEInvoice, setSelectedEInvoice] = useState(null);
     const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
     const [loadingOnlineHistory, setLoadingOnlineHistory] = useState(false);
 
@@ -322,7 +324,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 paymentMethod,
                 paymentNote: `Center yêu cầu xác nhận thanh toán ${paymentMethod}.`
             });
-            toast.success('Đã gửi yêu cầu xác nhận thanh toán tới SystemAdmin.');
+            toast.success('Đã gửi yêu cầu xác nhận thanh toán tại SystemAdmin.');
             loadMyInvoices();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Không thể gửi yêu cầu thanh toán.');
@@ -376,6 +378,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
 
     const closeRepresentationModal = () => {
         setShowRepresentationModal(false);
+        setSelectedEInvoice(null);
         if (representationUrl) {
             window.URL.revokeObjectURL(representationUrl);
             setRepresentationUrl('');
@@ -415,10 +418,16 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             const response = await fetchBlob(`/admin/subscription/invoices/${invoice.invoiceId}/einvoice/representation`);
             openRepresentationPreview(response);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Khong the tai ban the hien HDDT sandbox');
+            toast.error(error.response?.data?.message || 'Không thể tải bản thể hiện HDDT sandbox');
         } finally {
             setProcessingEInvoiceId(null);
         }
+    };
+
+    const handleOpenEInvoiceModal = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setSelectedEInvoice(invoice);
+        await downloadSandboxRepresentation(invoice);
     };
 
     // Tính số tiền phải trả khi đổi gói (chính sách mới)
@@ -426,7 +435,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         let finalPrice = 0;
         
         if (!activeSubscription) {
-            // Chưa có gói → trả giá gói
+            // Chưa có gói -> trả giá gói
             finalPrice = Math.round(plan.price);
         } else {
             // Kiểm tra grace period (7 ngày đầu)
@@ -434,12 +443,12 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
             const GRACE_PERIOD_DAYS = 7;
             
             if (daysSinceStart > GRACE_PERIOD_DAYS) {
-                // Ngoài grace period → không refund
+                // Ngoài grace period -> không refund
                 finalPrice = Math.round(plan.price);
             } else {
-                // Trong grace period → có thể refund
+                // Trong grace period -> có thể refund
                 if (plan.price < activeSubscription.planPrice) {
-                    // Downgrade trong grace period → refund chênh lệch
+                    // Downgrade trong grace period -> refund chênh lệch
                     const totalDays = Math.floor((new Date(activeSubscription.endDate) - new Date(activeSubscription.startDate)) / (1000 * 60 * 60 * 24));
                     const remainingDays = Math.floor((new Date(activeSubscription.endDate) - new Date()) / (1000 * 60 * 60 * 24));
                     const refundPercentage = remainingDays / totalDays;
@@ -448,7 +457,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                     
                     finalPrice = Math.round(Math.max(0, plan.price - refundAmount));
                 } else {
-                    // Upgrade → không refund
+                    // Upgrade -> không refund
                     finalPrice = Math.round(plan.price);
                 }
             }
@@ -524,7 +533,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                 setShowInvoicesModal(true);
                             }}
                         >
-                            <CreditCard size={15} /> Hoá đơn &amp; Thanh toán
+                            <CreditCard size={15} /> Hóa đơn &amp; Thanh toán
                         </button>
                         <button
                             type="button"
@@ -579,7 +588,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                         <h3>{plan.planName}</h3>
                                         {isDeprecated && (
                                             <div className="subscription-deprecation-notice">
-                                                ⚠️ Gói này sắp ngừng hoạt động
+                                                Gói này sắp ngừng hoạt động
                                             </div>
                                         )}
                                         <div className="subscription-price">
@@ -940,7 +949,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                             }}
                                                         >
                                                             {amount > 0 ? '+' : ''}
-                                                            {formatCurrency(amount)}
+                                                            {formatPrice(amount)} VNĐ
                                                         </td>
                                                         <td style={{ textAlign: 'right' }}>
                                                             {formatCurrency(balanceBefore)}
@@ -994,7 +1003,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                 <tr key={c.contractId}>
                                                     <td style={{ padding: '0.75rem' }}>{c.contractTitle}</td>
                                                     <td style={{ padding: '0.75rem' }}>{c.fileType}</td>
-                                                    <td style={{ padding: '0.75rem' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '?'}</td>
                                                     <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                                         <button style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }} onClick={() => handleViewContract(c)}>Xem</button>
                                                     </td>
@@ -1015,7 +1024,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                     <div className="subscription-modal-overlay" onClick={() => setShowInvoicesModal(false)} />
                     <div className="subscription-modal" style={{ maxWidth: '820px', width: '92vw', maxHeight: '90vh' }}>
                         <div className="subscription-modal-header">
-                            <h2>Hoá đơn &amp; Thanh toán</h2>
+                            <h2>Hóa đơn &amp; Thanh toán</h2>
                             <button className="subscription-modal-close" onClick={() => setShowInvoicesModal(false)}><X size={18} /></button>
                         </div>
                         <div className="subscription-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: 'calc(90vh - 120px)', overflow: 'auto', padding: '1rem' }}>
@@ -1024,7 +1033,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                 {loadingInvoices ? (
                                     <div className="subscription-state">Đang tải...</div>
                                 ) : myInvoices.length === 0 ? (
-                                    <div className="subscription-state">Chưa có hoá đơn nào.</div>
+                                    <div className="subscription-state">Chưa có hóa đơn nào.</div>
                                 ) : (
                                     <div style={{ overflow: 'auto' }}>
                                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -1093,26 +1102,10 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                                         <button
                                                                             type="button"
                                                                             disabled={processingEInvoiceId === i.invoiceId}
-                                                                            onClick={() => issueSandboxEInvoice(i)}
+                                                                            onClick={() => handleOpenEInvoiceModal(i)}
                                                                             style={{ padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #0ea5e9', color: '#0c4a6e', cursor: 'pointer', fontSize: '0.72rem', background: '#e0f2fe', fontWeight: 600 }}
                                                                         >
-                                                                            HĐĐT Sandbox
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={processingEInvoiceId === i.invoiceId}
-                                                                            onClick={() => downloadSandboxXml(i)}
-                                                                            style={{ padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#334155', cursor: 'pointer', fontSize: '0.72rem', background: '#fff', fontWeight: 600 }}
-                                                                        >
-                                                                            XML
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={processingEInvoiceId === i.invoiceId}
-                                                                            onClick={() => downloadSandboxRepresentation(i)}
-                                                                            style={{ padding: '0.22rem 0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#334155', cursor: 'pointer', fontSize: '0.72rem', background: '#fff', fontWeight: 600 }}
-                                                                        >
-                                                                            Bản thể hiện
+                                                                            Xem hóa đơn điện tử
                                                                         </button>
                                                                     </div>
                                                                 )}
@@ -1122,7 +1115,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                                     ? new Date(i.createdAt).toLocaleString('vi-VN')
                                                                     : i.dueDate
                                                                         ? new Date(i.dueDate).toLocaleString('vi-VN')
-                                                                        : '—'}
+                                                                        : '?'}
                                                             </td>
                                                         </tr>
                                                     );
@@ -1156,7 +1149,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                         <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: '#f3f4f6', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{h.paymentId?.slice(-8)}</span></td>
                                                         <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(h.amount)} VNĐ</td>
                                                         <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}><span style={{ color: h.status === 'Success' ? '#16a34a' : h.status === 'Failed' ? '#dc2626' : '#f59e0b', fontWeight: 500 }}>{h.status === 'Success' ? 'Thành công' : h.status === 'Failed' ? 'Thất bại' : h.status}</span></td>
-                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{h.paymentDate ? new Date(h.paymentDate).toLocaleString('vi-VN') : '—'}</td>
+                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{h.paymentDate ? new Date(h.paymentDate).toLocaleString('vi-VN') : '?'}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -1197,16 +1190,16 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                     <tbody>
                                         {myChangeRequests.map(r => (
                                             <tr key={r.requestId}>
-                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('vi-VN') : '—'}</td>
-                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{r.currentPlan?.planName || '—'}</td>
-                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{r.requestedPlan?.planName || '—'}</td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('vi-VN') : '?'}</td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{r.currentPlan?.planName || '?'}</td>
+                                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{r.requestedPlan?.planName || '?'}</td>
                                                 <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>
                                                     <span style={{ color: r.status === 'Approved' ? '#16a34a' : r.status === 'Rejected' ? '#dc2626' : '#f59e0b', fontWeight: 600 }}>
                                                         {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : r.status === 'Rejected' ? 'Từ chối' : r.status}
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                                                    {r.reviewNote || r.reason || '—'}
+                                                    {r.reviewNote || r.reason || '?'}
                                                 </td>
                                             </tr>
                                         ))}
@@ -1218,28 +1211,14 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                 </>
             )}
 
-            {showRepresentationModal && (
-                <>
-                    <div className="subscription-modal-overlay" onClick={closeRepresentationModal} />
-                    <div className="subscription-modal" style={{ maxWidth: '1100px', width: '92vw', maxHeight: '90vh' }}>
-                        <div className="subscription-modal-header">
-                            <h2>Ban the hien HDDT Sandbox</h2>
-                            <button className="subscription-modal-close" onClick={closeRepresentationModal}><X size={18} /></button>
-                        </div>
-                        <div className="subscription-modal-body" style={{ padding: '1rem', maxHeight: 'calc(90vh - 120px)' }}>
-                            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', minHeight: '70vh' }}>
-                                {representationUrl && (
-                                    <iframe
-                                        title="sandbox-einvoice-representation"
-                                        src={representationUrl}
-                                        style={{ width: '100%', height: '70vh', border: 'none' }}
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
+            <EInvoiceModal
+                isOpen={showRepresentationModal && !!selectedEInvoice}
+                previewUrl={representationUrl}
+                iframeTitle="sandbox-einvoice-representation"
+                onClose={closeRepresentationModal}
+                onDownload={() => downloadSandboxXml(selectedEInvoice)}
+                disableDownload={processingEInvoiceId === selectedEInvoice?.invoiceId}
+            />
 
             {/* View Contract Modal */}
             {viewContractTarget && (

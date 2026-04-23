@@ -598,4 +598,3 @@ const TeacherSchedule = ({ isTA = false }) => {
 
 export default TeacherSchedule;
 
-

@@ -233,12 +233,23 @@
     font-size: 0.9rem;
     color: #1e293b;
     line-height: 1.6;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .tid-response-by {
     margin: 8px 0 0;
     font-size: 0.75rem;
     color: #64748b;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.tid-detail-content {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .tid-pending-box {

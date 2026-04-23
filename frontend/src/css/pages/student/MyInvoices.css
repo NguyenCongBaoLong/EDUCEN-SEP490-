@@ -31,7 +31,8 @@
     flex: 1;
     padding: 2rem 3rem;
     margin-left: 260px;
-    max-width: 1200px;
+    max-width: none;
+    width: calc(100vw - 260px);
 }
 
 .my-invoices-container .family-invoices-embedded {
@@ -87,6 +88,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 1rem;
     overflow: hidden;
+    overflow-x: auto;
     box-shadow: var(--card-shadow);
     width: 100%;
     max-width: 100%;
@@ -95,7 +97,7 @@
 .history-table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto;
     min-width: 0;
 }
 
@@ -106,30 +108,76 @@
     text-align: left;
     font-size: 0.9rem;
     color: var(--text-main);
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
+    word-break: normal;
     vertical-align: top;
     line-height: 1.35;
 }
 
 .history-table th:nth-child(1),
-.history-table td:nth-child(1) { width: 20%; }   /* Mã hóa đơn */
+.history-table td:nth-child(1) { width: 20%; }   /* M? h?a don */
 .history-table th:nth-child(2),
-.history-table td:nth-child(2) { width: 8%; }   /* Kỳ */
+.history-table td:nth-child(2) { width: 8%; }   /* K? */
 .history-table th:nth-child(3),
-.history-table td:nth-child(3) { width: 12%; }  /* Học sinh */
+.history-table td:nth-child(3) { width: 12%; }  /* H?c sinh */
 .history-table th:nth-child(4),
-.history-table td:nth-child(4) { width: 12%; }  /* Lớp học */
+.history-table td:nth-child(4) { width: 10%; }  /* L?p h?c */
 .history-table th:nth-child(5),
-.history-table td:nth-child(5) { width: 10%; }   /* Số buổi */
+.history-table td:nth-child(5) { width: 7%; }   /* S? bu?i */
 .history-table th:nth-child(6),
-.history-table td:nth-child(6) { width: 20%; }  /* Hạn thanh toán */
+.history-table td:nth-child(6) { width: 12%; }  /* H?n thanh to?n */
 .history-table th:nth-child(7),
-.history-table td:nth-child(7) { width: 20%; }  /* Ngày thanh toán */
+.history-table td:nth-child(7) { width: 12%; }  /* Ng?y thanh to?n */
 .history-table th:nth-child(8),
-.history-table td:nth-child(8) { width: 15%; }  /* Trạng thái */
+.history-table td:nth-child(8) { width: 9%; }  /* Tr?ng th?i */
 .history-table th:nth-child(9),
-.history-table td:nth-child(9) { width: 15%; }  /* Số tiền */
+.history-table td:nth-child(9) { width: 10%; }  /* S? ti?n */
+.history-table th:nth-child(10),
+.history-table td:nth-child(10) { width: 12%; }  /* Thao t?c */
+
+.history-table td:nth-child(1) {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.history-amount {
+    font-weight: 600;
+}
+
+.einvoice-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+    flex-wrap: nowrap;
+}
+
+.einvoice-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.38rem 0.72rem;
+    border: 1px solid #38bdf8;
+    background: #e0f2fe;
+    color: #075985;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    line-height: 1.1;
+    cursor: pointer;
+}
+
+.einvoice-btn:hover:not(:disabled) {
+    border-color: #0ea5e9;
+    background: #bae6fd;
+    color: #0c4a6e;
+}
+
+.einvoice-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
 .history-table th {
     background: #f8fafc;
@@ -238,7 +286,7 @@
     font-size: 1.1rem;
 }
 
-/* Consolidate Button - Gộp hóa đơn */
+/* Consolidate Button - G?p h?a don */
 .consolidate-btn {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
@@ -657,6 +705,7 @@
     .invoices-content {
         padding: 2rem;
         margin-left: 0;
+        width: auto;
     }
     
     .invoices-list {

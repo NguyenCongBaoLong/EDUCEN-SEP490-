@@ -17,6 +17,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChild } from '../../context/ChildContext';
 import FamilyInvoices from '../parent/FamilyInvoices';
+import vnpayLogo from '../../vnpay-logo.png';
 import '../../css/pages/student/MyInvoices.css';
 
 const MyInvoices = () => {
@@ -881,7 +882,7 @@ const MyInvoices = () => {
                             <div className="gateway-info">
                                 <label>Phương thức thanh toán:</label>
                                 <div className="gateway-display">
-                                    <img src="/vnpay-logo.png" alt="VNPay" />
+                                    <img src={vnpayLogo} alt="VNPay" />
                                     <span>Thanh toán qua VNPay</span>
                                 </div>
                                 <p className="gateway-note">

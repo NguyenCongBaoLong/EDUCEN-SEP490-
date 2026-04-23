@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ClipboardCheck, CheckCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';

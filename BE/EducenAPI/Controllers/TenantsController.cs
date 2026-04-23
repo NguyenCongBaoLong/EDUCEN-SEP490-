@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs;
+using EducenAPI.DTOs;
 using EducenAPI.DTOs.Tenant;
 using EducenAPI.DTOs.Subscription;
 using EducenAPI.Services.TenantService;

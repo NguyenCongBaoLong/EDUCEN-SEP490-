@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, Check, Edit2, Trash2, Plus, X, Loader2, AlertCircle } from 'lucide-react';
 import SystemAdminSidebar from '../../components/SystemAdminSidebar';
 import adminApi from '../../services/adminApi';
@@ -355,4 +355,3 @@ const PlansManagement = () => {
 };
 
 export default PlansManagement;
-

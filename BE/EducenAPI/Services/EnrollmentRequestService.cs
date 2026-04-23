@@ -604,4 +604,3 @@ public async Task<IEnumerable<EnrollmentRequestDto>> GetPendingRequestsAsync()
         }
     }
 }
-

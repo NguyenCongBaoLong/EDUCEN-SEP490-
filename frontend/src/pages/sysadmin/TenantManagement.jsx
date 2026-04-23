@@ -2108,4 +2108,3 @@ const TenantManagement = () => {
 };
 
 export default TenantManagement;
-

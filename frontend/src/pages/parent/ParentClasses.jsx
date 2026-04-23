@@ -613,4 +613,3 @@ const ParentClasses = () => {
 
 export default ParentClasses;
 
-

@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Subscription;
+using EducenAPI.DTOs.Subscription;
 using EducenAPI.Models;
 using EducenAPI.Persistence.Contexts;
 using EducenAPI.Services.Interface;
@@ -21,15 +21,15 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
 
             if (tenant == null)
-                throw new Exception("Không tìm thấy trung tâm.");
+                throw new Exception("Kh?ng t?m th?y trung t?m.");
 
             var plan = await _context.Plans
                 .FirstOrDefaultAsync(p => p.PlanId == request.PlanId && p.IsActive);
 
             if (plan == null)
-                throw new Exception("Không tìm thấy gói dịch vụ hoặc gói không còn hoạt động.");
+                throw new Exception("Kh?ng t?m th?y g?i d?ch v? ho?c g?i kh?ng c?n ho?t d?ng.");
 
-            // 1. Kiểm tra xem tenant đã có gói này đang active chưa
+            // 1. Ki?m tra xem tenant d? c? g?i n?y dang active chua
             var existing = await _context.Subscriptions
                 .FirstOrDefaultAsync(s => s.TenantId == request.TenantId 
                                      && s.PlanId == request.PlanId 
@@ -37,9 +37,9 @@ namespace EducenAPI.Services
                                      && s.EndDate > DateTime.UtcNow);
 
             if (existing != null)
-                throw new Exception("Trung tâm này đã đăng ký gói này và vẫn còn hạn sử dụng.");
+                throw new Exception("Trung t?m n?y d? dang k? g?i n?y v? v?n c?n h?n s? d?ng.");
 
-            // 2. Nếu đăng ký gói mới, hủy tất cả các gói active cũ (nếu có)
+            // 2. N?u dang k? g?i m?i, h?y t?t c? c?c g?i active cu (n?u c?)
             var activeSubs = await _context.Subscriptions
                 .Where(s => s.TenantId == request.TenantId && s.Status == "Active")
                 .ToListAsync();
@@ -47,11 +47,11 @@ namespace EducenAPI.Services
             foreach (var sub in activeSubs)
             {
                 sub.Status = "Cancelled";
-                sub.EndDate = DateTime.UtcNow; // Hết hạn ngay lập tức
+                sub.EndDate = DateTime.UtcNow; // H?t h?n ngay l?p t?c
             }
 
             var startDate = DateTime.UtcNow;
-            // Nếu có TestEndDate thì dùng nó (cho test), otherwise mặc định 1 tháng
+            // N?u c? TestEndDate th? d?ng n? (cho test), otherwise m?c d?nh 1 th?ng
             var endDate = startDate.AddMonths(1);
 
             var subscription = new Subscription
@@ -79,9 +79,9 @@ namespace EducenAPI.Services
 
             _context.PaymentRecords.Add(payment);
 
-            // Tạo credit cho tenant bằng với giá gói đã mua
-            // Credit có thời hạn 12 tháng (có thể config trong appsettings)
-            var creditExpirationMonths = 12; // Default 12 tháng
+            // T?o credit cho tenant b?ng v?i gi? g?i d? mua
+            // Credit c? th?i h?n 12 th?ng (c? th? config trong appsettings)
+            var creditExpirationMonths = 12; // Default 12 th?ng
             tenant.CreditBalance += plan.Price;
             var creditLedger = new TenantCreditLedger
             {
@@ -92,7 +92,7 @@ namespace EducenAPI.Services
                 ReferenceId = subscription.Id,
                 BalanceAfter = tenant.CreditBalance,
                 ExpiredAt = DateTime.UtcNow.AddMonths(creditExpirationMonths),
-                Note = $"Đăng ký gói {plan.PlanName} - Tạo credit (hết hạn sau {creditExpirationMonths} tháng)"
+                Note = $"?ang k? g?i {plan.PlanName} - T?o credit (h?t h?n sau {creditExpirationMonths} th?ng)"
             };
             _context.TenantCreditLedgers.Add(creditLedger);
 
@@ -126,7 +126,7 @@ namespace EducenAPI.Services
 
             foreach (var sub in activeSubs)
             {
-                // Business rule: không hoàn credit khi hủy/hạ gói.
+                // Business rule: kh?ng ho?n credit khi h?y/h? g?i.
 
                 if (immediate)
                 {
@@ -135,7 +135,7 @@ namespace EducenAPI.Services
                 }
                 else
                 {
-                    // Hủy cuối kỳ - giữ nguyên EndDate
+                    // H?y cu?i k? - gi? nguy?n EndDate
                     sub.Status = "Cancelled";
                 }
             }
@@ -145,7 +145,7 @@ namespace EducenAPI.Services
         }
 
         /// <summary>
-        /// Tính credit hoàn lại từ gói cũ (theo thời gian còn lại)
+        /// T?nh credit ho?n l?i t? g?i cu (theo th?i gian c?n l?i)
         /// </summary>
         private decimal CalculateUnusedCreditInternal(Subscription currentSub)
         {
@@ -242,10 +242,10 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync();
 
             if (subscription == null)
-                throw new Exception("Không tìm thấy gói dịch vụ đang hoạt động để gia hạn.");
+                throw new Exception("Kh?ng t?m th?y g?i d?ch v? dang ho?t d?ng d? gia h?n.");
 
             if (!subscription.Plan.IsActive)
-                throw new Exception($"Gói '{subscription.Plan.PlanName}' đã ngừng cung cấp. Vui lòng sử dụng chức năng 'Đổi gói' để chọn gói dịch vụ khác.");
+                throw new Exception($"G?i '{subscription.Plan.PlanName}' d? ng?ng cung c?p. Vui l?ng s? d?ng ch?c nang '??i g?i' d? ch?n g?i d?ch v? kh?c.");
 
             if (subscription.EndDate > DateTime.UtcNow)
             {
@@ -296,13 +296,13 @@ namespace EducenAPI.Services
                 .FirstOrDefaultAsync(t => t.TenantId == request.TenantId);
 
             if (tenant == null)
-                throw new Exception("Không tìm thấy trung tâm.");
+                throw new Exception("Kh?ng t?m th?y trung t?m.");
 
             var newPlan = await _context.Plans
                 .FirstOrDefaultAsync(p => p.PlanId == request.NewPlanId);
 
             if (newPlan == null)
-                throw new Exception("Không tìm thấy gói dịch vụ.");
+                throw new Exception("Kh?ng t?m th?y g?i d?ch v?.");
 
             var currentSub = await _context.Subscriptions
                 .Include(s => s.Plan)
@@ -311,42 +311,42 @@ namespace EducenAPI.Services
 
             if (currentSub != null)
             {
-                // Kiểm tra quy tắc đổi gói: nâng gói bất cứ lúc nào, hạ gói chỉ trong 7 ngày đầu
+                // Ki?m tra quy t?c d?i g?i: n?ng g?i b?t c? l?c n?o, h? g?i ch? trong 7 ng?y d?u
                 var daysSinceStart = (DateTime.UtcNow - currentSub.StartDate).Days;
                 const int GRACE_PERIOD_DAYS = 7;
                 
                 if (newPlan.Price < currentSub.Plan.Price && daysSinceStart > GRACE_PERIOD_DAYS)
                 {
-                    throw new Exception("Chỉ được hạ gói trong 7 ngày đầu tiên của gói dịch vụ. Nâng gói có thể thực hiện bất cứ lúc nào.");
+                    throw new Exception("Ch? du?c h? g?i trong 7 ng?y d?u ti?n c?a g?i d?ch v?. N?ng g?i c? th? th?c hi?n b?t c? l?c n?o.");
                 }
                 
                 // Business rule: changing plan does not create refund/top-up entries.
 
-                // Chính sách mới: downgrade hiệu lực kỳ sau (không hủy gói cũ ngay)
+                // Ch?nh s?ch m?i: downgrade hi?u l?c k? sau (kh?ng h?y g?i cu ngay)
                 if (request.EffectiveImmediately && newPlan.Price < currentSub.Plan.Price)
                 {
-                    // Downgrade ngay chỉ được trong grace period
+                    // Downgrade ngay ch? du?c trong grace period
                     if (daysSinceStart > GRACE_PERIOD_DAYS)
                     {
-                        // Ngoài grace period → downgrade hiệu lực kỳ sau
+                        // Ngo?i grace period ? downgrade hi?u l?c k? sau
                         request.EffectiveImmediately = false;
                     }
                     else
                     {
-                        // Trong grace period → downgrade ngay
+                        // Trong grace period ? downgrade ngay
                         currentSub.Status = "Cancelled";
                         currentSub.EndDate = DateTime.UtcNow;
                     }
                 }
                 else if (request.EffectiveImmediately)
                 {
-                    // Upgrade hoặc downgrade trong grace period → hủy gói cũ ngay
+                    // Upgrade ho?c downgrade trong grace period ? h?y g?i cu ngay
                     currentSub.Status = "Cancelled";
                     currentSub.EndDate = DateTime.UtcNow;
                 }
             }
 
-            // Ngày bắt đầu và kết thúc gói mới
+            // Ng?y b?t d?u v? k?t th?c g?i m?i
             var startDate = request.EffectiveImmediately ? DateTime.UtcNow : (currentSub?.EndDate > DateTime.UtcNow ? currentSub.EndDate : DateTime.UtcNow);
             var endDate = startDate.AddMonths(request.Months);
 
