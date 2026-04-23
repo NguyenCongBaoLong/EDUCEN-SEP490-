@@ -23,12 +23,6 @@ const DAY_LABEL_MAP = {
     6: 'Thứ Bảy'
 };
 
-const TIME_OPTIONS = [
-    '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
-    '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
-    '19:00', '20:00', '21:00', '22:00'
-];
-
 const DEFAULT_REASON = '';
 const DEFAULT_DAY = 1;
 const DEFAULT_START_TIME = '16:00';
@@ -195,19 +189,19 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                     <div className="req-form-section">
                         <label className="req-section-label">Loại yêu cầu</label>
                         <div className="req-type-tabs">
-                            <button 
+                            <button
                                 className={`req-type-tab ${requestType === 'schedule_change' ? 'active' : ''}`}
                                 onClick={() => setRequestType('schedule_change')}
                             >
                                 Đổi lịch dạy
                             </button>
-                            <button 
+                            <button
                                 className={`req-type-tab ${requestType === 'absence' ? 'active' : ''}`}
                                 onClick={() => setRequestType('absence')}
                             >
                                 Xin nghỉ
                             </button>
-                            <button 
+                            <button
                                 className={`req-type-tab ${requestType === 'other' ? 'active' : ''}`}
                                 onClick={() => setRequestType('other')}
                             >
@@ -247,8 +241,8 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                             </label>
                             <div className="req-current-slots">
                                 {displaySlots.map((slot, idx) => (
-                                    <button 
-                                        key={idx} 
+                                    <button
+                                        key={idx}
                                         type="button"
                                         className={'req-slot-badge-btn ' + (selectedSlotIdx === idx ? 'active' : '')}
                                         onClick={() => setSelectedSlotIdx(idx)}
@@ -316,9 +310,9 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                             <div className="req-target-grid">
                                 <div className="req-target-item">
                                     <span className="req-target-label">Ngày</span>
-                                    <select 
-                                        className="req-select" 
-                                        value={targetDay} 
+                                    <select
+                                        className="req-select"
+                                        value={targetDay}
                                         onChange={(e) => setTargetDay(Number(e.target.value))}
                                     >
                                         {DAY_OPTIONS.map(day => (
@@ -328,34 +322,28 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                                 </div>
                                 <div className="req-target-item">
                                     <span className="req-target-label">Bắt đầu</span>
-                                    <select 
-                                        className="req-select" 
-                                        value={targetStartTime} 
+                                    <input
+                                        type="time"
+                                        className="req-time-input"
+                                        value={targetStartTime}
                                         onChange={(e) => setTargetStartTime(e.target.value)}
-                                    >
-                                        {TIME_OPTIONS.map(time => (
-                                            <option key={time} value={time}>{time}</option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                                 <div className="req-target-item">
                                     <span className="req-target-label">Kết thúc</span>
-                                    <select 
-                                        className="req-select" 
-                                        value={targetEndTime} 
+                                    <input
+                                        type="time"
+                                        className="req-time-input"
+                                        value={targetEndTime}
                                         onChange={(e) => setTargetEndTime(e.target.value)}
-                                    >
-                                        {TIME_OPTIONS.filter(t => t > targetStartTime).map(time => (
-                                            <option key={time} value={time}>{time}</option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                                 {rooms.length > 0 && (
                                     <div className="req-target-item">
                                         <span className="req-target-label">Phòng</span>
-                                        <select 
-                                            className="req-select" 
-                                            value={selectedRoomId || ''} 
+                                        <select
+                                            className="req-select"
+                                            value={selectedRoomId || ''}
                                             onChange={(e) => setSelectedRoomId(e.target.value ? Number(e.target.value) : null)}
                                         >
                                             <option value="">Giữ nguyên phòng</option>
@@ -395,7 +383,7 @@ const ScheduleRequestModal = ({ isOpen, onClose, onSend, initialData, classOptio
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

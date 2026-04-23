@@ -43,8 +43,8 @@ namespace EducenAPI.DTOs.Parents
             set => _email = value?.Trim() ?? string.Empty;
         }
 
-        [Phone(ErrorMessage = "Invalid phone number format")]
-        [StringLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
+        [Phone(ErrorMessage = "Định dạng số điện thoại không hợp lệ")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Số điện thoại phải có đúng 10 chữ số")]
         public string? PhoneNumber
         {
             get => _phoneNumber;
@@ -101,8 +101,8 @@ namespace EducenAPI.DTOs.Parents
             set => _email = value?.Trim();
         }
 
-        [Phone(ErrorMessage = "Invalid phone number format")]
-        [StringLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
+        [Phone(ErrorMessage = "Định dạng số điện thoại không hợp lệ")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "Số điện thoại phải có đúng 10 chữ số")]
         public string? PhoneNumber
         {
             get => _phoneNumber;

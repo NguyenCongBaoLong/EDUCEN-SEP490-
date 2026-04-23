@@ -70,7 +70,7 @@ const UserProfile = () => {
             const res = await api.get('/profile/me');
             const data = res.data;
             setProfile(data);
-            
+
             // Map data to formData
             setFormData({
                 username: data.username || '',
@@ -147,7 +147,7 @@ const UserProfile = () => {
             fieldsToUpdate.forEach(key => {
                 let oldValue = profile[key];
                 let newValue = formData[key];
-                
+
                 // Chuẩn hóa so sánh
                 let comparisonOldValue = oldValue;
                 if (key === 'dateOfBirth' && oldValue) comparisonOldValue = oldValue.split('T')[0];
@@ -169,7 +169,7 @@ const UserProfile = () => {
 
             const res = await api.put('/profile/update', updatePayload);
             setProfile(prev => ({ ...prev, ...formData }));
-            
+
             if (section === 'account') setIsEditingAccount(false);
             if (section === 'personal') setIsEditingPersonal(false);
             if (section === 'role') setIsEditingRoleInfo(false);
@@ -203,8 +203,8 @@ const UserProfile = () => {
                 extractMessages(errorData);
                 if (messages.length > 0) {
                     // Filter out generic messages and keep only specific field errors
-                    const specificErrors = messages.filter(msg => 
-                        msg.toLowerCase().includes('email') || 
+                    const specificErrors = messages.filter(msg =>
+                        msg.toLowerCase().includes('email') ||
                         msg.toLowerCase().includes('số điện thoại') ||
                         msg.toLowerCase().includes('phone')
                     );
@@ -220,7 +220,10 @@ const UserProfile = () => {
                 errorMsg = err.response.data;
             }
 
-            toast.error(errorMsg);
+            // Chỉ hiển thị toast nếu Interceptor chưa xử lý (tránh lặp lại 2 toast)
+            if (!err.config?._validationHandled) {
+                toast.error(errorMsg);
+            }
         }
     };
 
@@ -231,10 +234,10 @@ const UserProfile = () => {
             setIsEditingAccount(false);
         }
         if (section === 'personal') {
-            setFormData(prev => ({ 
-                ...prev, 
-                email: profile.email, 
-                phoneNumber: profile.phoneNumber, 
+            setFormData(prev => ({
+                ...prev,
+                email: profile.email,
+                phoneNumber: profile.phoneNumber,
                 address: profile.address,
                 dateOfBirth: profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : '',
                 gender: profile.gender
@@ -242,11 +245,11 @@ const UserProfile = () => {
             setIsEditingPersonal(false);
         }
         if (section === 'role') {
-            setFormData(prev => ({ 
-                ...prev, 
-                specialization: profile.specialization, 
-                degree: profile.degree, 
-                supportLevel: profile.supportLevel 
+            setFormData(prev => ({
+                ...prev,
+                specialization: profile.specialization,
+                degree: profile.degree,
+                supportLevel: profile.supportLevel
             }));
             setIsEditingRoleInfo(false);
         }
@@ -302,8 +305,13 @@ const UserProfile = () => {
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
             setIsChangingPassword(false);
         } catch (err) {
-            setPasswordError(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
-            toast.error(err.response?.data?.message || 'Lỗi khi đổi mật khẩu.');
+            const errorMsg = err.response?.data?.message || 'Lỗi khi đổi mật khẩu.';
+            setPasswordError(errorMsg);
+
+            // Chỉ hiển thị toast nếu Interceptor chưa xử lý
+            if (!err.config?._validationHandled) {
+                toast.error(errorMsg);
+            }
         }
     };
 
@@ -474,10 +482,10 @@ const UserProfile = () => {
                                             <label><Mail size={14} /> Email</label>
                                             {isEditingPersonal ? (
                                                 <>
-                                                    <input 
-                                                        name="email" 
-                                                        value={formData.email} 
-                                                        onChange={handleFormChange} 
+                                                    <input
+                                                        name="email"
+                                                        value={formData.email}
+                                                        onChange={handleFormChange}
                                                         style={{ borderColor: fieldErrors.email ? '#ef4444' : '' }}
                                                     />
                                                     {fieldErrors.email && (
@@ -492,9 +500,9 @@ const UserProfile = () => {
                                             <label><Phone size={14} /> Số điện thoại</label>
                                             {isEditingPersonal ? (
                                                 <>
-                                                    <input 
-                                                        name="phoneNumber" 
-                                                        value={formData.phoneNumber} 
+                                                    <input
+                                                        name="phoneNumber"
+                                                        value={formData.phoneNumber}
                                                         onChange={handleFormChange}
                                                         style={{ borderColor: fieldErrors.phoneNumber ? '#ef4444' : '' }}
                                                     />

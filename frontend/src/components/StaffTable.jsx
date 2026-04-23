@@ -36,11 +36,11 @@ const StaffTable = ({
 
     selectedStaff = [],
 
-    onToggleSelect = () => {},
+    onToggleSelect = () => { },
 
-    onSelectAll = () => {},
+    onSelectAll = () => { },
 
-    onSendBulkAccounts = () => {}
+    onSendBulkAccounts = () => { }
 
 }) => {
 
@@ -214,8 +214,8 @@ const StaffTable = ({
                             <tr>
 
                                 <th style={{ width: '40px' }}>
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         className="bulk-checkbox"
                                         checked={staffData.length > 0 && staffData.filter(s => !s.accountSent).length > 0 && selectedStaff.length === staffData.filter(s => !s.accountSent).length}
                                         onChange={onSelectAll}
@@ -241,8 +241,8 @@ const StaffTable = ({
 
                                 <tr key={staff.id}>
                                     <td>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             className="bulk-checkbox"
                                             disabled={staff.accountSent}
                                             checked={selectedStaff.includes(staff.id)}
@@ -280,7 +280,6 @@ const StaffTable = ({
 
                                                 <div className="staff-name">{staff.name}</div>
 
-                                                <div className="staff-id">ID: {staff.id}</div>
 
                                             </div>
 
@@ -505,9 +504,8 @@ const StaffTable = ({
 
                                         {lockModal.staff?.status === 'active'
 
-                                            ? <>Tài khoản <strong>{lockModal.staff?.name}</strong> (ID: {lockModal.staff?.id}) sẽ bị khóa và không thể đăng nhập.</>
-
-                                            : <>Tài khoản <strong>{lockModal.staff?.name}</strong> (ID: {lockModal.staff?.id}) sẽ được mở khóa và có thể đăng nhập trở lại.</>
+                                            ? <>Tài khoản <strong>{lockModal.staff?.name}</strong> sẽ bị khóa và không thể đăng nhập.</>
+                                            : <>Tài khoản <strong>{lockModal.staff?.name}</strong> sẽ được mở khóa và có thể đăng nhập trở lại.</>
 
                                         }
 
@@ -582,13 +580,13 @@ StaffTable.propTypes = {
     onToggleLock: PropTypes.func.isRequired,
 
     onSendAccount: PropTypes.func,
-    
+
     selectedStaff: PropTypes.array,
-    
+
     onToggleSelect: PropTypes.func,
-    
+
     onSelectAll: PropTypes.func,
-    
+
     onSendBulkAccounts: PropTypes.func
 
 };

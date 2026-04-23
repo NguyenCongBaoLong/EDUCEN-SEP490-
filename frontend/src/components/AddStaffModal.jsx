@@ -53,7 +53,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
 
     const validatePhone = (phone, allUsersList = []) => {
         if (!phone || phone.trim() === '') return ''; // optional
-        if (!/^(0[0-9]{9,10})$/.test(phone)) return 'Số điện thoại không hợp lệ (10-11 số, bắt đầu bằng 0)';
+        if (!/^(0[0-9]{9})$/.test(phone)) return 'Số điện thoại phải có đúng 10 chữ số (bắt đầu bằng 0)';
         // Validate uniqueness within SAME ROLE only (Teacher / Assistant)
         const currentRoleName = formData.role === 'assistant' ? 'assistant' : 'teacher';
         const isDuplicate = allUsersList.some(user => {
@@ -67,7 +67,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
 
     const validateEmail = (email, allUsersList = []) => {
         if (!email || email.trim() === '') return 'Email là bắt buộc';
-        
+
         // Check if it's a valid email format first
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
@@ -80,7 +80,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
             }
             return 'Email không hợp lệ (vd: staff@example.com)';
         }
-        
+
         // Check duplicate email across ALL users (teachers, students, parents, admins)
         const isDuplicate = allUsersList.some(user => {
             // Skip current user if editing
@@ -89,7 +89,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
             }
             return user.email && user.email.toLowerCase() === email.toLowerCase();
         });
-        
+
         if (isDuplicate) return 'Email này đã được sử dụng bởi người dùng khác trong hệ thống';
         return '';
     };

@@ -5,7 +5,7 @@ const errorMessageMap = {
     // Required fields
     'is required': 'bắt buộc',
     'required': 'bắt buộc',
-    
+
     // StringLength
     'cannot exceed': 'không được vượt quá',
     'must be between': 'phải có độ dài từ',
@@ -13,31 +13,31 @@ const errorMessageMap = {
     'minimum': 'tối thiểu',
     'maximum': 'tối đa',
     'characters': 'ký tự',
-    
+
     // Email
     'invalid email format': 'định dạng email không hợp lệ',
     'email is required': 'Email bắt buộc',
     'email cannot exceed': 'Email không được vượt quá',
     'email cannot be only whitespace': 'Email không được để trống',
-    
+
     // Phone
     'invalid phone number format': 'định dạng số điện thoại không hợp lệ',
     'phone number cannot exceed': 'Số điện thoại không được vượt quá',
-    
+
     // Regular expression (whitespace)
     'cannot be only whitespace': 'không được chỉ có khoảng trắng',
     'cannot be empty': 'không được để trống',
-    
+
     // Range validation
     'must be between 0 and 6': 'phải từ 0 đến 6 (0=Chủ nhật, 1=Thứ 2,...)',
     'must be greater than or equal to 0': 'phải lớn hơn hoặc bằng 0',
     'must be greater than or equal to 1': 'phải lớn hơn hoặc bằng 1',
-    
+
     // Pattern/Regex
     'the field': 'Trường',
     'must match the regular expression': 'không đúng định dạng',
     'contains invalid characters': 'chứa ký tự không hợp lệ',
-    
+
     // Generic
     'invalid': 'không hợp lệ',
     'cannot be null': 'không được để trống',
@@ -46,16 +46,16 @@ const errorMessageMap = {
 // Translate English error message to Vietnamese
 function translateErrorMessage(englishMsg) {
     if (!englishMsg) return 'Giá trị không hợp lệ';
-    
+
     let vietnameseMsg = englishMsg;
     let fieldName = '';
-    
+
     // Extract field name from message (e.g., "FullName is required" -> "FullName")
     const fieldMatch = englishMsg.match(/^([A-Za-z]+)\s+/);
     if (fieldMatch) {
         fieldName = fieldMatch[1].toLowerCase();
     }
-    
+
     // Map common field names first
     const fieldNameMap = {
         'classname': 'Tên lớp',
@@ -96,12 +96,12 @@ function translateErrorMessage(englishMsg) {
         'studentids': 'Danh sách học sinh',
         'parentids': 'Danh sách phụ huynh',
     };
-    
+
     // Translate common phrases
     for (const [eng, vie] of Object.entries(errorMessageMap)) {
         vietnameseMsg = vietnameseMsg.replace(new RegExp(eng, 'gi'), vie);
     }
-    
+
     // Format: "FullName is required" -> "Họ tên bắt buộc"
     if (fieldName && fieldNameMap[fieldName]) {
         if (vietnameseMsg.includes('bắt buộc')) {
@@ -127,7 +127,7 @@ function translateErrorMessage(englishMsg) {
             return `${fieldNameMap[fieldName]} ${vietnameseMsg}`;
         }
     }
-    
+
     return vietnameseMsg;
 }
 
@@ -136,7 +136,7 @@ function translateErrorMessage(englishMsg) {
  */
 export function parseValidationErrors(errorResponse) {
     const data = errorResponse?.data;
-    
+
     if (!data) {
         return { hasErrors: false, message: 'Lỗi không xác định', details: null };
     }
@@ -147,7 +147,10 @@ export function parseValidationErrors(errorResponse) {
         let errorMessages = [];
 
         data.errors.forEach(err => {
-            if (err.Field && err.Errors) {
+            const field = err.Field || err.field;
+            const messages = err.Errors || err.errors;
+
+            if (field && messages) {
                 // Map common field names from BE to Vietnamese
                 const fieldNameMap = {
                     'ClassName': 'Tên lớp',
@@ -189,12 +192,12 @@ export function parseValidationErrors(errorResponse) {
                     'ParentIds': 'Danh sách phụ huynh',
                 };
 
-                const displayName = fieldNameMap[err.Field] || err.Field;
-                const messages = Array.isArray(err.Errors) ? err.Errors : [err.Errors];
-                
+                const displayName = fieldNameMap[field] || fieldNameMap[field.charAt(0).toUpperCase() + field.slice(1)] || fieldNameMap[field.toLowerCase()] || field;
+                const messagesArray = Array.isArray(messages) ? messages : [messages];
+
                 // Translate each error message to Vietnamese
-                const translatedMessages = messages.map(m => translateErrorMessage(m));
-                
+                const translatedMessages = messagesArray.map(m => translateErrorMessage(m));
+
                 fieldErrors[displayName] = translatedMessages;
                 errorMessages.push(...translatedMessages.map(m => `• ${displayName}: ${m}`));
             }
@@ -214,7 +217,7 @@ export function parseValidationErrors(errorResponse) {
     if (data.message) {
         // Translate common English messages to Vietnamese
         let translatedMessage = data.message;
-        
+
         const commonMessages = {
             'Invalid input': 'Dữ liệu đầu vào không hợp lệ',
             'Bad request': 'Yêu cầu không hợp lệ',
@@ -226,11 +229,11 @@ export function parseValidationErrors(errorResponse) {
             'failed': 'thất bại',
             'error': 'lỗi',
         };
-        
+
         for (const [eng, vie] of Object.entries(commonMessages)) {
             translatedMessage = translatedMessage.replace(new RegExp(eng, 'gi'), vie);
         }
-        
+
         return {
             hasErrors: true,
             message: translatedMessage,
@@ -249,10 +252,10 @@ export function parseValidationErrors(errorResponse) {
  */
 export function showValidationError(error, defaultMessage = 'Có lỗi xảy ra') {
     const parsed = parseValidationErrors(error);
-    
+
     if (parsed.hasErrors && parsed.formattedMessage) {
         // Hiển thị chi tiết lỗi đã dịch sang tiếng Việt
-        toast.error(parsed.formattedMessage, { 
+        toast.error(parsed.formattedMessage, {
             duration: 5000,
             style: {
                 maxWidth: '500px',

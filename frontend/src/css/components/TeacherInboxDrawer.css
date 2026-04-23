@@ -14,6 +14,7 @@
     position: relative;
     transition: background 0.2s;
 }
+
 .tid-trigger-btn:hover {
     background: #e2e8f0;
 }
@@ -57,6 +58,7 @@
     display: flex;
     flex-direction: column;
 }
+
 .tid-drawer.open {
     right: 0;
 }
@@ -110,6 +112,7 @@
     display: flex;
     align-items: center;
 }
+
 .tid-close-btn:hover {
     background: #f1f5f9;
 }
@@ -185,6 +188,8 @@
     font-size: 0.9rem;
     color: #334155;
     line-height: 1.6;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .tid-status-wrap {
@@ -200,11 +205,13 @@
     font-size: 0.78rem;
     font-weight: 600;
 }
+
 .tid-status-badge.answered {
     background: #f0fdf4;
     color: #16a34a;
     border: 1px solid #bbf7d0;
 }
+
 .tid-status-badge.pending {
     background: #fefce8;
     color: #d97706;
@@ -233,9 +240,9 @@
     font-size: 0.9rem;
     color: #1e293b;
     line-height: 1.6;
-    overflow-wrap: anywhere;
     word-break: break-word;
-    white-space: pre-wrap;
+    overflow-wrap: break-word;
+
 }
 
 .tid-response-by {
@@ -287,9 +294,11 @@
     cursor: pointer;
     transition: background 0.15s;
 }
+
 .tid-msg-item:hover {
     background: #f8fafc !important;
 }
+
 .tid-msg-item.unread {
     background: #eff6ff;
 }
@@ -306,9 +315,11 @@
     flex-shrink: 0;
     font-size: 0.9rem;
 }
+
 .tid-msg-avatar.replied {
     background: #16a34a;
 }
+
 .tid-msg-avatar.pending {
     background: #94a3b8;
 }
@@ -344,6 +355,7 @@
     text-overflow: ellipsis;
     margin-bottom: 2px;
 }
+
 .tid-msg-title.unread {
     font-weight: 600;
 }

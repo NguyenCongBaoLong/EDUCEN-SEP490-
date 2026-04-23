@@ -626,7 +626,7 @@
     font-size: 0.875rem;
     padding: 5px 14px;
     border-radius: 99px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .pc-asm-badge.high {
@@ -749,7 +749,7 @@
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     text-align: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .pc-report-metric-val {
@@ -854,13 +854,59 @@
     font-size: 0.8125rem;
     color: #475569;
     line-height: 1.4;
-    min-width: 0;
+    word-break: break-word;
 }
 
 .pc-report-feedback svg {
     margin-top: 2px;
     color: #94a3b8;
     flex-shrink: 0;
+}
+
+/* Updated Report Filters */
+.pc-report-filters {
+    margin-right: 16px;
+    background: #f8fafc;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.pc-report-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pc-report-filter-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.pc-report-select {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pc-report-select:hover {
+    border-color: #6366f1;
+    background: #f5f7ff;
+}
+
+.pc-report-select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .pc-report-feedback span {

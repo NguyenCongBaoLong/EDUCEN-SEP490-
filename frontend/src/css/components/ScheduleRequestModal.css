@@ -15,8 +15,13 @@
 }
 
 @keyframes reqFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .req-modal-container {
@@ -37,6 +42,7 @@
         transform: translateY(30px) scale(0.95);
         opacity: 0;
     }
+
     to {
         transform: translateY(0) scale(1);
         opacity: 1;
@@ -343,7 +349,8 @@
     border-color: #3b82f6;
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-    padding-right: 2.5rem; /* Space for checkmark */
+    padding-right: 2.5rem;
+    /* Space for checkmark */
 }
 
 .req-badge-day {
@@ -386,15 +393,20 @@
 }
 
 @keyframes reqScaleIn {
-    from { transform: translateY(-50%) scale(0); }
-    to { transform: translateY(-50%) scale(1); }
+    from {
+        transform: translateY(-50%) scale(0);
+    }
+
+    to {
+        transform: translateY(-50%) scale(1);
+    }
 }
 
 /* Target Grid */
 .req-target-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1rem;
 }
 
 .req-target-item {
@@ -412,6 +424,7 @@
 }
 
 /* Form Elements */
+.req-time-input,
 .req-select,
 .req-textarea {
     width: 100%;
@@ -423,6 +436,7 @@
     background: white;
 }
 
+.req-time-input:focus,
 .req-select:focus,
 .req-textarea:focus {
     outline: none;
@@ -499,23 +513,23 @@
         border-radius: 20px 20px 0 0;
         max-height: 95vh;
     }
-    
+
     .req-target-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .req-class-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .req-modal-content {
         padding: 1.25rem;
     }
-    
+
     .req-modal-header {
         padding: 1.25rem;
     }
-    
+
     .req-modal-footer {
         padding: 1rem 1.25rem;
     }
