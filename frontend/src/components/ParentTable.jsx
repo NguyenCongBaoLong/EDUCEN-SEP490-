@@ -99,7 +99,6 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                                         <div className="parent-avatar">{getInitials(p.name)}</div>
                                         <div>
                                             <div className="parent-name">{p.name}</div>
-                                            <div className="parent-id">{p.id}</div>
                                         </div>
                                     </div>
                                 </td>
@@ -140,7 +139,7 @@ const ParentTable = ({ parentData, searchQuery, setSearchQuery, onView, onEdit, 
                                             <Edit2 size={18} />
                                         </button>
                                         {!p.accountSent && (
-                                            <button 
+                                            <button
                                                 className="action-btn send-account"
                                                 title="Gửi tài khoản"
                                                 onClick={() => setSendModal({ show: true, parent: p })}

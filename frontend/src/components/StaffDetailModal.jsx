@@ -41,7 +41,6 @@ const StaffDetailModal = ({ isOpen, onClose, staff }) => {
                             )}
                         </div>
                         <h3 className="staff-name-large">{staff.name}</h3>
-                        <span className="staff-id-large">ID: {staff.id}</span>
 
                         <div className="staff-badges">
                             <span className="role-badge-large">

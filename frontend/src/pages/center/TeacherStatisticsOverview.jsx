@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Fragment } from 'react';
-import { 
-    Download, Search, BookOpen, TrendingUp, Loader2, 
-    ChevronDown, ChevronRight, UserCheck 
+import {
+    Download, Search, BookOpen, TrendingUp, Loader2,
+    ChevronDown, ChevronRight, UserCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Sidebar from '../../components/Sidebar';
@@ -53,7 +53,7 @@ const TeacherStatisticsOverview = () => {
             const response = await api.get(`/admin/reports/teacher-statistics/export?month=${selectedMonth}&year=${selectedYear}`, {
                 responseType: 'blob'
             });
-            
+
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -61,7 +61,7 @@ const TeacherStatisticsOverview = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            
+
             toast.success("Đã xuất báo cáo thành công");
         } catch (error) {
             console.error("Export error:", error);
@@ -87,7 +87,7 @@ const TeacherStatisticsOverview = () => {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     };
 
-    const filteredStats = stats?.statistics?.filter(s => 
+    const filteredStats = stats?.statistics?.filter(s =>
         s.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.email?.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
@@ -106,16 +106,16 @@ const TeacherStatisticsOverview = () => {
                 <div className="stats-controls">
                     <div className="control-group">
                         <div className="date-inputs">
-                            <select 
-                                value={selectedMonth} 
+                            <select
+                                value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
                             >
                                 {months.map(m => (
                                     <option key={m.value} value={m.value}>{m.label}</option>
                                 ))}
                             </select>
-                            <select 
-                                value={selectedYear} 
+                            <select
+                                value={selectedYear}
                                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                             >
                                 {years.map(y => (
@@ -125,17 +125,17 @@ const TeacherStatisticsOverview = () => {
                         </div>
                         <div className="search-input-wrapper" style={{ position: 'relative' }}>
                             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                            <input 
-                                type="text" 
-                                placeholder="Tìm theo tên hoặc email..." 
+                            <input
+                                type="text"
+                                placeholder="Tìm theo tên hoặc email..."
                                 style={{ paddingLeft: '40px', minWidth: '300px' }}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
-                    <button 
-                        className="btn-export" 
+                    <button
+                        className="btn-export"
                         onClick={handleExport}
                         disabled={exporting || loading || filteredStats.length === 0}
                     >
@@ -180,9 +180,10 @@ const TeacherStatisticsOverview = () => {
                                 <table className="stats-table">
                                     <thead>
                                         <tr>
-                                            <th style={{ width: '60px', textAlign: 'center' }}>STT</th>
-                                            <th>Nhân viên</th>
-                                            <th>Vai trò</th>
+                                            <th style={{ width: '80px', textAlign: 'center' }}>STT</th>
+                                            <th style={{ textAlign: 'center' }}>Nhân viên</th>
+                                            <th style={{ textAlign: 'center' }}>Email</th>
+                                            <th style={{ textAlign: 'center' }}>Vai trò</th>
                                             <th style={{ textAlign: 'center' }}>Số buổi dạy</th>
                                             <th style={{ textAlign: 'center' }}>Lớp phụ trách</th>
                                         </tr>
@@ -194,32 +195,34 @@ const TeacherStatisticsOverview = () => {
 
                                             return (
                                                 <Fragment key={rowKey}>
-                                                    <tr 
+                                                    <tr
                                                         className={`main-row ${isExpanded ? 'expanded' : ''}`}
                                                         onClick={() => toggleRow(item.teacherId, item.role)}
                                                     >
-                                                        <td style={{ textAlign: 'center', position: 'relative' }}>
-                                                            {item.classDetails?.length > 0 && (
-                                                                <div style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }}>
-                                                                    {isExpanded ? <ChevronDown size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />}
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                                                <div style={{ width: '14px', display: 'flex', alignItems: 'center' }}>
+                                                                    {item.classDetails?.length > 0 && (
+                                                                        isExpanded ? <ChevronDown size={14} color="#94a3b8" /> : <ChevronRight size={14} color="#94a3b8" />
+                                                                    )}
                                                                 </div>
-                                                            )}
-                                                            <span style={{ fontWeight: '600', color: '#64748b', fontSize: '0.85rem' }}>{index + 1}</span>
+                                                                <span style={{ fontWeight: '600', color: '#64748b', fontSize: '0.85rem', width: '20px' }}>{index + 1}</span>
+                                                            </div>
                                                         </td>
-                                                        <td>
+                                                        <td style={{ textAlign: 'center' }}>
                                                             <div className="teacher-cell">
                                                                 <div className="teacher-avatar">
                                                                     <div className="teacher-avatar-initials">
                                                                         {getInitials(item.fullName)}
                                                                     </div>
                                                                 </div>
-                                                                <div className="teacher-info-compact">
-                                                                    <span className="teacher-name">{item.fullName}</span>
-                                                                    <span className="teacher-email">{item.email}</span>
-                                                                </div>
+                                                                <span className="teacher-name">{item.fullName}</span>
                                                             </div>
                                                         </td>
-                                                        <td>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <span className="teacher-email-col">{item.email}</span>
+                                                        </td>
+                                                        <td style={{ textAlign: 'center' }}>
                                                             <span className={`role-badge ${item.role.toLowerCase()}`}>
                                                                 {item.role === 'Teacher' ? 'Giáo Viên' : 'Trợ Giảng'}
                                                             </span>
@@ -231,11 +234,11 @@ const TeacherStatisticsOverview = () => {
                                                             <span className="class-count">{item.totalClasses} lớp</span>
                                                         </td>
                                                     </tr>
-                                                    
+
                                                     {/* Expanded Row Details */}
                                                     {isExpanded && item.classDetails?.length > 0 && (
                                                         <tr className="expanded-row-content">
-                                                            <td colSpan="5">
+                                                            <td colSpan="6">
                                                                 <div className="details-wrapper">
                                                                     <span className="details-title">Chi tiết lịch dạy theo lớp</span>
                                                                     <table className="details-table">
@@ -260,9 +263,9 @@ const TeacherStatisticsOverview = () => {
                                                                                         <div className="dates-grid">
                                                                                             {cls.sessionDates?.map((d, i) => (
                                                                                                 <span key={i} className="date-chip">
-                                                                                                    {new Date(d).toLocaleDateString('vi-VN', { 
-                                                                                                        day: '2-digit', 
-                                                                                                        month: '2-digit' 
+                                                                                                    {new Date(d).toLocaleDateString('vi-VN', {
+                                                                                                        day: '2-digit',
+                                                                                                        month: '2-digit'
                                                                                                     })}
                                                                                                 </span>
                                                                                             ))}

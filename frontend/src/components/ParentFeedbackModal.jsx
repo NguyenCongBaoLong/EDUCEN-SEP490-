@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { 
-    X, Send, AlertCircle, MessageSquare, Star, 
-    GraduationCap, Building, Calendar, CreditCard, Users, BookOpen, Smile 
+import {
+    X, Send, AlertCircle, MessageSquare, Star,
+    GraduationCap, Building, Calendar, CreditCard, Users, BookOpen, Smile
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
@@ -18,11 +18,11 @@ const CATEGORIES = [
 ];
 
 const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
-    const [form, setForm] = useState({ 
-        category: '', 
-        subject: '', 
-        content: '', 
-        rating: 0 
+    const [form, setForm] = useState({
+        category: '',
+        subject: '',
+        content: '',
+        rating: 0
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -33,8 +33,8 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
         const e = {};
         if (!form.category) e.category = 'Vui lòng chọn một danh mục.';
         if (!form.subject.trim()) e.subject = 'Vui lòng nhập tiêu đề.';
-        if (!form.content.trim() || form.content.trim().length < 20) 
-            e.content = 'Nội dung phản hồi cần ít nhất 20 ký tự.';
+        if (!form.content.trim())
+            e.content = 'Vui lòng nhập nội dung chi tiết.';
         if (form.rating === 0) e.rating = 'Vui lòng đánh giá mức độ hài lòng.';
         return e;
     };
@@ -80,7 +80,7 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
                     <form onSubmit={handleSubmit}>
                         {/* Categories Grid */}
                         <div className="pf-form-group">
-                            <label>Bạn muốn phản hồi về vấn đề gì? <span style={{color: '#ef4444'}}>*</span></label>
+                            <label>Bạn muốn phản hồi về vấn đề gì? <span style={{ color: '#ef4444' }}>*</span></label>
                             <div className="pf-type-grid">
                                 {CATEGORIES.map((cat) => {
                                     const Icon = cat.icon;
@@ -133,10 +133,10 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
                                             setErrors(p => ({ ...p, rating: undefined }));
                                         }}
                                     >
-                                        <Star 
-                                            size={24} 
-                                            fill={n <= form.rating ? '#f59e0b' : 'none'} 
-                                            color={n <= form.rating ? '#f59e0b' : '#cbd5e1'} 
+                                        <Star
+                                            size={24}
+                                            fill={n <= form.rating ? '#f59e0b' : 'none'}
+                                            color={n <= form.rating ? '#f59e0b' : '#cbd5e1'}
                                         />
                                     </button>
                                 ))}
@@ -159,7 +159,7 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
                                     setErrors(p => ({ ...p, content: undefined }));
                                 }}
                             ></textarea>
-                            <div style={{textAlign: 'right', fontSize: '0.7rem', color: '#94a3b8', marginTop: 4}}>
+                            <div style={{ textAlign: 'right', fontSize: '0.7rem', color: '#94a3b8', marginTop: 4 }}>
                                 {form.content.length}/1000
                             </div>
                             {errors.content && <div className="pf-error-msg"><AlertCircle size={12} /> {errors.content}</div>}
@@ -169,8 +169,8 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
 
                 <div className="pf-modal-footer">
                     <button className="pf-btn-cancel" onClick={onClose}>Hủy bỏ</button>
-                    <button 
-                        className="pf-btn-send" 
+                    <button
+                        className="pf-btn-send"
                         disabled={submitting}
                         onClick={handleSubmit}
                     >

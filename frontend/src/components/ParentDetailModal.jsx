@@ -29,7 +29,6 @@ const ParentDetailModal = ({ isOpen, onClose, parent }) => {
                             </span>
                         </div>
                         <h3 className="parent-name-large">{parent.name}</h3>
-                        <span className="parent-id-large">ID: {parent.id}</span>
 
                         <div className="parent-badges">
                             <span className="role-badge-large">
@@ -92,7 +91,8 @@ const ParentDetailModal = ({ isOpen, onClose, parent }) => {
                                             <div className="student-small-name">
                                                 {studentName}
                                                 <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>
-                                                    ID: {parent.linkedStudentIds?.[idx] || 'N/A'} • {parent.studentClassNames?.[idx] || 'N/A'}
+                                                    Khối: {parent.studentGradeNames?.[idx] || 'Chưa cập nhật'}
+                                                    {parent.studentClassNames?.[idx] && parent.studentClassNames[idx] !== 'N/A' && ` • ${parent.studentClassNames[idx]}`}
                                                 </div>
                                             </div>
                                         </div>

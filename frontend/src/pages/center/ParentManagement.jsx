@@ -19,7 +19,7 @@ const ParentManagement = () => {
     const [studentList, setStudentList] = useState([]);
     const [allUsers, setAllUsers] = useState([]); // For email validation across all roles
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // State for form validation errors
     const [errors, setErrors] = useState({});
 
@@ -28,7 +28,7 @@ const ParentManagement = () => {
         isOpen: false,
         title: '',
         message: '',
-        onConfirm: () => {},
+        onConfirm: () => { },
         type: 'warning'
     });
 
@@ -53,22 +53,30 @@ const ParentManagement = () => {
                 api.get('/Students'),
                 api.get('/admin/users')
             ]);
-            
-            const parents = parentsRes.data.map(p => ({
-                id: p.userId.toString(),
-                username: p.username,
-                name: p.fullName || p.username,
-                email: p.email,
-                phone: p.phoneNumber || '',
-                address: p.address || '',
-                gender: 'male',
-                status: p.accountStatus === 'Active' ? 'active' : 'inactive',
-                accountSent: p.accountStatus === 'Active',
-                linkedStudentIds: p.studentIds?.map(id => id.toString()) || [],
-                linkedStudentNames: p.studentNames || [],
-                studentClassNames: p.studentClassNames || [],
-                childrenCount: p.childrenCount || 0
-            }));
+
+            const parents = parentsRes.data.map(p => {
+                const studentGradeNames = (p.studentIds || []).map(id => {
+                    const student = studentsRes.data.find(s => s.userId === id);
+                    return student ? (student.gradeName || student.grade || '') : '';
+                });
+
+                return {
+                    id: p.userId.toString(),
+                    username: p.username,
+                    name: p.fullName || p.username,
+                    email: p.email,
+                    phone: p.phoneNumber || '',
+                    address: p.address || '',
+                    gender: 'male',
+                    status: p.accountStatus === 'Active' ? 'active' : 'inactive',
+                    accountSent: p.accountStatus === 'Active',
+                    linkedStudentIds: p.studentIds?.map(id => id.toString()) || [],
+                    linkedStudentNames: p.studentNames || [],
+                    studentClassNames: p.studentClassNames || [],
+                    studentGradeNames: studentGradeNames,
+                    childrenCount: p.childrenCount || 0
+                };
+            });
 
             const students = studentsRes.data.map(s => ({
                 id: s.userId.toString(),
@@ -164,7 +172,7 @@ const ParentManagement = () => {
                 : `/admin/users/${id}/unlock`;
 
             await api.put(endpoint);
-            
+
             setParentList(prev => prev.map(p =>
                 p.id === id ? { ...p, status: p.status === 'active' ? 'inactive' : 'active' } : p
             ));
@@ -178,7 +186,7 @@ const ParentManagement = () => {
         const loadingToast = toast.loading("Đang gửi thông tin tài khoản...");
         try {
             await api.post(`/Parents/send-account/${id}`);
-            
+
             setParentList(prev => prev.map(p =>
                 p.id === id ? { ...p, accountSent: true, status: 'active' } : p
             ));
@@ -192,7 +200,7 @@ const ParentManagement = () => {
 
     const handleBulkSendAccount = async () => {
         if (selectedParentIds.length === 0) return;
-        
+
         setConfirmModal({
             isOpen: true,
             title: 'Gửi tài khoản hàng loạt',
@@ -208,10 +216,10 @@ const ParentManagement = () => {
     const executeBulkSend = async () => {
         const loadingToast = toast.loading(`Đang gửi ${selectedParentIds.length} tài khoản...`);
         try {
-            await Promise.all(selectedParentIds.map(id => 
+            await Promise.all(selectedParentIds.map(id =>
                 api.post(`/Parents/send-account/${id}`)
             ));
-            
+
             fetchData();
             setSelectedParentIds([]);
             toast.dismiss(loadingToast);

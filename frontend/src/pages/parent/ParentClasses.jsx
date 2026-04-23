@@ -191,15 +191,23 @@ const PerformanceReportModal = ({ onClose }) => {
     const { selectedChild } = useChild();
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [month, setMonth] = useState(new Date().getMonth() + 1);
+    const [year, setYear] = useState(new Date().getFullYear());
 
+    const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
     useEffect(() => {
-        if (!selectedChild) return;
-        setLoading(true);
-        api.get(`/Parents/child/${selectedChild.studentId}/performance-report`)
+        if (!selectedChild || selectedChild.studentId === 'all') return;
+
+        // Use a flag to avoid full-screen loading flicker if we already have data
+        const isInitialLoad = !report;
+        if (isInitialLoad) setLoading(true);
+
+        api.get(`/Parents/child/${selectedChild.studentId}/performance-report`, { params: { month, year } })
             .then(res => setReport(res.data))
             .catch(() => toast.error('Không thể tải báo cáo học tập'))
             .finally(() => setLoading(false));
-    }, [selectedChild]);
+    }, [selectedChild, month, year]);
 
     if (!selectedChild || selectedChild.studentId === 'all') return null;
 
@@ -218,22 +226,47 @@ const PerformanceReportModal = ({ onClose }) => {
         <div className="pc-modal-overlay" onClick={onClose}>
             <div className="pc-modal pc-report-modal" onClick={e => e.stopPropagation()}>
                 <div className="pc-modal-header" style={{ borderTopColor: '#6366f1' }}>
-                    <div>
+                    <div style={{ flex: 1 }}>
                         <div className="pc-modal-subject" style={{ color: '#6366f1' }}>Học sinh: {selectedChild?.fullName}</div>
-                        <h2>Báo cáo học tập tổng kết</h2>
-                        <p>Dữ liệu tổng hợp từ tất cả các lớp đang theo học</p>
+                        <h2>Báo cáo học tập tháng {month}/{year}</h2>
+                        <p>Dữ liệu tổng hợp từ tất cả các lớp trong tháng được chọn</p>
+                    </div>
+
+                    <div className="pc-report-filters">
+                        <div className="pc-report-filter-group">
+                            <label>Thời gian:</label>
+                            <select
+                                className="pc-report-select"
+                                value={month}
+                                onChange={(e) => setMonth(parseInt(e.target.value))}
+                            >
+                                {months.map(m => <option key={m} value={m}>Tháng {m}</option>)}
+                            </select>
+                            <select
+                                className="pc-report-select"
+                                value={year}
+                                onChange={(e) => setYear(parseInt(e.target.value))}
+                            >
+                                {years.map(y => <option key={y} value={y}>Năm {y}</option>)}
+                            </select>
+                        </div>
                     </div>
                     <button className="pc-modal-close" onClick={onClose}>✕</button>
                 </div>
 
-                {loading ? (
+                {loading && !report ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem', gap: '1rem' }}>
                         <Loader2 className="animate-spin" size={40} color="#6366f1" />
                         <p style={{ color: '#64748b', fontSize: '0.9rem' }}>Đang tổng hợp dữ liệu...</p>
                     </div>
                 ) : (
                     <>
-                        <div className="pc-report-summary">
+                        {loading && report && (
+                            <div style={{ position: 'absolute', top: '100px', right: '40px', zIndex: 10 }}>
+                                <Loader2 className="animate-spin" size={20} color="#6366f1" />
+                            </div>
+                        )}
+                        <div className="pc-report-summary" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
                             <div className="pc-report-metric">
                                 <span className="pc-report-metric-val">{report?.overallGPA || 0}</span>
                                 <span className="pc-report-metric-label">GPA Tổng</span>
@@ -279,12 +312,12 @@ const PerformanceReportModal = ({ onClose }) => {
                                                     <div className="pc-report-att-cell">
                                                         <span style={{ fontWeight: 600 }}>{row.attendanceRate}%</span>
                                                         <div className="pc-report-att-bar">
-                                                            <div 
-                                                                className="pc-report-att-fill" 
-                                                                style={{ 
-                                                                    width: `${row.attendanceRate}%`, 
+                                                            <div
+                                                                className="pc-report-att-fill"
+                                                                style={{
+                                                                    width: `${row.attendanceRate}%`,
                                                                     background: row.attendanceRate >= 80 ? '#16a34a' : (row.attendanceRate >= 50 ? '#f59e0b' : '#dc2626')
-                                                                }} 
+                                                                }}
                                                             />
                                                         </div>
                                                         <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{row.attendedSessions}/{row.totalSessionsPassed} buổi</span>
@@ -602,10 +635,10 @@ const ParentClasses = () => {
                 <PerformanceReportModal onClose={() => setShowReportModal(false)} />
             )}
 
-            <ParentFeedbackModal 
-                isOpen={isFeedbackModalOpen} 
+            <ParentFeedbackModal
+                isOpen={isFeedbackModalOpen}
                 onClose={() => setIsFeedbackModalOpen(false)}
-                onSuccess={() => setInboxOpenSignal(prev => prev + 1)} 
+                onSuccess={() => setInboxOpenSignal(prev => prev + 1)}
             />
         </div>
     );

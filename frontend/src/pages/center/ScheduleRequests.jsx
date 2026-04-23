@@ -31,7 +31,7 @@ const ScheduleRequests = () => {
             }
             console.log('[ScheduleRequests] Raw data:', data);
             console.log('[ScheduleRequests] Data length:', data.length);
-            
+
             const isScheduleChangeRequest = (req) => {
                 const title = (req.title || req.Title || '').toLowerCase();
                 const content = (req.content || req.Content || '').toLowerCase();
@@ -52,9 +52,9 @@ const ScheduleRequests = () => {
                     id: req.id
                 });
             });
-            
+
             const scheduleChangeRequests = data.filter(isScheduleChangeRequest);
-            
+
             console.log('[ScheduleRequests] Filtered requests:', scheduleChangeRequests.length);
             setRequests(scheduleChangeRequests);
             setSelectedRequest((prev) => {
@@ -115,7 +115,7 @@ const ScheduleRequests = () => {
                         const classRes = await api.get(`/Classes/${slotInfo.classId}`);
                         const classData = classRes.data;
                         setSelectedClassData(classData);
-                        
+
                         const validation = await validateScheduleChange(slotInfo, classData);
                         setValidationResults(validation);
                     } catch (error) {
@@ -148,14 +148,14 @@ const ScheduleRequests = () => {
             if (classData.teacherId) {
                 const teacherSchedulesRes = await api.get(`/Schedules/teacher/${classData.teacherId}`);
                 const teacherSchedules = teacherSchedulesRes.data || [];
-                
+
                 const teacherConflict = teacherSchedules.find(schedule => {
                     const scheduleDay = schedule.dayOfWeek ?? schedule.DayOfWeek;
                     const scheduleStart = schedule.startTime ?? schedule.StartTime;
                     const scheduleEnd = schedule.endTime ?? schedule.EndTime;
-                    
+
                     if (schedule.classId === classData.classId) return false;
-                    
+
                     if (scheduleDay === newDayOfWeek) {
                         return (newStartTime < scheduleEnd && newEndTime > scheduleStart);
                     }
@@ -175,19 +175,19 @@ const ScheduleRequests = () => {
             if (slotInfo.newRoom) {
                 const roomSchedulesRes = await api.get('/Schedules');
                 const roomSchedules = roomSchedulesRes.data || [];
-                
+
                 const roomsRes = await api.get('/Rooms');
                 const rooms = roomsRes.data || [];
                 const newRoom = rooms.find(r => r.roomName === slotInfo.newRoom);
-                
+
                 const roomConflict = roomSchedules.find(schedule => {
                     const scheduleDay = schedule.dayOfWeek ?? schedule.DayOfWeek;
                     const scheduleStart = schedule.startTime ?? schedule.StartTime;
                     const scheduleEnd = schedule.endTime ?? schedule.EndTime;
                     const scheduleRoomId = schedule.roomId ?? schedule.RoomId;
-                    
+
                     if (schedule.classId === classData.classId) return false;
-                    
+
                     if (scheduleRoomId === newRoom?.roomId) {
                         if (scheduleDay === newDayOfWeek) {
                             return (newStartTime < scheduleEnd && newEndTime > scheduleStart);
@@ -224,12 +224,12 @@ const ScheduleRequests = () => {
 
             const slotInfo = parseSlotInfo(request.content || request.Content || '');
             console.log('[ScheduleRequests] Slot info:', slotInfo);
-            
+
             if (validationResults?.hasConflict) {
                 toast.error('Không thể duyệt: Có xung đột lịch/phòng. Vui lòng kiểm tra cảnh báo.');
                 return;
             }
-            
+
             await notificationService.approveSupportRequest(requestId, 'Đã duyệt yêu cầu đổi lịch.');
             toast.success('Đã duyệt và cập nhật lịch dạy thành công.');
             window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
@@ -272,7 +272,7 @@ const ScheduleRequests = () => {
         const changeTypeMatch = content?.match(/(?:ChangeType|Loại đổi)\s*:\s*(\w+)/i);
         const targetSessionDateMatch = content?.match(/(?:TargetSessionDate|Ngày đổi)\s*:\s*(\d{4}-\d{2}-\d{2})/i);
         const currentRoomMatch = content?.match(/(?:CurrentRoomId|Phòng hiện tại)\s*:\s*(\d+)/i);
-        
+
         return {
             classId: classIdMatch ? parseInt(classIdMatch[1]) : null,
             currentSlot: currentSlotMatch ? {
@@ -484,10 +484,10 @@ const ScheduleRequests = () => {
                                                     <div className="info-label" style={{ marginBottom: '1rem' }}>Thay đổi lịch học</div>
                                                     {(() => {
                                                         const slotInfo = parseSlotInfo(selectedRequest?.content || selectedRequest?.Content || '');
-                                                        
+
                                                         let displayCurrentSlot = slotInfo.currentSlot;
                                                         let displayCurrentRoom = null;
-                                                        
+
                                                         if (!displayCurrentSlot && selectedClassData?.scheduleSlots?.[0]) {
                                                             const firstSlot = selectedClassData.scheduleSlots[0];
                                                             displayCurrentSlot = {
@@ -541,7 +541,7 @@ const ScheduleRequests = () => {
                                                         if (slotInfo.changeType === 'single_session' && slotInfo.targetSessionDate) {
                                                             const targetDate = new Date(slotInfo.targetSessionDate);
                                                             formattedTargetDate = `${targetDate.getDate()}/${targetDate.getMonth() + 1}/${targetDate.getFullYear()}`;
-                                                            
+
                                                             // Calculate new date based on day difference
                                                             if (displayCurrentSlot?.dayLabel && slotInfo.newSlot?.dayLabel) {
                                                                 const dayMap = {
