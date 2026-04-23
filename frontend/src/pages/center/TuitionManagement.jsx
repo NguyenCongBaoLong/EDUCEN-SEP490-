@@ -30,6 +30,7 @@ import tuitionService from '../../services/tuitionService';
 import paymentService from '../../services/paymentService';
 import api from '../../services/api';
 import ConfirmModal from '../../components/ConfirmModal';
+import EInvoiceModal from '../../components/EInvoiceModal';
 import vnpayLogo from '../../vnpay-logo.png';
 import '../../css/pages/center/TuitionManagement.css';
 
@@ -69,6 +70,7 @@ const TuitionManagement = () => {
     const [processingPayment, setProcessingPayment] = useState(false);
     const [showRepresentationModal, setShowRepresentationModal] = useState(false);
     const [representationUrl, setRepresentationUrl] = useState('');
+    const [selectedEInvoice, setSelectedEInvoice] = useState(null);
 
     // State cho gửi hóa đơn
     const [sendingInvoice, setSendingInvoice] = useState(null);
@@ -467,10 +469,17 @@ const TuitionManagement = () => {
 
     const closeRepresentationModal = () => {
         setShowRepresentationModal(false);
+        setSelectedEInvoice(null);
         if (representationUrl) {
             window.URL.revokeObjectURL(representationUrl);
             setRepresentationUrl('');
         }
+    };
+
+    const handleOpenEInvoiceModal = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setSelectedEInvoice(invoice);
+        await downloadSandboxRepresentation(invoice);
     };
 
     const issueSandboxEInvoice = async (invoice) => {
@@ -1130,57 +1139,11 @@ const TuitionManagement = () => {
                                                         <>
                                                             <button
                                                                 type="button"
+                                                                className="einvoice-btn"
                                                                 disabled={processingEInvoiceId === invoice.invoiceId}
-                                                                onClick={() => issueSandboxEInvoice(invoice)}
-                                                                style={{
-                                                                    padding: '4px 10px',
-                                                                    background: '#e0f2fe',
-                                                                    color: '#0c4a6e',
-                                                                    border: '1px solid #0ea5e9',
-                                                                    borderRadius: 4,
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '0.8rem',
-                                                                    fontWeight: 600,
-                                                                    marginLeft: 4
-                                                                }}
+                                                                onClick={() => handleOpenEInvoiceModal(invoice)}
                                                             >
-                                                                HĐĐT Sandbox
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={processingEInvoiceId === invoice.invoiceId}
-                                                                onClick={() => downloadSandboxXml(invoice)}
-                                                                style={{
-                                                                    padding: '4px 10px',
-                                                                    background: '#fff',
-                                                                    color: '#334155',
-                                                                    border: '1px solid #cbd5e1',
-                                                                    borderRadius: 4,
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '0.8rem',
-                                                                    fontWeight: 600,
-                                                                    marginLeft: 4
-                                                                }}
-                                                            >
-                                                                XML
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={processingEInvoiceId === invoice.invoiceId}
-                                                                onClick={() => downloadSandboxRepresentation(invoice)}
-                                                                style={{
-                                                                    padding: '4px 10px',
-                                                                    background: '#fff',
-                                                                    color: '#334155',
-                                                                    border: '1px solid #cbd5e1',
-                                                                    borderRadius: 4,
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '0.8rem',
-                                                                    fontWeight: 600,
-                                                                    marginLeft: 4
-                                                                }}
-                                                            >
-                                                                Bản thể hiện
+                                                                Xem hóa đơn điện tử
                                                             </button>
                                                         </>
                                                     )}
@@ -1232,27 +1195,16 @@ const TuitionManagement = () => {
                         </div>
                     </div>
                 )}
-                {showRepresentationModal && (
-                    <div className="modal-overlay">
-                        <div className="payment-modal" style={{ width: '92vw', maxWidth: '1100px', height: '85vh' }}>
-                            <h3>Bản thể hiện HĐĐT Sandbox</h3>
-                            <div style={{ flex: 1, minHeight: 0, border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
-                                {representationUrl && (
-                                    <iframe
-                                        title="sandbox-einvoice-representation"
-                                        src={representationUrl}
-                                        style={{ width: '100%', height: '100%', border: 'none', minHeight: '65vh' }}
-                                    />
-                                )}
-                            </div>
-                            <div className="modal-actions">
-                                <button className="cancel-btn" onClick={closeRepresentationModal}>
-                                    Đóng
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <EInvoiceModal
+                    isOpen={showRepresentationModal && !!selectedEInvoice}
+                    title="Hợp đồng điện tử"
+                    previewUrl={representationUrl}
+                    iframeTitle="sandbox-einvoice-representation"
+                    onClose={closeRepresentationModal}
+                    onDownload={() => downloadSandboxXml(selectedEInvoice)}
+                    disableDownload={processingEInvoiceId === selectedEInvoice?.invoiceId}
+                    downloadLabel="Tải xuống hóa đơn điện tử"
+                />
                 {/* Confirm Modal */}
                 <ConfirmModal
                     isOpen={confirmModal.isOpen}

@@ -17,6 +17,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useChild } from '../../context/ChildContext';
 import FamilyInvoices from '../parent/FamilyInvoices';
+import EInvoiceModal from '../../components/EInvoiceModal';
 import vnpayLogo from '../../vnpay-logo.png';
 import '../../css/pages/student/MyInvoices.css';
 
@@ -48,6 +49,10 @@ const MyInvoices = () => {
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
+    const [processingEInvoiceId, setProcessingEInvoiceId] = useState(null);
+    const [showEInvoiceModal, setShowEInvoiceModal] = useState(false);
+    const [selectedEInvoice, setSelectedEInvoice] = useState(null);
+    const [eInvoicePreviewUrl, setEInvoicePreviewUrl] = useState('');
 
     useEffect(() => {
         fetchInvoices();
@@ -220,6 +225,69 @@ const MyInvoices = () => {
             toast.error(error.response?.data?.message || error.message || 'Lỗi thanh toán');
         } finally {
             setProcessingPayment(false);
+        }
+    };
+
+    const downloadBlob = (response, filename) => {
+        const blob = response.data instanceof Blob
+            ? response.data
+            : new Blob([response.data], { type: response.headers?.['content-type'] || 'application/octet-stream' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const openRepresentationPreview = (response) => {
+        if (eInvoicePreviewUrl) {
+            window.URL.revokeObjectURL(eInvoicePreviewUrl);
+        }
+
+        const blob = response.data instanceof Blob
+            ? response.data
+            : new Blob([response.data], { type: response.headers?.['content-type'] || 'text/html;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        setEInvoicePreviewUrl(url);
+        setShowEInvoiceModal(true);
+    };
+
+    const closeEInvoiceModal = () => {
+        setShowEInvoiceModal(false);
+        setSelectedEInvoice(null);
+        if (eInvoicePreviewUrl) {
+            window.URL.revokeObjectURL(eInvoicePreviewUrl);
+            setEInvoicePreviewUrl('');
+        }
+    };
+
+    const handleDownloadMyEInvoiceXml = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await tuitionService.downloadMyEInvoiceXml(invoice.invoiceId);
+            downloadBlob(response, `${invoice.invoiceId}.xml`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể tải XML hóa đơn điện tử');
+        } finally {
+            setProcessingEInvoiceId(null);
+        }
+    };
+
+    const handleOpenMyEInvoiceModal = async (invoice) => {
+        if (!invoice?.invoiceId) return;
+        setSelectedEInvoice(invoice);
+        setProcessingEInvoiceId(invoice.invoiceId);
+        try {
+            const response = await tuitionService.downloadMyEInvoiceRepresentation(invoice.invoiceId);
+            openRepresentationPreview(response);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Không thể mở bản thể hiện hóa đơn điện tử');
+        } finally {
+            setProcessingEInvoiceId(null);
         }
     };
 
@@ -820,6 +888,7 @@ const MyInvoices = () => {
                                         <th>Ngày thanh toán</th>
                                         <th>Trạng thái</th>
                                         <th>Số tiền</th>
+                                        <th>Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -838,6 +907,16 @@ const MyInvoices = () => {
                                                 </span>
                                             </td>
                                             <td>{formatCurrency(invoice.finalAmount)}</td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="einvoice-btn"
+                                                    onClick={() => handleOpenMyEInvoiceModal(invoice)}
+                                                    disabled={processingEInvoiceId === invoice.invoiceId}
+                                                >
+                                                    Xem hóa đơn điện tử
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -908,6 +987,15 @@ const MyInvoices = () => {
                         </div>
                     </div>
                 )}
+
+                <EInvoiceModal
+                    isOpen={showEInvoiceModal && !!selectedEInvoice}
+                    previewUrl={eInvoicePreviewUrl}
+                    iframeTitle="my-einvoice-representation"
+                    onClose={closeEInvoiceModal}
+                    onDownload={() => handleDownloadMyEInvoiceXml(selectedEInvoice)}
+                    disableDownload={processingEInvoiceId === selectedEInvoice?.invoiceId}
+                />
             </div>
         </div>
     );

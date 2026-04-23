@@ -742,7 +742,7 @@ const FamilyInvoices = ({ embedded = false }) => {
                                     {invoice.status === 'Paid' && (
                                         <>
                                             <button
-                                                className="invoice-action-btn details"
+                                                className="invoice-action-btn details einvoice-btn"
                                                 onClick={() => handleOpenFamilyEInvoiceModal(invoice)}
                                                 disabled={processingEInvoiceId === invoice.invoiceId}
                                             >

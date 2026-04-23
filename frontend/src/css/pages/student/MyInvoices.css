@@ -157,21 +157,22 @@
     align-items: center;
     justify-content: center;
     padding: 0.38rem 0.72rem;
-    border: 1px solid #38bdf8;
+    border: 1px solid #0ea5e9;
     background: #e0f2fe;
-    color: #075985;
+    color: #0c4a6e;
     border-radius: 8px;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 700;
     white-space: nowrap;
     line-height: 1.1;
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .einvoice-btn:hover:not(:disabled) {
-    border-color: #0ea5e9;
+    border-color: #0284c7;
     background: #bae6fd;
-    color: #0c4a6e;
+    color: #075985;
 }
 
 .einvoice-btn:disabled {

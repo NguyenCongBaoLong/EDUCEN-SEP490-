@@ -1,13 +1,12 @@
 const EInvoiceModal = ({
     isOpen,
-    title = 'Xem hóa đơn điện tử',
+    title = 'Hợp đồng điện tử',
     previewUrl,
     iframeTitle = 'einvoice-representation',
     onClose,
     onDownload,
-    onReissue,
     disableDownload = false,
-    disableReissue = false
+    downloadLabel = 'Tải xuống hóa đơn điện tử'
 }) => {
     if (!isOpen) return null;
 
@@ -88,34 +87,17 @@ const EInvoiceModal = ({
                 <div
                     style={{
                         display: 'grid',
-                        gridTemplateColumns: onReissue ? '1fr 1fr 1fr' : '1fr 1fr',
+                        gridTemplateColumns: onDownload ? '1fr 1fr' : '1fr',
                         gap: '0.6rem',
                         padding: '0.75rem 1.25rem 1.1rem',
                         borderTop: '1px solid #e2e8f0'
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={onDownload}
-                        disabled={disableDownload}
-                        style={{
-                            height: 42,
-                            borderRadius: 10,
-                            border: '1px solid #cbd5e1',
-                            background: '#e2e8f0',
-                            color: '#1e293b',
-                            fontWeight: 700,
-                            cursor: disableDownload ? 'not-allowed' : 'pointer'
-                        }}
-                    >
-                        Tải xuống XML hóa đơn
-                    </button>
-
-                    {onReissue && (
+                    {onDownload && (
                         <button
                             type="button"
-                            onClick={onReissue}
-                            disabled={disableReissue}
+                            onClick={onDownload}
+                            disabled={disableDownload}
                             style={{
                                 height: 42,
                                 borderRadius: 10,
@@ -123,13 +105,12 @@ const EInvoiceModal = ({
                                 background: '#e2e8f0',
                                 color: '#1e293b',
                                 fontWeight: 700,
-                                cursor: disableReissue ? 'not-allowed' : 'pointer'
+                                cursor: disableDownload ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            Phát hành lại HĐĐT Sandbox
+                            {downloadLabel}
                         </button>
                     )}
-
                     <button
                         type="button"
                         onClick={onClose}

@@ -494,6 +494,23 @@
     border-color: #3b82f6;
 }
 
+.invoice-action-btn.einvoice-btn {
+    background: #e0f2fe;
+    color: #0c4a6e;
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 0.38rem 0.72rem;
+}
+
+.invoice-action-btn.einvoice-btn:hover:not(:disabled) {
+    background: #bae6fd;
+    color: #075985;
+    border-color: #0284c7;
+    transform: translateY(-1px);
+}
+
 .pay-button {
     background: var(--success-color);
     color: white;
