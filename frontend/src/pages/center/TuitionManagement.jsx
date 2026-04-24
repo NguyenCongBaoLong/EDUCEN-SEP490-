@@ -1197,7 +1197,7 @@ const TuitionManagement = () => {
                 )}
                 <EInvoiceModal
                     isOpen={showRepresentationModal && !!selectedEInvoice}
-                    title="Hợp đồng điện tử"
+                    title="Hóa đơn điện tử"
                     previewUrl={representationUrl}
                     iframeTitle="sandbox-einvoice-representation"
                     onClose={closeRepresentationModal}
