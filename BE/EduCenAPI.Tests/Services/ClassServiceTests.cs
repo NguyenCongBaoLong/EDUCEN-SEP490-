@@ -380,3 +380,261 @@ public class ClassService_CreateClass_Tests
         Assert.Contains("Existing Room Class", ex.Message);
     }
 }
+
+public class ClassService_AddStudentToClass_Tests
+{
+    private EducenV2Context GetDbContext(string? databaseName = null)
+    {
+        var dbName = databaseName ?? Guid.NewGuid().ToString();
+        var options = new DbContextOptionsBuilder<EducenV2Context>()
+            .UseInMemoryDatabase(dbName)
+            .ConfigureWarnings(x => x.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+
+        var context = new EducenV2Context(options, new FakeTenantService());
+        // Seed Role for students
+        context.Roles.Add(new Role { RoleId = 3, RoleName = "Student" });
+        context.SaveChanges();
+        return context;
+    }
+
+    private MailService GetMailService()
+    {
+        var configData = new Dictionary<string, string?>
+        {
+            ["EmailSettings:Email"] = "test@example.com",
+            ["EmailSettings:Password"] = "test123",
+            ["EmailSettings:Host"] = "smtp.example.com",
+            ["EmailSettings:Port"] = "587"
+        };
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(configData)
+            .Build();
+
+        return new MailService(configuration, new FakeTenantService());
+    }
+
+    private IServiceScopeFactory CreateScopeFactory(string databaseName)
+    {
+        var services = new ServiceCollection();
+        services.AddScoped(_ => GetMailService());
+        services.AddScoped(_ => GetDbContext(databaseName));
+        return services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+    }
+
+    private ClassService GetService(EducenV2Context context, string? databaseName = null)
+    {
+        var notificationService = new Mock<IPaymentReminderService>();
+        IServiceScopeFactory scopeFactory = databaseName == null
+            ? new Mock<IServiceScopeFactory>().Object
+            : CreateScopeFactory(databaseName);
+        return new ClassService(context, notificationService.Object, GetMailService(), scopeFactory);
+    }
+
+    private static Student CreateStudent(int userId, string email = "student@test.com", string fullName = "Test Student") =>
+        new()
+        {
+            UserId = userId,
+            StudentNavigation = new User
+            {
+                UserId = userId,
+                Email = email,
+                FullName = fullName,
+                Username = $"student{userId}",
+                AccountStatus = "Active",
+                RoleId = 3
+            }
+        };
+
+    private static Class CreateActiveClass(int classId, int maxStudents = 20) =>
+        new()
+        {
+            ClassId = classId,
+            ClassName = $"Test Class {classId}",
+            Status = "Active",
+            MaxStudents = maxStudents,
+            StartDate = DateTime.Today.AddDays(1),
+            EndDate = DateTime.Today.AddDays(30),
+            Students = new List<Student>()
+        };
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldReturnFalse_WhenClassNotFound()
+    {
+        using var context = GetDbContext();
+        var student = CreateStudent(1);
+        context.Students.Add(student);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+        var result = await service.AddStudentToClassAsync(999, 1);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("Completed")]
+    [InlineData("Cancelled")]
+    public async Task AddStudentToClass_ShouldThrow_WhenClassIsCompletedOrCancelled(string status)
+    {
+        using var context = GetDbContext();
+        var classEntity = CreateActiveClass(1);
+        classEntity.Status = status;
+        context.Classes.Add(classEntity);
+        var student = CreateStudent(1);
+        context.Students.Add(student);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => service.AddStudentToClassAsync(1, 1));
+
+        Assert.Equal("Lớp đã kết thúc, không thể thêm học sinh.", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldThrow_WhenClassEndDatePassed()
+    {
+        using var context = GetDbContext();
+        var classEntity = CreateActiveClass(1);
+        classEntity.EndDate = DateTime.Today.AddDays(-1);
+        context.Classes.Add(classEntity);
+        var student = CreateStudent(1);
+        context.Students.Add(student);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => service.AddStudentToClassAsync(1, 1));
+
+        Assert.Equal("Lớp đã kết thúc, không thể thêm học sinh.", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldThrow_WhenStudentNotFound()
+    {
+        using var context = GetDbContext();
+        context.Classes.Add(CreateActiveClass(1));
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => service.AddStudentToClassAsync(1, 999));
+
+        Assert.Equal("Không tìm thấy học sinh", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldThrow_WhenStudentAlreadyInClass()
+    {
+        using var context = GetDbContext();
+        var student = CreateStudent(1);
+        var classEntity = CreateActiveClass(1);
+        classEntity.Students.Add(student);
+        context.Classes.Add(classEntity);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => service.AddStudentToClassAsync(1, 1));
+
+        Assert.Equal("Học sinh này đã tham gia lớp học này", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldThrow_WhenClassIsFull()
+    {
+        using var context = GetDbContext();
+        var classEntity = CreateActiveClass(1, maxStudents: 2);
+        var student1 = CreateStudent(1);
+        var student2 = CreateStudent(2);
+        var student3 = CreateStudent(3);
+        classEntity.Students.Add(student1);
+        classEntity.Students.Add(student2);
+        context.Classes.Add(classEntity);
+        context.Students.Add(student3);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => service.AddStudentToClassAsync(1, 3));
+
+        Assert.Equal("Lớp học đã đầy sĩ số tối đa.", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldThrow_WhenScheduleConflicts()
+    {
+        using var context = GetDbContext();
+        var student = CreateStudent(1);
+        var existingClass = CreateActiveClass(1);
+        existingClass.Students.Add(student);
+        context.Classes.Add(existingClass);
+        context.Schedules.Add(new Schedule
+        {
+            ClassId = 1,
+            DayOfWeek = 1,
+            StartTime = TimeOnly.Parse("09:00"),
+            EndTime = TimeOnly.Parse("10:00")
+        });
+
+        var newClass = CreateActiveClass(2);
+        context.Classes.Add(newClass);
+        context.Schedules.Add(new Schedule
+        {
+            ClassId = 2,
+            DayOfWeek = 1,
+            StartTime = TimeOnly.Parse("09:30"),
+            EndTime = TimeOnly.Parse("10:30")
+        });
+        await context.SaveChangesAsync();
+
+        var service = GetService(context);
+
+        var ex = await Assert.ThrowsAsync<Exception>(() => service.AddStudentToClassAsync(2, 1));
+
+        Assert.Equal("Lịch học của học sinh bị trùng với lịch của lớp học này.", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldReturnTrue_WhenDataIsValid()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        using var context = GetDbContext(databaseName);
+        var classEntity = CreateActiveClass(1);
+        var student = CreateStudent(1);
+        context.Classes.Add(classEntity);
+        context.Students.Add(student);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context, databaseName);
+        var result = await service.AddStudentToClassAsync(1, 1);
+
+        Assert.True(result);
+        var updatedClass = await context.Classes
+            .Include(c => c.Students)
+            .FirstOrDefaultAsync(c => c.ClassId == 1);
+        Assert.Single(updatedClass!.Students);
+        Assert.Equal(1, updatedClass.Students.First().UserId);
+    }
+
+    [Fact]
+    public async Task AddStudentToClass_ShouldAllow_WhenMaxStudentsIsZero()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        using var context = GetDbContext(databaseName);
+        var classEntity = CreateActiveClass(1, maxStudents: 0);
+        var student1 = CreateStudent(1);
+        var student2 = CreateStudent(2);
+        classEntity.Students.Add(student1);
+        context.Classes.Add(classEntity);
+        context.Students.Add(student2);
+        await context.SaveChangesAsync();
+
+        var service = GetService(context, databaseName);
+        var result = await service.AddStudentToClassAsync(1, 2);
+
+        Assert.True(result);
+    }
+}
