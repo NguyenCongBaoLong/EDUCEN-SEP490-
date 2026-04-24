@@ -691,29 +691,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             Môn: {classData.subject} &nbsp;•&nbsp; Khối lớp: {classData.gradeLevel}
                         </p>
                     </div>
-                    <button className="ts-btn-request" onClick={() => {
-                        const rawSlots = classInfo?.scheduleSlots || classInfo?.ScheduleSlots || [];
-                        setRequestInitialData({
-                            type: 'reschedule',
-                            classInfo: {
-                                classId: classData.id,
-                                name: classData.name,
-                                code: classData.code,
-                                time: classData.scheduleTime,
-                                date: classData.schedule,
-                                scheduleSlots: rawSlots.map(slot => ({
-                                    dayOfWeek: slot.dayOfWeek ?? slot.DayOfWeek,
-                                    startTime: slot.startTime ?? slot.StartTime,
-                                    endTime: slot.endTime ?? slot.EndTime,
-                                    roomName: slot.roomName || classData.roomName || ''
-                                }))
-                            }
-                        });
-                        setRequestOpen(true);
-                    }}>
-                        <MessageSquare size={18} />
-                        Yêu cầu đổi lịch
-                    </button>
+
                 </div>
 
                 <div className="cd-info-cards">
