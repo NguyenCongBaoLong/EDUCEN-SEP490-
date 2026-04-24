@@ -41,6 +41,8 @@ namespace EducenAPI.Services
         {
             await UpdateExpiredClassesAsync();
 
+            var today = DateTime.UtcNow.AddHours(7).Date;
+
             return await _context.Classes
                 .Include(c => c.Subject)
                 .Include(c => c.Teacher)
@@ -78,7 +80,12 @@ namespace EducenAPI.Services
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     PricePerSession = c.PricePerSession,
-                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    ScheduleSlots = c.Schedules
+                        .Where(s => !s.Sessions.Any() || 
+                                    ((c.EndDate == null || c.EndDate >= today) 
+                                        ? s.Sessions.Any(sess => sess.SessionDate >= today) 
+                                        : s.Sessions.Any(sess => sess.SessionDate >= c.EndDate.Value.AddDays(-7))))
+                        .Select(s => new CreateScheduleSlotDto
                     {
                         Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
@@ -94,6 +101,8 @@ namespace EducenAPI.Services
         public async Task<ClassDto?> GetClassByIdAsync(int id)
         {
             await UpdateExpiredClassesAsync();
+
+            var today = DateTime.UtcNow.AddHours(7).Date;
 
             return await _context.Classes
                 .Include(c => c.Subject)
@@ -134,7 +143,12 @@ namespace EducenAPI.Services
                     CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
                     CreatedAt = DateTime.Now,
                     PricePerSession = c.PricePerSession,
-                    ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto
+                    ScheduleSlots = c.Schedules
+                        .Where(s => !s.Sessions.Any() || 
+                                    ((c.EndDate == null || c.EndDate >= today) 
+                                        ? s.Sessions.Any(sess => sess.SessionDate >= today) 
+                                        : s.Sessions.Any(sess => sess.SessionDate >= c.EndDate.Value.AddDays(-7))))
+                        .Select(s => new CreateScheduleSlotDto
                     {
                         Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
@@ -852,6 +866,15 @@ namespace EducenAPI.Services
 
                 if (dto.ScheduleSlots != null)
                 {
+                    // Fill default RoomId before comparison
+                    foreach (var slot in dto.ScheduleSlots)
+                    {
+                        if (slot.RoomId == null)
+                        {
+                            slot.RoomId = dto.RoomId ?? existingClass.RoomId;
+                        }
+                    }
+
                     var existingSlots = existingClass.Schedules.Select(s => new CreateScheduleSlotDto
                     {
                         Slot = s.ScheduleId,
@@ -1376,18 +1399,13 @@ namespace EducenAPI.Services
             if (newSlots.Count != existingSlots.Count) return false;
 
             // Sort both lists to ensure consistent comparison
-            var sortedNew = newSlots.OrderBy(s => s.Slot ?? int.MaxValue).ThenBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
-            var sortedExisting = existingSlots.OrderBy(s => s.Slot ?? int.MaxValue).ThenBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ToList();
+            var sortedNew = newSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ThenBy(s => s.EndTime).ToList();
+            var sortedExisting = existingSlots.OrderBy(s => s.DayOfWeek).ThenBy(s => s.StartTime).ThenBy(s => s.EndTime).ToList();
 
             for (int i = 0; i < sortedNew.Count; i++)
             {
                 var n = sortedNew[i];
                 var e = sortedExisting[i];
-
-                if ((n.Slot.HasValue || e.Slot.HasValue) && n.Slot != e.Slot)
-                {
-                    return false;
-                }
 
                 if (n.DayOfWeek != e.DayOfWeek ||
                     NormalizeTime(n.StartTime) != NormalizeTime(e.StartTime) ||

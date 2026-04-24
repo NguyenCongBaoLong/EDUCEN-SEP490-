@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ClipboardCheck, CheckCircle, AlertCircle } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import api from '../../services/api';
@@ -11,6 +11,7 @@ const AttendanceModifications = () => {
     const [attendanceRequestsLoading, setAttendanceRequestsLoading] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [processingRequest, setProcessingRequest] = useState(false);
+    const isInitialMount = React.useRef(true);
 
     const getAttendanceStatusMeta = (status) => {
         const normalized = (status || '').toLowerCase();
@@ -20,7 +21,10 @@ const AttendanceModifications = () => {
     };
 
     const loadAttendanceRequests = useCallback(async (reason = 'manual') => {
-        setAttendanceRequestsLoading(true);
+        if (isInitialMount.current || reason === 'manual') {
+            setAttendanceRequestsLoading(true);
+            isInitialMount.current = false;
+        }
         try {
             const res = await api.get('/attendance/modification-requests');
             let data = res.data;
