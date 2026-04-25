@@ -111,6 +111,67 @@
     border-color: var(--primary-blue);
     box-shadow: 0 12px 40px rgba(0, 102, 255, 0.2);
     transform: scale(1.05);
+    z-index: 10;
+}
+
+/* Theme Colors */
+.pricing-card.theme-green {
+    border-color: #10b981;
+}
+.pricing-card.theme-green.highlighted {
+    box-shadow: 0 12px 40px rgba(16, 185, 129, 0.2);
+}
+.pricing-card.theme-green .plan-name-badge {
+    background: #ecfdf5;
+    color: #059669;
+}
+.pricing-card.theme-green .stat-value {
+    color: #10b981;
+}
+.pricing-card.theme-green .plan-button {
+    border-color: #10b981;
+    color: #10b981;
+}
+.pricing-card.theme-green .plan-button:hover,
+.pricing-card.theme-green .plan-button.primary {
+    background: #10b981;
+    color: white;
+}
+.pricing-card.theme-green .plan-features li svg {
+    color: #10b981;
+}
+
+.pricing-card.theme-purple {
+    border-color: #8b5cf6;
+}
+.pricing-card.theme-purple.highlighted {
+    box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+}
+.pricing-card.theme-purple .plan-name-badge {
+    background: #f5f3ff;
+    color: #7c3aed;
+}
+.pricing-card.theme-purple .stat-value {
+    color: #8b5cf6;
+}
+.pricing-card.theme-purple .plan-button {
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+}
+.pricing-card.theme-purple .plan-button:hover,
+.pricing-card.theme-purple .plan-button.primary {
+    background: #8b5cf6;
+    color: white;
+}
+.pricing-card.theme-purple .plan-features li svg {
+    color: #8b5cf6;
+}
+
+.pricing-card.theme-purple .best-value-badge {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+.pricing-card.theme-green .best-value-badge {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 .pricing-card.highlighted:hover {
