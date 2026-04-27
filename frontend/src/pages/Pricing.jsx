@@ -6,7 +6,6 @@ import '../css/pages/HomePage.css';
 import axios from 'axios';
 
 const Pricing = () => {
-    const [billingPeriod, setBillingPeriod] = useState('monthly');
     const [showMegaMenu, setShowMegaMenu] = useState(false);
     const [activeCategory, setActiveCategory] = useState('management');
     const [showBenefitsMenu, setShowBenefitsMenu] = useState(false);
@@ -183,7 +182,7 @@ const Pricing = () => {
                                 Lợi ích
                             </button>
                             <Link to="/pricing" className="active">Bảng giá</Link>
-                            <Link to="/login" className="btn-login">Đăng nhập</Link>
+                            <Link to="/sysadmin/login" className="btn-login">Đăng nhập</Link>
                             <Link to="/signup" className="btn-primary">Bắt đầu</Link>
                         </nav>
                     </div>
@@ -295,33 +294,20 @@ const Pricing = () => {
                     <p>Bảng giá linh hoạt cho giáo viên gia sư cá nhân và trung tâm giáo dục đang phát triển. Chọn gói phù hợp với doanh nghiệp của bạn.</p>
                 </div>
 
-                {/* Billing Toggle */}
-                <div className="billing-toggle">
-                    <button
-                        className={billingPeriod === 'monthly' ? 'active' : ''}
-                        onClick={() => setBillingPeriod('monthly')}
-                    >
-                        Thanh toán hàng tháng
-                    </button>
-                    <button
-                        className={billingPeriod === 'yearly' ? 'active' : ''}
-                        onClick={() => setBillingPeriod('yearly')}
-                    >
-                        Hàng năm <span className="save-badge">(Tiết kiệm 10%)</span>
-                    </button>
-                </div>
+
 
                 {/* Pricing Cards */}
                 <div className="pricing-cards">
                     {plansLoading ? (
                         <div style={{ textAlign: 'center', padding: '3rem', color: '#6b7280', gridColumn: '1/-1' }}>Đang tải gói dịch vụ...</div>
-                    ) : dynamicPlans.length > 0 ? (
+                    ) : dynamicPlans && dynamicPlans.length > 0 ? (
                         /* Dynamic plans from backend */
                         dynamicPlans.map((plan, idx) => {
                             const feats = plan.features ? plan.features.split(',').map(f => f.trim()).filter(Boolean) : [];
                             const isHighlighted = idx === 1 || (dynamicPlans.length === 1);
+                            const themeClass = idx % 3 === 0 ? 'theme-green' : idx % 3 === 1 ? 'theme-blue' : 'theme-purple';
                             return (
-                                <div key={plan.planId} className={`pricing-card ${isHighlighted ? 'highlighted' : ''}`}>
+                                <div key={plan.planId} className={`pricing-card ${isHighlighted ? 'highlighted' : ''} ${themeClass}`}>
                                     {isHighlighted && <div className="best-value-badge">GIÁ TRỊ TỐT NHẤT</div>}
 
                                     <div className="plan-header">
@@ -347,9 +333,9 @@ const Pricing = () => {
                                         </div>
                                     </div>
 
-                                    <button className={`plan-button ${isHighlighted ? 'primary' : ''}`}>
+                                    <Link to="/signup" className={`plan-button ${isHighlighted ? 'primary' : ''}`} style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
                                         Chọn gói này
-                                    </button>
+                                    </Link>
 
                                     {feats.length > 0 && (
                                         <ul className="plan-features">
@@ -366,37 +352,40 @@ const Pricing = () => {
                         })
                     ) : (
                         /* Fallback to static plans if API fails */
-                        plans.map((plan) => (
-                            <div key={plan.id} className={`pricing-card ${plan.highlighted ? 'highlighted' : ''}`}>
-                                {plan.highlighted && <div className="best-value-badge">GIÁ TRỊ TỐT NHẤT</div>}
-                                <div className="plan-header">
-                                    <h3>{plan.name}</h3>
-                                    <div className="plan-price">
-                                        {plan.price === 'Custom' ? (
-                                            <span className="custom-price">Tùy chỉnh</span>
-                                        ) : plan.price === 'Free' ? (
-                                            <span className="free-price">Miễn phí</span>
-                                        ) : (
-                                            <>
-                                                <span className="amount">
-                                                    {typeof plan.price === 'object'
-                                                        ? (billingPeriod === 'monthly' ? plan.price.monthly : plan.price.yearly)
-                                                        : plan.price}
-                                                </span>
-                                                <span className="period">{plan.priceUnit}</span>
-                                            </>
-                                        )}
+                        plans.map((plan, idx) => {
+                            const themeClass = idx % 3 === 0 ? 'theme-green' : idx % 3 === 1 ? 'theme-blue' : 'theme-purple';
+                            return (
+                                <div key={plan.id} className={`pricing-card ${plan.highlighted ? 'highlighted' : ''} ${themeClass}`}>
+                                    {plan.highlighted && <div className="best-value-badge">GIÁ TRỊ TỐT NHẤT</div>}
+                                    <div className="plan-header">
+                                        <h3>{plan.name}</h3>
+                                        <div className="plan-price">
+                                            {plan.price === 'Custom' ? (
+                                                <span className="custom-price">Tùy chỉnh</span>
+                                            ) : plan.price === 'Free' ? (
+                                                <span className="free-price">Miễn phí</span>
+                                            ) : (
+                                                <>
+                                                    <span className="amount">
+                                                        {typeof plan.price === 'object' ? plan.price.monthly : plan.price}
+                                                    </span>
+                                                    <span className="period">{plan.priceUnit}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <p className="plan-description">{plan.description}</p>
                                     </div>
-                                    <p className="plan-description">{plan.description}</p>
+                                    <Link to="/signup" className={`plan-button ${plan.highlighted ? 'primary' : ''}`} style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+                                        {plan.buttonText}
+                                    </Link>
+                                    <ul className="plan-features">
+                                        {plan.features.map((feature, index) => (
+                                            <li key={index}><Check size={18} /><span>{feature}</span></li>
+                                        ))}
+                                    </ul>
                                 </div>
-                                <button className={`plan-button ${plan.highlighted ? 'primary' : ''}`}>{plan.buttonText}</button>
-                                <ul className="plan-features">
-                                    {plan.features.map((feature, index) => (
-                                        <li key={index}><Check size={18} /><span>{feature}</span></li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 

@@ -88,6 +88,61 @@ const ICON_MAP = {
 const DAY_LABELS = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
 const dayToColumnIndex = (day) => (day === 0 ? 6 : day - 1);
 
+/* ── Date helper functions for deduplication ────────── */
+const isSameDate = (d1, d2) =>
+    d1 && d2 &&
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate();
+
+const toDateKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+const getSessionDateKeysByClass = (classes) => {
+    const map = new Map();
+    (classes || []).forEach((c) => {
+        if (c.source !== 'session' || !c.sessionDate || !c.classId) return;
+        const classKey = String(c.classId);
+        if (!map.has(classKey)) map.set(classKey, new Set());
+        map.get(classKey).add(toDateKey(c.sessionDate));
+    });
+    return map;
+};
+
+const occursOnDate = (classItem, date, sessionKeysMap) => {
+    // If it's a specific session, it must match the date exactly
+    if (classItem.source === 'session' && classItem.sessionDate) {
+        if (classItem.sessionStatus && classItem.sessionStatus !== 'Scheduled') return false;
+        return isSameDate(classItem.sessionDate, date);
+    }
+
+    // If it's a recurring schedule, it must match the day of week
+    const currentDayIdx = date.getDay() === 0 ? 6 : date.getDay() - 1;
+    const classDay = classItem.day === 0 ? 6 : classItem.day - 1;
+    if (classDay !== currentDayIdx) return false;
+
+    // And fall within the date range
+    const compareDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const check = compareDate.getTime();
+
+    if (classItem.startDate) {
+        const start = new Date(classItem.startDate.getFullYear(), classItem.startDate.getMonth(), classItem.startDate.getDate()).getTime();
+        if (check < start) return false;
+    }
+    if (classItem.endDate) {
+        const end = new Date(classItem.endDate.getFullYear(), classItem.endDate.getMonth(), classItem.endDate.getDate()).getTime();
+        if (check > end) return false;
+    }
+
+    // AND it must not be overridden by a specific session on this date
+    const classKey = String(classItem.classId || '');
+    const overrideDateSet = sessionKeysMap.get(classKey);
+    if (overrideDateSet && overrideDateSet.has(toDateKey(date))) {
+        return false;
+    }
+
+    return true;
+};
+
 
 /* ── Inline edit helper ── */
 const InlineEditField = ({ draft, set, field, className, placeholder, multiline, rows = 3, maxLength }) =>
@@ -1383,21 +1438,15 @@ useEffect(() => {
                                                     monday.setDate(today.getDate() + mondayDiff);
                                                     monday.setHours(0, 0, 0, 0);
 
+                                                    const sessionKeysMap = getSessionDateKeysByClass(scheduledClasses);
+
                                                     return DAY_LABELS.map((dayLabel, colIdx) => {
                                                         const targetDate = new Date(monday);
                                                         targetDate.setDate(monday.getDate() + colIdx);
-                                                        const check = targetDate.getTime();
 
-                                                        const dayClasses = scheduledClasses.filter(c => {
-                                                            const isSameDay = dayToColumnIndex(c.day) === colIdx;
-                                                            if (!isSameDay) return false;
-
-                                                            // Filter by date range
-                                                            const start = c.startDate ? new Date(c.startDate.getFullYear(), c.startDate.getMonth(), c.startDate.getDate()).getTime() : 0;
-                                                            const end = c.endDate ? new Date(c.endDate.getFullYear(), c.endDate.getMonth(), c.endDate.getDate()).getTime() : Infinity;
-
-                                                            return check >= start && check <= end;
-                                                        });
+                                                        const dayClasses = scheduledClasses.filter(c => 
+                                                            occursOnDate(c, targetDate, sessionKeysMap)
+                                                        );
 
                                                         return (
                                                             <div key={colIdx} className={`center-schedule-day reveal slide-up stagger-${colIdx + 1}`}>
@@ -1406,8 +1455,8 @@ useEffect(() => {
                                                                 </div>
                                                                 <div className="center-schedule-slots">
                                                                     {dayClasses.length > 0 ? (
-                                                                        dayClasses.map((cls) => (
-                                                                            <div key={cls.id} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
+                                                                        dayClasses.map((cls, idx) => (
+                                                                            <div key={cls.eventKey || `${cls.id}-${idx}`} className="center-schedule-slot" style={{ borderLeftColor: cls.color }}>
                                                                                 <span className="center-slot-time">{cls.startTime} - {cls.endTime}</span>
                                                                                 <span className="center-slot-subject">{cls.name}</span>
                                                                             </div>
