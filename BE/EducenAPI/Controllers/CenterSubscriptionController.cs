@@ -316,7 +316,7 @@ namespace EducenAPI.Controllers
         {
             return BadRequest(new
             {
-                message = "Da ngung luong gia han truc tiep. Vui long gui yeu cau doi goi voi cung goi hien tai de gia han va cho SystemAdmin duyet."
+                message = "Đã ngừng luồng gia hạn trực tiếp. Vui lòng gửi yêu cầu đổi gói với cùng gói hiện tại để gia hạn và cho SystemAdmin duyệt."
             });
         }
 
@@ -329,7 +329,7 @@ namespace EducenAPI.Controllers
         {
             return BadRequest(new
             {
-                message = "Da ngung luong xac nhan gia han truc tiep. Vui long thanh toan hoa don tu luong yeu cau doi goi."
+                message = "Đã ngừng luồng xác nhận gia hạn trực tiếp. Vui lòng thanh toán hóa đơn từ luồng yêu cầu đổi gói."
             });
         }
 
@@ -539,7 +539,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Tai file XML hoa don dien tu sandbox
+        /// Tải file XML hóa đơn điện tử sandbox
         /// </summary>
         [HttpGet("invoices/{invoiceId}/einvoice/xml")]
         public async Task<IActionResult> DownloadSandboxEInvoiceXml(string invoiceId)
@@ -571,7 +571,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Tai ban the hien hoa don dien tu sandbox (HTML)
+        /// Tải bản thể hiện hóa đơn điện tử sandbox (HTML)
         /// </summary>
         [HttpGet("invoices/{invoiceId}/einvoice/representation")]
         public async Task<IActionResult> DownloadSandboxEInvoiceRepresentation(string invoiceId)

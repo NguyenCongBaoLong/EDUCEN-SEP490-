@@ -38,8 +38,8 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// T?o h�a don gia d�nh (g?p nhi?u h�a don con)
-        /// Ch? Parent m?i c� th? t?o cho con c?a m�nh
+        /// Tạo hóa đơn gia đình (gộp nhiều hóa đơn con)
+        /// Chỉ Parent mới có thể tạo cho con của mình
         /// </summary>
         [HttpPost("create-family")]
         [Authorize(Roles = "Parent,Student")]
@@ -49,24 +49,24 @@ namespace EducenAPI.Controllers
             {
                 var tenantId = _currentTenantService.TenantId;
                 if (string.IsNullOrWhiteSpace(tenantId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c trung t�m." });
+                    return BadRequest(new { message = "Không xác định được trung tâm." });
 
                 // Validate type
                 if (request.Type != "Student" && request.Type != "Family")
-                    return BadRequest(new { message = "Lo?i h�a don kh�ng h?p l?. Ch? ch?p nh?n 'Student' ho?c 'Family'." });
+                    return BadRequest(new { message = "Loại hóa đơn không hợp lệ. Chỉ chấp nhận 'Student' hoặc 'Family'." });
 
                 // Validate StudentIds
                 var hasSelectedInvoiceIds = request.SelectedTuitionInvoiceIds != null && request.SelectedTuitionInvoiceIds.Any();
 
                 if (!hasSelectedInvoiceIds && (request.StudentIds == null || !request.StudentIds.Any()))
-                    return BadRequest(new { message = "Danh s�ch h?c sinh kh�ng du?c tr?ng." });
+                    return BadRequest(new { message = "Danh sách học sinh không được trống." });
 
                 if (request.Type == "Student" && !hasSelectedInvoiceIds && request.StudentIds.Count > 1)
-                    return BadRequest(new { message = "G?p h�a don theo con ch? du?c ch?n 1 h?c sinh." });
+                    return BadRequest(new { message = "Gộp hóa đơn theo con chỉ được chọn 1 học sinh." });
 
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrWhiteSpace(userId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c ngu?i d�ng." });
+                    return BadRequest(new { message = "Không xác định được người dùng." });
 
                 var requesterRole = User.IsInRole("Parent") ? "Parent" : "Student";
                 var result = await _invoiceService.CreateFamilyInvoiceAsync(userId, request, requesterRole);
@@ -76,8 +76,8 @@ namespace EducenAPI.Controllers
                     return Ok(new 
                     { 
                         message = request.Type == "Student" 
-                            ? "�� t?o h�a don g?p theo con th�nh c�ng"
-                            : "�� t?o h�a don gia d�nh th�nh c�ng",
+                            ? "Đã tạo hóa đơn gộp theo con thành công"
+                            : "Đã tạo hóa đơn gia đình thành công",
                         invoiceId = result.InvoiceId,
                         totalAmount = result.TotalAmount,
                         studentCount = result.StudentCount,
@@ -97,10 +97,10 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// L?y danh s�ch h�a don g?p c?a parent
-        /// type=Student: h�a don g?p theo t?ng con
-        /// type=Family: h�a don g?p t?t c? con
-        /// kh�ng truy?n type: l?y t?t c?
+        /// Lấy danh sách hóa đơn gộp của parent
+        /// type=Student: hóa đơn gộp theo từng con
+        /// type=Family: hóa đơn gộp tất cả con
+        /// không truyền type: lấy tất cả
         /// </summary>
         [HttpGet("family-invoices")]
         [Authorize(Roles = "Parent,Student")]
@@ -110,16 +110,16 @@ namespace EducenAPI.Controllers
             {
                 var tenantId = _currentTenantService.TenantId;
                 if (string.IsNullOrWhiteSpace(tenantId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c trung t�m." });
+                    return BadRequest(new { message = "Không xác định được trung tâm." });
 
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 
                 if (string.IsNullOrWhiteSpace(userId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c ngu?i d�ng." });
+                    return BadRequest(new { message = "Không xác định được người dùng." });
 
                 // Validate type if provided
                 if (!string.IsNullOrWhiteSpace(type) && type != "Student" && type != "Family")
-                    return BadRequest(new { message = "Lo?i h�a don kh�ng h?p l?." });
+                    return BadRequest(new { message = "Loại hóa đơn không hợp lệ." });
 
                 var requesterRole = User.IsInRole("Parent") ? "Parent" : "Student";
                 var invoices = await _invoiceService.GetFamilyInvoicesAsync(userId, type, requesterRole);
@@ -204,7 +204,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Thanh to�n h�a don gia d�nh
+        /// Thanh toán hóa đơn gia đình
         /// </summary>
         [HttpPost("pay-family/{invoiceId}")]
         [Authorize(Roles = "Parent")]
@@ -214,21 +214,21 @@ namespace EducenAPI.Controllers
             {
                 var tenantId = _currentTenantService.TenantId;
                 if (string.IsNullOrWhiteSpace(tenantId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c trung t�m." });
+                    return BadRequest(new { message = "Không xác định được trung tâm." });
 
                 var parentId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrWhiteSpace(parentId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c ngu?i d�ng." });
+                    return BadRequest(new { message = "Không xác định được người dùng." });
 
                 var success = await _invoiceService.PayFamilyInvoiceAsync(parentId, invoiceId, request.PaymentMethod, request.Notes);
                 
                 if (success)
                 {
-                    return Ok(new { message = "Thanh to�n h�a don gia d�nh th�nh c�ng" });
+                    return Ok(new { message = "Thanh toán hóa đơn gia đình thành công" });
                 }
                 else
                 {
-                    return BadRequest(new { message = "Thanh to�n th?t b?i" });
+                    return BadRequest(new { message = "Thanh toán thất bại" });
                 }
             }
             catch (Exception ex)
@@ -239,7 +239,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// H?y h�a don g?p c?a ch�nh ch? s? h?u (Parent/Student)
+        /// Hủy hóa đơn gộp của chủ sở hữu (Parent/Student)
         /// </summary>
         [HttpPost("{invoiceId}/cancel")]
         [Authorize(Roles = "Parent,Student")]
@@ -249,11 +249,11 @@ namespace EducenAPI.Controllers
             {
                 var tenantId = _currentTenantService.TenantId;
                 if (string.IsNullOrWhiteSpace(tenantId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c trung t�m." });
+                    return BadRequest(new { message = "Không xác định được trung tâm." });
 
                 var ownerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrWhiteSpace(ownerUserId))
-                    return BadRequest(new { message = "Kh�ng x�c d?nh du?c ngu?i d�ng." });
+                    return BadRequest(new { message = "Không xác định được người dùng." });
 
                 var requesterRole = User.IsInRole("Parent") ? "Parent" : "Student";
 

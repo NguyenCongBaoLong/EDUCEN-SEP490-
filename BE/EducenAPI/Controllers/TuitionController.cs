@@ -41,7 +41,7 @@ namespace EducenAPI.Controllers
         #region Admin Endpoints
 
         /// <summary>
-        /// T?nh to?n h?c ph? cho m?t h?c sinh
+        /// Tính toán học phí cho một học sinh
         /// </summary>
         [HttpPost("calculate")]
         [Authorize(Roles = "Admin")]
@@ -61,7 +61,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// T?nh to?n h?c ph? cho c? l?p
+        /// Tính toán học phí cho cả lớp
         /// </summary>
         [HttpPost("calculate-class")]
         [Authorize(Roles = "Admin")]
@@ -81,7 +81,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// T?o h?a don h?c ph? cho m?t h?c sinh
+        /// Tạo hóa đơn học phí cho một học sinh
         /// </summary>
         [HttpPost("invoices")]
         [Authorize(Roles = "Admin")]
@@ -93,7 +93,7 @@ namespace EducenAPI.Controllers
                 {
                     var lockInfo = await _invoiceLockService.GetLockInfoAsync(request.Month, request.Year);
                     return BadRequest(new { 
-                        message = $"?? h?t th?i gian ch?nh s?a h?a don th?ng {request.Month}/{request.Year}. Vui l?ng ch?nh s?a tru?c ng?y {lockInfo?.UnlockDate:dd/MM/yyyy}.",
+                        message = $"Đã hết thời gian chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}. Vui lòng chỉnh sửa trước ngày {lockInfo?.UnlockDate:dd/MM/yyyy}.",
                         lockInfo = lockInfo
                     });
                 }
@@ -119,7 +119,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// T?o h?a don h?ng lo?t cho c? l?p
+        /// Tạo hóa đơn hàng loạt cho cả lớp
         /// </summary>
         [HttpPost("invoices/batch")]
         [Authorize(Roles = "Admin")]
@@ -131,20 +131,20 @@ namespace EducenAPI.Controllers
                 {
                     var lockInfo = await _invoiceLockService.GetLockInfoAsync(request.Month, request.Year);
                     return BadRequest(new { 
-                        message = $"?? h?t th?i gian ch?nh s?a h?a don th?ng {request.Month}/{request.Year}. Vui l?ng ch?nh s?a tru?c ng?y {lockInfo?.UnlockDate:dd/MM/yyyy}.",
+                        message = $"Đã hết thời gian chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}. Vui lòng chỉnh sửa trước ngày {lockInfo?.UnlockDate:dd/MM/yyyy}.",
                         lockInfo = lockInfo
                     });
                 }
 
-                // Log d? debug validation
+                // Log để debug validation
                 _logger.LogInformation("CreateBatchInvoices called: ClassId={ClassId}, Month={Month}, Year={Year}",
                     request?.ClassId, request?.Month, request?.Year);
 
                 if (request == null)
-                    return BadRequest(new { message = "D? li?u y?u c?u tr?ng." });
+                    return BadRequest(new { message = "Dữ liệu yêu cầu trống." });
 
                 if (request.ClassId <= 0)
-                    return BadRequest(new { message = "Vui l?ng ch?n l?p h?c" });
+                    return BadRequest(new { message = "Vui lòng chọn lớp học" });
 
                 var result = await _invoiceService.CreateBatchInvoicesAsync(new BatchInvoiceRequest
                 {
@@ -165,7 +165,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// L?y danh s?ch h?a don theo filter
+        /// Lấy danh sách hóa đơn theo filter
         /// </summary>
         [HttpGet("invoices")]
         [Authorize(Roles = "Admin")]
@@ -195,7 +195,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// L?y chi ti?t h?a don
+        /// Lấy chi tiết hóa đơn
         /// </summary>
         [HttpGet("invoices/{invoiceId}")]
         [Authorize(Roles = "Admin,Student,Parent")]
@@ -205,12 +205,12 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
-                // Kh?ng cho Student/Parent xem ho? don nh?p
+                // Không cho Student/Parent xem hóa đơn nháp
                 var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
                 if (userRole != "Admin" && invoice.Status == "Draft")
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 return Ok(invoice);
             }
@@ -222,7 +222,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// G?i h?a don cho h?c sinh/ph? huynh
+        /// Gửi hóa đơn cho học sinh/phụ huynh
         /// </summary>
         [HttpPost("invoices/{invoiceId}/send")]
         [Authorize(Roles = "Admin")]
@@ -232,9 +232,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceService.SendInvoiceAsync(invoiceId);
                 if (!success)
-                    return BadRequest(new { message = "G?i h?a don th?t b?i." });
+                    return BadRequest(new { message = "Gửi hóa đơn thất bại." });
 
-                return Ok(new { message = "?? g?i h?a don th?nh c?ng." });
+                return Ok(new { message = "Đã gửi hóa đơn thành công." });
             }
             catch (Exception ex)
             {
@@ -244,7 +244,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// H?y h?a don
+        /// Hủy hóa đơn
         /// </summary>
         [HttpPost("invoices/{invoiceId}/cancel")]
         [Authorize(Roles = "Admin")]
@@ -257,16 +257,16 @@ namespace EducenAPI.Controllers
                 {
                     var lockInfo = await _invoiceLockService.GetLockInfoAsync(invoice.InvoiceMonth, invoice.InvoiceYear);
                     return BadRequest(new { 
-                        message = $"?? h?t th?i gian ch?nh s?a h?a don th?ng {invoice.InvoiceMonth}/{invoice.InvoiceYear}. Vui l?ng ch?nh s?a tru?c ng?y {lockInfo?.UnlockDate:dd/MM/yyyy}.",
+                        message = $"Đã hết thời gian chỉnh sửa hóa đơn tháng {invoice.InvoiceMonth}/{invoice.InvoiceYear}. Vui lòng chỉnh sửa trước ngày {lockInfo?.UnlockDate:dd/MM/yyyy}.",
                         lockInfo = lockInfo
                     });
                 }
 
                 var success = await _invoiceService.CancelInvoiceAsync(invoiceId, request.Reason);
                 if (!success)
-                    return BadRequest(new { message = "H?y h?a don th?t b?i." });
+                    return BadRequest(new { message = "Hủy hóa đơn thất bại." });
 
-                return Ok(new { message = "?? h?y h?a don th?nh c?ng." });
+                return Ok(new { message = "Đã hủy hóa đơn thành công." });
             }
             catch (Exception ex)
             {
@@ -276,7 +276,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Admin thu ti?n h?c ph? m?t
+        /// Admin thu tiền học phí mặt
         /// </summary>
         [HttpPost("invoices/{invoiceId}/mark-as-paid")]
         [Authorize(Roles = "Admin")]
@@ -286,9 +286,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceService.MarkInvoiceAsPaidAsync(invoiceId, request.PaymentMethod, request.Notes);
                 if (!success)
-                    return BadRequest(new { message = "X?c nh?n d? thanh to?n th?t b?i." });
+                    return BadRequest(new { message = "Xác nhận đã thanh toán thất bại." });
 
-                return Ok(new { message = "?? x?c nh?n thanh to?n th?nh c?ng." });
+                return Ok(new { message = "Đã xác nhận thanh toán thành công." });
             }
             catch (Exception ex)
             {
@@ -305,10 +305,10 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 if (!string.Equals(invoice.Status, "Paid", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new { message = "Ch? ph?t h?nh H??T cho h?a don d? thanh to?n." });
+                    return BadRequest(new { message = "Chỉ phát hành HĐĐT cho hóa đơn đã thanh toán." });
 
                 var tenantName = ResolveTenantName();
                 var metadata = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
@@ -336,10 +336,10 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 if (!string.Equals(invoice.Status, "Paid", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new { message = "H?a don chua thanh to?n." });
+                    return BadRequest(new { message = "Hóa đơn chưa thanh toán." });
 
                 var tenantName = ResolveTenantName();
                 var metadata = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
@@ -361,10 +361,10 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await _invoiceService.GetInvoiceAsync(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 if (!string.Equals(invoice.Status, "Paid", StringComparison.OrdinalIgnoreCase))
-                    return BadRequest(new { message = "H?a don chua thanh to?n." });
+                    return BadRequest(new { message = "Hóa đơn chưa thanh toán." });
 
                 var tenantName = ResolveTenantName();
                 var metadata = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
@@ -379,8 +379,8 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// C?p nh?t t? d?ng c?c h?a don qu? h?n
-        /// Endpoint n?y c? th? du?c g?i b?i scheduled job ho?c manual trigger
+        /// Cập nhật tự động các hóa đơn quá hạn
+        /// Endpoint này có thể được gọi bởi scheduled job hoặc manual trigger
         /// </summary>
         [HttpPost("update-overdue")]
         [Authorize(Roles = "Admin")]
@@ -390,7 +390,7 @@ namespace EducenAPI.Controllers
             {
                 var updatedCount = await _invoiceService.UpdateOverdueInvoicesAsync();
                 return Ok(new { 
-                    message = "C?p nh?t h?a don qu? h?n th?nh c?ng",
+                    message = "Cập nhật hóa đơn quá hạn thành công",
                     updatedCount = updatedCount,
                     timestamp = DateTime.UtcNow
                 });
@@ -403,7 +403,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// Kh?a ch?nh s?a h?a don th?ng (th? c?ng)
+        /// Khóa chỉnh sửa hóa đơn tháng (thực cứng)
         /// </summary>
         [HttpPost("lock")]
         [Authorize(Roles = "Admin")]
@@ -413,9 +413,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceLockService.LockMonthAsync(request.Month, request.Year, User.Identity?.Name ?? "Admin");
                 if (!success)
-                    return BadRequest(new { message = "Kh?a th?ng th?t b?i." });
+                    return BadRequest(new { message = "Khóa tháng thất bại." });
 
-                return Ok(new { message = $"?? kh?a ch?nh s?a h?a don th?ng {request.Month}/{request.Year}." });
+                return Ok(new { message = $"Đã khóa chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}." });
             }
             catch (Exception ex)
             {
@@ -425,7 +425,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// M? kh?a ch?nh s?a h?a don th?ng
+        /// Mở khóa chỉnh sửa hóa đơn tháng
         /// </summary>
         [HttpPost("unlock")]
         [Authorize(Roles = "Admin")]
@@ -435,9 +435,9 @@ namespace EducenAPI.Controllers
             {
                 var success = await _invoiceLockService.UnlockMonthAsync(request.Month, request.Year);
                 if (!success)
-                    return BadRequest(new { message = "M? kh?a th?t b?i." });
+                    return BadRequest(new { message = "Mở khóa thất bại." });
 
-                return Ok(new { message = $"?? m? kh?a ch?nh s?a h?a don th?ng {request.Month}/{request.Year}." });
+                return Ok(new { message = $"Đã mở khóa chỉnh sửa hóa đơn tháng {request.Month}/{request.Year}." });
             }
             catch (Exception ex)
             {
@@ -447,7 +447,7 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// L?y th?ng tin kh?a c?a th?ng
+        /// Lấy thông tin khóa của tháng
         /// </summary>
         [HttpGet("lock/{month}/{year}")]
         [Authorize(Roles = "Admin")]
@@ -470,8 +470,8 @@ namespace EducenAPI.Controllers
         #region Student/Parent Endpoints
 
         /// <summary>
-        /// L?y danh s?ch h?a don c?a h?c sinh hi?n t?i
-        /// (Parent: tr? v? h?a don c?a T?T C? con)
+        /// Lấy danh sách hóa đơn của học sinh hiện tại
+        /// (Parent: tr? v? h�a don c?a T?T C? con)
         /// </summary>
         [HttpGet("my-invoices")]
         [Authorize(Roles = "Student,Parent")]
@@ -499,8 +499,8 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// L?y danh s?ch h?a don chua thanh to?n
-        /// (Parent: tr? v? h?a don c?a T?T C? con)
+        /// Lấy danh sách hóa đơn chưa thanh toán
+        /// (Parent: tr? v? h�a don c?a T?T C? con)
         /// </summary>
         [HttpGet("outstanding")]
         [Authorize(Roles = "Student,Parent")]
@@ -535,7 +535,7 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await GetMyPaidInvoiceOrNull(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 var tenantName = ResolveTenantName();
                 var metadata = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
@@ -557,7 +557,7 @@ namespace EducenAPI.Controllers
             {
                 var invoice = await GetMyPaidInvoiceOrNull(invoiceId);
                 if (invoice == null)
-                    return NotFound(new { message = "Kh?ng t?m th?y h?a don." });
+                    return NotFound(new { message = "Không tìm thấy hóa đơn." });
 
                 var tenantName = ResolveTenantName();
                 var metadata = _eInvoiceSandboxService.BuildMetadata(invoice, tenantName);
@@ -577,7 +577,7 @@ namespace EducenAPI.Controllers
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                throw new Exception("ID ngu?i d?ng kh?ng h?p l?.");
+                throw new Exception("ID người dùng không hợp lệ.");
             return userId;
         }
 
@@ -596,9 +596,9 @@ namespace EducenAPI.Controllers
         }
 
         /// <summary>
-        /// L?y danh s?ch StudentId t? UserId trong JWT claims.
-        /// - Student: UserId ch?nh l? StudentId
-        /// - Parent: Query b?ng ParentStudent d? t?m T?T C? h?c sinh
+        /// Lấy danh sách StudentId từ UserId trong JWT claims.
+        /// - Student: UserId chính là StudentId
+        /// - Parent: Query bảng ParentStudent để tìm TẤT CẢ học sinh
         /// </summary>
         private async Task<List<int>> GetStudentIdsFromUserAsync(int userId)
         {
@@ -610,7 +610,7 @@ namespace EducenAPI.Controllers
                     .AnyAsync(s => s.UserId == userId);
 
                 if (!studentExists)
-                    throw new Exception($"Kh?ng t?m th?y h?c sinh cho m? ngu?i d?ng {userId}");
+                    throw new Exception($"Không tìm thấy học sinh cho mã người dùng {userId}");
 
                 return new List<int> { userId };
             }
@@ -623,12 +623,12 @@ namespace EducenAPI.Controllers
                     .ToListAsync();
 
                 if (!studentIds.Any())
-                    throw new Exception("Kh?ng t?m th?y h?c sinh n?o cho t?i kho?n ph? huynh n?y.");
+                    throw new Exception("Không tìm thấy học sinh nào cho tài khoản phụ huynh này.");
 
                 return studentIds;
             }
 
-            throw new Exception($"Vai tr? '{role}' kh?ng du?c h? tr? d? tra c?u h?c ph?.");
+            throw new Exception($"Vai trò '{role}' không được hỗ trợ để tra cứu học phí.");
         }
         private string ResolveTenantName()
         {
