@@ -336,12 +336,17 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
     // 6. Data Fetch Functions
     const fetchCenterData = async () => {
         try {
-            const [response, classesRes] = await Promise.all([
-                api.get('/CenterHome'),
-                api.get('/CenterHome/classes').catch(() => ({ data: [] }))
+            const [response, classesRes, allGradesRes, allSubjectsRes] = await Promise.all([
+                api.get('/CenterHome').catch(err => {
+                    if (err.response?.status === 404) return { data: null };
+                    throw err;
+                }),
+                api.get('/CenterHome/classes').catch(() => ({ data: [] })),
+                api.get('/Grades').catch(() => ({ data: [] })),
+                api.get('/tenantadmin/Subjects').catch(() => ({ data: [] }))
             ]);
             
-            if (response.data) {
+            if (response && response.data) {
                 const data = response.data;
                 data.highlights = data.highlights || [];
                 data.courses = data.courses || [];
@@ -362,6 +367,10 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
                 setSaved(data);
                 setDraft(data);
+            } else {
+                // Fallback to initial data if 404 or null
+                setSaved({ ...INIT });
+                setDraft({ ...INIT });
             }
 
             let classes = classesRes.data || [];
@@ -381,28 +390,44 @@ const CenterHome = ({ isAdmin: isAdminProp = false }) => {
 
             setUpcomingClasses(classes);
             
-            const extGrades = [];
-            const gradeIds = new Set();
+            // Populate grades and subjects from all available data
+            const extGradesMap = new Map();
             const extSubjects = new Set();
+
+            // 1. Add from allGrades endpoint
+            if (allGradesRes && Array.isArray(allGradesRes.data)) {
+                allGradesRes.data.forEach(g => {
+                    extGradesMap.set(String(g.gradeId), { 
+                        gradeId: g.gradeId, 
+                        gradeName: g.gradeName 
+                    });
+                });
+            }
+
+            // 2. Add from allSubjects endpoint
+            if (allSubjectsRes && Array.isArray(allSubjectsRes.data)) {
+                allSubjectsRes.data.forEach(s => {
+                    if (s.subjectName) extSubjects.add(s.subjectName);
+                });
+            }
             
+            // 3. Fallback/Supplement from classes (just in case)
             classes.forEach(c => {
-                if (c.gradeId && !gradeIds.has(c.gradeId)) {
-                    gradeIds.add(c.gradeId);
-                    extGrades.push({ gradeId: c.gradeId, gradeName: c.gradeName || `Khối ${c.gradeId}` });
+                if (c.gradeId && !extGradesMap.has(String(c.gradeId))) {
+                    extGradesMap.set(String(c.gradeId), { 
+                        gradeId: c.gradeId, 
+                        gradeName: c.gradeName || `Khối ${c.gradeId}` 
+                    });
                 }
                 if (c.subjectName) {
                     extSubjects.add(c.subjectName);
                 }
             });
             
-            setGrades(extGrades.sort((a,b) => a.gradeId - b.gradeId));
+            setGrades(Array.from(extGradesMap.values()).sort((a,b) => a.gradeId - b.gradeId));
             setAvailableSubjects(Array.from(extSubjects).sort());
         } catch (error) {
             console.error('Error fetching center data:', error);
-            if (error.response?.status === 404) {
-                setSaved({ ...INIT });
-                setDraft({ ...INIT });
-            }
         }
     };
 

@@ -213,7 +213,7 @@ const AddStaffModal = ({ isOpen, onClose, onSubmit, editingStaff, existingStaff 
                                     onChange={handleChange}
                                     required
                                 >
-                                    <option value="teacher">Giảng Viên</option>
+                                    <option value="teacher">Giáo Viên</option>
                                     <option value="assistant">Trợ Giảng</option>
                                 </select>
                             </div>

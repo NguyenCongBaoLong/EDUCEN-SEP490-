@@ -10,7 +10,8 @@ const EnrollmentRequestsTable = ({
     setStatusFilter,
     onView,
     onApprove,
-    onReject
+    onReject,
+    processingIds = new Set()
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
@@ -155,22 +156,29 @@ const EnrollmentRequestsTable = ({
                                                 className="action-btn view"
                                                 title="Xem chi tiết"
                                                 onClick={() => onView(request)}
+                                                disabled={processingIds.has(request.id)}
                                             >
                                                 <Eye size={20} />
                                             </button>
                                             {request.status === 'pending' && (
                                                 <>
                                                     <button
-                                                        className="action-btn approve"
+                                                        className={`action-btn approve${processingIds.has(request.id) ? ' processing' : ''}`}
                                                         title="Duyệt yêu cầu"
                                                         onClick={() => onApprove(request)}
+                                                        disabled={processingIds.has(request.id)}
                                                     >
-                                                        <Check size={20} />
+                                                        {processingIds.has(request.id) ? (
+                                                            <div className="btn-spinner"></div>
+                                                        ) : (
+                                                            <Check size={20} />
+                                                        )}
                                                     </button>
                                                     <button
-                                                        className="action-btn reject"
+                                                        className={`action-btn reject${processingIds.has(request.id) ? ' processing' : ''}`}
                                                         title="Từ chối yêu cầu"
                                                         onClick={() => onReject(request)}
+                                                        disabled={processingIds.has(request.id)}
                                                     >
                                                         <X size={20} />
                                                     </button>

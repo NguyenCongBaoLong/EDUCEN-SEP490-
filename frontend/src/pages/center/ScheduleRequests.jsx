@@ -5,6 +5,7 @@ import notificationService from '../../services/notificationService';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import '../../css/pages/center/ScheduleRequests.css';
+import '../../css/pages/center/ClassesManagement.css';
 
 const SCHEDULE_CHANGE_TAG = '[SCHEDULE_CHANGE]';
 
@@ -17,6 +18,7 @@ const ScheduleRequests = () => {
     const [selectedClassData, setSelectedClassData] = useState(null);
     const [validationResults, setValidationResults] = useState(null);
     const [rooms, setRooms] = useState([]);
+    const [listFilter, setListFilter] = useState('pending'); // 'pending' or 'processed'
 
     const fetchRequests = useCallback(async (reason = 'manual') => {
         if (isInitialMount.current || reason === 'manual') {
@@ -340,23 +342,26 @@ const ScheduleRequests = () => {
     const pendingCount = pendingRequests.length;
 
     return (
-        <div className="admin-dashboard">
+        <div className="classes-management">
             <Sidebar />
-            <main className="dashboard-main">
+            <main className="classes-main">
                 <div className="schedule-mgmt-container">
-                    <header className="mgmt-header">
-                        <div className="mgmt-title-area">
-                            <h1 className="mgmt-page-title">Yêu Cầu Đổi Lịch</h1>
-                            <p className="mgmt-subtitle">
-                                Phê duyệt các yêu cầu đổi lịch dạy từ giáo viên và trợ giảng.
-                                {pendingCount > 0 && (
-                                    <span style={{ marginLeft: '1rem', color: 'var(--sr-warning)', fontWeight: 700 }}>
-                                        ({pendingCount} yêu cầu mới)
-                                    </span>
-                                )}
-                            </p>
+                    <div className="classes-header">
+                        <div className="classes-header-top">
+                            <div>
+                                <h1>Yêu cầu đổi lịch</h1>
+                                <p className="classes-subtitle">
+                                    Phê duyệt các yêu cầu đổi lịch dạy từ giáo viên và trợ giảng.
+                                </p>
+                            </div>
+                            {pendingCount > 0 && (
+                                <span className="mgmt-badge">
+                                    <AlertCircle size={14} />
+                                    {pendingCount} yêu cầu mới
+                                </span>
+                            )}
                         </div>
-                    </header>
+                    </div>
 
                     <div className="adm-schedule-wrap">
                         {loading ? (
@@ -373,58 +378,71 @@ const ScheduleRequests = () => {
                         ) : (
                             <div className="adm-schedule-grid">
                                 <section className="adm-schedule-list-panel">
-                                    <div className="adm-schedule-list-head">
-                                        <span>Danh sách yêu cầu</span>
+                                    <div className="adm-list-tabs">
+                                        <button 
+                                            className={`adm-list-tab ${listFilter === 'pending' ? 'active' : ''}`}
+                                            onClick={() => setListFilter('pending')}
+                                        >
+                                            Yêu cầu mới {pendingCount > 0 && <span className="tab-badge">{pendingCount}</span>}
+                                        </button>
+                                        <button 
+                                            className={`adm-list-tab ${listFilter === 'processed' ? 'active' : ''}`}
+                                            onClick={() => setListFilter('processed')}
+                                        >
+                                            Đã xử lý
+                                        </button>
                                     </div>
-                                    <div className="adm-schedule-sections">
-                                        <div className="adm-schedule-section">
-                                            <div className="adm-schedule-section-head">
-                                                <span>Yêu cầu mới</span>
-                                            </div>
+                                    <div className="adm-list-content">
+                                        {listFilter === 'pending' && (
                                             <div className="adm-schedule-list">
-                                                {pendingRequests.map((req) => (
-                                                    <div
-                                                        key={req.id}
-                                                        onClick={() => setSelectedRequest(req)}
-                                                        className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
-                                                    >
-                                                        <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                                                            <div className="adm-schedule-sender">{req?.senderName}</div>
-                                                            <span className="adm-schedule-pending">Mới</span>
+                                                {pendingRequests.length === 0 ? (
+                                                    <div className="adm-empty-list">Không có yêu cầu mới nào.</div>
+                                                ) : (
+                                                    pendingRequests.map((req) => (
+                                                        <div
+                                                            key={req.id}
+                                                            onClick={() => setSelectedRequest(req)}
+                                                            className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
+                                                        >
+                                                            <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                                                                <div className="adm-schedule-sender">{req?.senderName}</div>
+                                                                <span className="adm-schedule-pending">Mới</span>
+                                                            </div>
+                                                            <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                            <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
+                                                                {formatDate(req?.createdAt)}
+                                                            </div>
                                                         </div>
-                                                        <div className="adm-schedule-role">{req?.senderRoleName}</div>
-                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
-                                                            {formatDate(req?.createdAt)}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    ))
+                                                )}
                                             </div>
-                                        </div>
+                                        )}
 
-                                        <div className="adm-schedule-section">
-                                            <div className="adm-schedule-section-head">
-                                                <span>Đã xử lý</span>
-                                            </div>
+                                        {listFilter === 'processed' && (
                                             <div className="adm-schedule-list">
-                                                {processedRequests.map((req) => (
-                                                    <div
-                                                        key={req.id}
-                                                        onClick={() => setSelectedRequest(req)}
-                                                        className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
-                                                        style={{ opacity: 0.7 }}
-                                                    >
-                                                        <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                                                            <div className="adm-schedule-sender">{req?.senderName}</div>
-                                                            <span className="adm-schedule-processed">Đã xử lý</span>
+                                                {processedRequests.length === 0 ? (
+                                                    <div className="adm-empty-list">Chưa có yêu cầu nào được xử lý.</div>
+                                                ) : (
+                                                    processedRequests.map((req) => (
+                                                        <div
+                                                            key={req.id}
+                                                            onClick={() => setSelectedRequest(req)}
+                                                            className={`adm-schedule-item ${selectedRequest?.id === req?.id ? 'active' : ''}`}
+                                                            style={{ opacity: 0.7 }}
+                                                        >
+                                                            <div className="adm-schedule-item-top" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                                                                <div className="adm-schedule-sender">{req?.senderName}</div>
+                                                                <span className="adm-schedule-processed">Đã xử lý</span>
+                                                            </div>
+                                                            <div className="adm-schedule-role">{req?.senderRoleName}</div>
+                                                            <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
+                                                                {formatDate(req?.createdAt)}
+                                                            </div>
                                                         </div>
-                                                        <div className="adm-schedule-role">{req?.senderRoleName}</div>
-                                                        <div className="adm-schedule-meta" style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--sr-text-muted)' }}>
-                                                            {formatDate(req?.createdAt)}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    ))
+                                                )}
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </section>
 

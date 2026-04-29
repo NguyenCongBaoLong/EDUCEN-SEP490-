@@ -311,7 +311,7 @@ const fetchStaff = async () => {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 await executeSendAccount(staffId);
             },
-            type: 'info'
+            type: 'mail'
         });
     };
 
@@ -376,7 +376,7 @@ const fetchStaff = async () => {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 await executeBulkSendAccounts();
             },
-            type: 'info'
+            type: 'mail'
         });
     };
 

@@ -9,6 +9,13 @@ const TeacherAssignModal = ({ isOpen, onClose, onSelectTeacher, classSlots = [],
     const [selectedTeacher, setSelectedTeacher] = useState(null);
     const [confirmData, setConfirmData] = useState({ isOpen: false, title: '', message: '' });
 
+    // Reset state when modal opens
+    React.useEffect(() => {
+        if (isOpen) {
+            setSearchQuery('');
+            setSelectedTeacher(null);
+        }
+    }, [isOpen]);
 
     // Get display string for help text
     const classScheduleDisplay = useMemo(() => {
@@ -191,29 +198,36 @@ const TeacherAssignModal = ({ isOpen, onClose, onSelectTeacher, classSlots = [],
                         </div>
 
                         <div className="teacher-list">
-                            {filteredTeachers.map(teacher => {
-                                const { hasConflict } = checkConflict(teacher);
-                                return (
-                                    <div
-                                        key={teacher.id}
-                                        className={`teacher-item ${selectedTeacher?.id === teacher.id ? 'selected' : ''}`}
-                                        onClick={() => setSelectedTeacher(teacher)}
-                                    >
-                                        <div className="teacher-avatar">{teacher.avatar}</div>
-                                        <div className="teacher-info">
-                                            <div className="teacher-name">{teacher.name}</div>
-                                            <div className="teacher-meta">
-                                                <span className="teacher-title">{teacher.title}</span>
-                                                <span className="separator">•</span>
-                                                <span className="teacher-dept">{teacher.department}</span>
+                            {filteredTeachers.length > 0 ? (
+                                filteredTeachers.map(teacher => {
+                                    const { hasConflict } = checkConflict(teacher);
+                                    return (
+                                        <div
+                                            key={teacher.id}
+                                            className={`teacher-item ${selectedTeacher?.id === teacher.id ? 'selected' : ''}`}
+                                            onClick={() => setSelectedTeacher(teacher)}
+                                        >
+                                            <div className="teacher-avatar">{teacher.avatar}</div>
+                                            <div className="teacher-info">
+                                                <div className="teacher-name">{teacher.name}</div>
+                                                <div className="teacher-meta">
+                                                    <span className="teacher-title">{teacher.title}</span>
+                                                    <span className="separator">•</span>
+                                                    <span className="teacher-dept">{teacher.department}</span>
+                                                </div>
+                                            </div>
+                                            <div className={`status-badge ${hasConflict ? 'conflict' : 'available'}`}>
+                                                {hasConflict ? 'Xung đột' : 'Rảnh'}
                                             </div>
                                         </div>
-                                        <div className={`status-badge ${hasConflict ? 'conflict' : 'available'}`}>
-                                            {hasConflict ? 'Xung đột' : 'Rảnh'}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })
+                            ) : (
+                                <div className="no-results-message">
+                                    <AlertCircle size={24} />
+                                    <p>{searchQuery ? 'Không tìm thấy giáo viên/trợ giảng phù hợp' : 'Danh sách trống'}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 

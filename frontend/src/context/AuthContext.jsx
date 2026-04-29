@@ -64,7 +64,10 @@ export function AuthProvider({ children }) {
                 });
             }
         } catch (error) {
-            console.error('Lỗi khi tải thông tin trung tâm:', error);
+            // Only log if it's NOT a 404 (404 is expected for new centers)
+            if (error.response?.status !== 404) {
+                console.error('Lỗi khi tải thông tin trung tâm:', error);
+            }
         }
     };
 

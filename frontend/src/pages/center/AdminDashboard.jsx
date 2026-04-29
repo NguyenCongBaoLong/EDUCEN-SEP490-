@@ -384,14 +384,14 @@ const AdminDashboard = () => {
                                 <span className="storage-number">
                                     {loading ? '...' : (
                                         <>
-                                            {overview.currentStorageMB < 1024
-                                                ? `${(overview.currentStorageMB || 0).toFixed(1)} MB`
-                                                : `${((overview.currentStorageMB || 0) / 1024).toFixed(1)} GB`
+                                            {overview.currentStorageMB < 1000
+                                                ? `${Number((overview.currentStorageMB || 0).toFixed(1))} MB`
+                                                : `${Number(((overview.currentStorageMB || 0) / 1000).toFixed(1))} GB`
                                             }
                                             <span style={{ margin: '0 8px', color: '#9ca3af' }}>/</span>
-                                            {overview.maxStorageMB < 1024
-                                                ? `${(overview.maxStorageMB || 0).toFixed(0)} MB`
-                                                : `${((overview.maxStorageMB || 0) / 1024).toFixed(0)} GB`
+                                            {overview.maxStorageMB < 1000
+                                                ? `${Number((overview.maxStorageMB || 0).toFixed(1))} MB`
+                                                : `${Number(((overview.maxStorageMB || 0) / 1000).toFixed(1))} GB`
                                             }
                                         </>
                                     )}

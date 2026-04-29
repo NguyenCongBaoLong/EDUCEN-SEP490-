@@ -29,6 +29,7 @@ const Sidebar = () => {
     const [pendingEnrollmentCount, setPendingEnrollmentCount] = useState(0);
     const [pendingAttendanceModCount, setPendingAttendanceModCount] = useState(0);
     const [pendingScheduleRequestsCount, setPendingScheduleRequestsCount] = useState(0);
+    const [pendingInvoiceCount, setPendingInvoiceCount] = useState(0);
     const isScheduleChangeRequest = (req) => {
         const title = (req?.title || req?.Title || '').toLowerCase();
         const content = (req?.content || req?.Content || '').toLowerCase();
@@ -41,10 +42,11 @@ const Sidebar = () => {
 
     const fetchCounts = useCallback(async (reason = 'manual') => {
         try {
-            const [enrollmentRes, attendanceRes, scheduleRes] = await Promise.all([
+            const [enrollmentRes, attendanceRes, scheduleRes, invoiceRes] = await Promise.all([
                 api.get('/enrollment-requests/pending'),
                 api.get('/attendance/modification-requests/pending'),
-                api.get('/admin/support-requests')
+                api.get('/admin/support-requests'),
+                api.get('/admin/subscription/invoices')
             ]);
 
             const enrollmentCount = Array.isArray(enrollmentRes.data) ? enrollmentRes.data.length : 0;
@@ -60,14 +62,22 @@ const Sidebar = () => {
             );
             const scheduleCount = scheduleChangeRequests.length;
 
+            // Filter unpaid subscription invoices
+            const invoiceData = Array.isArray(invoiceRes.data) ? invoiceRes.data : [];
+            const unpaidInvoiceCount = invoiceData.filter(inv => 
+                inv.status === 'Pending' || inv.status === 'AwaitingConfirmation'
+            ).length;
+
             setPendingEnrollmentCount(enrollmentCount);
             setPendingAttendanceModCount(attendanceCount);
             setPendingScheduleRequestsCount(scheduleCount);
+            setPendingInvoiceCount(unpaidInvoiceCount);
             console.debug('[Sidebar] badge counts updated', {
                 reason,
                 enrollmentCount,
                 attendanceCount,
-                scheduleCount
+                scheduleCount,
+                unpaidInvoiceCount
             });
         } catch (error) {
             console.warn('[Sidebar] failed to refresh badge counts', {
@@ -188,7 +198,12 @@ const Sidebar = () => {
                 { path: '/center/tuition', icon: DollarSign, label: 'Quản lý học phí' },
                 { path: '/center/teacher-statistics', icon: TrendingUp, label: 'Thống kê dạy học' },
                 { path: '/center/revenue', icon: TrendingUp, label: 'Doanh thu' },
-                { path: '/center/subscription', icon: CreditCard, label: 'Gói dịch vụ' },
+                { 
+                    path: '/center/subscription', 
+                    icon: CreditCard, 
+                    label: 'Gói dịch vụ',
+                    badge: pendingInvoiceCount
+                },
             ]
         }
     ];

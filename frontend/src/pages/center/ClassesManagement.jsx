@@ -17,6 +17,7 @@ const ClassesManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [gradeFilter, setGradeFilter] = useState('');
 
     const [classes, setClasses] = useState([]);
     const [teachers, setTeachers] = useState([]);
@@ -107,11 +108,18 @@ const ClassesManagement = () => {
                 api.get('/Grades')
             ]);
 
+            const reverseDayMap = { 0: 'CN', 1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7' };
+
             const mapStaff = (staff, title) => ({
                 id: staff.userId || staff.teacherId || staff.assistantId,
                 name: staff.fullName,
                 title: title,
-                avatar: staff.fullName ? staff.fullName.substring(0, 2).toUpperCase() : 'ST'
+                avatar: staff.fullName ? staff.fullName.substring(0, 2).toUpperCase() : 'ST',
+                schedule: (staff.schedule || staff.Schedule || []).map(s => ({
+                    day: reverseDayMap[s.dayOfWeek !== undefined ? s.dayOfWeek : s.DayOfWeek] || 'Thứ 2',
+                    startTime: s.startTime || s.StartTime,
+                    endTime: s.endTime || s.EndTime
+                }))
             });
 
             setTeachers(tRes.data.map(t => mapStaff(t, 'Giáo viên')));
@@ -211,7 +219,8 @@ const ClassesManagement = () => {
             classItem.mainTeacher.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesSubject = !subjectFilter || classItem.subject === subjectFilter;
         const matchesStatus = !statusFilter || classItem.status === statusFilter;
-        return matchesSearch && matchesSubject && matchesStatus;
+        const matchesGrade = !gradeFilter || String(classItem.gradeId) === gradeFilter;
+        return matchesSearch && matchesSubject && matchesStatus && matchesGrade;
     });
 
     return (
@@ -253,6 +262,17 @@ const ClassesManagement = () => {
                         <option value="">Tất cả môn học</option>
                         {subjects.map(s => (
                             <option key={s.subjectId} value={s.subjectName}>{s.subjectName}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        className="filter-select"
+                        value={gradeFilter}
+                        onChange={(e) => setGradeFilter(e.target.value)}
+                    >
+                        <option value="">Tất cả khối lớp</option>
+                        {grades.map(g => (
+                            <option key={g.gradeId} value={String(g.gradeId)}>{g.gradeName}</option>
                         ))}
                     </select>
 

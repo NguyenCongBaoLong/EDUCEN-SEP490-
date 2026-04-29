@@ -114,6 +114,10 @@ namespace EducenAPI.Services
             //  Validate StartTime > EndTime
             if (dto.EndTime.HasValue && resolvedStartTime > dto.EndTime.Value)
             {
+                if (dto.SessionId.HasValue)
+                {
+                    throw new BadRequestException("Hạn nộp bài tập không thể trước thời gian bắt đầu của buổi học này.");
+                }
                 throw new BadRequestException("Thời gian bắt đầu không được sau thời gian kết thúc.");
             }
 

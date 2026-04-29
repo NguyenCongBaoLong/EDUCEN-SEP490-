@@ -18,6 +18,7 @@ namespace EducenAPI.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         [Authorize(Roles = "Admin,TenantAdmin,Teacher,Assistant")]
         public async Task<ActionResult<IEnumerable<GradeDto>>> GetGrades()
         {

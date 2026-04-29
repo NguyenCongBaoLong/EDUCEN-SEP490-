@@ -375,6 +375,21 @@
     color: #059669;
 }
 
+.sa-status-badge.pending {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.sa-status-badge.rejected {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.sa-status-badge.completed {
+    background: #eff6ff;
+    color: #1e40af;
+}
+
 .sa-status-badge.inactive {
     background: #f3f4f6;
     color: #6b7280;

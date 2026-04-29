@@ -51,6 +51,10 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     const [selectedEInvoice, setSelectedEInvoice] = useState(null);
     const [onlinePaymentHistory, setOnlinePaymentHistory] = useState([]);
     const [loadingOnlineHistory, setLoadingOnlineHistory] = useState(false);
+    
+    const refreshSidebarBadges = () => {
+        window.dispatchEvent(new CustomEvent('center-sidebar-badge-refresh'));
+    };
 
     useEffect(() => {
         const fetchPlans = async () => {
@@ -148,6 +152,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
         try {
             const res = await api.get('/admin/subscription/invoices');
             setMyInvoices(res.data || []);
+            refreshSidebarBadges();
         } catch (error) {
             console.error('Load invoices error:', error?.response?.data || error);
         } finally {
@@ -469,16 +474,35 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
     };
 
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
-    const formatDate = (value) => new Date(value).toLocaleDateString('vi-VN');
-    const formatDateTime = (value) => new Date(value).toLocaleString('vi-VN', {
-        hour12: false,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
+    
+    const parseSafeDate = (value) => {
+        if (!value) return null;
+        if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+        let d = new Date(value);
+        if (typeof value === 'string' && !value.includes('Z') && !/[+-]\d{2}:?\d{2}$/.test(value)) {
+            const utcDate = new Date(value + 'Z');
+            if (!isNaN(utcDate.getTime())) d = utcDate;
+        }
+        return isNaN(d.getTime()) ? null : d;
+    };
+
+    const formatDate = (value) => {
+        const date = parseSafeDate(value);
+        if (!date) return '—';
+        return new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        }).format(date);
+    };
+
+    const formatDateTime = (value) => {
+        const date = parseSafeDate(value);
+        if (!date) return '—';
+        return new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false
+        }).format(date).replace(/,/g, '');
+    };
     const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', {
         style: 'currency',
         currency: 'VND',
@@ -523,7 +547,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                         <h1>Chọn gói dịch vụ</h1>
                         <p>Đăng ký, đổi gói, gia hạn đều theo luồng yêu cầu duyệt và thanh toán hóa đơn.</p>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', whiteSpace: 'nowrap', flexShrink: 0 }}>
                         <button
                             type="button"
                             className="subscription-credit-history-btn subscription-action-btn--invoice"
@@ -532,8 +556,14 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                 loadOnlinePaymentHistory();
                                 setShowInvoicesModal(true);
                             }}
+                            style={{ position: 'relative' }}
                         >
                             <CreditCard size={15} /> Hóa đơn &amp; Thanh toán
+                            {myInvoices.filter(inv => inv.status === 'Pending' || inv.status === 'AwaitingConfirmation').length > 0 && (
+                                <span className="subscription-button-badge">
+                                    {myInvoices.filter(inv => inv.status === 'Pending' || inv.status === 'AwaitingConfirmation').length}
+                                </span>
+                            )}
                         </button>
                         <button
                             type="button"
@@ -1003,7 +1033,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                 <tr key={c.contractId}>
                                                     <td style={{ padding: '0.75rem' }}>{c.contractTitle}</td>
                                                     <td style={{ padding: '0.75rem' }}>{c.fileType}</td>
-                                                    <td style={{ padding: '0.75rem' }}>{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '?'}</td>
+                                                    <td style={{ padding: '0.75rem' }}>{formatDate(c.createdAt)}</td>
                                                     <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                                         <button style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer' }} onClick={() => handleViewContract(c)}>Xem</button>
                                                     </td>
@@ -1111,11 +1141,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                                 )}
                                                             </td>
                                                             <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                                                                {i.createdAt
-                                                                    ? new Date(i.createdAt).toLocaleString('vi-VN')
-                                                                    : i.dueDate
-                                                                        ? new Date(i.dueDate).toLocaleString('vi-VN')
-                                                                        : '?'}
+                                                                {i.createdAt ? formatDateTime(i.createdAt) : (i.dueDate ? formatDate(i.dueDate) : '—')}
                                                             </td>
                                                         </tr>
                                                     );
@@ -1149,7 +1175,7 @@ const SubscriptionPlans = ({ hideSidebar = false }) => {
                                                         <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}><span style={{ fontFamily: 'monospace', fontSize: '0.8rem', background: '#f3f4f6', padding: '0.2rem 0.4rem', borderRadius: '3px' }}>{h.paymentId?.slice(-8)}</span></td>
                                                         <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}>{formatPrice(h.amount)} VNĐ</td>
                                                         <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }}><span style={{ color: h.status === 'Success' ? '#16a34a' : h.status === 'Failed' ? '#dc2626' : '#f59e0b', fontWeight: 500 }}>{h.status === 'Success' ? 'Thành công' : h.status === 'Failed' ? 'Thất bại' : h.status}</span></td>
-                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{h.paymentDate ? new Date(h.paymentDate).toLocaleString('vi-VN') : '?'}</td>
+                                                        <td style={{ padding: '0.5rem', borderBottom: '1px solid #f3f4f6', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{formatDateTime(h.paymentDate)}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>

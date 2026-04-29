@@ -1,4 +1,4 @@
-﻿using EducenAPI.DTOs.Profile;
+using EducenAPI.DTOs.Profile;
 using EducenAPI.Persistence.Contexts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +13,12 @@ namespace EducenAPI.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly EducenV2Context _context;
+        private readonly AdminDbContext _adminDbContext;
 
-        public ProfileController(EducenV2Context context)
+        public ProfileController(EducenV2Context context, AdminDbContext adminDbContext)
         {
             _context = context;
+            _adminDbContext = adminDbContext;
         }
 
         [HttpGet("me")]
@@ -149,6 +151,23 @@ namespace EducenAPI.Controllers
                 }
 
                 user.Email = normalizedEmail;
+
+                // Sync with Tenant table if user is Admin (RoleId = 1)
+                if (user.RoleId == 1)
+                {
+                    var tenantId = _context.CurrentTenantId;
+                    if (!string.IsNullOrEmpty(tenantId))
+                    {
+                        var tenant = _adminDbContext.Tenants.FirstOrDefault(t => t.TenantId == tenantId);
+                        if (tenant != null)
+                        {
+                            tenant.Email = normalizedEmail;
+                            tenant.ContactPerson = user.FullName;
+                            tenant.PhoneNumber = user.PhoneNumber;
+                            tenant.Address = user.Address;
+                        }
+                    }
+                }
             }
 
             if (normalizedPhone != null)
@@ -159,6 +178,22 @@ namespace EducenAPI.Controllers
             if (request.Address != null)
             {
                 user.Address = request.Address.Trim();
+            }
+
+            // After phone and address are updated on user, sync again to ensure latest values are captured if Admin
+            if (user.RoleId == 1)
+            {
+                var tenantId = _context.CurrentTenantId;
+                if (!string.IsNullOrEmpty(tenantId))
+                {
+                    var tenant = _adminDbContext.Tenants.FirstOrDefault(t => t.TenantId == tenantId);
+                    if (tenant != null)
+                    {
+                        tenant.ContactPerson = user.FullName;
+                        tenant.PhoneNumber = user.PhoneNumber;
+                        tenant.Address = user.Address;
+                    }
+                }
             }
 
             if (user.Teacher != null)
@@ -193,6 +228,7 @@ namespace EducenAPI.Controllers
             }
 
             _context.SaveChanges();
+            _adminDbContext.SaveChanges();
 
             return Ok(new { message = "Cập nhật hồ sơ thành công" });
         }

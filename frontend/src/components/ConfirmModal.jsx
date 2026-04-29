@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, HelpCircle, X, Mail } from 'lucide-react';
 import '../css/components/ConfirmModal.css';
 
 const ConfirmModal = ({ 
@@ -16,27 +16,48 @@ const ConfirmModal = ({
 }) => {
     if (!isOpen) return null;
 
+    const getIcon = () => {
+        switch (type) {
+            case 'danger': return <AlertTriangle size={24} />;
+            case 'info': return <Info size={24} />;
+            case 'mail': return <Mail size={24} />;
+            case 'success': return <CheckCircle size={24} />;
+            case 'warning': return <AlertTriangle size={24} />;
+            default: return <HelpCircle size={24} />;
+        }
+    };
+
     return (
-        <div className="confirm-modal-overlay">
-            <div className={`confirm-modal-container ${type}`}>
+        <div className="confirm-modal-overlay" onClick={onClose}>
+            <div className={`confirm-modal-container ${type}`} onClick={e => e.stopPropagation()}>
                 <div className="confirm-modal-header">
-                    <div className="confirm-icon">
-                        <AlertTriangle size={24} />
-                    </div>
                     <h3>{title}</h3>
                     <button className="confirm-close-btn" onClick={onClose}>
                         <X size={20} />
                     </button>
                 </div>
+                
                 <div className="confirm-modal-body">
-                    <div className="confirm-message-content" dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, '<br/>') }} />
+                    <div className="confirm-warning-section">
+                        <div className={`confirm-warning-icon ${type}`}>
+                            {getIcon()}
+                        </div>
+                        <div className="confirm-warning-content">
+                            <h4>{title}</h4>
+                            <div 
+                                className="confirm-message-text" 
+                                dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, '<br/>') }} 
+                            />
+                        </div>
+                    </div>
                 </div>
+
                 <div className="confirm-modal-footer" style={isAlert ? { justifyContent: 'center' } : {}}>
                     <button className="btn-cancel" onClick={onClose}>
                         {cancelText}
                     </button>
                     {!isAlert && (
-                        <button className="btn-confirm" onClick={onConfirm}>
+                        <button className={`btn-confirm ${type}`} onClick={onConfirm}>
                             {confirmText}
                         </button>
                     )}

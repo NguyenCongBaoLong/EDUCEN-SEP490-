@@ -140,6 +140,27 @@
     border-color: #dc2626;
 }
 
+.no-results-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+    text-align: center;
+    gap: 12px;
+}
+
+.no-results-message svg {
+    opacity: 0.5;
+}
+
+.no-results-message p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .teacher-avatar {
     width: 40px;
     height: 40px;

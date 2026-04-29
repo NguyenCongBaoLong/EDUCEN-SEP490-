@@ -25,6 +25,35 @@ const buildPublicFileUrl = (path) => {
     return `${API_ORIGIN}/${cleaned}`;
 };
 
+const parseSafeDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+    let d = new Date(value);
+    if (typeof value === 'string' && !value.includes('Z') && !/[+-]\d{2}:?\d{2}$/.test(value)) {
+        const utcDate = new Date(value + 'Z');
+        if (!isNaN(utcDate.getTime())) d = utcDate;
+    }
+    return isNaN(d.getTime()) ? null : d;
+};
+
+const formatFullDateTime = (value) => {
+    const date = parseSafeDate(value);
+    if (!date) return '—';
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false
+    }).format(date).replace(/,/g, '');
+};
+
+const formatDateOnly = (value) => {
+    const date = parseSafeDate(value);
+    if (!date) return '—';
+    return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+    }).format(date);
+};
+
 const TenantManagement = () => {
     const [tenants, setTenants] = useState([]);
     const [plans, setPlans] = useState([]);
@@ -80,6 +109,7 @@ const TenantManagement = () => {
     const [loadingInvoiceHistory, setLoadingInvoiceHistory] = useState(false);
     const [viewCreditLedger, setViewCreditLedger] = useState([]);
     const [loadingCreditLedger, setLoadingCreditLedger] = useState(false);
+    const [packageFilterStatus, setPackageFilterStatus] = useState('Pending'); // 'All', 'Pending', 'Approved', 'Rejected', 'Completed'
 
     const fetchTenants = () => {
         setLoading(true);
@@ -103,9 +133,9 @@ const TenantManagement = () => {
             .finally(() => setLoadingReg(false));
     };
 
-    const fetchChangeRequests = (status = null) => {
+    const fetchChangeRequests = (status = packageFilterStatus) => {
         setLoadingChangeRequests(true);
-        const url = status
+        const url = (status && status !== 'All')
             ? `/admin/tenants/subscription-change-requests?status=${status}`
             : '/admin/tenants/subscription-change-requests';
         adminApi.get(url)
@@ -130,7 +160,7 @@ const TenantManagement = () => {
             setReviewRequestTarget(null);
             setReviewRequestMode('approve');
             setReviewRequestNote('');
-            fetchChangeRequests();
+            fetchChangeRequests(packageFilterStatus);
             notifySidebarBadgeRefresh();
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể xử lý yêu cầu.', 'error');
@@ -211,7 +241,7 @@ const TenantManagement = () => {
             await adminApi.post(`/admin/tenants/subscription-change-requests/${requestId}/invoice`, { dueDays });
             showToast('Đã tạo hoá đơn.');
             setCreateInvoiceTarget(null);
-            fetchChangeRequests();
+            fetchChangeRequests(packageFilterStatus);
             await fetchInvoiceHistory({ silent: !showInvoiceHistory, reason: 'create-invoice' });
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể tạo hoá đơn.', 'error');
@@ -231,7 +261,7 @@ const TenantManagement = () => {
     useEffect(() => {
         const refreshBadgeSources = () => {
             fetchRegistrations();
-            fetchChangeRequests('Pending');
+            fetchChangeRequests(packageFilterStatus);
             fetchInvoiceAwaitingCount({ silent: true, reason: 'sysadmin-badge-refresh' });
         };
 
@@ -486,7 +516,7 @@ const TenantManagement = () => {
 
             showToast('Đã xác nhận thanh toán tiền mặt và áp dụng đổi gói.');
             await fetchInvoiceHistory({ openModal: showInvoiceHistory, silent: !showInvoiceHistory, reason: 'confirm-cash' });
-            fetchChangeRequests();
+            fetchChangeRequests(packageFilterStatus);
             fetchTenants();
         } catch (err) {
             showToast(err.response?.data?.message || 'Không thể xác nhận thanh toán tiền mặt.', 'error');
@@ -710,7 +740,7 @@ const TenantManagement = () => {
                     </button>
                     <button
                         className={`sa-tab-btn ${activeTab === 'package-requests' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('package-requests'); fetchChangeRequests(); }}
+                        onClick={() => { setActiveTab('package-requests'); fetchChangeRequests(packageFilterStatus); }}
                     >
                         <Package size={18} /> Yêu Cầu Đổi Gói
                         {pendingPackageCount > 0 && (
@@ -747,7 +777,30 @@ const TenantManagement = () => {
                             </select>
                         </div>
                     )}
-                                        {activeTab === 'package-requests' && (
+                    
+                    {activeTab === 'package-requests' && (
+                        <div className="sa-filter-wrap">
+                            <Filter size={14} className="sa-filter-label" style={{ color: '#6366f1' }} />
+                            <span className="sa-filter-label">Trạng thái:</span>
+                            <select 
+                                value={packageFilterStatus}
+                                onChange={(e) => {
+                                    const newStatus = e.target.value;
+                                    setPackageFilterStatus(newStatus);
+                                    fetchChangeRequests(newStatus);
+                                }}
+                                className="sa-filter-select"
+                            >
+                                <option value="All">Tất cả</option>
+                                <option value="Pending">Chờ duyệt</option>
+                                <option value="Approved">Đã duyệt (Chờ HĐ)</option>
+                                <option value="Rejected">Từ chối</option>
+                                <option value="Completed">Đã thanh toán</option>
+                            </select>
+                        </div>
+                    )}
+
+                    {activeTab === 'package-requests' && (
                         <button className="sa-btn-primary" onClick={openInvoiceHistory}>
                             <FileText size={16} /> Lịch Sử Gửi Hóa Đơn
                             {invoiceHistoryCount > 0 && (
@@ -812,7 +865,7 @@ const TenantManagement = () => {
                                                     </span>
                                                     {t.expiredAt && (
                                                         <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 2 }}>
-                                                            Hết hạn: {new Date(t.expiredAt).toLocaleDateString('vi-VN')}
+                                                            Hết hạn: {formatDateOnly(t.expiredAt)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -824,7 +877,7 @@ const TenantManagement = () => {
                                                     </span>
                                                     {t.expiredAt && (
                                                         <div style={{ fontSize: '0.75rem', color: '#666', marginTop: 2 }}>
-                                                            Hết hạn: {new Date(t.expiredAt).toLocaleDateString('vi-VN')}
+                                                            Hết hạn: {formatDateOnly(t.expiredAt)}
                                                         </div>
                                                     )}
                                                 </div>
@@ -959,7 +1012,7 @@ const TenantManagement = () => {
                                                     '—'
                                                 )}
                                             </td>
-                                            <td>{new Date(r.createdAt).toLocaleDateString('vi-VN')}</td>
+                                            <td>{formatDateOnly(r.createdAt)}</td>
                                             <td>
                                                 <span className={`sa-status-badge ${r.status === 'Pending' ? 'pending' : r.status === 'Approved' ? 'active' : 'inactive'}`} style={r.status === 'Pending' ? { background: '#fef3c7', color: '#d97706' } : r.status === 'Rejected' ? { background: '#fef2f2', color: '#ef4444' } : {}}>
                                                     {r.status === 'Pending' ? 'Chờ duyệt' : r.status === 'Approved' ? 'Đã duyệt' : 'Từ chối'}
@@ -1025,7 +1078,7 @@ const TenantManagement = () => {
                                         { label: 'Số điện thoại', value: viewRegTarget.phoneNumber },
                                         { label: 'Mã số thuế', value: viewRegTarget.taxCode },
                                         { label: 'Trạng thái', value: viewRegTarget.status === 'Pending' ? 'Chưa duyệt' : viewRegTarget.status === 'Approved' ? 'Đã duyệt' : 'Từ chối' },
-                                        { label: 'Ngày gửi', value: new Date(viewRegTarget.createdAt).toLocaleString('vi-VN') },
+                                        { label: 'Ngày gửi', value: formatFullDateTime(viewRegTarget.createdAt) },
                                         { label: 'Lời nhắn / Yêu cầu', value: viewRegTarget.message || 'Không có', span: true },
                                     ].map(({ label, value, span }) => (
                                         <div key={label} style={{
@@ -1324,7 +1377,7 @@ const TenantManagement = () => {
                                             Thông tin gói: <span style={{ color: '#6366f1' }}>{viewTarget.planName}</span>
                                             {viewTarget.expiredAt && (
                                                 <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginLeft: 8 }}>
-                                                    (Hết hạn: {new Date(viewTarget.expiredAt).toLocaleDateString('vi-VN')})
+                                                    (Hết hạn: {formatDateOnly(viewTarget.expiredAt)})
                                                 </span>
                                             )}
                                         </div>
@@ -1376,7 +1429,7 @@ const TenantManagement = () => {
                                                 <tbody>
                                                     {viewCreditLedger.map((l) => (
                                                         <tr key={l.ledgerId}>
-                                                            <td>{l.createdAt ? new Date(l.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                                                            <td>{formatFullDateTime(l.createdAt)}</td>
                                                             <td>{l.entryType || '—'}</td>
                                                             <td style={{ color: Number(l.amount || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
                                                                 {Number(l.amount || 0).toLocaleString('vi-VN')} VNĐ
@@ -1432,7 +1485,7 @@ const TenantManagement = () => {
                                             <tbody>
                                                 {historyRecords.map((record) => (
                                                     <tr key={record.paymentId}>
-                                                        <td>{record.paymentDate ? new Date(record.paymentDate).toLocaleString('vi-VN') : '—'}</td>
+                                                        <td>{formatFullDateTime(record.paymentDate)}</td>
                                                         <td>{record.amount != null ? `${record.amount.toLocaleString('vi-VN')} VND` : '—'}</td>
                                                         <td>{record.subscriptionMonths || 1}</td>
                                                         <td>{record.status || '—'}</td>
@@ -1699,7 +1752,7 @@ const TenantManagement = () => {
                                                         <td className="sa-table-title-cell">{c.contractTitle}</td>
                                                         <td>{c.fileType}</td>
                                                         <td>{(c.fileSize / 1024).toFixed(1)} KB</td>
-                                                        <td className="sa-date-col">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                                                        <td className="sa-date-col">{formatDateOnly(c.createdAt)}</td>
                                                         <td className="sa-actions-col">
                                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                                 <button 
@@ -1842,16 +1895,16 @@ const TenantManagement = () => {
                                             <td>{r.requestedPlan?.planName || '—'}</td>
                                             <td>{r.requestedMonths}</td>
                                             <td>{r.reason || '—'}</td>
-                                            <td>{r.requestedAt ? new Date(r.requestedAt).toLocaleString('vi-VN') : '—'}</td>
+                                            <td>{formatFullDateTime(r.requestedAt)}</td>
                                             <td>
                                                 <span className={`sa-status-badge ${
                                                     r.status === 'Pending' ? 'pending' : 
                                                     r.status === 'Approved' ? 'active' : 
-                                                    r.status === 'Rejected' ? 'inactive' : ''
+                                                    r.status === 'Rejected' ? 'rejected' : r.status === 'Completed' ? 'completed' : 'inactive'
                                                 }`}>
                                                     {r.status === 'Pending' ? 'Chờ duyệt' : 
                                                      r.status === 'Approved' ? 'Đã duyệt' : 
-                                                     r.status === 'Rejected' ? 'Từ chối' : r.status}
+                                                     r.status === 'Rejected' ? 'Từ chối' : r.status === 'Completed' ? 'Đã thanh toán' : r.status}
                                                 </span>
                                             </td>
                                             <td>
@@ -2027,9 +2080,23 @@ const TenantManagement = () => {
                                                         <td>{inv.tenant?.tenantName || inv.tenantId}</td>
                                                         <td>{inv.packageChangeRequest?.requestedPlan?.planName || '—'}</td>
                                                         <td>{inv.amount?.toLocaleString('vi-VN')} VNĐ</td>
-                                                        <td>{inv.status}</td>
-                                                        <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('vi-VN') : '—'}</td>
-                                                        <td>{inv.createdAt ? new Date(inv.createdAt).toLocaleString('vi-VN') : '—'}</td>
+                                                        <td>
+                                                            <span className={`sa-status-badge ${
+                                                                inv.status === 'Paid' ? 'active' : 
+                                                                inv.status === 'Pending' ? 'pending' : 
+                                                                inv.status === 'AwaitingConfirmation' ? 'pending' : 
+                                                                inv.status === 'Cancelled' ? 'rejected' : 
+                                                                inv.status === 'Expired' ? 'inactive' : 'inactive'
+                                                            }`}>
+                                                                {inv.status === 'Pending' ? 'Chờ thanh toán' : 
+                                                                 inv.status === 'Paid' ? 'Đã thanh toán' : 
+                                                                 inv.status === 'Cancelled' ? 'Đã hủy' : 
+                                                                 inv.status === 'AwaitingConfirmation' ? 'Chờ xác nhận' : 
+                                                                 inv.status === 'Expired' ? 'Hết hạn' : inv.status}
+                                                            </span>
+                                                        </td>
+                                                        <td>{formatDateOnly(inv.dueDate)}</td>
+                                                        <td>{formatFullDateTime(inv.createdAt)}</td>
                                                         <td>
                                                             {inv.status === 'AwaitingConfirmation' && inv.paymentMethod === 'Cash' ? (
                                                                 <button

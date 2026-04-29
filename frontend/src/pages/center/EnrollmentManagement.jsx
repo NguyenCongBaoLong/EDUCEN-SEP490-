@@ -15,6 +15,7 @@ const EnrollmentManagement = () => {
     const [viewingRequest, setViewingRequest] = useState(null);
     const [rejectingRequest, setRejectingRequest] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [processingIds, setProcessingIds] = useState(new Set());
 
     const fetchEnrollmentRequests = useCallback(async (reason = 'manual') => {
         setLoading(true);
@@ -86,27 +87,39 @@ const EnrollmentManagement = () => {
     const handleRejectRequest = (req) => setRejectingRequest(req);
 
     const handleConfirmReject = async (requestId, reason) => {
+        setProcessingIds(prev => new Set(prev).add(requestId));
         try {
             await api.put(`/enrollment-requests/${requestId}/reject`, { reason });
             toast.success('Đã từ chối yêu cầu đăng ký');
             setRejectingRequest(null);
-            // Opt-optimistic update to avoid full reload flicker
             setRequestsList(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
             window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Từ chối thất bại');
+        } finally {
+            setProcessingIds(prev => {
+                const next = new Set(prev);
+                next.delete(requestId);
+                return next;
+            });
         }
     };
 
     const handleApproveClick = async (req) => {
+        setProcessingIds(prev => new Set(prev).add(req.id));
         try {
             await api.put(`/enrollment-requests/${req.id}/approve`);
             toast.success('Đã duyệt yêu cầu đăng ký thành công');
-            // Opt-optimistic update to avoid full reload flicker
             setRequestsList(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
             window.dispatchEvent(new Event('center-sidebar-badge-refresh'));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Duyệt thất bại');
+        } finally {
+            setProcessingIds(prev => {
+                const next = new Set(prev);
+                next.delete(req.id);
+                return next;
+            });
         }
     };
 
@@ -146,6 +159,7 @@ const EnrollmentManagement = () => {
                                 onView={handleViewRequest}
                                 onApprove={handleApproveClick}
                                 onReject={handleRejectRequest}
+                                processingIds={processingIds}
                             />
                         )}
                     </div>
