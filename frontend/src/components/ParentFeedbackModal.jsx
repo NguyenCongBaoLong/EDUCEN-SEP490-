@@ -32,7 +32,6 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
     const validate = () => {
         const e = {};
         if (!form.category) e.category = 'Vui lòng chọn một danh mục.';
-        if (!form.subject.trim()) e.subject = 'Vui lòng nhập tiêu đề.';
         if (!form.content.trim())
             e.content = 'Vui lòng nhập nội dung chi tiết.';
         if (form.rating === 0) e.rating = 'Vui lòng đánh giá mức độ hài lòng.';
@@ -49,13 +48,13 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
 
         setSubmitting(true);
         try {
-            const title = `[${form.category}] ${form.subject}`;
+            const title = `Phản hồi về: ${form.category}`;
             const content = `Đánh giá: ${form.rating}/5\n---\n${form.content}`;
             await api.post('/support-requests', { Title: title, Content: content });
             toast.success('Gửi phản hồi thành công!');
             onSuccess?.();
             onClose();
-            setForm({ category: '', subject: '', content: '', rating: 0 });
+            setForm({ category: '', content: '', rating: 0 });
         } catch (err) {
             toast.error(err.response?.data?.message || 'Gửi phản hồi thất bại.');
         } finally {
@@ -101,22 +100,6 @@ const ParentFeedbackModal = ({ isOpen, onClose, onSuccess }) => {
                                 })}
                             </div>
                             {errors.category && <div className="pf-error-msg"><AlertCircle size={12} /> {errors.category}</div>}
-                        </div>
-
-                        {/* Subject */}
-                        <div className="pf-form-group">
-                            <label>Tiêu đề tóm tắt</label>
-                            <input
-                                className="pf-input"
-                                type="text"
-                                placeholder="Ví dụ: Phản hồi về giáo viên lớp Toán..."
-                                value={form.subject}
-                                onChange={e => {
-                                    setForm(p => ({ ...p, subject: e.target.value }));
-                                    setErrors(p => ({ ...p, subject: undefined }));
-                                }}
-                            />
-                            {errors.subject && <div className="pf-error-msg"><AlertCircle size={12} /> {errors.subject}</div>}
                         </div>
 
                         {/* Rating */}

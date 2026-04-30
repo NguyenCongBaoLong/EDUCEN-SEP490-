@@ -53,7 +53,7 @@ const StudentManagement = () => {
                 api.get('/Classes'),
                 api.get('/admin/users')
             ]);
-            
+
             const parents = parentsRes.data.map(p => ({
                 id: p.userId.toString(),
                 name: p.fullName || p.username,
@@ -64,7 +64,7 @@ const StudentManagement = () => {
             setGradeList(gradesRes.data);
             setClassList(classesRes.data);
             setAllUsers(usersRes.data || []);
-            
+
             await fetchStudents(parents);
         } finally {
             setIsLoading(false);
@@ -110,7 +110,7 @@ const StudentManagement = () => {
         try {
             const res = await api.get('/Students');
             const data = res.data.map((student) => {
-                const linkedParents = parentsData.filter(p => 
+                const linkedParents = parentsData.filter(p =>
                     student.parentIds?.map(id => id.toString()).includes(p.id)
                 );
 
@@ -150,7 +150,7 @@ const StudentManagement = () => {
         const match = grade.toString().match(/\d+/);
         return match ? match[0] : grade.toString();
     };
-    
+
     const filteredStudents = studentList
         .filter(student => student.name.toLowerCase().includes(searchQuery.toLowerCase()) || student.id.toLowerCase().includes(searchQuery.toLowerCase()))
         .filter(student => {
@@ -228,8 +228,8 @@ const StudentManagement = () => {
                     setEditingStudent(studentData);
                     setIsModalOpen(true);
                     setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('set-form-errors', { 
-                            detail: formErrors 
+                        window.dispatchEvent(new CustomEvent('set-form-errors', {
+                            detail: formErrors
                         }));
                     }, 100);
                     return;
@@ -262,6 +262,7 @@ const StudentManagement = () => {
     };
 
     const handleSendAccount = async (studentId) => {
+        const loadingToast = toast.loading("Đang gửi thông tin tài khoản...");
         try {
             await api.post(`/Students/send-account/${studentId}`);
             setStudentList(prev => prev.map(s =>
@@ -269,27 +270,36 @@ const StudentManagement = () => {
                     ? { ...s, accountSent: true, status: 'active' }
                     : s
             ));
+            toast.dismiss(loadingToast);
             toast.success('Đã gửi tài khoản cho học sinh!');
         } catch (error) {
+            toast.dismiss(loadingToast);
             toast.error(error.response?.data?.message || error.response?.data || 'Gửi tài khoản thất bại');
         }
     };
 
     const handleBulkSendAccount = async () => {
         if (selectedStudentIds.length === 0) return;
+        const loadingToast = toast.loading(`Đang gửi ${selectedStudentIds.length} tài khoản...`);
         let successCount = 0;
         let failCount = 0;
-        await Promise.allSettled(
-            selectedStudentIds.map(id =>
-                api.post(`/Students/send-account/${id}`)
-                    .then(() => { successCount++; })
-                    .catch(() => { failCount++; })
-            )
-        );
-        fetchStudents();
-        setSelectedStudentIds([]);
-        if (successCount > 0) toast.success(`Đã gửi tài khoản cho ${successCount} học sinh!`);
-        if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
+        try {
+            await Promise.allSettled(
+                selectedStudentIds.map(id =>
+                    api.post(`/Students/send-account/${id}`)
+                        .then(() => { successCount++; })
+                        .catch(() => { failCount++; })
+                )
+            );
+            fetchStudents();
+            setSelectedStudentIds([]);
+            toast.dismiss(loadingToast);
+            if (successCount > 0) toast.success(`Đã gửi tài khoản cho ${successCount} học sinh!`);
+            if (failCount > 0) toast.error(`${failCount} tài khoản gửi thất bại (học sinh chưa có email?)`);
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            toast.error("Có lỗi xảy ra trong quá trình gửi hàng loạt.");
+        }
     };
 
     const handleImportStudents = (importResults) => {

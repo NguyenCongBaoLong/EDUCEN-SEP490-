@@ -43,13 +43,21 @@ const ClassCard = ({ classData, onEdit, onDelete, readOnly = false, basePath = '
                 </div>
                 <div className="class-card-status-wrapper">
                     {(() => {
-                        const hasStarted = classData.startDate ? new Date(classData.startDate) <= new Date() : false;
-                        const statusKey = classData.status !== 'active' 
+                        const now = new Date();
+                        now.setHours(0, 0, 0, 0);
+                        const start = classData.startDate ? new Date(classData.startDate) : null;
+                        if (start) start.setHours(0, 0, 0, 0);
+                        
+                        const hasStarted = start ? start <= now : false;
+                        const isActive = classData.status === 'active';
+                        
+                        const statusKey = !isActive
                             ? 'inactive' 
-                            : (classData.completedSessions === 0 && !hasStarted ? 'notstarted' : 'active');
-                        const statusLabel = classData.status !== 'active' 
+                            : (!hasStarted ? 'notstarted' : 'active');
+                        
+                        const statusLabel = !isActive
                             ? (classData.status === 'completed' ? 'Đã kết thúc' : 'Tạm dừng')
-                            : (classData.completedSessions === 0 && !hasStarted ? 'Chưa học' : 'Đang học');
+                            : (!hasStarted ? 'Chưa học' : 'Đang học');
                         
                         return (
                             <span className={`class-card-status ${statusKey}`}>

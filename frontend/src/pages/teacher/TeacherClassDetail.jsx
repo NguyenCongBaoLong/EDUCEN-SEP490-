@@ -176,7 +176,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
     const [classData, setClassData] = useState({
         id: null, name: '', subject: '', gradeLevel: '', status: 'active',
-        schedule: '', scheduleTime: '', startDate: '', duration: '',
+        schedule: '', scheduleTime: '', scheduleGroups: {}, startDate: '', duration: '',
         mainTeacher: { name: '', initials: '?' },
         assistant: null,
         sessions: [],
@@ -232,10 +232,19 @@ const TeacherClassDetail = ({ isTA = false }) => {
 
             const scheduleSlots = c.scheduleSlots || [];
             const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-            const scheduleStr = scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(' & ');
-            const timeStr = scheduleSlots.length > 0
-                ? `${scheduleSlots[0].startTime} - ${scheduleSlots[0].endTime}`
-                : '';
+            
+            const groups = {};
+            scheduleSlots.forEach(s => {
+                const time = `${s.startTime} - ${s.endTime}`;
+                if (!groups[time]) groups[time] = [];
+                groups[time].push(dayNames[s.dayOfWeek]);
+            });
+
+            const scheduleStr = Object.entries(groups)
+                .map(([time, days]) => `${days.join(' & ')} (${time})`)
+                .join('; ');
+
+            const timeStr = ''; // Giờ đã được gộp vào scheduleStr ở trên
 
             setClassInfo(c);
             setClassData(prev => ({
@@ -246,6 +255,7 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 gradeLevel: c.gradeName || '',
                 schedule: scheduleStr,
                 scheduleTime: timeStr,
+                scheduleGroups: groups, // Lưu vào state
                 startDate: c.startDate ? formatDateVN(c.startDate) : '',
                 duration: c.startDate && c.endDate
                     ? `${Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / (1000 * 60 * 60 * 24 * 7))} tuần`
@@ -266,7 +276,9 @@ const TeacherClassDetail = ({ isTA = false }) => {
                 }) : mappedSessions,
                 classesCompleted: mappedSessions.filter(s => isPast(s.date)).length,
                 totalClasses: mappedSessions.length,
-                roomName: c.roomName || (scheduleSlots.length > 0 ? scheduleSlots[0].roomName : 'Chưa gán phòng'),
+                roomName: c.roomName || (scheduleSlots.length > 0 
+                    ? Array.from(new Set(scheduleSlots.map(s => s.roomName).filter(Boolean))).join(', ') 
+                    : 'Chưa gán phòng'),
             }));
 
             setStudents(mappedStudents);
@@ -673,13 +685,22 @@ const TeacherClassDetail = ({ isTA = false }) => {
                         <div className="cd-title-row">
                             <h1>{classData.name}</h1>
                             {(() => {
-                                const hasStarted = classData.startDate ? new Date(classData.startDate) <= new Date() : false;
-                                const statusKey = classData.status === 'active' 
-                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'notstarted' : 'active') 
-                                    : 'inactive';
-                                const statusLabel = classData.status === 'active' 
-                                    ? (classData.classesCompleted === 0 && !hasStarted ? 'Chưa học' : 'Đang hoạt động') 
-                                    : 'Tạm dừng';
+                                const now = new Date();
+                                now.setHours(0, 0, 0, 0);
+                                const start = classInfo?.startDate ? new Date(classInfo.startDate) : null;
+                                if (start) start.setHours(0, 0, 0, 0);
+
+                                const hasStarted = start ? start <= now : false;
+                                const isActive = classData.status === 'active';
+
+                                const statusKey = !isActive 
+                                    ? 'inactive'
+                                    : (!hasStarted ? 'notstarted' : 'active');
+                                
+                                const statusLabel = !isActive 
+                                    ? (classData.status === 'completed' ? 'Đã kết thúc' : 'Tạm dừng') 
+                                    : (!hasStarted ? 'Chưa học' : 'Đang học');
+                                
                                 return (
                                     <span className={`cd-status-badge ${statusKey}`}>
                                         {statusLabel}
@@ -691,22 +712,31 @@ const TeacherClassDetail = ({ isTA = false }) => {
                             Môn: {classData.subject} &nbsp;•&nbsp; Khối lớp: {classData.gradeLevel}
                         </p>
                     </div>
-
                 </div>
 
                 <div className="cd-info-cards">
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Calendar size={16} /> LỊCH HỌC</div>
-                        <div className="cd-info-card-value">{classData.schedule}</div>
-                        <div className="cd-info-card-sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                            <span>{classData.scheduleTime}</span>
-                            <span style={{ color: '#4f46e5', fontWeight: 600 }}>{classData.roomName}</span>
+                        <div className="cd-info-card-value">
+                            {classData.schedule}
+                        </div>
+                        <div className="cd-info-card-sub" style={{ color: '#4f46e5', fontWeight: 600 }}>
+                            <MapPin size={14} /> {classData.roomName}
                         </div>
                     </div>
+                    
                     <div className="cd-info-card">
                         <div className="cd-info-card-label"><Clock size={16} /> THỜI GIAN</div>
                         <div className="cd-info-card-value">{classData.duration}</div>
-                        <div className="cd-info-card-sub">Bắt đầu {classData.startDate}</div>
+                        <div className="cd-info-card-sub">Bắt đầu: {classData.startDate} • {classData.totalClasses} buổi</div>
+                    </div>
+
+                    <div className="cd-info-card">
+                        <div className="cd-info-card-label"><CheckCircle size={16} /> TIẾN ĐỘ</div>
+                        <div className="cd-info-card-value">
+                            {Math.round((classData.classesCompleted / (classData.totalClasses || 1)) * 100)}%
+                        </div>
+                        <div className="cd-info-card-sub">Đã học {classData.classesCompleted}/{classData.totalClasses} buổi</div>
                     </div>
                 </div>
 
@@ -854,22 +884,20 @@ const TeacherClassDetail = ({ isTA = false }) => {
                                     <div className="cd-staff-list">
                                         <div className="cd-staff-item">
                                             <div className="cd-staff-avatar">{classData.mainTeacher.initials}</div>
-                                            <div className="cd-staff-info">
-                                                <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
-                                                <div className="cd-staff-name">{classData.mainTeacher.name}</div>
-                                                <div className="cd-staff-sub">{classData.mainTeacher.subject}</div>
-                                            </div>
-                                        </div>
-                                        {classData.assistant && (
-                                            <div className="cd-staff-item">
-                                                <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
                                                 <div className="cd-staff-info">
-                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trợ giảng (TA)</div>
-                                                    <div className="cd-staff-name">{classData.assistant.name}</div>
-                                                    <div className="cd-staff-sub">{classData.assistant.subject}</div>
+                                                    <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
+                                                    <div className="cd-staff-name">{classData.mainTeacher.name}</div>
                                                 </div>
                                             </div>
-                                        )}
+                                            {classData.assistant && (
+                                                <div className="cd-staff-item">
+                                                    <div className="cd-staff-avatar assistant">{classData.assistant.initials}</div>
+                                                    <div className="cd-staff-info">
+                                                        <div className="cd-staff-role" style={{ color: '#6366f1' }}>Trợ giảng (TA)</div>
+                                                        <div className="cd-staff-name">{classData.assistant.name}</div>
+                                                    </div>
+                                                </div>
+                                            )}
                                     </div>
                                 </div>
 

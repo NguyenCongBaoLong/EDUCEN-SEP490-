@@ -306,7 +306,7 @@ const StudentClassDetail = () => {
     let progressTrend = { label: 'Chưa đủ dữ liệu', icon: <MinusCircle size={14} />, color: '#94a3b8' };
     if (gradedAsms.length >= 2) {
         const sortedByDate = [...gradedAsms].sort((a, b) => new Date(b.currentSubmission.submittedAt || b.currentSubmission.createdAt) - new Date(a.currentSubmission.submittedAt || a.currentSubmission.createdAt));
-        const recentAvg = sortedByDate.slice(-2).reduce((acc, a) => acc + a.currentSubmission.score, 0) / 2;
+        const recentAvg = sortedByDate.slice(0, 2).reduce((acc, a) => acc + a.currentSubmission.score, 0) / 2;
         const overallAvg = parseFloat(gpa);
         const diff = recentAvg - overallAvg;
 
@@ -370,46 +370,62 @@ const StudentClassDetail = () => {
                 {/* Page Header */}
                 <div className="scd-page-header" style={{ '--accent': accent }}>
                     <div className="scd-header-accent" style={{ background: accent }} />
-                    <div className="scd-title-block">
-                        <div className="scd-title-row">
-                        <h1>{classInfo.className}</h1>
-                        {(() => {
-                            const hasStarted = classInfo.startDate ? new Date(classInfo.startDate) <= new Date() : false;
-                            const statusKey = classInfo.status === 'Active' 
-                                ? (passedSessionsCount === 0 && !hasStarted ? 'notstarted' : 'active') 
-                                : 'inactive';
-                            const statusLabel = classInfo.status === 'Active' 
-                                ? (passedSessionsCount === 0 && !hasStarted ? 'Chưa học' : 'Đang học') 
-                                : 'Đã kết thúc';
-                            return (
-                                <span className={`scd-status-badge ${statusKey}`}>
-                                    {statusLabel}
-                                </span>
-                            );
-                        })()}
-                    </div>
-                        <p className="scd-title-meta">
-                            Môn: {classInfo.subjectName} &nbsp;•&nbsp; {classInfo.teacherName ? `GV: ${classInfo.teacherName}` : 'Chưa có GV'}
-                        </p>
+                    <div className="scd-header-content">
+                        <div className="scd-title-block">
+                            <div className="scd-title-row">
+                                <h1>{classInfo.className}</h1>
+                                {(() => {
+                                    const hasStarted = classInfo.startDate ? new Date(classInfo.startDate) <= new Date() : false;
+                                    const statusKey = classInfo.status === 'Active' 
+                                        ? (passedSessionsCount === 0 && !hasStarted ? 'notstarted' : 'active') 
+                                        : 'inactive';
+                                    const statusLabel = classInfo.status === 'Active' 
+                                        ? (passedSessionsCount === 0 && !hasStarted ? 'Chưa học' : 'Đang học') 
+                                        : 'Đã kết thúc';
+                                    return (
+                                        <span className={`scd-status-badge ${statusKey}`}>
+                                            {statusLabel}
+                                        </span>
+                                    );
+                                })()}
+                            </div>
+                            <p className="scd-title-meta">
+                                Môn: {classInfo.subjectName} &nbsp;•&nbsp; {classInfo.teacherName ? `GV: ${classInfo.teacherName}` : 'Chưa có GV'}
+                            </p>
+                        </div>
+
+                        <div className="scd-header-schedule">
+                            <div className="scd-header-label">
+                                <Calendar size={14} /> 
+                                <span>LỊCH HỌC CHI TIẾT</span>
+                            </div>
+                            <div className="scd-header-schedule-list">
+                                {classInfo.scheduleSlots?.length > 0 ? (
+                                    classInfo.scheduleSlots.map((slot, idx) => {
+                                        const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+                                        return (
+                                            <div key={idx} className="scd-header-schedule-item">
+                                                <span className="scd-day-tag">{days[slot.dayOfWeek]}</span>
+                                                <span className="scd-time-tag">{slot.startTime} - {slot.endTime}</span>
+                                                {slot.roomName && (
+                                                    <span className="scd-room-tag">
+                                                        <Clock size={12} /> {slot.roomName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <span className="scd-no-schedule">Chưa có lịch học</span>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Info Cards */}
                 <div className="scd-info-cards">
-                    <div className="scd-info-card">
-                        <div className="scd-info-label"><Calendar size={15} /> LỊCH HỌC</div>
-                        <div className="scd-info-value">
-                            {classInfo.scheduleSlots?.length > 0 
-                                ? classInfo.scheduleSlots.map(s => {
-                                    const days = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-                                    return days[s.dayOfWeek];
-                                  }).join(", ")
-                                : "N/A"}
-                        </div>
-                        <div className="scd-info-sub">
-                            {classInfo.scheduleSlots?.[0]?.startTime} - {classInfo.scheduleSlots?.[0]?.endTime}
-                        </div>
-                    </div>
+
                     <div className="scd-info-card">
                         <div className="scd-info-label"><Clock size={15} /> THỜI GIAN</div>
                         <div className="scd-info-value">{formatDate(classInfo.startDate)}</div>
@@ -517,22 +533,21 @@ const StudentClassDetail = () => {
                                     <div className="cd-staff-list">
                                         <div className="cd-staff-item">
                                             <div className="cd-staff-avatar" style={{ background: accent }}>{classInfo.teacherName?.charAt(0) || 'G'}</div>
-                                            <div className="cd-staff-info">
-                                                <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
-                                                <div className="cd-staff-name">{classInfo.teacherName || 'Chưa phân công'}</div>
-                                                <div className="cd-staff-sub">{classInfo.subjectName}</div>
-                                            </div>
-                                        </div>
-                                        {classInfo.assistantName && (
-                                            <div className="cd-staff-item">
-                                                <div className="cd-staff-avatar assistant">{classInfo.assistantName.charAt(0)}</div>
                                                 <div className="cd-staff-info">
-                                                    <div className="cd-staff-role" style={{ color: '#6366f1' }}>TRỢ GIẢNG</div>
-                                                    <div className="cd-staff-name">{classInfo.assistantName}</div>
-                                                    <div className="cd-staff-sub">Trợ giảng lớp học</div>
+                                                    <div className="cd-staff-role">GIÁO VIÊN CHÍNH</div>
+                                                    <div className="cd-staff-name">{classInfo.teacherName || 'Chưa phân công'}</div>
                                                 </div>
                                             </div>
-                                        )}
+                                            {classInfo.assistantName && (
+                                                <div className="cd-staff-item">
+                                                    <div className="cd-staff-avatar assistant">{classInfo.assistantName.charAt(0)}</div>
+                                                    <div className="cd-staff-info">
+                                                        <div className="cd-staff-role" style={{ color: '#6366f1' }}>TRỢ GIẢNG</div>
+                                                        <div className="cd-staff-name">{classInfo.assistantName}</div>
+                                                        <div className="cd-staff-sub">Trợ giảng lớp học</div>
+                                                    </div>
+                                                </div>
+                                            )}
                                     </div>
                                 </div>
 

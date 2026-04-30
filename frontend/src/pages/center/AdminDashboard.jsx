@@ -170,6 +170,7 @@ const AdminDashboard = () => {
         };
 
         fetchAllData();
+        fetchInbox();
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
@@ -631,17 +632,17 @@ const AdminDashboard = () => {
                     if (msg?.type === 'support' && !msg.adminResponse) {
                         return (
                             <div style={{ marginTop: '1rem' }}>
-                                <textarea 
-                                    className="zalo-textarea" 
-                                    rows={3} 
-                                    placeholder="Phản hồi giáo viên..." 
-                                    value={replyText} 
-                                    onChange={(e) => setReplyText(e.target.value)} 
+                                <textarea
+                                    className="zalo-textarea"
+                                    rows={3}
+                                    placeholder="Phản hồi giáo viên..."
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
                                 />
-                                <button 
-                                    className="zalo-send-btn" 
-                                    style={{ marginTop: '0.5rem' }} 
-                                    disabled={replying} 
+                                <button
+                                    className="zalo-send-btn"
+                                    style={{ marginTop: '0.5rem' }}
+                                    disabled={replying}
                                     onClick={() => handleReply(msg)}
                                 >
                                     Gửi phản hồi

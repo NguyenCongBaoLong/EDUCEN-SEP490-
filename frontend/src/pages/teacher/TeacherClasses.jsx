@@ -29,9 +29,15 @@ const TeacherClasses = ({ isTA = false }) => {
                     let scheduleStr = 'Chưa xếp lịch';
                     if (c.scheduleSlots && c.scheduleSlots.length > 0) {
                         const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-                        const days = c.scheduleSlots.map(s => dayNames[s.dayOfWeek]).join(', ');
-                        const time = `${c.scheduleSlots[0].startTime} - ${c.scheduleSlots[0].endTime}`;
-                        scheduleStr = `${days} (${time})`;
+                        const groups = {};
+                        c.scheduleSlots.forEach(s => {
+                            const time = `${s.startTime} - ${s.endTime}`;
+                            if (!groups[time]) groups[time] = [];
+                            groups[time].push(dayNames[s.dayOfWeek]);
+                        });
+                        scheduleStr = Object.entries(groups)
+                            .map(([time, days]) => `${days.join(', ')} (${time})`)
+                            .join('; ');
                     }
 
                     return {
@@ -39,13 +45,13 @@ const TeacherClasses = ({ isTA = false }) => {
                         name: c.className,
                         subject: c.subjectName || '',
                         gradeName: c.gradeName || '',
-                        mainTeacher: { 
-                            name: c.teacherName || 'Chưa phân công', 
-                            initials: (c.teacherName || '?').split(' ').pop().charAt(0).toUpperCase() 
+                        mainTeacher: {
+                            name: c.teacherName || 'Chưa phân công',
+                            initials: (c.teacherName || '?').split(' ').pop().charAt(0).toUpperCase()
                         },
-                        assistant: c.assistantName ? { 
-                            name: c.assistantName, 
-                            initials: c.assistantName.split(' ').pop().charAt(0).toUpperCase() 
+                        assistant: c.assistantName ? {
+                            name: c.assistantName,
+                            initials: c.assistantName.split(' ').pop().charAt(0).toUpperCase()
                         } : null,
                         currentStudents: c.studentCount ?? 0,
                         maxStudents: c.maxStudents || c.MaxStudents || 30,
@@ -53,7 +59,10 @@ const TeacherClasses = ({ isTA = false }) => {
                         status: (c.status || 'Active').toLowerCase() === 'active' ? 'active' : 'inactive',
                         startDate: c.startDate,
                         totalSessions: c.totalSessions || 0,
-                        completedSessions: c.completedSessions || 0
+                        completedSessions: c.completedSessions || 0,
+                        roomName: c.roomName || (c.scheduleSlots && c.scheduleSlots.length > 0
+                            ? Array.from(new Set(c.scheduleSlots.map(s => s.roomName).filter(Boolean))).join(', ')
+                            : 'Chưa gán phòng')
                     };
                 });
                 setClasses(normalized);
@@ -116,8 +125,8 @@ const TeacherClasses = ({ isTA = false }) => {
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
                         <option value="">Tất cả trạng thái</option>
-                        <option value="active">Đang hoạt động</option>
-                        <option value="inactive">Tạm dừng</option>
+                        <option value="active">Đang học</option>
+                        <option value="inactive">Đã kết thúc</option>
                     </select>
                 </div>
 

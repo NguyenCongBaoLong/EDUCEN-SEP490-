@@ -8,7 +8,7 @@
 .cd-main {
     margin-left: 260px;
     flex: 1;
-    padding: 2rem 2.5rem;
+    padding: 1.25rem 1.75rem;
     max-width: calc(100vw - 260px);
 }
 
@@ -19,7 +19,7 @@
     gap: 0.5rem;
     font-size: 0.875rem;
     color: #6b7280;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .cd-back {
@@ -51,7 +51,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .cd-title-row {
@@ -63,7 +63,7 @@
 }
 
 .cd-title-row h1 {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: #1e293b;
     margin: 0;
@@ -94,9 +94,9 @@
 }
 
 .cd-title-meta {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: #64748b;
-    margin: 0 0 1rem 0;
+    margin: 0 0 0.75rem 0;
 }
 
 .cd-header-more-info {
@@ -209,8 +209,14 @@
 .cd-info-card {
     background: white;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+    border-radius: 10px;
+    padding: 0.875rem 1.125rem;
+    transition: transform 0.2s;
+}
+
+.cd-info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .cd-info-card-label {
@@ -226,15 +232,54 @@
 }
 
 .cd-info-card-value {
-    font-size: 1.1875rem;
+    font-size: 1.0625rem;
     font-weight: 700;
     color: #111827;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.125rem;
 }
 
 .cd-info-card-sub {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* --- Header Info Boxes --- */
+.cd-header-more-info {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.cd-header-info-box {
+    flex: 1;
+    min-width: 280px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.cd-info-box-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #2563eb;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.cd-info-box-content {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-height: 80px;
+    overflow-y: auto;
 }
 
 /* ─── Content Grid ───────────────────────────────────── */
@@ -266,7 +311,7 @@
 }
 
 .cd-card-header h3 {
-    font-size: 1.0625rem;
+    font-size: 0.9375rem;
     font-weight: 700;
     color: #111827;
     margin: 0;
@@ -277,12 +322,12 @@
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.4rem 0.875rem;
+    padding: 0.35rem 0.75rem;
     border: none;
-    border-radius: 7px;
+    border-radius: 6px;
     background: #2563eb;
     color: white;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
@@ -342,7 +387,7 @@
 .cd-student-name {
     font-weight: 600;
     color: #111827;
-    font-size: 0.9rem;
+    font-size: 0.8125rem;
 }
 
 .cd-student-id {
@@ -663,12 +708,12 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 22px;
+    padding: 0.5rem 1.25rem;
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 0.875rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -730,11 +775,11 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.75rem 1.125rem;
+    padding: 0.625rem 1rem;
     border: none;
     background: none;
     color: #6b7280;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
     border-bottom: 2px solid transparent;
