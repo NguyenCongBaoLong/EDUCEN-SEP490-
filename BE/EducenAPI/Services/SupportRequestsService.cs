@@ -328,7 +328,12 @@ namespace EducenAPI.Services
             if (!success)
                 throw new Exception("Có lỗi xảy ra khi cập nhật lịch thực tế từ ClassService.");
 
-            _logger.LogInformation("[ApplyScheduleChange] UpdateClassAsync SUCCESS for Request {RequestId}", request.Id);
+            if (_context.Entry(request).State == EntityState.Detached)
+            {
+                _context.SupportRequests.Attach(request);
+            }
+
+                _logger.LogInformation("[ApplyScheduleChange] UpdateClassAsync SUCCESS for Request {RequestId}", request.Id);
             }
         }
 

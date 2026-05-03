@@ -262,11 +262,30 @@ if (request == null)
             var activeSubscription = await GetActiveSubscriptionAsync(request.TenantId);
             ValidateChangeRules(activeSubscription, request.RequestedPlan);
 
-            var pricing = CalculateChangePricing(
-                request.RequestedPlan,
-                request.RequestedMonths,
-                request.Tenant.CreditBalance,
-                activeSubscription);
+            // Phân biệt gia hạn (extend) vs đổi gói (change)
+            bool isExtend = request.CurrentPlanId == request.RequestedPlanId;
+            
+            ChangePricingResult pricing;
+            if (isExtend)
+            {
+                // Gia hạn: chỉ tính tổng tiền, không trừ credit
+                var totalAmount = request.RequestedPlan.Price * request.RequestedMonths;
+                pricing = new ChangePricingResult
+                {
+                    TotalAmount = totalAmount,
+                    CurrentCredit = 0,  // Không sử dụng credit
+                    AmountToCharge = totalAmount  // Phải trả toàn bộ
+                };
+            }
+            else
+            {
+                // Đổi gói: tính toán chi phí với credit shortage
+                pricing = CalculateChangePricing(
+                    request.RequestedPlan,
+                    request.RequestedMonths,
+                    request.Tenant.CreditBalance,
+                    activeSubscription);
+            }
 
             var invoice = new Invoice
             {
@@ -280,7 +299,7 @@ if (request == null)
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy,
                 PaidAt = pricing.AmountToCharge <= 0 ? now : null,
-                PaymentNote = $"Gói: {request.RequestedPlan.PlanName} | {request.RequestedMonths} tháng | Giá gói: {pricing.TotalAmount:N0} VND | {BuildPricingNote(pricing)}"
+                PaymentNote = $"Gói: {request.RequestedPlan.PlanName} | {request.RequestedMonths} tháng | Giá gói: {pricing.TotalAmount:N0} VND | {(isExtend ? "Gia hạn" : BuildPricingNote(pricing))}"
             };
 
             _context.Invoices.Add(invoice);
@@ -631,13 +650,27 @@ if (invoice == null)
             var currentSub = await GetActiveSubscriptionAsync(request.TenantId);
             ValidateChangeRules(currentSub, request.RequestedPlan);
 
-            var pricing = CalculateChangePricing(
-                request.RequestedPlan,
-                request.RequestedMonths,
-                tenant.CreditBalance,
-                currentSub);
+            // Phân biệt gia hạn vs đổi gói
+            bool isExtend = request.CurrentPlanId == request.RequestedPlanId;
+            decimal expectedAmount;
 
-            if (!AmountEquals(pricing.AmountToCharge, invoice.Amount))
+            if (isExtend)
+            {
+                // Gia hạn: chỉ tính tổng tiền, không trừ credit
+                expectedAmount = request.RequestedPlan.Price * request.RequestedMonths;
+            }
+            else
+            {
+                // Đổi gói: tính credit deduction như cũ
+                var pricing = CalculateChangePricing(
+                    request.RequestedPlan,
+                    request.RequestedMonths,
+                    tenant.CreditBalance,
+                    currentSub);
+                expectedAmount = pricing.AmountToCharge;
+            }
+
+            if (!AmountEquals(expectedAmount, invoice.Amount))
                 throw new Exception("Hóa đơn không còn khớp với công thức bù trừ credit hiện tại.");
 
             if (invoice.Amount > 0 &&
