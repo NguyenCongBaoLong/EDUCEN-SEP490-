@@ -251,6 +251,7 @@ namespace EducenAPI.Services
 
             var classEntity = await _context.Classes
                 .Include(c => c.Schedules)
+                    .ThenInclude(s => s.Sessions)
                 .FirstOrDefaultAsync(c => c.ClassId == parsed.ClassId.Value);
                 
             if (classEntity == null)
@@ -259,8 +260,10 @@ namespace EducenAPI.Services
             _logger.LogInformation("[ApplyScheduleChange] Found class {ClassName}. Current schedule count: {Count}", 
                 classEntity.ClassName, classEntity.Schedules?.Count ?? 0);
 
-            // 1. Chuan bi danh sach slots moi
-            var currentSlots = classEntity.Schedules.Select(s => new EducenAPI.DTOs.Classes.CreateScheduleSlotDto
+            // 1. Chuan bi danh sach slots moi (chỉ lấy các slot định kỳ - có Sessions.Count != 1)
+            var currentSlots = classEntity.Schedules
+                .Where(s => s.Sessions.Count != 1)
+                .Select(s => new EducenAPI.DTOs.Classes.CreateScheduleSlotDto
             {
                 Slot = s.ScheduleId,
                 DayOfWeek = s.DayOfWeek,
@@ -344,6 +347,7 @@ namespace EducenAPI.Services
 
             // Find the session to change
             var targetDate = parsed.TargetSessionDate.Value.Date;
+            Schedule? originalSchedule = null;
             var targetSession = await _context.ClassSessions
                 .Include(s => s.Schedule)
                 .FirstOrDefaultAsync(s => s.ClassId == classEntity.ClassId && s.SessionDate.Date == targetDate);
@@ -363,7 +367,6 @@ namespace EducenAPI.Services
                     .Where(s => s.ClassId == classEntity.ClassId && s.DayOfWeek == parsed.CurrentDayOfWeek.Value)
                     .ToListAsync();
 
-                Schedule originalSchedule = null;
                 originalSchedule = classSchedules.FirstOrDefault(s => 
                     s.StartTime.ToString() == parsed.CurrentStartTime.Value.ToString("HH:mm") &&
                     s.EndTime.ToString() == parsed.CurrentEndTime.Value.ToString("HH:mm"));
@@ -409,19 +412,54 @@ namespace EducenAPI.Services
             var newDate = targetDate;
             if (parsed.CurrentDayOfWeek.Value != parsed.NewDayOfWeek.Value)
             {
-                // Calculate new date based on day difference
-                var dayDiff = parsed.NewDayOfWeek.Value - parsed.CurrentDayOfWeek.Value;
+                // Treat Sunday as 7 to ensure it's calculated as the END of the week (standard in Vietnam)
+                int currentDay = parsed.CurrentDayOfWeek.Value == 0 ? 7 : parsed.CurrentDayOfWeek.Value;
+                int newDay = parsed.NewDayOfWeek.Value == 0 ? 7 : parsed.NewDayOfWeek.Value;
+
+                var dayDiff = newDay - currentDay;
                 newDate = targetDate.AddDays(dayDiff);
             }
 
-            var oldScheduleId = targetSession.ScheduleId;
+            // Determine the room to use if "keep same room" is requested (RoomId is null or 0)
+            // We should use the room from the session being changed, or its original schedule, or the class default.
+            int? currentRoomId = targetSession?.Schedule?.RoomId ?? originalSchedule?.RoomId ?? classEntity.RoomId;
+            int? resolvedRoomId = (parsed.RequestedRoomId.HasValue && parsed.RequestedRoomId.Value > 0)
+                                    ? parsed.RequestedRoomId.Value
+                                    : currentRoomId;
+
+            // Resolve new schedule ID based on requested time
+            var newSchedule = await _context.Schedules
+                .FirstOrDefaultAsync(s => s.ClassId == classEntity.ClassId 
+                                     && s.DayOfWeek == parsed.NewDayOfWeek.Value 
+                                     && s.StartTime == parsed.NewStartTime.Value 
+                                     && s.EndTime == parsed.NewEndTime.Value 
+                                     && s.RoomId == resolvedRoomId);
+            
+            if (newSchedule == null)
+            {
+                _logger.LogInformation("[ApplySingleSessionChange] No existing schedule matches {DayOfWeek} ({Start}-{End}) in room {RoomId}. Creating new schedule record.",
+                    parsed.NewDayOfWeek.Value, parsed.NewStartTime.Value, parsed.NewEndTime.Value, resolvedRoomId);
+                    
+                newSchedule = new Schedule
+                {
+                    ClassId = classEntity.ClassId,
+                    DayOfWeek = parsed.NewDayOfWeek.Value,
+                    StartTime = parsed.NewStartTime.Value,
+                    EndTime = parsed.NewEndTime.Value,
+                    RoomId = resolvedRoomId
+                };
+                _context.Schedules.Add(newSchedule);
+                await _context.SaveChangesAsync();
+            }
+            var newScheduleId = newSchedule.ScheduleId;
+
             targetSession.Status = "Rescheduled";
 
             var movedSession = await _context.ClassSessions
                 .FirstOrDefaultAsync(s =>
                     s.ClassId == classEntity.ClassId &&
                     s.SessionDate.Date == newDate.Date &&
-                    s.ScheduleId == oldScheduleId);
+                    s.ScheduleId == newScheduleId);
 
             if (movedSession == null)
             {
@@ -429,7 +467,7 @@ namespace EducenAPI.Services
                 {
                     ClassId = classEntity.ClassId,
                     SessionDate = newDate,
-                    ScheduleId = oldScheduleId,
+                    ScheduleId = newScheduleId,
                     Status = "Scheduled"
                 };
                 _context.ClassSessions.Add(movedSession);
@@ -441,8 +479,8 @@ namespace EducenAPI.Services
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("[ApplySingleSessionChange] SUCCESS: Session {SessionId} moved from {OldDate} to {NewDate}",
-                targetSession.SessionId, targetDate, newDate);
+            _logger.LogInformation("[ApplySingleSessionChange] SUCCESS: Session moved from {OldDate} to {NewDate} with ScheduleId {NewScheduleId} ({StartTime}-{EndTime})",
+                targetDate, newDate, newScheduleId, newSchedule.StartTime, newSchedule.EndTime);
         }
 
         private static EducenAPI.DTOs.Classes.CreateScheduleSlotDto? ResolveTargetSlot(List<EducenAPI.DTOs.Classes.CreateScheduleSlotDto> slots, ParsedScheduleChangeRequest parsed)

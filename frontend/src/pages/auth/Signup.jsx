@@ -157,7 +157,13 @@ const Signup = () => {
             setTouched({});
         } catch (error) {
             console.error('Lỗi khi gửi đăng ký:', error);
-            toast.error('Có lỗi xảy ra khi gửi đăng ký. Vui lòng thử lại sau.');
+            if (error.response?.data?.errors) {
+                console.table(error.response.data.errors);
+                const firstError = Object.values(error.response.data.errors)[0];
+                toast.error(Array.isArray(firstError) ? firstError[0] : 'Thông tin không hợp lệ.');
+            } else {
+                toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi đăng ký. Vui lòng thử lại sau.');
+            }
         } finally {
             setIsSubmitting(false);
         }

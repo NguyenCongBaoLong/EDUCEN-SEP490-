@@ -81,10 +81,10 @@ namespace EducenAPI.Services
                     CreatedAt = DateTime.Now,
                     PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules
-                        .Where(s => !s.Sessions.Any() || 
+                        .Where(s => s.Sessions.Count != 1 && (!s.Sessions.Any() || 
                                     ((c.EndDate == null || c.EndDate >= today) 
                                         ? s.Sessions.Any(sess => sess.SessionDate >= today) 
-                                        : s.Sessions.Any(sess => sess.SessionDate >= c.EndDate.Value.AddDays(-7))))
+                                        : s.Sessions.Any(sess => sess.SessionDate >= c.EndDate.Value.AddDays(-7)))))
                         .Select(s => new CreateScheduleSlotDto
                     {
                         Slot = s.ScheduleId,
@@ -139,15 +139,15 @@ namespace EducenAPI.Services
                     Status = c.Status,
                     StudentCount = c.Students.Count,
                     MaxStudents = c.MaxStudents,
-                    TotalSessions = c.Sessions.Count,
-                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
+                    TotalSessions = c.Sessions.Count(s => s.Status != "Rescheduled"),
+                    CompletedSessions = c.Sessions.Count(s => (s.Status == "Completed" || s.SessionDate < DateTime.Now) && s.Status != "Rescheduled"),
                     CreatedAt = DateTime.Now,
                     PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules
-                        .Where(s => !s.Sessions.Any() || 
+                        .Where(s => s.Sessions.Count != 1 && (!s.Sessions.Any() || 
                                     ((c.EndDate == null || c.EndDate >= today) 
                                         ? s.Sessions.Any(sess => sess.SessionDate >= today) 
-                                        : s.Sessions.Any(sess => sess.SessionDate >= c.EndDate.Value.AddDays(-7))))
+                                        : s.Sessions.Any(sess => sess.SessionDate >= c.EndDate.Value.AddDays(-7)))))
                         .Select(s => new CreateScheduleSlotDto
                     {
                         Slot = s.ScheduleId,
@@ -875,7 +875,7 @@ namespace EducenAPI.Services
                         }
                     }
 
-                    var existingSlots = existingClass.Schedules.Select(s => new CreateScheduleSlotDto
+                    var existingSlots = existingClass.Schedules.Where(s => s.Sessions.Count != 1).Select(s => new CreateScheduleSlotDto
                     {
                         Slot = s.ScheduleId,
                         DayOfWeek = s.DayOfWeek,
@@ -902,12 +902,14 @@ namespace EducenAPI.Services
                             // Tìm các buổi học cần giữ lại:
                             // 1. Đã qua (Ngày < Hôm nay HOẶC Ngày == Hôm nay và Giờ < Hiện tại)
                             // 2. Có dữ liệu (Bài tập, Tài liệu)
+                            // 3. Status != Scheduled
                             var sessionIdsWithData = await _context.ClassSessions
                                 .Where(s => oldSchedIds.Contains(s.ScheduleId) &&
                                     (s.SessionDate.Date < today ||
                                      (s.SessionDate.Date == today && s.Schedule.StartTime < currentTime) ||
                                      s.Assignments.Any() ||
-                                     s.LessonMaterials.Any()))
+                                     s.LessonMaterials.Any() ||
+                                     s.Status != "Scheduled"))
                                 .Select(s => s.SessionId)
                                 .ToListAsync();
 
@@ -950,16 +952,22 @@ namespace EducenAPI.Services
                                 .ToHashSet();
                         }
 
-                        // Xóa sessions tương lai từ schedules cũ
-                        if (oldSchedIds.Any())
+                        // Identify one-off schedules to protect them (Sessions.Count == 1)
+                        var oneOffScheduleIds = existingClass.Schedules.Where(s => s.Sessions.Count == 1).Select(s => s.ScheduleId).ToList();
+                        
+                        // Exclude one-offs from the list of schedules whose future sessions will be purged
+                        var schedIdsToPurgeSessions = oldSchedIds.Except(oneOffScheduleIds).ToList();
+
+                        // Xóa sessions tương lai từ schedules cũ (trừ các slot đổi 1 buổi)
+                        if (schedIdsToPurgeSessions.Any())
                         {
-                            var oldSchedIdsParam = string.Join(",", oldSchedIds);
+                            var purgeIdsParam = string.Join(",", schedIdsToPurgeSessions);
                             await _context.Database.ExecuteSqlRawAsync(
-                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({oldSchedIdsParam}) AND SessionDate >= CAST(GETDATE() AS DATE)");
+                                $"DELETE FROM ClassSessions WHERE ScheduleId IN ({purgeIdsParam}) AND SessionDate >= CAST(GETDATE() AS DATE) AND Status = 'Scheduled'");
                         }
 
-                        // Xóa các schedules cũ KHÔNG có session quá khứ
-                        var schedulesToDelete = oldSchedIds.Except(oldScheduleIdsWithPastSessions).ToList();
+                        // Xóa các schedules cũ KHÔNG có session quá khứ VÀ KHÔNG phải là một buổi đổi lẻ
+                        var schedulesToDelete = oldSchedIds.Except(oldScheduleIdsWithPastSessions).Except(oneOffScheduleIds).ToList();
                         if (schedulesToDelete.Any())
                         {
                             var schedulesToDeleteParam = string.Join(",", schedulesToDelete);
@@ -1073,7 +1081,7 @@ namespace EducenAPI.Services
                             .Select(s => new { s.SessionDate.Date, s.ScheduleId })
                             .ToHashSet();
 
-                        foreach (var schedule in existingClass.Schedules)
+                        foreach (var schedule in existingClass.Schedules.Where(s => s.Sessions.Count != 1))
                         {
                             var newDates = GenerateSessionDates(finalStartDate.Value, finalEndDate.Value, schedule.DayOfWeek);
                             foreach (var d in newDates)
@@ -1553,7 +1561,9 @@ namespace EducenAPI.Services
             var sessions = await _context.ClassSessions
                 .Include(s => s.Schedule)
                     .ThenInclude(sc => sc!.Room)
-                .Where(s => s.ClassId == classId || (s.Schedule != null && s.Schedule.ClassId == classId))
+                .Include(s => s.Class)
+                    .ThenInclude(c => c!.Room)
+                .Where(s => (s.ClassId == classId || (s.Schedule != null && s.Schedule.ClassId == classId)) && s.Status != "Rescheduled")
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
 
@@ -1567,7 +1577,8 @@ namespace EducenAPI.Services
                 Status = s.Status,
                 DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
                 Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
-                Title = $"Buổi {sessions.IndexOf(s) + 1}: Ngày {s.SessionDate:dd/MM/yyyy}"
+                Title = $"Buổi {sessions.IndexOf(s) + 1}: Ngày {s.SessionDate:dd/MM/yyyy}",
+                RoomName = s.Schedule?.Room?.RoomName ?? s.Class?.Room?.RoomName
             }).ToList();
         }
 
@@ -1579,11 +1590,13 @@ namespace EducenAPI.Services
             var sessions = await _context.ClassSessions
                 .Include(s => s.Schedule)
                     .ThenInclude(sc => sc!.Room)
+                .Include(s => s.Class)
+                    .ThenInclude(c => c!.Room)
                 .Include(s => s.LessonMaterials)
                 .Include(s => s.Assignments)
                     .ThenInclude(a => a.Submissions.Where(sub => sub.StudentId == studentId))
                 .Include(s => s.Attendances.Where(att => att.StudentId == studentId))
-                .Where(s => s.ClassId == classId)
+                .Where(s => s.ClassId == classId && s.Status != "Rescheduled")
                 .OrderBy(s => s.SessionDate)
                 .ToListAsync();
 
@@ -1607,53 +1620,54 @@ namespace EducenAPI.Services
                         ScheduleId = s.ScheduleId,
                         SessionDate = s.SessionDate,
                         Status = effectiveStatus,
-                    DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
-                    Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
-                    Title = $"Buổi {index + 1}: Ngày {s.SessionDate:dd/MM/yyyy}",
-                    Materials = s.LessonMaterials.Select(m => new MaterialResponseDto
-                    {
-                        MaterialId = m.MaterialId,
-                        Title = m.Title,
-                        FileUrl = !string.IsNullOrEmpty(m.FileUrl) 
-                            ? $"{baseUrl}/{m.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}" 
-                            : null,
-                        ContentType = m.ContentType
-                    }).ToList(),
-                    Assignments = s.Assignments.Select(a => new StudentAssignmentDto
-                    {
-                        AsmId = a.AsmId,
-                        Title = a.Title ?? string.Empty,
-                        Description = a.Description ?? string.Empty,
-                        DueDate = a.EndTime,
-                        FileUrl = !string.IsNullOrEmpty(a.FileUrl)
-                            ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
-                            : null,
-                        CurrentSubmission = a.Submissions.Select(sub => {
-                            var fileUrls = new List<string>();
-                            if (!string.IsNullOrEmpty(sub.FileUrl))
-                            {
-                                var paths = sub.FileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
-                                foreach (var p in paths)
+                        DayLabel = dayLabels[(int)s.SessionDate.DayOfWeek],
+                        Time = s.Schedule != null ? $"{s.Schedule.StartTime:HH:mm} - {s.Schedule.EndTime:HH:mm}" : "N/A",
+                        Title = $"Buổi {index + 1}: Ngày {s.SessionDate:dd/MM/yyyy}",
+                        RoomName = s.Schedule?.Room?.RoomName ?? s.Class?.Room?.RoomName,
+                        Materials = s.LessonMaterials.Select(m => new MaterialResponseDto
+                        {
+                            MaterialId = m.MaterialId,
+                            Title = m.Title,
+                            FileUrl = !string.IsNullOrEmpty(m.FileUrl) 
+                                ? $"{baseUrl}/{m.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}" 
+                                : null,
+                            ContentType = m.ContentType
+                        }).ToList(),
+                        Assignments = s.Assignments.Select(a => new StudentAssignmentDto
+                        {
+                            AsmId = a.AsmId,
+                            Title = a.Title ?? string.Empty,
+                            Description = a.Description ?? string.Empty,
+                            DueDate = a.EndTime,
+                            FileUrl = !string.IsNullOrEmpty(a.FileUrl)
+                                ? $"{baseUrl}/{a.FileUrl.Replace("\\", "/").Replace("wwwroot/", "")}"
+                                : null,
+                            CurrentSubmission = a.Submissions.Select(sub => {
+                                var fileUrls = new List<string>();
+                                if (!string.IsNullOrEmpty(sub.FileUrl))
                                 {
-                                    fileUrls.Add($"{baseUrl}/{p.Replace("\\", "/").Replace("wwwroot/", "")}");
+                                    var paths = sub.FileUrl.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                                    foreach (var p in paths)
+                                    {
+                                        fileUrls.Add($"{baseUrl}/{p.Replace("\\", "/").Replace("wwwroot/", "")}");
+                                    }
                                 }
-                            }
-                            return new SubmissionResponseDto
-                            {
-                                SubId = sub.SubId,
-                                AsmId = sub.AsmId,
-                                StudentId = sub.StudentId,
-                                FileUrl = fileUrls.FirstOrDefault(),
-                                FileUrls = fileUrls,
-                                SubmittedAt = sub.SubmittedAt,
-                                Status = sub.Status,
-                                Score = sub.Score,
-                                TeacherComment = sub.TeacherComment,
-                                GradedAt = sub.GradedAt,
-                                IsPublished = sub.IsPublished
-                            };
-                        }).FirstOrDefault()
-                    }).ToList()
+                                return new SubmissionResponseDto
+                                {
+                                    SubId = sub.SubId,
+                                    AsmId = sub.AsmId,
+                                    StudentId = sub.StudentId,
+                                    FileUrl = fileUrls.FirstOrDefault(),
+                                    FileUrls = fileUrls,
+                                    SubmittedAt = sub.SubmittedAt,
+                                    Status = sub.Status,
+                                    Score = sub.Score,
+                                    TeacherComment = sub.TeacherComment,
+                                    GradedAt = sub.GradedAt,
+                                    IsPublished = sub.IsPublished
+                                };
+                            }).FirstOrDefault()
+                        }).ToList()
                     };
                 }).ToList()
             };
@@ -1700,8 +1714,8 @@ namespace EducenAPI.Services
                     AssistantInitials = GetInitials(c.Assistant?.AssistantNavigation?.FullName),
                     ScheduleDays = scheduleDays,
                     ScheduleTime = scheduleTime,
-                    TotalSessions = c.Sessions.Count,
-                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
+                    TotalSessions = c.Sessions.Count(s => s.Status != "Rescheduled"),
+                    CompletedSessions = c.Sessions.Count(s => (s.Status == "Completed" || s.SessionDate < DateTime.Now) && s.Status != "Rescheduled"),
                     Color = GetSubjectColor(c.Subject?.SubjectName),
                     StartDate = c.StartDate,
                     EndDate = c.EndDate
@@ -1746,8 +1760,8 @@ namespace EducenAPI.Services
                     Status = c.Status,
                     StudentCount = c.Students.Count,
                     MaxStudents = c.MaxStudents,
-                    TotalSessions = c.Sessions.Count,
-                    CompletedSessions = c.Sessions.Count(s => s.Status == "Completed" || s.SessionDate < DateTime.Now),
+                    TotalSessions = c.Sessions.Count(s => s.Status != "Rescheduled"),
+                    CompletedSessions = c.Sessions.Count(s => (s.Status == "Completed" || s.SessionDate < DateTime.Now) && s.Status != "Rescheduled"),
                     CreatedAt = DateTime.Now,
                     PricePerSession = c.PricePerSession,
                     ScheduleSlots = c.Schedules.Select(s => new CreateScheduleSlotDto

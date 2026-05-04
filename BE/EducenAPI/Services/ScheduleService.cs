@@ -75,6 +75,7 @@ namespace EducenAPI.Services
         public async Task<IEnumerable<ScheduleDto>> GetAllSchedulesAsync()
         {
             var schedules = await _context.Schedules
+                .Include(s => s.Sessions) // NEW
                 .Include(s => s.Room)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Teacher)
@@ -85,12 +86,15 @@ namespace EducenAPI.Services
                     .ThenInclude(c => c.Room)
                 .ToListAsync();
 
-            return schedules.Select(MapToScheduleDto);
+            return schedules
+                .Where(s => s.Sessions.Count != 1) // Filter out one-off schedules
+                .Select(MapToScheduleDto);
         }
 
         public async Task<IEnumerable<ScheduleDto>> GetSchedulesByClassIdAsync(int classId)
         {
             var schedules = await _context.Schedules
+                .Include(s => s.Sessions) // NEW
                 .Include(s => s.Room)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
@@ -99,7 +103,9 @@ namespace EducenAPI.Services
                 .Where(s => s.ClassId == classId)
                 .ToListAsync();
 
-            return schedules.Select(MapToScheduleDto);
+            return schedules
+                .Where(s => s.Sessions.Count != 1) // Filter out one-off schedules
+                .Select(MapToScheduleDto);
         }
 
         public async Task<ScheduleDto?> GetScheduleByIdAsync(int id)
@@ -426,6 +432,7 @@ namespace EducenAPI.Services
 
             var schedules = await _context.Schedules
                 .Include(s => s.Room)
+                .Include(s => s.Sessions)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
                 .Include(s => s.Class)
@@ -433,7 +440,9 @@ namespace EducenAPI.Services
                 .Where(s => s.Class.TeacherId == teacher.UserId && s.Class.Status == "Active")
                 .ToListAsync();
 
-            return schedules.Select(s => new TeacherScheduleDto
+            return schedules
+                .Where(s => s.Sessions.Count != 1) // Filter out one-off schedules
+                .Select(s => new TeacherScheduleDto
             {
                 ScheduleId = s.ScheduleId,
                 SessionId = null,
@@ -564,6 +573,7 @@ namespace EducenAPI.Services
     
             var schedules = await _context.Schedules
                 .Include(s => s.Room)
+                .Include(s => s.Sessions)
                 .Include(s => s.Class)
                     .ThenInclude(c => c.Subject)
                 .Include(s => s.Class)
@@ -571,7 +581,9 @@ namespace EducenAPI.Services
                 .Where(s => s.Class.AssistantId == assistant.UserId && s.Class.Status == "Active")
                 .ToListAsync();
     
-            return schedules.Select(s => new TeacherScheduleDto
+            return schedules
+                .Where(s => s.Sessions.Count != 1) // Filter out one-off schedules
+                .Select(s => new TeacherScheduleDto
             {
                 ScheduleId = s.ScheduleId,
                 SessionId = null,
@@ -606,6 +618,9 @@ namespace EducenAPI.Services
                     .ThenInclude(c => c.Schedules)
                         .ThenInclude(sch => sch.Room)
                 .Include(s => s.Classes)
+                    .ThenInclude(c => c.Schedules)
+                        .ThenInclude(sch => sch.Sessions)
+                .Include(s => s.Classes)
                     .ThenInclude(c => c.Subject)
                 .Include(s => s.Classes)
                     .ThenInclude(c => c.Teacher)
@@ -621,7 +636,7 @@ namespace EducenAPI.Services
             
             foreach (var classEntity in student.Classes.Where(c => c.Status == "Active"))
             {
-                foreach (var schedule in classEntity.Schedules)
+                foreach (var schedule in classEntity.Schedules.Where(s => s.Sessions.Count != 1)) // Filter out one-off schedules
                 {
                     schedules.Add(new StudentScheduleDto
                     {
