@@ -296,7 +296,7 @@ const AdminDashboard = () => {
         { label: 'Tổng học sinh', value: overview.totalStudents, icon: Users, color: 'blue', change: `+${overview.newStudentsThisMonth} tháng này` },
         { label: 'Lớp đang học', value: overview.totalClasses, icon: BookOpen, color: 'purple', change: 'Hoạt động' },
         { label: 'Sắp khai giảng', value: overview.upcomingClasses, icon: Bell, color: 'green', change: 'Đang tuyển sinh' },
-        { label: 'Nhân viên', value: overview.totalStaff, icon: UserCheck, color: 'orange', change: `${overview.activeStaff} đang làm việc` },
+        { label: 'Nhân viên', value: overview.totalStaff, icon: UserCheck, color: 'orange', change: `Đang làm việc` },
     ];
 
     const enrollmentData = useMemo(() => {
