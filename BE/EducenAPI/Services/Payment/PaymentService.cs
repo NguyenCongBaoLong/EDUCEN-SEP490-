@@ -1625,7 +1625,7 @@ namespace EducenAPI.Services.Payment
                 await _mailService.SendEmailWithAttachmentsAsync(
                     recipientEmail,
                     "Xác nhận thanh toán học phí - Kèm hóa đơn điện tử (Sandbox)",
-                    $"<p>Thanh toán học phí thành công.</p><p>Mã hóa đơn: <strong>{invoice.InvoiceId}</strong></p>",
+                    html, // Sử dụng HTML làm nội dung mail để hiện thị đầy đủ thông tin
                     new[]
                     {
                         ($"{meta.InvoiceNo}.xml", "application/xml", System.Text.Encoding.UTF8.GetBytes(xml)),

@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.RegularExpressions;
@@ -74,45 +74,31 @@ namespace EducenAPI.Services
             var sanitizedNote = SanitizeDisplayNote(invoice.PaymentNote);
             var localizedStatus = LocalizeStatus(invoice.Status);
             var localizedNote = LocalizeNote(sanitizedNote);
-            return $@"<!doctype html>
-<html>
-<head>
-  <meta charset='utf-8'/>
-  <title>Hóa đơn điện tử sandbox</title>
-  <style>
-    body {{ font-family: Arial, sans-serif; margin: 24px; color: #111827; }}
-    .card {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }}
-    .muted {{ color: #6b7280; }}
-    .title {{ font-size: 20px; font-weight: 700; margin-bottom: 8px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-    td {{ border-bottom: 1px solid #f3f4f6; padding: 8px; vertical-align: top; }}
-    .warn {{ margin-top: 14px; background: #fff7ed; border: 1px solid #fdba74; padding: 10px; border-radius: 8px; color: #9a3412; }}
-  </style>
-</head>
-<body>
-  <div class='card'>
-    <div class='title'>HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)</div>
-    <div class='muted'>Nhà cung cấp: {encoder.Encode(metadata.Provider)}</div>
-    <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
-    <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
-    <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
+            return $@"
+  <div style='font-family: Arial, sans-serif; margin: 24px; color: #111827; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; max-width: 600px;'>
+    <div style='font-size: 24px; font-weight: 700; margin-bottom: 12px; color: #1e40af;'>HÓA ĐƠN ĐIỆN TỬ (SANDBOX DEMO)</div>
+    <div style='color: #6b7280; font-size: 14px; margin-bottom: 16px;'>Nhà cung cấp: {encoder.Encode(metadata.Provider)}</div>
+    
+    <div style='margin-bottom: 20px; padding: 12px; background-color: #f9fafb; border-radius: 8px;'>
+        <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
+        <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
+        <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
+    </div>
 
-    <table>
-      <tr><td><strong>Mã hóa đơn nội bộ</strong></td><td>{encoder.Encode(invoice.InvoiceNumber)}</td></tr>
-      <tr><td><strong>Trung tâm</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
-      <tr><td><strong>Số tiền</strong></td><td>{invoice.Amount:N0} VND</td></tr>
-      <tr><td><strong>Trạng thái</strong></td><td>{encoder.Encode(localizedStatus)}</td></tr>
-      <tr><td><strong>Phương thức thanh toán</strong></td><td>{encoder.Encode(invoice.PaymentMethod ?? string.Empty)}</td></tr>
-      <tr><td><strong>Thời điểm thanh toán</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
-      <tr><td><strong>Ghi chú</strong></td><td>{encoder.Encode(localizedNote)}</td></tr>
+    <table style='width: 100%; border-collapse: collapse; margin-top: 10px;'>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Mã hóa đơn nội bộ</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(invoice.InvoiceNumber)}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Trung tâm</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(tenantName)}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Số tiền</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; color: #b91c1c; font-weight: bold;'>{invoice.Amount:N0} VND</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Trạng thái</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(localizedStatus)}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Phương thức thanh toán</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(invoice.PaymentMethod ?? string.Empty)}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Thời điểm thanh toán</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Ghi chú</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(localizedNote)}</td></tr>
     </table>
 
-    <div class='warn'>
-      Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.
+    <div style='margin-top: 24px; background: #fff7ed; border: 1px solid #fdba74; padding: 12px; border-radius: 8px; color: #9a3412; font-size: 13px;'>
+      <strong>Lưu ý:</strong> Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.
     </div>
-  </div>
-</body>
-</html>";
+  </div>";
         }
 
         public byte[] BuildPdfRepresentation(Invoice invoice, string tenantName, SandboxEInvoiceMetadata metadata)
@@ -173,45 +159,31 @@ namespace EducenAPI.Services
             var sanitizedNote = SanitizeDisplayNote(invoice.Notes);
             var localizedStatus = LocalizeStatus(invoice.Status);
             var localizedNote = LocalizeNote(sanitizedNote);
-            return $@"<!doctype html>
-<html>
-<head>
-  <meta charset='utf-8'/>
-  <title>Hóa đơn điện tử sandbox</title>
-  <style>
-    body {{ font-family: Arial, sans-serif; margin: 24px; color: #111827; }}
-    .card {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }}
-    .muted {{ color: #6b7280; }}
-    .title {{ font-size: 20px; font-weight: 700; margin-bottom: 8px; }}
-    table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-    td {{ border-bottom: 1px solid #f3f4f6; padding: 8px; vertical-align: top; }}
-    .warn {{ margin-top: 14px; background: #fff7ed; border: 1px solid #fdba74; padding: 10px; border-radius: 8px; color: #9a3412; }}
-  </style>
-</head>
-<body>
-  <div class='card'>
-    <div class='title'>HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)</div>
-    <div class='muted'>Nhà cung cấp: {encoder.Encode(metadata.Provider)}</div>
-    <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
-    <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
-    <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
+            return $@"
+  <div style='font-family: Arial, sans-serif; margin: 24px; color: #111827; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; max-width: 600px;'>
+    <div style='font-size: 24px; font-weight: 700; margin-bottom: 12px; color: #1e40af;'>HÓA ĐƠN ĐIỆN TỬ HỌC PHÍ (SANDBOX DEMO)</div>
+    <div style='color: #6b7280; font-size: 14px; margin-bottom: 16px;'>Nhà cung cấp: {encoder.Encode(metadata.Provider)}</div>
+    
+    <div style='margin-bottom: 20px; padding: 12px; background-color: #f9fafb; border-radius: 8px;'>
+        <div><strong>Số hóa đơn:</strong> {encoder.Encode(metadata.InvoiceNo)}</div>
+        <div><strong>Mã tra cứu:</strong> {encoder.Encode(metadata.LookupCode)}</div>
+        <div><strong>Ngày phát hành:</strong> {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}</div>
+    </div>
 
-    <table>
-      <tr><td><strong>Trung tâm</strong></td><td>{encoder.Encode(tenantName)}</td></tr>
-      <tr><td><strong>Kỳ học phí</strong></td><td>{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}</td></tr>
-      <tr><td><strong>Số buổi học</strong></td><td>{invoice.AttendedSessions}/{invoice.TotalSessions}</td></tr>
-      <tr><td><strong>Số tiền</strong></td><td>{invoice.FinalAmount:N0} VND</td></tr>
-      <tr><td><strong>Trạng thái</strong></td><td>{encoder.Encode(localizedStatus)}</td></tr>
-      <tr><td><strong>Thời điểm thanh toán</strong></td><td>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
-      <tr><td><strong>Ghi chú</strong></td><td>{encoder.Encode(localizedNote)}</td></tr>
+    <table style='width: 100%; border-collapse: collapse; margin-top: 10px;'>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Trung tâm</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(tenantName)}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Kỳ học phí</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{invoice.InvoiceMonth:D2}/{invoice.InvoiceYear}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Số buổi học</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{invoice.AttendedSessions}/{invoice.TotalSessions}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Số tiền</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; color: #b91c1c; font-weight: bold;'>{invoice.FinalAmount:N0} VND</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Trạng thái</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(localizedStatus)}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Thời điểm thanh toán</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{(invoice.PaidAt.HasValue ? invoice.PaidAt.Value.ToString("dd/MM/yyyy HH:mm:ss") : "-")}</td></tr>
+      <tr><td style='border-bottom: 1px solid #f3f4f6; padding: 10px; font-weight: bold;'>Ghi chú</td><td style='border-bottom: 1px solid #f3f4f6; padding: 10px;'>{encoder.Encode(localizedNote)}</td></tr>
     </table>
 
-    <div class='warn'>
-      Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.
+    <div style='margin-top: 24px; background: #fff7ed; border: 1px solid #fdba74; padding: 12px; border-radius: 8px; color: #9a3412; font-size: 13px;'>
+      <strong>Lưu ý:</strong> Đây là hóa đơn điện tử SANDBOX để demo, không có giá trị pháp lý thuế.
     </div>
-  </div>
-</body>
-</html>";
+  </div>";
         }
 
         public byte[] BuildPdfRepresentation(TuitionInvoice invoice, string tenantName, SandboxEInvoiceMetadata metadata)
@@ -246,64 +218,62 @@ namespace EducenAPI.Services
             // Title
             contentBuilder.AppendLine("/F1 16 Tf");
             contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"({EscapePdfText(title)}) Tj");
-            y -= 30;
+            contentBuilder.AppendLine($"({EscapePdfText(RemoveDiacritics(title))}) Tj");
             
             // Provider info
             contentBuilder.AppendLine("/F2 10 Tf");
-            contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Provider: {EscapePdfText(metadata.Provider)}) Tj");
-            y -= 20;
-            contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Số hóa đơn: {EscapePdfText(metadata.InvoiceNo)}) Tj");
-            y -= 20;
-            contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Mã tra cứu: {EscapePdfText(metadata.LookupCode)}) Tj");
-            y -= 20;
-            contentBuilder.AppendLine($"50 {y} Td");
-            contentBuilder.AppendLine($"(Ngày phát hành: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
-            y -= 30;
+            contentBuilder.AppendLine($"0 -30 Td"); // Move from title
+            contentBuilder.AppendLine($"(Provider: {EscapePdfText(RemoveDiacritics(metadata.Provider))}) Tj");
             
-            // Draw table border
+            contentBuilder.AppendLine($"0 -20 Td");
+            contentBuilder.AppendLine($"(So hoa don: {EscapePdfText(metadata.InvoiceNo)}) Tj");
+            
+            contentBuilder.AppendLine($"0 -20 Td");
+            contentBuilder.AppendLine($"(Ma tra cuu: {EscapePdfText(metadata.LookupCode)}) Tj");
+            
+            contentBuilder.AppendLine($"0 -20 Td");
+            contentBuilder.AppendLine($"(Ngay phat hanh: {metadata.IssuedAt:dd/MM/yyyy HH:mm:ss}) Tj");
+            
+            // Draw table start
+            contentBuilder.AppendLine("ET");
+            y = 660; // Reset Y for relative moves logic if needed, but we used relative above
+            
             contentBuilder.AppendLine("0.5 w");
             contentBuilder.AppendLine("0 0 0 RG");
             contentBuilder.AppendLine($"50 {y} m");
-            contentBuilder.AppendLine("545 {y} l");
+            contentBuilder.AppendLine($"545 {y} l");
             contentBuilder.AppendLine("S");
-            y -= 10;
             
-            // Table content
+            contentBuilder.AppendLine("BT");
             contentBuilder.AppendLine("/F2 11 Tf");
+            contentBuilder.AppendLine($"50 {y - 20} Td"); // Move to first row
+            
             foreach (var (label, value) in data)
             {
-                contentBuilder.AppendLine($"50 {y} Td");
-                contentBuilder.AppendLine($"({EscapePdfText(label)}:) Tj");
-                contentBuilder.AppendLine($"300 {y} Td");
-                contentBuilder.AppendLine($"({EscapePdfText(value)}) Tj");
-                y -= 20;
+                contentBuilder.AppendLine($"({EscapePdfText(RemoveDiacritics(label))}:) Tj");
+                contentBuilder.AppendLine($"250 0 Td"); // Move right for value
+                contentBuilder.AppendLine($"({EscapePdfText(RemoveDiacritics(value))}) Tj");
                 
-                contentBuilder.AppendLine($"50 {y} m");
-                contentBuilder.AppendLine("545 {y} l");
-                contentBuilder.AppendLine("S");
-                y -= 10;
+                // Move back and down for next row
+                contentBuilder.AppendLine($"-250 -30 Td");
             }
+            contentBuilder.AppendLine("ET");
             
-            // Warning box
-            y -= 20;
+            // Warning box (using absolute for line drawing)
+            var tableEndY = y - (data.Count * 30) - 10;
             contentBuilder.AppendLine("0.5 w");
             contentBuilder.AppendLine("0.7 0.5 0.3 RG");
-            contentBuilder.AppendLine($"50 {y} m");
-            contentBuilder.AppendLine("545 {y} l");
-            contentBuilder.AppendLine("545 {y-40} l");
-            contentBuilder.AppendLine("50 {y-40} l");
-            contentBuilder.AppendLine("50 {y} l");
+            contentBuilder.AppendLine($"50 {tableEndY} m");
+            contentBuilder.AppendLine($"545 {tableEndY} l");
+            contentBuilder.AppendLine($"545 {tableEndY - 40} l");
+            contentBuilder.AppendLine($"50 {tableEndY - 40} l");
+            contentBuilder.AppendLine($"50 {tableEndY} l");
             contentBuilder.AppendLine("S");
-            y -= 30;
             
+            contentBuilder.AppendLine("BT");
             contentBuilder.AppendLine("/F2 10 Tf");
-            contentBuilder.AppendLine($"60 {y} Td");
-            contentBuilder.AppendLine($"({EscapePdfText(disclaimer)}) Tj");
-            
+            contentBuilder.AppendLine($"60 {tableEndY - 25} Td");
+            contentBuilder.AppendLine($"({EscapePdfText(RemoveDiacritics(disclaimer))}) Tj");
             contentBuilder.AppendLine("ET");
 
             var content = contentBuilder.ToString();
@@ -410,6 +380,21 @@ namespace EducenAPI.Services
                 return "Thanh toán online thành công.";
 
             return note;
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            text = text.Normalize(NormalizationForm.FormD);
+            var chars = text.Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray();
+            var result = new string(chars).Normalize(NormalizationForm.FormC);
+            
+            // Handle some specific Vietnamese characters that don't normalize well
+            return result
+                .Replace("đ", "d")
+                .Replace("Đ", "D");
         }
     }
 }
